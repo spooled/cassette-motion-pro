@@ -1,0 +1,378 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="12.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.30729</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{8AA92254-A016-4A84-925C-F5B07E02F8A8}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Kinovea.Services</RootNamespace>
+    <AssemblyName>Kinovea.Services</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
+    <NoStdLib>False</NoStdLib>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <NoWarn>1591</NoWarn>
+    <SignAssembly>False</SignAssembly>
+    <DelaySign>False</DelaySign>
+    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <OldToolsVersion>3.5</OldToolsVersion>
+    <UpgradeBackupLocation />
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+    <OutputPath>bin\x86\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <BaseAddress>4194304</BaseAddress>
+    <DebugType>Full</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <DebugSymbols>true</DebugSymbols>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+    <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+    <OutputPath>bin\x86\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <BaseAddress>57737216</BaseAddress>
+    <DebugType>None</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <DebugSymbols>false</DebugSymbols>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <Optimize>False</Optimize>
+    <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <Optimize>true</Optimize>
+    <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Platform)' == 'x86' ">
+    <RegisterForComInterop>False</RegisterForComInterop>
+    <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
+    <FileAlignment>1024</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'DebugExternals|x86' ">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x86\DebugExternals\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+    <FileAlignment>1024</FileAlignment>
+    <NoWarn>1591</NoWarn>
+    <DebugType>Full</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x64\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+    <FileAlignment>1024</FileAlignment>
+    <NoWarn>1591</NoWarn>
+    <DebugType>Full</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <CodeAnalysisLogFile>bin\x86\Debug\Kinovea.Services.dll.CodeAnalysisLog.xml</CodeAnalysisLogFile>
+    <CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
+    <CodeAnalysisModuleSuppressionsFile>GlobalSuppressions.cs</CodeAnalysisModuleSuppressionsFile>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSetDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\\Rule Sets</CodeAnalysisRuleSetDirectories>
+    <CodeAnalysisRuleDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\FxCop\\Rules</CodeAnalysisRuleDirectories>
+    <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <OutputPath>bin\x64\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <BaseAddress>57737216</BaseAddress>
+    <Optimize>true</Optimize>
+    <FileAlignment>1024</FileAlignment>
+    <NoWarn>1591</NoWarn>
+    <DebugType>None</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <CodeAnalysisLogFile>bin\x86\Release\Kinovea.Services.dll.CodeAnalysisLog.xml</CodeAnalysisLogFile>
+    <CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
+    <CodeAnalysisModuleSuppressionsFile>GlobalSuppressions.cs</CodeAnalysisModuleSuppressionsFile>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSetDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\\Rule Sets</CodeAnalysisRuleSetDirectories>
+    <CodeAnalysisRuleDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\FxCop\\Rules</CodeAnalysisRuleDirectories>
+    <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'DebugExternals|x64'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x64\DebugExternals\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+    <FileAlignment>1024</FileAlignment>
+    <NoWarn>1591</NoWarn>
+    <DebugType>Full</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <CodeAnalysisLogFile>bin\x86\DebugExternals\Kinovea.Services.dll.CodeAnalysisLog.xml</CodeAnalysisLogFile>
+    <CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
+    <CodeAnalysisModuleSuppressionsFile>GlobalSuppressions.cs</CodeAnalysisModuleSuppressionsFile>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRuleSetDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\\Rule Sets</CodeAnalysisRuleSetDirectories>
+    <CodeAnalysisIgnoreBuiltInRuleSets>false</CodeAnalysisIgnoreBuiltInRuleSets>
+    <CodeAnalysisRuleDirectories>;C:\Program Files (x86)\Microsoft Visual Studio 10.0\Team Tools\Static Analysis Tools\FxCop\\Rules</CodeAnalysisRuleDirectories>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+    <FileAlignment>1024</FileAlignment>
+    <NoWarn>1591</NoWarn>
+    <DebugType>Full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <BaseAddress>57737216</BaseAddress>
+    <Optimize>true</Optimize>
+    <FileAlignment>1024</FileAlignment>
+    <NoWarn>1591</NoWarn>
+    <DebugType>None</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'DebugExternals|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\DebugExternals\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+    <FileAlignment>1024</FileAlignment>
+    <NoWarn>1591</NoWarn>
+    <DebugType>Full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisIgnoreBuiltInRuleSets>false</CodeAnalysisIgnoreBuiltInRuleSets>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="log4net, Version=2.0.14.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
+      <HintPath>..\packages\log4net.2.0.14\lib\net45\log4net.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.VisualBasic" />
+    <Reference Include="System" />
+    <Reference Include="System.configuration" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Management" />
+    <Reference Include="System.Security.AccessControl, Version=6.0.0.1, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Security.AccessControl.6.0.1\lib\net461\System.Security.AccessControl.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Security.Principal.Windows, Version=5.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Security.Principal.Windows.5.0.0\lib\net461\System.Security.Principal.Windows.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Bitmap\TJPEG\TJCS.cs" />
+    <Compile Include="Bitmap\TJPEG\TJFLAG.cs" />
+    <Compile Include="Bitmap\TJPEG\tjnet.cs" />
+    <Compile Include="Bitmap\TJPEG\TJPF.cs" />
+    <Compile Include="Bitmap\TJPEG\TJSAMP.cs" />
+    <Compile Include="Bitmap\TJPEG\TJXOP.cs" />
+    <Compile Include="Events\VideoLoadAskedEventArgs.cs" />
+    <Compile Include="Filesystem\AlphanumComparator.cs" />
+    <Compile Include="Filesystem\FileComparator.cs" />
+    <Compile Include="Filesystem\FilePicker.cs" />
+    <Compile Include="Filesystem\FolderNavigationType.cs" />
+    <Compile Include="Filesystem\FileSortAxis.cs" />
+    <Compile Include="Bitmap\BitmapHelper.cs" />
+    <Compile Include="Types\WindowContent.cs" />
+    <Compile Include="Types\UserCommand.cs" />
+    <Compile Include="Preferences\PreferencesHelper.cs" />
+    <Compile Include="Types\CalibrationValidationMode.cs" />
+    <Compile Include="Types\CameraMotionFeatureType.cs" />
+    <Compile Include="Types\CameraMotionParameters.cs" />
+    <Compile Include="Types\CaptureFolder.cs" />
+    <Compile Include="Types\CSVDecimalSeparator.cs" />
+    <Compile Include="Types\ExportSpace.cs" />
+    <Compile Include="Types\HSVRange.cs" />
+    <Compile Include="Types\KeyframePresetsParameters.cs" />
+    <Compile Include="Types\KinogramParameters.cs" />
+    <Compile Include="Infrastructure\NativeMethods.cs" />
+    <Compile Include="Types\CaptureTriggerAction.cs" />
+    <Compile Include="Types\CameraManagerPluginInfo.cs" />
+    <Compile Include="Types\Demosaicing.cs" />
+    <Compile Include="Types\ImageAspectRatio.cs" />
+    <Compile Include="Perfs\Averager.cs" />
+    <Compile Include="Perfs\DropWatcher.cs" />
+    <Compile Include="Perfs\LoopWatcher.cs" />
+    <Compile Include="Perfs\TimeWatcher.cs" />
+    <Compile Include="Diagnostics\BenchmarkCounterBandwidth.cs" />
+    <Compile Include="Diagnostics\BenchmarkCounterIntervals.cs" />
+    <Compile Include="Diagnostics\BenchmarkCounterValues.cs" />
+    <Compile Include="Diagnostics\BenchmarkMode.cs" />
+    <Compile Include="Diagnostics\FrequencyCounter.cs" />
+    <Compile Include="Diagnostics\MemoryHelper.cs" />
+    <Compile Include="Diagnostics\WMI\LogicalDisk.cs" />
+    <Compile Include="Diagnostics\WMI\DriveType.cs" />
+    <Compile Include="Diagnostics\IBenchmarkCounter.cs" />
+    <Compile Include="Diagnostics\WMI\PhysicalDisk.cs" />
+    <Compile Include="Diagnostics\WMI\WMI.cs" />
+    <Compile Include="Events\EventArgs`1.cs" />
+    <Compile Include="LaunchSettings\CommandLine\CommandLineArgumentException.cs" />
+    <Compile Include="LaunchSettings\CommandLine\CommandLineArgumentManager.cs" />
+    <Compile Include="LaunchSettings\CommandLine\CommandLineArgumentParser.cs" />
+    <Compile Include="Events\CurrentDirectoryChangedEventArgs.cs" />
+    <Compile Include="Window\IScreenDescriptor.cs" />
+    <Compile Include="LaunchSettings\LaunchSettingsManager.cs" />
+    <Compile Include="Window\ScreenDescriptorCapture.cs" />
+    <Compile Include="Window\ScreenDescriptorPlayback.cs" />
+    <Compile Include="Window\ScreenType.cs" />
+    <Compile Include="Types\ImageFormat.cs" />
+    <Compile Include="Types\ImageFormatHelper.cs" />
+    <Compile Include="Types\ImageRotation.cs" />
+    <Compile Include="Types\KVAExportFlags.cs" />
+    <Compile Include="Types\LensCalibrationParameters.cs" />
+    <Compile Include="Types\MeasureLabelType.cs" />
+    <Compile Include="Types\Pair.cs" />
+    <Compile Include="Types\TimedPoint.cs" />
+    <Compile Include="Types\TrackingAlgorithm.cs" />
+    <Compile Include="Types\TrackingParameters.cs" />
+    <Compile Include="Types\Units\CadenceUnit.cs" />
+    <Compile Include="Types\Units\AccelerationUnit.cs" />
+    <Compile Include="Types\Units\AngleUnit.cs" />
+    <Compile Include="Types\Units\AngularAccelerationUnit.cs" />
+    <Compile Include="Types\Units\AngularVelocityUnit.cs" />
+    <Compile Include="Types\CaptureAutomationConfiguration.cs" />
+    <Compile Include="Types\CapturePathConfiguration.cs" />
+    <Compile Include="Types\CaptureRecordingMode.cs" />
+    <Compile Include="Types\FileProperty.cs" />
+    <Compile Include="Types\FilePropertyVisibility.cs" />
+    <Compile Include="Types\KinoveaUncompressedVideoFormat.cs" />
+    <Compile Include="Types\PhotofinishConfiguration.cs" />
+    <Compile Include="Preferences\PreferenceTab.cs" />
+    <Compile Include="Types\KeyframePreset.cs" />
+    <Compile Include="Infrastructure\TimestampMapper.cs" />
+    <Compile Include="Types\Units\LengthUnit.cs" />
+    <Compile Include="Types\VideoSection.cs" />
+    <Compile Include="UndoRedo\CommandManager.cs" />
+    <Compile Include="Events\NotificationCenter.cs" />
+    <Compile Include="Filesystem\FilesystemHelper.cs" />
+    <Compile Include="Preferences\IPreferenceSerializer.cs" />
+    <Compile Include="Preferences\KeyboardPreferences.cs" />
+    <Compile Include="Commands\Commands.cs" />
+    <Compile Include="Window\WindowDescriptor.cs" />
+    <Compile Include="Window\WindowManager.cs" />
+    <Compile Include="Window\WindowStartupMode.cs" />
+    <Compile Include="Window\WorkspaceDescriptor.cs" />
+    <Compile Include="WinForms\FormsHelper.cs" />
+    <Compile Include="Commands\HotkeyCommand.cs" />
+    <Compile Include="Commands\HotkeySettings.cs" />
+    <Compile Include="Commands\HotkeySettingsManager.cs" />
+    <Compile Include="WinForms\KeysExtensions.cs" />
+    <Compile Include="WinForms\KinoveaControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Types\CameraBlurb.cs" />
+    <Compile Include="Preferences\CapturePreferences.cs" />
+    <Compile Include="Preferences\FileExplorerPreferences.cs" />
+    <Compile Include="Preferences\GeneralPreferences.cs" />
+    <Compile Include="Preferences\PlayerPreferences.cs" />
+    <Compile Include="Software.cs" />
+    <Compile Include="HelpSystem\HelpIndex.cs" />
+    <Compile Include="HelpSystem\HelpItem.cs" />
+    <Compile Include="Infrastructure\IKernel.cs" />
+    <Compile Include="Types\InfosFading.cs" />
+    <Compile Include="Infrastructure\RelayCommand.cs" />
+    <Compile Include="Infrastructure\ToggleCommand.cs" />
+    <Compile Include="Language\LanguageIdentifier.cs" />
+    <Compile Include="Language\LanguageManager.cs" />
+    <Compile Include="UndoRedo\IUndoableCommand.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Types\BrowserContentType.cs" />
+    <Compile Include="Types\ExplorerThumbSize.cs" />
+    <Compile Include="Types\KinoveaImageFormat.cs" />
+    <Compile Include="Types\KinoveaVideoFormat.cs" />
+    <Compile Include="Preferences\PreferencesManager.cs" />
+    <Compile Include="Types\ShortcutFolder.cs" />
+    <Compile Include="Types\Units\SpeedUnit.cs" />
+    <Compile Include="Types\TimecodeFormat.cs" />
+    <Compile Include="Types\TimecodeType.cs" />
+    <Compile Include="ThreePartsVersion.cs" />
+    <Compile Include="TimeHelper.cs" />
+    <Compile Include="WinForms\NudHelper.cs" />
+    <Compile Include="WinForms\TextHelper.cs" />
+    <Compile Include="WinForms\TextboxHotkey.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="WinForms\VolumeMeterThreshold.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="WinForms\VolumeMeterThreshold.Designer.cs">
+      <DependentUpon>VolumeMeterThreshold.cs</DependentUpon>
+    </Compile>
+    <Compile Include="XmlHelper.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Windows.Installer.3.1">
+      <Visible>False</Visible>
+      <ProductName>Windows Installer 3.1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

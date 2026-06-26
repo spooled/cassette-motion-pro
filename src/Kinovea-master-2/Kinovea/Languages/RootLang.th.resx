@@ -1,0 +1,658 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata" id="root">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Generic_Cancel" xml:space="preserve">
+    <value>ยกเลิก</value>
+  </data>
+  <data name="dlgAbout_License" xml:space="preserve">
+    <value>การอนุญาต</value>
+  </data>
+  <data name="dlgAbout_Translation" xml:space="preserve">
+    <value>การแปลภาษา</value>
+  </data>
+  <data name="dlgPreferences_Capture_lblTriggerThreshold" xml:space="preserve">
+    <value>Trigger ขั้นต่ำ:</value>
+  </data>
+  <data name="dlgPreferences_Capture_lblInputDevice" xml:space="preserve">
+    <value>อุปกรณ์นำเข้า:</value>
+  </data>
+  <data name="dlgPreferences_Capture_chkEnableAudioTrigger" xml:space="preserve">
+    <value>เปิดการใช้งาน audio trigger</value>
+  </data>
+  <data name="dlgPreferences_Capture_tabAutomation" xml:space="preserve">
+    <value>ระบบอัตโนมัติ</value>
+  </data>
+  <data name="dlgPreferences_Capture_lblReplacementValue" xml:space="preserve">
+    <value>เฟรมเรตแทนที่ (fps):</value>
+  </data>
+  <data name="dlgPreferences_Capture_lblReplacementThreshold" xml:space="preserve">
+    <value>เฟรมเรตขั้นต่ำเพื่อแทนที่ (fps):</value>
+  </data>
+  <data name="dlgPreferences_Capture_gbHighspeedCameras" xml:space="preserve">
+    <value>กล้องความเร็วสูง</value>
+  </data>
+  <data name="dlgPreferences_Capture_chkIgnoreOverwrite" xml:space="preserve">
+    <value>ละเว้นแจ้งเตือนการเขียนทับไฟล์</value>
+  </data>
+  <data name="dlgPreferences_Capture_lblMemoryBuffer" xml:space="preserve">
+    <value>จัดสรรหน่วยความจำให้บัฟเฟอร์หน่วงเวลา: {0} MB</value>
+  </data>
+  <data name="dlgPreferences_Capture_tabMemory" xml:space="preserve">
+    <value>หน่วยความจำ</value>
+  </data>
+  <data name="dlgPreferences_Capture_RecordingMode_Scheduled" xml:space="preserve">
+    <value>ย้อนหลัง: บันทึกเฟรมเมื่อการจับภาพหยุดลง</value>
+  </data>
+  <data name="dlgPreferences_Capture_RecordingMode_Display" xml:space="preserve">
+    <value>การหน่วงเวลา:บันทึกเฟรมที่ถูกหน่วงเวลา</value>
+  </data>
+  <data name="dlgPreferences_Capture_RecordingMode_Camera" xml:space="preserve">
+    <value>กล้อง: บันทึกกรอบเวลาจริง</value>
+  </data>
+  <data name="dlgPreferences_Capture_RecordingMode" xml:space="preserve">
+    <value>โหมดการบันทึกและการหน่วงเวลา</value>
+  </data>
+  <data name="dlgPreferences_Capture_Recording" xml:space="preserve">
+    <value>การบันทึก</value>
+  </data>
+  <data name="dlgPreferences_Capture_chkUncompressedVideo" xml:space="preserve">
+    <value>บันทึกวีดีโอไม่บีบอัด</value>
+  </data>
+  <data name="dlgPreferences_Capture_lblUncompressedVideoFormat" xml:space="preserve">
+    <value>ประเภทวีดีโอไม่บีบอัด:</value>
+  </data>
+  <data name="dlgPreferences_Capture_lblVideoFormat" xml:space="preserve">
+    <value>ประเภทวีดีโอ:</value>
+  </data>
+  <data name="dlgPreferences_Capture_lblImageFormat" xml:space="preserve">
+    <value>ประเภทรูปภาพ:</value>
+  </data>
+  <data name="dlgPreferences_Capture_lblForcedFramerate" xml:space="preserve">
+    <value>แสดงเฟรมเรต (fps):</value>
+  </data>
+  <data name="dlgPreferences_tabKeyboard" xml:space="preserve">
+    <value>แป้นพิมพ์</value>
+  </data>
+  <data name="dlgPreferences_tabPlayback" xml:space="preserve">
+    <value>เล่นวีดีโอ</value>
+  </data>
+  <data name="dlgPreferences_tabGeneral" xml:space="preserve">
+    <value>ทั่วไป</value>
+  </data>
+  <data name="dlgPreferences_tabDrawings" xml:space="preserve">
+    <value>การวาดรูป</value>
+  </data>
+  <data name="dlgPreferences_tabCapture" xml:space="preserve">
+    <value>การจับภาพ</value>
+  </data>
+  <data name="dlgAbout_Citation" xml:space="preserve">
+    <value>การอ้างถึง</value>
+  </data>
+  <data name="dlgAbout_BuildingBlocks" xml:space="preserve">
+    <value>การสร้างบล็อค</value>
+  </data>
+  <data name="TimeCodeFormat_TenThousandthOfHours" xml:space="preserve">
+    <value>หนึ่งในหมื่นของชั่วโมง</value>
+  </data>
+  <data name="TimeCodeFormat_HundredthOfMinutes" xml:space="preserve">
+    <value>หนึ่งในร้อยของนาที</value>
+  </data>
+  <data name="TimeCodeFormat_Microseconds" xml:space="preserve">
+    <value>ไมโครวินาทีรวม</value>
+  </data>
+  <data name="TimeCodeFormat_Milliseconds" xml:space="preserve">
+    <value>มิลลิวินาทีรวม</value>
+  </data>
+  <data name="TimeCodeFormat_Frames" xml:space="preserve">
+    <value>ลำดับเฟรม</value>
+  </data>
+  <data name="mnuRedo" xml:space="preserve">
+    <value>ทำซ้ำ</value>
+  </data>
+  <data name="mnuUndo" xml:space="preserve">
+    <value>เลิกทำ</value>
+  </data>
+  <data name="mnuScreens" xml:space="preserve">
+    <value>ดู</value>
+  </data>
+  <data name="mnuWorkspace" xml:space="preserve">
+    <value>พื้นที่ทำงาน</value>
+  </data>
+  <data name="mnuPreferences" xml:space="preserve">
+    <value>การตั้งค่า…</value>
+  </data>
+  <data name="mnuOptions" xml:space="preserve">
+    <value>ตัวเลือก</value>
+  </data>
+  <data name="mnuTools" xml:space="preserve">
+    <value>เครื่องมือ</value>
+  </data>
+  <data name="mnuVideo" xml:space="preserve">
+    <value>วีดีโอ</value>
+  </data>
+  <data name="mnuLanguages" xml:space="preserve">
+    <value>ภาษา</value>
+  </data>
+  <data name="mnuImage" xml:space="preserve">
+    <value>รูปภาพ</value>
+  </data>
+  <data name="mnuHistoryReset" xml:space="preserve">
+    <value>ล้างประวัติ</value>
+  </data>
+  <data name="mnuHistory" xml:space="preserve">
+    <value>ล่าสุด</value>
+  </data>
+  <data name="mnuHelpContents" xml:space="preserve">
+    <value>Kinovea ช่วยเหลือ...</value>
+  </data>
+  <data name="mnuHelp" xml:space="preserve">
+    <value>ช่วยเหลือ</value>
+  </data>
+  <data name="mnuFullScreen" xml:space="preserve">
+    <value>เต็มจอ</value>
+  </data>
+  <data name="mnuFile" xml:space="preserve">
+    <value>ไฟล์</value>
+  </data>
+  <data name="mnuEdit" xml:space="preserve">
+    <value>แก้ไข</value>
+  </data>
+  <data name="mnuAbout" xml:space="preserve">
+    <value>เกี่ยวกับ Kinovea…</value>
+  </data>
+  <data name="Generic_Save" xml:space="preserve">
+    <value>บันทึก</value>
+  </data>
+  <data name="Generic_Quit" xml:space="preserve">
+    <value>ออก</value>
+  </data>
+  <data name="dlgPreferences_Keyboard_btnDefault" xml:space="preserve">
+    <value>ค่าเริ่มต้น</value>
+  </data>
+  <data name="dlgPreferences_Keyboard_btnClear" xml:space="preserve">
+    <value>ล้างข้อมูล</value>
+  </data>
+  <data name="dlgPreferences_Keyboard_btnApply" xml:space="preserve">
+    <value>นำมาใช้</value>
+  </data>
+  <data name="dlgPreferences_Keyboard_lblHotkey" xml:space="preserve">
+    <value>ปุ่มลัดสำหรับ {0}.{1}</value>
+  </data>
+  <data name="dlgPreferences_Keyboard_lblCommands" xml:space="preserve">
+    <value>คำสั่ง</value>
+  </data>
+  <data name="dlgPreferences_Keyboard_lblCategories" xml:space="preserve">
+    <value>หมวดหมู่</value>
+  </data>
+  <data name="dlgPreferences_Player_TrackingPercentage" xml:space="preserve">
+    <value>เปอร์เซ็นต์</value>
+  </data>
+  <data name="dlgPreferences_Player_TrackingDescription" xml:space="preserve">
+    <value>พารามิเตอร์การติดตามเริ่มต้น</value>
+  </data>
+  <data name="dlgPreferences_Player_UnitsCustom" xml:space="preserve">
+    <value>หน่วยความยาวที่กำหนดเอง :</value>
+  </data>
+  <data name="dlgPreferences_Player_UnitsRadiansPerSecondSquared" xml:space="preserve">
+    <value>เรเดียนต่อวินาทีกำลังสอง ({0})</value>
+  </data>
+  <data name="dlgPreferences_Player_UnitsDegreesPerSecondSquared" xml:space="preserve">
+    <value>องศาต่อวินาทีกำลังสอง ({0})</value>
+  </data>
+  <data name="dlgPreferences_Player_UnitsRevolutionsPerMinute" xml:space="preserve">
+    <value>รอบต่อนาที ({0})</value>
+  </data>
+  <data name="dlgPreferences_Player_UnitsRadiansPerSecond" xml:space="preserve">
+    <value>เรเดียนต่อวินาที ({0})</value>
+  </data>
+  <data name="dlgPreferences_Player_UnitsDegreesPerSecond" xml:space="preserve">
+    <value>องศาต่อวินาที ({0})</value>
+  </data>
+  <data name="dlgPreferences_Player_UnitsRadians" xml:space="preserve">
+    <value>เรเดียน ({0})</value>
+  </data>
+  <data name="dlgPreferences_Player_UnitsDegrees" xml:space="preserve">
+    <value>องศา ({0})</value>
+  </data>
+  <data name="dlgPreferences_Player_UnitsFeetPerSecondSquared" xml:space="preserve">
+    <value>ฟุตต่อวินาทีกำลังสอง ({0})</value>
+  </data>
+  <data name="dlgPreferences_Player_UnitsMetersPerSecondSquared" xml:space="preserve">
+    <value>เมตรต่อวินาทีกำลังสอง ({0})</value>
+  </data>
+  <data name="dlgPreferences_Player_UnitsAngularAcceleration" xml:space="preserve">
+    <value>การเร่งความเร็วเชิงมุม:</value>
+  </data>
+  <data name="dlgPreferences_Player_UnitsAngularVelocity" xml:space="preserve">
+    <value>ความเร็วเชิงมุม:</value>
+  </data>
+  <data name="dlgPreferences_Player_UnitsAngle" xml:space="preserve">
+    <value>มุม:</value>
+  </data>
+  <data name="dlgPreferences_Player_UnitsAcceleration" xml:space="preserve">
+    <value>การเร่งความเร็ว:</value>
+  </data>
+  <data name="dlgPreferences_Player_UnitsSpeed" xml:space="preserve">
+    <value>ความเร็ว:</value>
+  </data>
+  <data name="dlgPreferences_Player_UnitTime" xml:space="preserve">
+    <value>เวลา:</value>
+  </data>
+  <data name="mnuTimeFormat" xml:space="preserve">
+    <value>เวลา</value>
+  </data>
+  <data name="dlgPreferences_Title" xml:space="preserve">
+    <value>การตั้งค่า</value>
+  </data>
+  <data name="dlgPreferences_Speed_MilesPerHour" xml:space="preserve">
+    <value>ไมล์ต่อชั่วโมง ({0})</value>
+  </data>
+  <data name="dlgPreferences_Speed_FeetPerSecond" xml:space="preserve">
+    <value>ฟุตต่อวินาที ({0})</value>
+  </data>
+  <data name="dlgPreferences_Speed_KilometersPerHour" xml:space="preserve">
+    <value>กิโลเมตรต่อชั่วโมง ({0})</value>
+  </data>
+  <data name="dlgPreferences_Speed_MetersPerSecond" xml:space="preserve">
+    <value>เมตรต่อวินาที ({0})</value>
+  </data>
+  <data name="dlgPreferences_Player_tabUnits" xml:space="preserve">
+    <value>หน่วย</value>
+  </data>
+  <data name="dlgPreferences_Player_lblMemory" xml:space="preserve">
+    <value>จัดสรรหน่วยความจำแคชสำหรับแต่ละหน้าจอการเล่น: {0} MB</value>
+  </data>
+  <data name="dlgPreferences_Player_lblLanguages" xml:space="preserve">
+    <value>ภาษา:</value>
+  </data>
+  <data name="dlgPreferences_Player_lblImageFormat" xml:space="preserve">
+    <value>อัตราส่วนภาพเริ่มต้น:</value>
+  </data>
+  <data name="dlgPreferences_General_lblHistoryCount" xml:space="preserve">
+    <value>จำนวนไฟล์ในประวัติ:</value>
+  </data>
+  <data name="dlgPreferences_Player_DefaultKVA" xml:space="preserve">
+    <value>ไฟล์คำอธิบายประกอบเริ่มต้น:</value>
+  </data>
+  <data name="dlgPreferences_Player_SyncLockSpeeds" xml:space="preserve">
+    <value>ลิงก์ตัวเลื่อนความเร็วเมื่อเปรียบเทียบวิดีโอ</value>
+  </data>
+  <data name="dlgPreferences_Player_InteractiveFrameTracker" xml:space="preserve">
+    <value>อัปเดตรูปภาพระหว่างการเลื่อนเคอร์เซอร์เวลา</value>
+  </data>
+  <data name="dlgPreferences_Player_DeinterlaceByDefault" xml:space="preserve">
+    <value>Deinterlace เสมอเมื่อเปิดวิดีโอใหม่</value>
+  </data>
+  <data name="dlgPreferences_Player_ImportImageSequences" xml:space="preserve">
+    <value>นำเข้าลำดับภาพเป็นวิดีโอ</value>
+  </data>
+  <data name="dlgPreferences_Drawings_rbAlwaysVisible" xml:space="preserve">
+    <value>มองเห็นได้สำหรับวิดีโอทั้งหมด</value>
+  </data>
+  <data name="dlgPreferences_Drawings_lblDefaultOpacity" xml:space="preserve">
+    <value>ค่าความทึบเริ่มต้นของภาพวาดใหม่:</value>
+  </data>
+  <data name="dlgPreferences_Drawings_chkCustomToolsDebugMode" xml:space="preserve">
+    <value>เปิดใช้งานโหมดเครื่องมือดีบักที่กำหนดเอง</value>
+  </data>
+  <data name="dlgPreferences_Drawings_chkEnableFiltering" xml:space="preserve">
+    <value>เปิดใช้งานการกรองพิกัด</value>
+  </data>
+  <data name="dlgPreferences_Drawings_chkDrawOnPlay" xml:space="preserve">
+    <value>แสดงรูปภาพขณะเล่นวิดีโอ</value>
+  </data>
+  <data name="dlgPreferences_Capture_lblIdleTime" xml:space="preserve">
+    <value>เวลาว่าง (s):</value>
+  </data>
+  <data name="dlgPreferences_Drawings_TabExport" xml:space="preserve">
+    <value>ส่งออก</value>
+  </data>
+  <data name="dlgPreferences_Capture_TriggerAction" xml:space="preserve">
+    <value>การปฏิบัติเมื่อกดเริ่ม:</value>
+  </data>
+  <data name="dlgPreferences_General_PathToPandoc" xml:space="preserve">
+    <value>เส้นทางไป pandoc:</value>
+  </data>
+  <data name="dlgPreferences_Drawings_CSVComma" xml:space="preserve">
+    <value>จุลภาค</value>
+  </data>
+  <data name="dlgPreferences_Drawings_CSVDelimiter" xml:space="preserve">
+    <value>ตัวคั่นทศนิยมสำหรับไฟล์ CSV:</value>
+  </data>
+  <data name="dlgPreferences_Drawings_CSVPoint" xml:space="preserve">
+    <value>จุด</value>
+  </data>
+  <data name="dlgPreferences_Drawings_ExportCalibrated" xml:space="preserve">
+    <value>ปรับแต่งค่าการวัด</value>
+  </data>
+  <data name="dlgPreferences_Drawings_ExportPixels" xml:space="preserve">
+    <value>พิกเซล</value>
+  </data>
+  <data name="dlgPreferences_Drawings_ExportSpace" xml:space="preserve">
+    <value>โหมดส่งออก:</value>
+  </data>
+  <data name="dlgPreferences_Drawing_CSVSystem" xml:space="preserve">
+    <value>ระบบ ({0})</value>
+  </data>
+  <data name="mnuBigArrow" xml:space="preserve">
+    <value>ลูกศรใหญ่</value>
+  </data>
+  <data name="mnuBigHand" xml:space="preserve">
+    <value>มือชี้นิ้วใหญ่</value>
+  </data>
+  <data name="mnuDefaultPointer" xml:space="preserve">
+    <value>ค่าเริ่มต้น</value>
+  </data>
+  <data name="mnuPointer" xml:space="preserve">
+    <value>ตัวชี้</value>
+  </data>
+  <data name="mnuTranslate" xml:space="preserve">
+    <value>แปล Kinovea…</value>
+  </data>
+  <data name="dlgPreferences_Player_UnitsHertz" xml:space="preserve">
+    <value>เฮิรตซ์ ({0})</value>
+  </data>
+  <data name="PreferencePanelDrawings_InitTabUnits_CyclesPerSecond" xml:space="preserve">
+    <value>วนรอบต่อวินาที ({0})</value>
+  </data>
+  <data name="PreferencePanelDrawings_InitTabUnits_CyclesPerMinute" xml:space="preserve">
+    <value>วนรอบต่อนาที ({0})</value>
+  </data>
+  <data name="PreferencePanelDrawings_InitTabUnits_StepsPerSecond" xml:space="preserve">
+    <value>ขั้นต่อวินาที ({0})</value>
+  </data>
+  <data name="PreferencePanelDrawings_InitTabUnits_StepsPerMinute" xml:space="preserve">
+    <value>ขั้นต่อนาที ({0})</value>
+  </data>
+  <data name="PreferencePanelDrawings_InitTabUnits_StrokesPerSecond" xml:space="preserve">
+    <value>จังหวะต่อวินาที ({0})</value>
+  </data>
+  <data name="PreferencePanelDrawings_InitTabUnits_StrokesPerMinute" xml:space="preserve">
+    <value>จังหวะต่อนาที ({0})</value>
+  </data>
+  <data name="PreferencePanelDrawings_InitTabExport_IncludeImages" xml:space="preserve">
+    <value>รวมกับรูปภาพ</value>
+  </data>
+  <data name="OpenFolder" xml:space="preserve">
+    <value>เปิดแฟ้ม…</value>
+  </data>
+  <data name="NavigationPane" xml:space="preserve">
+    <value>แผงนำทาง</value>
+  </data>
+  <data name="mnuWindow" xml:space="preserve">
+    <value>หน้าต่าง</value>
+  </data>
+  <data name="mnuWindowProperties" xml:space="preserve">
+    <value>คุณสมบัติหน้าต่าง…</value>
+  </data>
+  <data name="mnuOpenNewWindow" xml:space="preserve">
+    <value>เปิดหน้าต่างใหม่</value>
+  </data>
+  <data name="mnuReopenWindow" xml:space="preserve">
+    <value>เปิดหน้าต่างเดิม</value>
+  </data>
+  <data name="mnuManageWindows" xml:space="preserve">
+    <value>จัดการหน้าต่าง…</value>
+  </data>
+  <data name="mnuManageWorkspaces" xml:space="preserve">
+    <value>จัดการพื้นที่ทำงาน…</value>
+  </data>
+  <data name="mnuOpenApplicationDataFolder" xml:space="preserve">
+    <value>เปิดแฟ้มข้อมูลโปรแกรม…</value>
+  </data>
+  <data name="mnuDisableDebugLogs" xml:space="preserve">
+    <value>ปิดการบันทึกดีบัก</value>
+  </data>
+  <data name="mnuEnableDebugLogs" xml:space="preserve">
+    <value>เปิดการบันทึกดีบัก</value>
+  </data>
+  <data name="mnuRefresh" xml:space="preserve">
+    <value>รีเฟรช</value>
+  </data>
+  <data name="mnuConfigureCaptureFolders" xml:space="preserve">
+    <value>ตั้งค่าแฟ้มจับภาพ</value>
+  </data>
+  <data name="dlgTitle_ManageWindows" xml:space="preserve">
+    <value>จัดการหน้าต่าง</value>
+  </data>
+  <data name="formWindowManager_StopProcess" xml:space="preserve">
+    <value>หยุดกระบวนการ</value>
+  </data>
+  <data name="formWindowManager_DeleteWindow" xml:space="preserve">
+    <value>ลบหน้าต่าง</value>
+  </data>
+  <data name="formWindowManager_RefreshWindowList" xml:space="preserve">
+    <value>รีเฟรชรายการหน้าต่าง</value>
+  </data>
+  <data name="formWindowProperties_ActiveWindowProperties" xml:space="preserve">
+    <value>คุณสมบัติหน้าต่างปัจจุบัน</value>
+  </data>
+  <data name="formWindowProperties_OpenTheFileBrowser" xml:space="preserve">
+    <value>เปิดไฟล์เบราว์เซอร์</value>
+  </data>
+  <data name="formWindowProperties_ContinueWhereYouLeftOff" xml:space="preserve">
+    <value>เปิดหน้าต่างเดิมก่อนออก</value>
+  </data>
+  <data name="formWindowProperties_OpenSpecificContent" xml:space="preserve">
+    <value>เปิดเนื้อหาที่เฉพาะเจาะจง</value>
+  </data>
+  <data name="formWindowProperties_FileBrowser" xml:space="preserve">
+    <value>ไฟล์เบราว์เซอร์</value>
+  </data>
+  <data name="formWindowProperties_Replay0" xml:space="preserve">
+    <value>เล่นซ้ำ: {0}</value>
+  </data>
+  <data name="formWindowProperties_Playback0" xml:space="preserve">
+    <value>เล่นย้อน: {0}</value>
+  </data>
+  <data name="formWindowProperties_Capture0" xml:space="preserve">
+    <value>จับภาพ: {0}</value>
+  </data>
+  <data name="formWorkspaceManager_ManageWorkspaces" xml:space="preserve">
+    <value>จัดการพื้นที่ทำงาน</value>
+  </data>
+  <data name="formWorkspaceManager_Windows" xml:space="preserve">
+    <value>หน้าต่าง</value>
+  </data>
+  <data name="formWorkspaceManager_CreateADesktopShortcut" xml:space="preserve">
+    <value>สร้างทางลัดไปเดสก์ท็อป</value>
+  </data>
+  <data name="formWorkspaceManager_CreateAWorkspaceFromTheActiveWindows" xml:space="preserve">
+    <value>สร้างพื้นที่ทำงานด้วยหน้าต่างปัจจุบัน</value>
+  </data>
+  <data name="formWorkspaceManager_RenameTheSelectedWorkspace" xml:space="preserve">
+    <value>แก้ไขชื่อพื้นที่ทำงานที่เลือก</value>
+  </data>
+  <data name="formWorkspaceManager_DeleteTheSelectedWorkspace" xml:space="preserve">
+    <value>ลบพื้นที่ทำงานที่เลือก</value>
+  </data>
+  <data name="formWorkspaceName_WorkspaceName" xml:space="preserve">
+    <value>ชื่อพื้นที่ทำงาน</value>
+  </data>
+  <data name="formWorkspaceName_Name" xml:space="preserve">
+    <value>ชื่อ:</value>
+  </data>
+  <data name="prefPanelCapture_Folders" xml:space="preserve">
+    <value>แฟ้ม</value>
+  </data>
+  <data name="prefPanelCapture_CaptureFolders" xml:space="preserve">
+    <value>แฟ้มจับภาพ</value>
+  </data>
+  <data name="prefPanelCapture_CaptureFolderDetails" xml:space="preserve">
+    <value>รายละเอียดแฟ้มจับภาพ</value>
+  </data>
+  <data name="prefPanelCapture_ShortName" xml:space="preserve">
+    <value>ชื่อย่อ:</value>
+  </data>
+  <data name="prefPanelCapture_Path" xml:space="preserve">
+    <value>เส้นทาง:</value>
+  </data>
+  <data name="prefPanelCapture_InsertAVariable" xml:space="preserve">
+    <value>แทรกตัวแปร…</value>
+  </data>
+  <data name="prefPanelCapture_InsertABackslash" xml:space="preserve">
+    <value>แทรกแบ็กสแลช</value>
+  </data>
+  <data name="prefPanelCapture_InsertAHyphen" xml:space="preserve">
+    <value>แทรกขีดกลาง</value>
+  </data>
+  <data name="prefPanelCapture_InsertAnUnderscore" xml:space="preserve">
+    <value>แทรกขีดล่าง</value>
+  </data>
+  <data name="prefPanelCapture_PreviewDynamicPath" xml:space="preserve">
+    <value>ดูตัวอย่างเส้นทางแบบไดนามิก</value>
+  </data>
+  <data name="prefPanelCapture_BrowseForFolder" xml:space="preserve">
+    <value>ค้นหาโฟลเดอร์</value>
+  </data>
+  <data name="prefPanelCapture_RemoveTheCaptureFolderFromTheList" xml:space="preserve">
+    <value>ลบแฟ้มจับภาพจากรายการ</value>
+  </data>
+  <data name="prefPanelCapture_AddANewCaptureFolder" xml:space="preserve">
+    <value>เพิ่มแฟ้มจับภาพใหม่</value>
+  </data>
+  <data name="prefPanelCapture_MoveUp" xml:space="preserve">
+    <value>เลื่อนขึ้น</value>
+  </data>
+  <data name="prefPanelCapture_MoveDown" xml:space="preserve">
+    <value>เลื่อนลง</value>
+  </data>
+  <data name="prefPanelCapture_PostRecordingCommandHelp" xml:space="preserve">
+    <value>ในการเรียกใช้โปรแกรมภายนอกหลังการบันทึก ให้ใช้กล่องโต้ตอบคำสั่งหลังการบันทึกในหน้าจอการจับภาพที่เกี่ยวข้อง\n\nคลิกขวาที่พื้นหลังช่องมองภาพและเลือก {0}</value>
+  </data>
+  <data name="mnuPostRecordingCommand" xml:space="preserve">
+    <value>คำสั่งหลังการบันทึก…</value>
+  </data>
+  <data name="prefPanelCapture_Files" xml:space="preserve">
+    <value>ไฟล์</value>
+  </data>
+  <data name="prefPanelCapture_DefaultFileName" xml:space="preserve">
+    <value>ชื่อไฟล์เริ่มต้น:</value>
+  </data>
+  <data name="prefPanelCapture_EnableAutoNumbering" xml:space="preserve">
+    <value>เปิดระบบการใส่ลำดับอัตโนมัติ</value>
+  </data>
+  <data name="prefPanelCapture_ToolTipAutoNumbering" xml:space="preserve">
+    <value>อัปเดตชื่อไฟล์อัตโนมัติหลังการบันทึกแต่ละครั้งเพื่อรวมหมายเลขลำดับ\nตัวเลือกนี้จะถูกละเว้นหากชื่อไฟล์ใช้ตัวแปรแบบไดนามิก</value>
+  </data>
+  <data name="prefPanelGeneral_EnableAllLanguages" xml:space="preserve">
+    <value>แสดงทุกภาษา</value>
+  </data>
+  <data name="formWindowProperties_StartProcess" xml:space="preserve">
+    <value>เริ่มกระบวนการ</value>
+  </data>
+  <data name="prefPanelCapture_ExportCalibration" xml:space="preserve">
+    <value>ส่งออกค่าการปรับเทียบ</value>
+  </data>
+  <data name="prefPanelCapture_ToolTipIgnoreOverwriteWarning" xml:space="preserve">
+    <value>ไม่ต้องแสดงกล่องข้อความยืนยันเมื่อเป็นการบันทึกทับไฟล์ที่มีอยู่</value>
+  </data>
+  <data name="prefPanelCapture_Trigger" xml:space="preserve">
+    <value>ตัวกระตุ้น</value>
+  </data>
+  <data name="prefPanelCapture_EnableUDPTrigger" xml:space="preserve">
+    <value>เปิดใช้งานตัวกระตุ้น UDP</value>
+  </data>
+  <data name="prefPanelCapture_UDPPort" xml:space="preserve">
+    <value>พอร์ต UDP:</value>
+  </data>
+  <data name="prefPanelCapture_DefaultTriggerState" xml:space="preserve">
+    <value>ค่าตัวกระตุ้นเริ่มต้น:</value>
+  </data>
+  <data name="prefPanelCapture_Armed" xml:space="preserve">
+    <value>พร้อมรอคำสั่งใช้งาน</value>
+  </data>
+  <data name="prefPanelCapture_Disarmed" xml:space="preserve">
+    <value>ปลดคำสั่งรอใช้งาน</value>
+  </data>
+  <data name="prefPanelPlayer_Image" xml:space="preserve">
+    <value>รูปภาพ</value>
+  </data>
+  <data name="prefPanelPlayer_EnablePixelFiltering" xml:space="preserve">
+    <value>เปิดการกรองพิกเซล</value>
+  </data>
+  <data name="prefPanelDrawings_lblPreset" xml:space="preserve">
+    <value>ตั้งล่วงหน้า {0}:</value>
+  </data>
+  <data name="Name" xml:space="preserve">
+    <value>ชื่อ</value>
+  </data>
+  <data name="formWindowProperties_OnStartup" xml:space="preserve">
+    <value>ตอนเริ่มต้น</value>
+  </data>
+  <data name="formWindowProperties_ScreenList" xml:space="preserve">
+    <value>รายการหน้าฉาก</value>
+  </data>
+  <data name="formWindowProperties_ImportCurrentScreens" xml:space="preserve">
+    <value>นำเข้าหน้าฉากปัจจุบัน</value>
+  </data>
+  <data name="formWindowManager_SavedWindows" xml:space="preserve">
+    <value>หน้าต่างที่บันทึกไว้</value>
+  </data>
+  <data name="prefPanelCapture_ExportedAnnotations" xml:space="preserve">
+    <value>ส่งออกคำอธิบายแล้ว</value>
+  </data>
+  <data name="prefPanelCapture_ExportDrawings" xml:space="preserve">
+    <value>ส่งออกภาพวาด</value>
+  </data>
+  <data name="prefPanelDrawings_EnableSmoothingOfDerivativesForHighSpeedFootage" xml:space="preserve">
+    <value>เปิดใช้งานการปรับภาพเนียนแยกย่อยสำหรับฟุตเทจความเร็วสูง</value>
+  </data>
+</root>

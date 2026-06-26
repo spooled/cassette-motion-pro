@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<KinoveaDrawingTool>
+  <FormatVersion>1.0</FormatVersion>
+  <Id>6b59ec55-fe12-483f-99a0-013e693ef4e8</Id>
+  <Name>Plane</Name>
+  <DisplayName>DrawingName_PerspectiveGrid</DisplayName>
+  <Icon>plane</Icon>
+  <DrawingClass>DrawingPlane</DrawingClass>
+  <Attached>true</Attached>
+  <KeepToolAfterDrawingCreation>false</KeepToolAfterDrawingCreation>
+  <KeepToolAfterFrameChange>false</KeepToolAfterFrameChange>
+  <DefaultStyle>
+    <Color Key="color">
+      <Value>255;150;149;237</Value>
+    </Color>
+    <Int Key="cols" DisplayName="Columns">
+      <Min>1</Min>
+      <Max>50</Max>
+      <Value>10</Value>
+    </Int>
+    <Int Key="rows" DisplayName="Rows">
+      <Min>1</Min>
+      <Max>50</Max>
+      <Value>10</Value>
+    </Int>
+    <Toggle Key="perspective">
+      <Value>true</Value>
+      <Variant>Perspective</Variant>
+    </Toggle>
+  </DefaultStyle>
+</KinoveaDrawingTool>
