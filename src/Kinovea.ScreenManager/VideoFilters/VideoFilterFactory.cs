@@ -1,0 +1,112 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Drawing;
+using Kinovea.ScreenManager.Languages;
+
+namespace Kinovea.ScreenManager
+{
+    /// <summary>
+    /// Static class that produces instances of Video filters and provide information about filter types.
+    /// This is used to build the menu or get the XML tag for example.
+    ///
+    /// The individual filters are owned by the metadata object of each player screen.
+    /// The screen has one instance of each filter. There at most one active filter at any given time.
+    /// Filters keep their data even when they are not active.
+    /// </summary>
+    public static class VideoFilterFactory
+    {
+        private static Dictionary<VideoFilterType, VideoFilterInfo> info = new Dictionary<VideoFilterType, VideoFilterInfo>();
+
+        /// <summary>
+        /// Private constructor initializing all the video filters.
+        /// </summary>
+        static VideoFilterFactory()
+        {
+            info.Add(VideoFilterType.Kinogram, new VideoFilterInfo("Kinogram", "filterName_Kinogram", Properties.Resources.kinogram, false));
+            info.Add(VideoFilterType.CameraMotion, new VideoFilterInfo("CameraMotion", "filterName_CameraMotion", Properties.Resources.motion_detector, false));
+            info.Add(VideoFilterType.LensCalibration, new VideoFilterInfo("LensCalibration", "filterName_LensCalibration", Properties.Resources.checkerboard, false));
+        }
+
+        /// <summary>
+        /// Create a new filter of the specified type.
+        /// There should be one filter of each type per screen.
+        /// </summary>
+        public static IVideoFilter CreateFilter(VideoFilterType type, Metadata metadata)
+        {
+            switch (type)
+            {
+                case VideoFilterType.Kinogram:
+                    return new VideoFilterKinogram(metadata);
+                case VideoFilterType.CameraMotion:
+                    return new VideoFilterCameraMotion(metadata);
+                case VideoFilterType.LensCalibration:
+                    return new VideoFilterLensCalibration(metadata);
+                default:
+                    return null;
+            }
+        }
+
+        /// <summary>
+        /// Retrieve the internal name for this filter type.
+        /// </summary>
+        public static string GetName(VideoFilterType type)
+        {
+            if (type == VideoFilterType.None)
+                return "";
+
+            return info[type].Name;
+        }
+
+        /// <summary>
+        /// Retrieve the user-facing name for this filter type.
+        /// </summary>
+        public static string GetFriendlyName(VideoFilterType type)
+        {
+            if (type == VideoFilterType.None)
+                return ScreenManagerLang.filterName_Analysis;
+
+            string friendlyNameResource = info[type].FriendlyNameResource;
+            if (string.IsNullOrEmpty(friendlyNameResource))
+                return info[type].Name;
+
+            string friendlyName = ScreenManagerLang.ResourceManager.GetString(friendlyNameResource);
+            if (string.IsNullOrEmpty(friendlyName))
+                return info[type].Name;
+
+            return friendlyName;
+        }
+
+        public static Bitmap GetIcon(VideoFilterType type)
+        {
+            if (type == VideoFilterType.None)
+                return Properties.Resources.microscope_16;
+
+            return info[type].Icon;
+        }
+
+        public static bool GetExperimental(VideoFilterType type)
+        {
+            if (type == VideoFilterType.None)
+                return false;
+
+            return info[type].Experimental;
+        }
+
+        /// <summary>
+        /// Retrieve the filter type from the name.
+        /// </summary>
+        public static VideoFilterType GetFilterType(string name)
+        {
+            foreach (var pair in info)
+            {
+                if (pair.Value.Name == name)
+                    return pair.Key;
+            }
+
+            return VideoFilterType.None;
+        }
+    }
+}

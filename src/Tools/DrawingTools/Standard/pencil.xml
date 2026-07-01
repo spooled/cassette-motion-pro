@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<KinoveaDrawingTool>
+  <FormatVersion>1.0</FormatVersion>
+  <Id>26989429-b003-426d-b754-203855b94eeb</Id>
+  <Name>Pencil</Name>
+  <DisplayName>ToolTip_DrawingToolPencil</DisplayName>
+  <Icon>drawing_16</Icon>
+  <DrawingClass>DrawingPencil</DrawingClass>
+  <Attached>true</Attached>
+  <KeepToolAfterDrawingCreation>true</KeepToolAfterDrawingCreation>
+  <KeepToolAfterFrameChange>true</KeepToolAfterFrameChange>
+  <DefaultStyle>
+    <Color Key="color">
+      <Value>255;100;149;237</Value>
+    </Color>
+    <PenSize Key="pen size">
+      <Value>10</Value>
+    </PenSize>
+    <PenShape Key="pen shape">
+      <Value>Solid</Value>
+    </PenShape>
+  </DefaultStyle>
+</KinoveaDrawingTool>

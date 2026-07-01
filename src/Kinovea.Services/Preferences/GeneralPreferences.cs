@@ -1,0 +1,161 @@
+﻿#region License
+/*
+Copyright © Joan Charmant 2012.
+jcharmant@gmail.com 
+ 
+This file is part of Kinovea.
+
+Kinovea is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License version 2 
+as published by the Free Software Foundation.
+
+Kinovea is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Kinovea. If not, see http://www.gnu.org/licenses/.
+*/
+#endregion
+using System;
+using System.Globalization;
+using System.Threading;
+using System.Xml;
+using System.Windows.Forms;
+using System.Drawing;
+
+namespace Kinovea.Services
+{
+    public class GeneralPreferences : IPreferenceSerializer
+    {
+        #region Properties
+        public string Name
+        {
+            get { return "General"; }
+        }
+
+        public bool EnableDebugLog
+        {
+            get { BeforeRead(); return enableDebugLog; }
+            set { enableDebugLog = value; Save(); }
+        }
+
+        /// <summary>
+        /// If true all languages are enabled in the language selection list,
+        /// even those that with less than 50% coverage.
+        /// </summary>
+        public bool EnableAllLanguages
+        {
+            get { BeforeRead(); return enableAllLanguages; }
+            set { enableAllLanguages = value; Save(); }
+        }
+
+        /// <summary>
+        /// Last preference page visited.
+        /// </summary>
+        public int PreferencePage
+        {
+            get { BeforeRead(); return preferencePage; }
+            set { preferencePage = value; Save(); }
+        }
+
+        /// <summary>
+        /// Last mouse pointer used.
+        /// </summary>
+        public string PointerKey
+        {
+            get { BeforeRead(); return pointerKey; }
+            set { pointerKey = value; Save(); }
+        }
+        #endregion
+
+        #region Members
+        private string uiCultureName;
+        private bool enableDebugLog = false;
+        private bool enableAllLanguages = false;
+        private int preferencePage;
+        private string pointerKey = "::default";
+        #endregion
+
+
+        public GeneralPreferences()
+        {
+            uiCultureName = Thread.CurrentThread.CurrentUICulture.Name;
+        }
+
+        private void Save()
+        {
+            PreferencesManager.Save();
+        }
+
+        private void BeforeRead()
+        {
+            PreferencesManager.BeforeRead();
+        }
+
+        public void SetCulture(string cultureName)
+        {
+            uiCultureName = cultureName;
+            Save();
+        }
+
+        /// <summary>
+        /// Returns a CultureInfo object corresponding to the culture selected by the user.
+        /// The object is safe to be assigned CurrentThread.CurrentUICulture for this specific platform (codename may differ from the saved one).
+        /// </summary>
+        /// <returns></returns>
+        public CultureInfo GetSupportedCulture()
+        {
+            CultureInfo ci = new CultureInfo(uiCultureName);
+            if (LanguageManager.IsSupportedCulture(ci))
+                return ci;
+            else
+                return new CultureInfo("en");
+        }
+
+        #region Serialization
+
+        public void WriteXML(XmlWriter writer)
+        {
+            writer.WriteElementString("Culture", uiCultureName);
+            writer.WriteElementString("EnableDebugLog", XmlHelper.WriteBoolean(enableDebugLog));
+            writer.WriteElementString("EnableAllLanguages", XmlHelper.WriteBoolean(enableAllLanguages));
+            writer.WriteElementString("PreferencesPage", preferencePage.ToString());
+            writer.WriteElementString("Pointer", pointerKey);
+        }
+
+        public void ReadXML(XmlReader reader)
+        {
+            reader.ReadStartElement();
+
+            while (reader.NodeType == XmlNodeType.Element)
+            {
+                switch (reader.Name)
+                {
+                    case "Culture":
+                        uiCultureName = reader.ReadElementContentAsString();
+                        break;
+                    case "EnableDebugLog":
+                        enableDebugLog = XmlHelper.ParseBoolean(reader.ReadElementContentAsString());
+                        break;
+                    case "EnableAllLanguages":
+                        enableAllLanguages = XmlHelper.ParseBoolean(reader.ReadElementContentAsString());
+                        break;
+                    case "PreferencesPage":
+                        preferencePage = reader.ReadElementContentAsInt();
+                        break;
+                    case "Pointer":
+                        pointerKey = reader.ReadElementContentAsString();
+                        break;
+                    default:
+                        reader.ReadOuterXml();
+                        break;
+                }
+            }
+
+            reader.ReadEndElement();
+        }
+        #endregion
+    }
+}

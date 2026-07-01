@@ -1,0 +1,296 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+  <PropertyGroup>
+    <ProjectGuid>{2BF373B8-5D33-4FCF-8C30-5E8CAF6777E7}</ProjectGuid>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Kinovea.Camera</RootNamespace>
+    <AssemblyName>Kinovea.Camera</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <TargetFrameworkProfile>
+    </TargetFrameworkProfile>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <SignAssembly>False</SignAssembly>
+    <DelaySign>False</DelaySign>
+    <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+    <AllowUnsafeBlocks>False</AllowUnsafeBlocks>
+    <NoStdLib>False</NoStdLib>
+    <WarningLevel>4</WarningLevel>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <RunCodeAnalysis>False</RunCodeAnalysis>
+    <RunSourceAnalysis>False</RunSourceAnalysis>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Platform)' == 'x86' ">
+    <PlatformTarget>x86</PlatformTarget>
+    <RegisterForComInterop>False</RegisterForComInterop>
+    <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
+    <BaseAddress>4194304</BaseAddress>
+    <FileAlignment>4096</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <OutputPath>bin\Debug\</OutputPath>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>Full</DebugType>
+    <Optimize>False</Optimize>
+    <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <StartAction>Project</StartAction>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <OutputPath>bin\Release\</OutputPath>
+    <DebugSymbols>False</DebugSymbols>
+    <DebugType>None</DebugType>
+    <Optimize>True</Optimize>
+    <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>
+    <DefineConstants>TRACE</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x64\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+    <FileAlignment>4096</FileAlignment>
+    <DebugType>Full</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <CodeAnalysisLogFile>bin\Debug\Kinovea.Camera.dll.CodeAnalysisLog.xml</CodeAnalysisLogFile>
+    <CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
+    <CodeAnalysisModuleSuppressionsFile>GlobalSuppressions.cs</CodeAnalysisModuleSuppressionsFile>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisFailOnMissingRules>false</CodeAnalysisFailOnMissingRules>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <OutputPath>bin\x64\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <FileAlignment>4096</FileAlignment>
+    <DebugType>None</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <CodeAnalysisLogFile>bin\Release\Kinovea.Camera.dll.CodeAnalysisLog.xml</CodeAnalysisLogFile>
+    <CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
+    <CodeAnalysisModuleSuppressionsFile>GlobalSuppressions.cs</CodeAnalysisModuleSuppressionsFile>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+    <FileAlignment>4096</FileAlignment>
+    <DebugType>Full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <FileAlignment>4096</FileAlignment>
+    <DebugType>None</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="log4net">
+      <HintPath>..\packages\log4net.2.0.14\lib\net45\log4net.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="CameraManager.cs" />
+    <Compile Include="Configuration\AbstractCameraPropertyView.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Configuration\CameraProperty.cs" />
+    <Compile Include="Configuration\CameraPropertyRepresentation.cs" />
+    <Compile Include="Configuration\CameraPropertyType.cs" />
+    <Compile Include="CameraSummary.cs" />
+    <Compile Include="CameraTypeManager.cs" />
+    <Compile Include="Configuration\CameraPropertyViewLinear.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Configuration\CameraPropertyViewLinear.Designer.cs">
+      <DependentUpon>CameraPropertyViewLinear.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Configuration\CameraPropertyViewLogarithmic.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Configuration\CameraPropertyViewLogarithmic.Designer.cs">
+      <DependentUpon>CameraPropertyViewLogarithmic.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Configuration\AbstractControlDescriptionProvider`2.cs" />
+    <Compile Include="Configuration\CameraPropertyViewCheckbox.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Configuration\CameraPropertyViewCheckbox.Designer.cs">
+      <DependentUpon>CameraPropertyViewCheckbox.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Events\CameraThumbnailProducedEventArgs.cs" />
+    <Compile Include="Events\CameraLoadAskedEventArgs.cs" />
+    <Compile Include="Events\CamerasDiscoveredEventArgs.cs" />
+    <Compile Include="FormHandshakeResult.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FormHandshakeResult.designer.cs">
+      <DependentUpon>FormHandshakeResult.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FormIconPicker.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="FormIconPicker.Designer.cs">
+      <DependentUpon>FormIconPicker.cs</DependentUpon>
+    </Compile>
+    <Compile Include="IconLibrary.cs" />
+    <Compile Include="ImageAspectRatio.cs" />
+    <Compile Include="Interfaces\IConnectionWizard.cs" />
+    <Compile Include="Interfaces\ICaptureSource.cs" />
+    <Compile Include="Languages\CameraLang.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>CameraLang.resx</DependentUpon>
+    </Compile>
+    <Compile Include="LogarithmicMapper.cs" />
+    <Compile Include="Finishline.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Icons.Designer.cs">
+      <DependentUpon>Icons.resx</DependentUpon>
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Configuration\CameraPropertyViewLinear.resx">
+      <DependentUpon>CameraPropertyViewLinear.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Configuration\CameraPropertyViewLogarithmic.resx">
+      <DependentUpon>CameraPropertyViewLogarithmic.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Configuration\CameraPropertyViewCheckbox.resx">
+      <DependentUpon>CameraPropertyViewCheckbox.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FormHandshakeResult.resx">
+      <DependentUpon>FormHandshakeResult.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="FormIconPicker.resx">
+      <DependentUpon>FormIconPicker.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Languages\CameraLang.ar.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.az.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.bg.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.ca.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.cs.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.da.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.de.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.el.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.es.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.et.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.fa.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.fi.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.fr.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.hr.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.id.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.it.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.ja.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.ko.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.lt.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.mk.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.ms.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.nl.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.no.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.pl.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.pt.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>CameraLang.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Languages\CameraLang.ro.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.ru.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.sl.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.sr-Cyrl-RS.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.sr-Latn-RS.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.sv.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.ta.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.th.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.tr.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.uk.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.vi.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.Zh-CHS.resx" />
+    <EmbeddedResource Include="Languages\CameraLang.zh-Hant.resx" />
+    <EmbeddedResource Include="Properties\Icons.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Icons.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Kinovea.Pipeline\Kinovea.Pipeline.csproj">
+      <Project>{32380CE3-AA6A-465B-BB0C-BF0708B2B3A5}</Project>
+      <Name>Kinovea.Pipeline</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Kinovea.Services\Kinovea.Services.csproj">
+      <Project>{8AA92254-A016-4A84-925C-F5B07E02F8A8}</Project>
+      <Name>Kinovea.Services</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\counter.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\dashboard.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\basler.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\logitech.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\microsoft.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\playstation.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\basler2.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\ids.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\bug.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\dummy-happy.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\robot.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\baumer.png" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.Targets" />
+  <Target Name="FixAL1703Warning" BeforeTargets="GenerateSatelliteAssemblies" Condition="'$(PlatformTarget)' == 'x64'">
+    <Message Text="Adjusting SDK tools directory to use x64 version of AL.EXE" />
+    <PropertyGroup>
+      <TargetFrameworkSDKToolsDirectory>$(TargetFrameworkSDKToolsDirectory)$(PlatformTarget)\</TargetFrameworkSDKToolsDirectory>
+    </PropertyGroup>
+  </Target>
+</Project>
