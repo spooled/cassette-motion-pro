@@ -1,1 +1,63 @@
 
+name: Build Cassette Motion Pro
+
+on:
+  push:
+    branches: ["main", "feature/**"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+env:
+  VERSION: 0.1.0
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v2
+
+      - name: Restore NuGet packages
+        run: nuget restore src/CassetteMotionPro.sln
+
+      - name: Build solution
+        run: msbuild src/CassetteMotionPro.sln /p:Platform="x64" /p:Configuration=Release /p:AllowedReferenceRelatedFileExtensions=none
+
+      - name: Create portable settings folder
+        shell: cmd
+        run: mkdir src\Kinovea\bin\x64\Release\AppData
+
+      - name: Upload portable application
+        uses: actions/upload-artifact@v6
+        with:
+          name: CassetteMotionPro-Portable-${{ env.VERSION }}
+          path: src/Kinovea/bin/x64/Release/
+
+      - name: Remove portable settings folder
+        shell: cmd
+        run: rmdir src\Kinovea\bin\x64\Release\AppData
+
+      - name: Install NSIS
+        uses: repolevedavaj/install-nsis@v1.2.0
+        with:
+          nsis-version: "3.11"
+
+      - name: Build installer
+        shell: cmd
+        run: makensis src\Installer\kinovea.nsi
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v6
+        with:
+          name: CassetteMotionPro-Installer-${{ env.VERSION }}
+          path: src/Installer/CassetteMotionPro-${{ env.VERSION }}.exe
