@@ -112,7 +112,7 @@
 
   <Target Name="MoveLanguages">
     <Message Text="Moving language files"/>
-    <Move SourceFiles="$(TargetDir)%(Lang.Identity)\Kinovea.resources.dll" DestinationFolder="$(TargetDir)Languages\%(Lang.Identity)"/>
+    <Move SourceFiles="$(TargetDir)%(Lang.Identity)\$(TargetName).resources.dll" DestinationFolder="$(TargetDir)Languages\%(Lang.Identity)"/>
     <Move SourceFiles="$(TargetDir)%(Lang.Identity)\Kinovea.Camera.resources.dll" DestinationFolder="$(TargetDir)Languages\%(Lang.Identity)"/>
     <Move SourceFiles="$(TargetDir)%(Lang.Identity)\Kinovea.FileBrowser.resources.dll" DestinationFolder="$(TargetDir)Languages\%(Lang.Identity)"/>
     <Move SourceFiles="$(TargetDir)%(Lang.Identity)\Kinovea.ScreenManager.resources.dll" DestinationFolder="$(TargetDir)Languages\%(Lang.Identity)"/>
