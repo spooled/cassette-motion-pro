@@ -169,6 +169,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Branding\BrandingAssets.cs" />
+    <Compile Include="Clients\ClientRecord.cs" />
+    <Compile Include="Clients\ClientRepository.cs" />
+    <Compile Include="Clients\NewClientForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Clients\ClientManagerForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="NativeMethods.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>

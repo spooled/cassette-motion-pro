@@ -25,6 +25,5 @@ appdata_folder = os.path.join(output_folder, "AppData")
 os.mkdir(appdata_folder)
 
 # Zip the output folder
-shutil.make_archive("CassetteMotionPro-0.1.0", 'zip', output_folder)
-
+shutil.make_archive("CassetteMotionPro-0.2.0", 'zip', output_folder)
 

@@ -10,10 +10,11 @@
 
 ## 0.2 - Client manager
 
-- Client and bicycle records
-- Fit-session dates, notes, photos, videos, measurements, and reports
-- Recent clients and search
-- Durable storage with migration support
+- [x] Client, contact, bicycle, and notes records
+- [x] Automatic photos, videos, measurements, notes, and reports folders
+- [x] Recent clients and search
+- [x] Durable XML storage isolated from the video engine
+- [x] Direct navigation into the selected client's Videos folder
 
 ## 0.3 - Bike fit workspace
 

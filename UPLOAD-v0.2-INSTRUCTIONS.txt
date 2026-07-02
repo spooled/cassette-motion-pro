@@ -1,0 +1,30 @@
+Cassette Motion Pro v0.2 Update
+================================
+
+This update adds the Client Manager and changes the build version to 0.2.0.
+
+UPLOAD TO GITHUB
+
+1. Extract Cassette-Motion-Pro-0.2.0-update.zip.
+2. Open https://github.com/spooled/cassette-motion-pro
+3. Choose Add file, then Upload files.
+4. Drag every item from inside the extracted update folder onto the upload page.
+   Drag the contents, not the outer update folder itself.
+5. Wait for GitHub to finish listing the files.
+6. In the message box, enter: Add Cassette Motion Pro v0.2 Client Manager
+7. Choose Commit changes.
+
+BUILD THE WINDOWS APP
+
+The upload should start GitHub Actions automatically. Open the Actions tab and
+select the newest "Build Cassette Motion Pro" run. When it has a green check,
+download either:
+
+- CassetteMotionPro-Portable-0.2.0 (ZIP application)
+- CassetteMotionPro-Installer-0.2.0 (Windows installer)
+
+IMPORTANT
+
+The extracted update contains a hidden .github folder. It carries the updated
+0.2.0 Windows build recipe. On macOS, press Command+Shift+Period in Finder if
+you need to make hidden files visible.

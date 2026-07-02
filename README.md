@@ -5,7 +5,7 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.1 branding foundation
+## Current milestone: 0.2 client manager
 
 - Complete Kinovea source imported under `src/`
 - Application output renamed to `CassetteMotionPro.exe`
@@ -14,9 +14,13 @@ can be incorporated with minimal changes to the playback and annotation engine.
 - New application icon, splash screen, and About dialog artwork
 - Windows installer and portable artifact names updated
 - Windows build workflow provided at `.github/workflows/build.yml`
+- Dedicated Client Manager with search and recent clients
+- Persistent client, contact, bicycle, and notes records
+- Automatic Videos, Photos, Reports, Measurements, and Notes folders
+- One-click navigation from a client record into the existing video workflow
 
-The client manager, bike fit workspace, measurement library, and report
-generator remain future milestones. See [docs/roadmap.md](docs/roadmap.md).
+The bike fit workspace, measurement library, and report generator remain future
+milestones. See [docs/roadmap.md](docs/roadmap.md).
 
 ## Build on Windows
 

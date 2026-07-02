@@ -38,6 +38,7 @@ using Kinovea.Updater;
 using Kinovea.Video;
 using Kinovea.Camera;
 using System.Linq;
+using CassetteMotionPro.Clients;
 
 namespace Kinovea.Root
 {
@@ -56,8 +57,15 @@ namespace Kinovea.Root
         private UpdaterKernel updater;
         private ScreenManagerKernel screenManager;
         private Stopwatch stopwatch = new Stopwatch();
+        private ClientRepository clientRepository;
         
         #region Menus
+
+        // Clients
+        private ToolStripMenuItem mnuClients = new ToolStripMenuItem();
+        private ToolStripMenuItem mnuClientManager = new ToolStripMenuItem();
+        private ToolStripMenuItem mnuNewClient = new ToolStripMenuItem();
+        private ToolStripMenuItem mnuRecentClients = new ToolStripMenuItem();
 
         // File
         private ToolStripMenuItem mnuFile = new ToolStripMenuItem();
@@ -119,6 +127,7 @@ namespace Kinovea.Root
         #endregion
         
         private ToolStripButton toolOpenFile = new ToolStripButton();
+        private ToolStripButton toolClients = new ToolStripButton();
         private ToolStripStatusLabel statusLabel = new ToolStripStatusLabel();
 
         private static readonly log4net.ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
@@ -185,6 +194,8 @@ namespace Kinovea.Root
                 VariablesRepository.Initialize();
                 log.DebugFormat("Loaded variables:{0} ms.", stopwatch.ElapsedMilliseconds);
             }
+
+            clientRepository = new ClientRepository();
 
             // Build all other modules and their UI.
             BuildSubTree();
@@ -344,6 +355,27 @@ namespace Kinovea.Root
         private void GetModuleMenus(ToolStrip menu)
         {
             // Affectation of .Text property happens in RefreshCultureMenu
+
+            #region Clients
+            mnuClients.MergeAction = MergeAction.Append;
+            mnuClientManager.Image = Properties.Resources.user_detective;
+            mnuClientManager.ShortcutKeys = Keys.Control | Keys.Shift | Keys.C;
+            mnuClientManager.Click += mnuClientManager_Click;
+
+            mnuNewClient.Image = Properties.Resources.folder_add;
+            mnuNewClient.ShortcutKeys = Keys.Control | Keys.Shift | Keys.N;
+            mnuNewClient.Click += mnuNewClient_Click;
+
+            mnuRecentClients.Image = Properties.Resources.time;
+            mnuRecentClients.DropDownOpening += delegate { BuildRecentClientMenus(); };
+
+            mnuClients.DropDownItems.AddRange(new ToolStripItem[] {
+                mnuClientManager,
+                mnuNewClient,
+                new ToolStripSeparator(),
+                mnuRecentClients
+            });
+            #endregion
             
             #region File
             mnuFile.MergeAction = MergeAction.Append;
@@ -515,7 +547,7 @@ namespace Kinovea.Root
 
             // Top level merge.
             MenuStrip thisMenuStrip = new MenuStrip();
-            thisMenuStrip.Items.AddRange(new ToolStripItem[] { mnuFile, mnuEdit, mnuView, mnuImage, mnuVideo, mnuTools, mnuWindow, mnuOptions, mnuHelp });
+            thisMenuStrip.Items.AddRange(new ToolStripItem[] { mnuClients, mnuFile, mnuEdit, mnuView, mnuImage, mnuVideo, mnuTools, mnuWindow, mnuOptions, mnuHelp });
             thisMenuStrip.AllowMerge = true;
 
             ToolStripManager.Merge(thisMenuStrip, menu);
@@ -532,12 +564,19 @@ namespace Kinovea.Root
         }
         private void GetModuleToolBar(ToolStrip toolbar)
         {
+            toolClients.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            toolClients.Image = Properties.Resources.user_detective;
+            toolClients.ToolTipText = "Client Manager";
+            toolClients.Click += mnuClientManager_Click;
+
             // Open.
             toolOpenFile.DisplayStyle = ToolStripItemDisplayStyle.Image;
             toolOpenFile.Image = Properties.Resources.folder;
             toolOpenFile.ToolTipText = ScreenManagerLang.mnuOpenVideo;
             toolOpenFile.Click += new EventHandler(mnuOpenFileOnClick);
             
+            toolbar.Items.Add(toolClients);
+            toolbar.Items.Add(new ToolStripSeparator());
             toolbar.Items.Add(toolOpenFile);
         }
         private void GetSubModulesToolBars(ToolStrip toolbar)
@@ -548,6 +587,11 @@ namespace Kinovea.Root
         }
         private void RefreshCultureMenu()
         {
+            mnuClients.Text = "Clients";
+            mnuClientManager.Text = "Client Manager";
+            mnuNewClient.Text = "New Client...";
+            mnuRecentClients.Text = "Recent Clients";
+
             mnuFile.Text = RootLang.mnuFile;
             mnuOpenFile.Text = ScreenManagerLang.mnuOpenVideo;
 
@@ -615,6 +659,69 @@ namespace Kinovea.Root
         #endregion
 
         #region Menus Event Handlers
+
+        #region Clients
+        private void mnuClientManager_Click(object sender, EventArgs e)
+        {
+            using (ClientManagerForm form = new ClientManagerForm(clientRepository, OpenClient))
+                form.ShowDialog(mainWindow);
+
+            BuildRecentClientMenus();
+        }
+
+        private void mnuNewClient_Click(object sender, EventArgs e)
+        {
+            using (NewClientForm form = new NewClientForm())
+            {
+                if (form.ShowDialog(mainWindow) != DialogResult.OK)
+                    return;
+
+                try
+                {
+                    ClientRecord client = clientRepository.Create(form.Client);
+                    OpenClient(client);
+                }
+                catch (Exception exception)
+                {
+                    MessageBox.Show(mainWindow, "The client could not be created.\n\n" + exception.Message, "Client Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private void OpenClient(ClientRecord client)
+        {
+            if (client == null)
+                return;
+
+            clientRepository.MarkOpened(client);
+            NotificationCenter.RaiseFolderChangeAsked(client.VideosPath);
+            statusLabel.Text = string.Format("Client: {0} · {1}", client.DisplayName, client.BikeDescription);
+            BuildRecentClientMenus();
+        }
+
+        private void BuildRecentClientMenus()
+        {
+            mnuRecentClients.DropDownItems.Clear();
+            IList<ClientRecord> clients = clientRepository.LoadAll().Take(8).ToList();
+            if (clients.Count == 0)
+            {
+                ToolStripMenuItem empty = new ToolStripMenuItem("No recent clients");
+                empty.Enabled = false;
+                mnuRecentClients.DropDownItems.Add(empty);
+                return;
+            }
+
+            foreach (ClientRecord client in clients)
+            {
+                ClientRecord recentClient = client;
+                ToolStripMenuItem item = new ToolStripMenuItem();
+                item.Text = string.Format("{0}  -  {1}", recentClient.DisplayName, recentClient.BikeDescription);
+                item.Image = Properties.Resources.folder;
+                item.Click += delegate { OpenClient(recentClient); };
+                mnuRecentClients.DropDownItems.Add(item);
+            }
+        }
+        #endregion
 
         #region File
         private void mnuOpenFileOnClick(object sender, EventArgs e)
