@@ -1,0 +1,31 @@
+Cassette Motion Pro v0.3 Update
+================================
+
+This update adds the Bike Fit Workspace and automatic client video importing.
+
+UPLOAD THE VISIBLE FILES
+
+1. Extract Cassette-Motion-Pro-0.3.0-update.zip.
+2. Open the extracted folder. Do not upload the outer folder itself.
+3. Open https://github.com/spooled/cassette-motion-pro
+4. Choose Add file, then Upload files.
+5. Drag every item from INSIDE the extracted folder onto GitHub.
+6. Check that GitHub shows paths beginning with README.md, docs/, installer/,
+   and src/. The paths must not begin with Cassette-Motion-Pro-0.3.0-update/.
+7. Enter: Add Cassette Motion Pro v0.3 Bike Fit Workspace
+8. Commit the changes.
+
+UPDATE THE WINDOWS BUILD VERSION
+
+The hidden .github folder is intentionally not included in this package.
+
+1. Open this existing file on GitHub:
+   https://github.com/spooled/cassette-motion-pro/blob/main/.github/workflows/build.yml
+2. Click the pencil icon.
+3. Change VERSION: 0.2.0 to VERSION: 0.3.0.
+4. Commit the change.
+
+The second commit starts the final build. When it has a green check, download:
+
+- CassetteMotionPro-Installer-0.3.0
+- CassetteMotionPro-Portable-0.3.0

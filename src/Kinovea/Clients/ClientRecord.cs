@@ -67,5 +67,8 @@ namespace CassetteMotionPro.Clients
 
         [XmlIgnore]
         public string NotesPath { get { return Path.Combine(FolderPath ?? string.Empty, "Notes"); } }
+
+        [XmlIgnore]
+        public string FitSessionsPath { get { return Path.Combine(MeasurementsPath, "Sessions"); } }
     }
 }

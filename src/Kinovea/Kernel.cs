@@ -39,6 +39,7 @@ using Kinovea.Video;
 using Kinovea.Camera;
 using System.Linq;
 using CassetteMotionPro.Clients;
+using CassetteMotionPro.Workspace;
 
 namespace Kinovea.Root
 {
@@ -663,7 +664,7 @@ namespace Kinovea.Root
         #region Clients
         private void mnuClientManager_Click(object sender, EventArgs e)
         {
-            using (ClientManagerForm form = new ClientManagerForm(clientRepository, OpenClient))
+            using (ClientManagerForm form = new ClientManagerForm(clientRepository, OpenClient, QueueClientWorkspace))
                 form.ShowDialog(mainWindow);
 
             BuildRecentClientMenus();
@@ -679,7 +680,7 @@ namespace Kinovea.Root
                 try
                 {
                     ClientRecord client = clientRepository.Create(form.Client);
-                    OpenClient(client);
+                    OpenClientWorkspace(client);
                 }
                 catch (Exception exception)
                 {
@@ -697,6 +698,23 @@ namespace Kinovea.Root
             NotificationCenter.RaiseFolderChangeAsked(client.VideosPath);
             statusLabel.Text = string.Format("Client: {0} · {1}", client.DisplayName, client.BikeDescription);
             BuildRecentClientMenus();
+        }
+
+        private void OpenClientWorkspace(ClientRecord client)
+        {
+            if (client == null)
+                return;
+
+            clientRepository.MarkOpened(client);
+            statusLabel.Text = string.Format("Fit session: {0} · {1}", client.DisplayName, client.BikeDescription);
+            using (BikeFitWorkspaceForm form = new BikeFitWorkspaceForm(client, OpenFromPath))
+                form.ShowDialog(mainWindow);
+            BuildRecentClientMenus();
+        }
+
+        private void QueueClientWorkspace(ClientRecord client)
+        {
+            mainWindow.BeginInvoke((MethodInvoker)delegate { OpenClientWorkspace(client); });
         }
 
         private void BuildRecentClientMenus()

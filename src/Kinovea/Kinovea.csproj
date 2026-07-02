@@ -177,6 +177,11 @@
     <Compile Include="Clients\ClientManagerForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Workspace\FitSessionRecord.cs" />
+    <Compile Include="Workspace\FitSessionRepository.cs" />
+    <Compile Include="Workspace\BikeFitWorkspaceForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="NativeMethods.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>

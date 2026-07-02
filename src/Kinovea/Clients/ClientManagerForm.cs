@@ -18,6 +18,7 @@ namespace CassetteMotionPro.Clients
     {
         private readonly ClientRepository repository;
         private readonly Action<ClientRecord> openClient;
+        private readonly Action<ClientRecord> openWorkspace;
         private readonly TextBox txtSearch = new TextBox();
         private readonly ListView clientList = new ListView();
         private readonly Label lblName = new Label();
@@ -26,6 +27,7 @@ namespace CassetteMotionPro.Clients
         private readonly Label lblLastOpened = new Label();
         private readonly Label lblNotes = new Label();
         private readonly Button btnOpenVideos = new Button();
+        private readonly Button btnWorkspace = new Button();
         private readonly Button btnOpenFolder = new Button();
         private IList<ClientRecord> clients = new List<ClientRecord>();
 
@@ -39,13 +41,14 @@ namespace CassetteMotionPro.Clients
             }
         }
 
-        public ClientManagerForm(ClientRepository repository, Action<ClientRecord> openClient)
+        public ClientManagerForm(ClientRepository repository, Action<ClientRecord> openClient, Action<ClientRecord> openWorkspace)
         {
             if (repository == null)
                 throw new ArgumentNullException("repository");
 
             this.repository = repository;
             this.openClient = openClient;
+            this.openWorkspace = openWorkspace;
 
             Text = "Client Manager - Cassette Motion Pro";
             Font = new Font("Segoe UI", 9F);
@@ -125,7 +128,7 @@ namespace CassetteMotionPro.Clients
             clientList.Columns.Add("Bike", 155);
             clientList.Columns.Add("Last opened", 105);
             clientList.SelectedIndexChanged += delegate { UpdateDetails(); };
-            clientList.DoubleClick += delegate { OpenSelectedClient(); };
+            clientList.DoubleClick += delegate { OpenSelectedWorkspace(); };
 
             split.Panel1.Controls.Add(clientList);
             split.Panel1.Controls.Add(searchPanel);
@@ -194,13 +197,20 @@ namespace CassetteMotionPro.Clients
             };
 
             btnOpenVideos.Text = "Open Videos";
-            btnOpenVideos.Size = new Size(130, 40);
+            btnOpenVideos.Size = new Size(110, 40);
             btnOpenVideos.Location = new Point(191, 10);
-            StyleButton(btnOpenVideos, true);
+            StyleButton(btnOpenVideos, false);
             btnOpenVideos.Click += delegate { OpenSelectedClient(); };
+
+            btnWorkspace.Text = "Fit Workspace";
+            btnWorkspace.Size = new Size(130, 40);
+            btnWorkspace.Location = new Point(311, 10);
+            StyleButton(btnWorkspace, true);
+            btnWorkspace.Click += delegate { OpenSelectedWorkspace(); };
 
             actions.Controls.Add(btnOpenFolder);
             actions.Controls.Add(btnOpenVideos);
+            actions.Controls.Add(btnWorkspace);
             content.Controls.Add(lblName);
             content.Controls.Add(lblBike);
             content.Controls.Add(lblContact);
@@ -261,6 +271,7 @@ namespace CassetteMotionPro.Clients
             bool hasClient = client != null;
             btnOpenFolder.Enabled = hasClient;
             btnOpenVideos.Enabled = hasClient;
+            btnWorkspace.Enabled = hasClient;
 
             if (!hasClient)
             {
@@ -338,6 +349,19 @@ namespace CassetteMotionPro.Clients
                 openClient(client);
             DialogResult = DialogResult.OK;
             Close();
+        }
+
+        private void OpenSelectedWorkspace()
+        {
+            ClientRecord client = SelectedClient;
+            if (client == null)
+                return;
+
+            repository.MarkOpened(client);
+            DialogResult = DialogResult.OK;
+            Close();
+            if (openWorkspace != null)
+                openWorkspace(client);
         }
 
         private static Button CreateButton(string text, bool primary)
