@@ -1,0 +1,17 @@
+Cassette Motion Pro v0.3.2 Update
+==================================
+
+This update replaces Left/Right video with Before/After video.
+
+1. Extract Cassette-Motion-Pro-0.3.2-update.zip.
+2. Open the extracted folder. Upload its contents, not the outer folder.
+3. In GitHub choose Add file, then Upload files.
+4. Drag everything from INSIDE the extracted folder onto GitHub.
+5. Confirm paths begin with README.md, docs/, installer/, and src/.
+6. Commit with: Add v0.3.2 before and after video comparison
+
+Then open:
+https://github.com/spooled/cassette-motion-pro/blob/main/.github/workflows/build.yml
+
+Click the pencil and change VERSION: 0.3.1 to VERSION: 0.3.2, then commit.
+Download the 0.3.2 installer after the final Actions run receives a green check.

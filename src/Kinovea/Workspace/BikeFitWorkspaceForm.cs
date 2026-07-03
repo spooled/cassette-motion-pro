@@ -221,18 +221,18 @@ namespace CassetteMotionPro.Workspace
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 86));
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 72));
 
-            AddMediaRow(table, "Left", "LeftVideoPath");
-            AddMediaRow(table, "Right", "RightVideoPath");
+            AddMediaRow(table, "Before", "BeforeVideoPath");
+            AddMediaRow(table, "After", "AfterVideoPath");
 
             FlowLayoutPanel comparisons = new FlowLayoutPanel();
             comparisons.Dock = DockStyle.Fill;
             comparisons.FlowDirection = FlowDirection.LeftToRight;
             comparisons.Padding = new Padding(0, 18, 0, 0);
 
-            Button leftRight = CreateButton("Open Left + Right", true);
-            leftRight.Size = new Size(170, 38);
-            leftRight.Click += delegate { OpenPair("LeftVideoPath", "RightVideoPath"); };
-            comparisons.Controls.Add(leftRight);
+            Button beforeAfter = CreateButton("Open Before + After", true);
+            beforeAfter.Size = new Size(190, 38);
+            beforeAfter.Click += delegate { OpenPair("BeforeVideoPath", "AfterVideoPath"); };
+            comparisons.Controls.Add(beforeAfter);
 
             int comparisonRow = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 78));
@@ -240,7 +240,7 @@ namespace CassetteMotionPro.Workspace
             table.SetColumnSpan(comparisons, 3);
 
             Label hint = new Label();
-            hint.Text = "Opening the pair loads the left and right videos into Cassette Motion Pro’s synchronized dual-player workspace.";
+            hint.Text = "Opening the pair loads the before and after videos into Cassette Motion Pro’s synchronized dual-player workspace.";
             hint.Dock = DockStyle.Fill;
             hint.ForeColor = Color.FromArgb(92, 104, 98);
             int hintRow = table.RowCount++;
@@ -478,8 +478,14 @@ namespace CassetteMotionPro.Workspace
             txtGoals.Text = session.Goals ?? string.Empty;
             txtNotes.Text = session.Notes ?? string.Empty;
 
-            SetMedia("LeftVideoPath", string.IsNullOrEmpty(session.LeftVideoPath) ? session.SideVideoPath : session.LeftVideoPath);
-            SetMedia("RightVideoPath", string.IsNullOrEmpty(session.RightVideoPath) ? session.FrontVideoPath : session.RightVideoPath);
+            string beforePath = session.BeforeVideoPath;
+            if (string.IsNullOrEmpty(beforePath))
+                beforePath = string.IsNullOrEmpty(session.LeftVideoPath) ? session.SideVideoPath : session.LeftVideoPath;
+            string afterPath = session.AfterVideoPath;
+            if (string.IsNullOrEmpty(afterPath))
+                afterPath = string.IsNullOrEmpty(session.RightVideoPath) ? session.FrontVideoPath : session.RightVideoPath;
+            SetMedia("BeforeVideoPath", beforePath);
+            SetMedia("AfterVideoPath", afterPath);
 
             SetMeasurement("SaddleHeightBefore", session.SaddleHeightBefore);
             SetMeasurement("SaddleHeightAfter", session.SaddleHeightAfter);
@@ -528,8 +534,8 @@ namespace CassetteMotionPro.Workspace
             currentSession.Status = Convert.ToString(cmbStatus.SelectedItem);
             currentSession.Goals = txtGoals.Text.Trim();
             currentSession.Notes = txtNotes.Text.Trim();
-            currentSession.LeftVideoPath = mediaBoxes["LeftVideoPath"].Text;
-            currentSession.RightVideoPath = mediaBoxes["RightVideoPath"].Text;
+            currentSession.BeforeVideoPath = mediaBoxes["BeforeVideoPath"].Text;
+            currentSession.AfterVideoPath = mediaBoxes["AfterVideoPath"].Text;
             currentSession.SaddleHeightBefore = measurementBoxes["SaddleHeightBefore"].Text.Trim();
             currentSession.SaddleHeightAfter = measurementBoxes["SaddleHeightAfter"].Text.Trim();
             currentSession.SaddleSetbackBefore = measurementBoxes["SaddleSetbackBefore"].Text.Trim();

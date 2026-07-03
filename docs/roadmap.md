@@ -24,6 +24,13 @@
 - [x] Synchronized left/right launch into the dual player
 - [x] Rider goals, session notes, status, and before/after bike measurements
 
+## 0.3.2 - Before/after comparison
+
+- [x] Replace Left/Right session slots with Before/After
+- [x] Import before and after media into the client folder
+- [x] Open both videos in the synchronized dual player
+- [x] Migrate existing Left/Right session paths when a session is reopened
+
 ## 0.4 - Measurement library
 
 - Body-angle tools: hip, knee, shoulder, elbow, ankle, back, and torso
