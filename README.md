@@ -19,9 +19,9 @@ can be incorporated with minimal changes to the playback and annotation engine.
 - Automatic Videos, Photos, Reports, Measurements, and Notes folders
 - One-click navigation from a client record into the existing video workflow
 - Persistent fit sessions attached to each client
-- Side, front, rear, before, and after video slots
+- Simple left and right video slots
 - Video import into organized client-specific folders
-- One-click synchronized side/front and before/after comparison
+- One-click synchronized left/right comparison
 - Rider goals, fit notes, session status, and before/after bike measurements
 
 The expanded body-angle measurement library and report generator remain future

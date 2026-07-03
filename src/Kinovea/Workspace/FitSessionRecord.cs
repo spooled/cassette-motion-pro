@@ -21,6 +21,10 @@ namespace CassetteMotionPro.Workspace
         public string Goals { get; set; }
         public string Notes { get; set; }
 
+        public string LeftVideoPath { get; set; }
+        public string RightVideoPath { get; set; }
+
+        // Retained so sessions created by the first 0.3 build remain readable.
         public string SideVideoPath { get; set; }
         public string FrontVideoPath { get; set; }
         public string RearVideoPath { get; set; }

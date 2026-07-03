@@ -19,9 +19,9 @@
 ## 0.3 - Bike fit workspace
 
 - [x] Persistent bike-fit sessions tied to each client
-- [x] Side, front, rear, and before/after video organization
+- [x] Simple left and right video organization
 - [x] Automatic video import into the client folder
-- [x] Synchronized side/front and before/after launch into the dual player
+- [x] Synchronized left/right launch into the dual player
 - [x] Rider goals, session notes, status, and before/after bike measurements
 
 ## 0.4 - Measurement library

@@ -1,0 +1,17 @@
+Cassette Motion Pro v0.3.1 Update
+==================================
+
+This update simplifies the workspace to Left Video and Right Video.
+
+1. Extract Cassette-Motion-Pro-0.3.1-update.zip.
+2. Open the extracted folder. Upload its contents, not the outer folder.
+3. In the GitHub repository choose Add file, then Upload files.
+4. Drag everything from INSIDE the extracted folder onto GitHub.
+5. Confirm paths begin with README.md, docs/, installer/, and src/.
+6. Commit with: Simplify workspace to left and right videos
+
+Then open:
+https://github.com/spooled/cassette-motion-pro/blob/main/.github/workflows/build.yml
+
+Click the pencil and change VERSION: 0.3.0 to VERSION: 0.3.1, then commit.
+Download the 0.3.1 installer after the final Actions run receives a green check.
