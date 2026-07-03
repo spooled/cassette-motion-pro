@@ -41,6 +41,10 @@ namespace CassetteMotionPro.Workspace
         public string HandlebarDropAfter { get; set; }
         public string SaddleTipToGripReachBefore { get; set; }
         public string SaddleTipToGripReachAfter { get; set; }
+        public string HandlebarXBefore { get; set; }
+        public string HandlebarXAfter { get; set; }
+        public string HandlebarYBefore { get; set; }
+        public string HandlebarYAfter { get; set; }
         public string CrankLengthBefore { get; set; }
         public string CrankLengthAfter { get; set; }
         public string CleatPositionBefore { get; set; }

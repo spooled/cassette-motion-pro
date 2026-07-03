@@ -1,0 +1,15 @@
+Cassette Motion Pro v0.3.4 Update
+==================================
+
+This update adds Handlebar X and Handlebar Y to the Measurements chart.
+
+1. Extract Cassette-Motion-Pro-0.3.4-update.zip.
+2. Open the extracted folder and upload its contents, not the outer folder.
+3. In GitHub choose Add file, then Upload files.
+4. Drag everything from INSIDE the extracted folder onto GitHub.
+5. Confirm paths begin with README.md, docs/, installer/, and src/.
+6. Commit with: Add Handlebar X and Y measurements
+
+Then edit .github/workflows/build.yml and change VERSION: 0.3.3 to
+VERSION: 0.3.4. Commit the change and download the 0.3.4 installer after the
+final Actions run receives a green check.

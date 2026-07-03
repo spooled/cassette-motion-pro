@@ -268,6 +268,8 @@ namespace CassetteMotionPro.Workspace
             AddMeasurementRow(table, "Saddle height", "SaddleHeight");
             AddMeasurementRow(table, "Saddle setback", "SaddleSetback");
             AddMeasurementRow(table, "Saddle tip to grip reach", "SaddleTipToGripReach");
+            AddMeasurementRow(table, "Handlebar X", "HandlebarX");
+            AddMeasurementRow(table, "Handlebar Y", "HandlebarY");
             AddMeasurementRow(table, "Handlebar reach", "HandlebarReach");
             AddMeasurementRow(table, "Handlebar drop", "HandlebarDrop");
             AddMeasurementRow(table, "Crank length", "CrankLength");
@@ -498,6 +500,10 @@ namespace CassetteMotionPro.Workspace
             SetMeasurement("HandlebarDropAfter", session.HandlebarDropAfter);
             SetMeasurement("SaddleTipToGripReachBefore", session.SaddleTipToGripReachBefore);
             SetMeasurement("SaddleTipToGripReachAfter", session.SaddleTipToGripReachAfter);
+            SetMeasurement("HandlebarXBefore", session.HandlebarXBefore);
+            SetMeasurement("HandlebarXAfter", session.HandlebarXAfter);
+            SetMeasurement("HandlebarYBefore", session.HandlebarYBefore);
+            SetMeasurement("HandlebarYAfter", session.HandlebarYAfter);
             SetMeasurement("CrankLengthBefore", session.CrankLengthBefore);
             SetMeasurement("CrankLengthAfter", session.CrankLengthAfter);
             SetMeasurement("CleatPositionBefore", session.CleatPositionBefore);
@@ -549,6 +555,10 @@ namespace CassetteMotionPro.Workspace
             currentSession.HandlebarDropAfter = measurementBoxes["HandlebarDropAfter"].Text.Trim();
             currentSession.SaddleTipToGripReachBefore = measurementBoxes["SaddleTipToGripReachBefore"].Text.Trim();
             currentSession.SaddleTipToGripReachAfter = measurementBoxes["SaddleTipToGripReachAfter"].Text.Trim();
+            currentSession.HandlebarXBefore = measurementBoxes["HandlebarXBefore"].Text.Trim();
+            currentSession.HandlebarXAfter = measurementBoxes["HandlebarXAfter"].Text.Trim();
+            currentSession.HandlebarYBefore = measurementBoxes["HandlebarYBefore"].Text.Trim();
+            currentSession.HandlebarYAfter = measurementBoxes["HandlebarYAfter"].Text.Trim();
             currentSession.CrankLengthBefore = measurementBoxes["CrankLengthBefore"].Text.Trim();
             currentSession.CrankLengthAfter = measurementBoxes["CrankLengthAfter"].Text.Trim();
             currentSession.CleatPositionBefore = measurementBoxes["CleatPositionBefore"].Text.Trim();

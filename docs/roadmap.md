@@ -35,6 +35,10 @@
 
 - [x] Add saddle-tip-to-grip reach to the before/after measurement chart
 
+## 0.3.4 - Handlebar coordinates
+
+- [x] Add Handlebar X and Handlebar Y to the before/after measurement chart
+
 ## 0.4 - Measurement library
 
 - Body-angle tools: hip, knee, shoulder, elbow, ankle, back, and torso
