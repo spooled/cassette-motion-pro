@@ -267,6 +267,7 @@ namespace CassetteMotionPro.Workspace
             AddMeasurementHeader(table);
             AddMeasurementRow(table, "Saddle height", "SaddleHeight");
             AddMeasurementRow(table, "Saddle setback", "SaddleSetback");
+            AddMeasurementRow(table, "Saddle tip to grip reach", "SaddleTipToGripReach");
             AddMeasurementRow(table, "Handlebar reach", "HandlebarReach");
             AddMeasurementRow(table, "Handlebar drop", "HandlebarDrop");
             AddMeasurementRow(table, "Crank length", "CrankLength");
@@ -495,6 +496,8 @@ namespace CassetteMotionPro.Workspace
             SetMeasurement("HandlebarReachAfter", session.HandlebarReachAfter);
             SetMeasurement("HandlebarDropBefore", session.HandlebarDropBefore);
             SetMeasurement("HandlebarDropAfter", session.HandlebarDropAfter);
+            SetMeasurement("SaddleTipToGripReachBefore", session.SaddleTipToGripReachBefore);
+            SetMeasurement("SaddleTipToGripReachAfter", session.SaddleTipToGripReachAfter);
             SetMeasurement("CrankLengthBefore", session.CrankLengthBefore);
             SetMeasurement("CrankLengthAfter", session.CrankLengthAfter);
             SetMeasurement("CleatPositionBefore", session.CleatPositionBefore);
@@ -544,6 +547,8 @@ namespace CassetteMotionPro.Workspace
             currentSession.HandlebarReachAfter = measurementBoxes["HandlebarReachAfter"].Text.Trim();
             currentSession.HandlebarDropBefore = measurementBoxes["HandlebarDropBefore"].Text.Trim();
             currentSession.HandlebarDropAfter = measurementBoxes["HandlebarDropAfter"].Text.Trim();
+            currentSession.SaddleTipToGripReachBefore = measurementBoxes["SaddleTipToGripReachBefore"].Text.Trim();
+            currentSession.SaddleTipToGripReachAfter = measurementBoxes["SaddleTipToGripReachAfter"].Text.Trim();
             currentSession.CrankLengthBefore = measurementBoxes["CrankLengthBefore"].Text.Trim();
             currentSession.CrankLengthAfter = measurementBoxes["CrankLengthAfter"].Text.Trim();
             currentSession.CleatPositionBefore = measurementBoxes["CleatPositionBefore"].Text.Trim();

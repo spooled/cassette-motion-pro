@@ -31,6 +31,10 @@
 - [x] Open both videos in the synchronized dual player
 - [x] Migrate existing Left/Right session paths when a session is reopened
 
+## 0.3.3 - Fit measurement refinement
+
+- [x] Add saddle-tip-to-grip reach to the before/after measurement chart
+
 ## 0.4 - Measurement library
 
 - Body-angle tools: hip, knee, shoulder, elbow, ankle, back, and torso
