@@ -707,9 +707,24 @@ namespace Kinovea.Root
 
             clientRepository.MarkOpened(client);
             statusLabel.Text = string.Format("Fit session: {0} · {1}", client.DisplayName, client.BikeDescription);
-            using (BikeFitWorkspaceForm form = new BikeFitWorkspaceForm(client, OpenFromPath))
+            using (BikeFitWorkspaceForm form = new BikeFitWorkspaceForm(client, OpenFromPath, OpenBodyAngleGuide))
                 form.ShowDialog(mainWindow);
             BuildRecentClientMenus();
+        }
+
+        private void OpenBodyAngleGuide(string path)
+        {
+            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+                return;
+
+            int target = screenManager.FindTargetScreen(typeof(PlayerScreen));
+            if (target < 0)
+                target = 0;
+
+            NotificationCenter.RaiseLoadVideoAsked(path, target);
+            screenManager.OrganizeScreens();
+            screenManager.ActivateDrawingTool("Bikefit", target);
+            statusLabel.Text = "Bike Fit Angles active: click the video to place the guided overlay.";
         }
 
         private void QueueClientWorkspace(ClientRecord client)

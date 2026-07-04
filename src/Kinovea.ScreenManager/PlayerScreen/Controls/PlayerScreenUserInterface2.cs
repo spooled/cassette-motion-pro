@@ -1203,6 +1203,24 @@ namespace Kinovea.ScreenManager
             btn.AutoToolTip = false;
             return btn;
         }
+
+        public bool ActivateDrawingTool(string toolName)
+        {
+            AbstractDrawingTool tool;
+            if (!m_FrameServer.Loaded || string.IsNullOrEmpty(toolName) || !ToolManager.Tools.TryGetValue(toolName, out tool))
+                return false;
+
+            if (m_FrameServer.Metadata.Magnifier.Initializing)
+                DisableMagnifier();
+
+            OnPoke();
+            m_ActiveTool = tool;
+            UpdateCursor();
+            if (m_ActiveTool.Attached)
+                PrepareKeyframesDock();
+            DoInvalidate();
+            return true;
+        }
         private void ResetData()
         {
             m_iFramesToDecode = 1;

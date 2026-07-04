@@ -1092,6 +1092,16 @@ namespace Kinovea.ScreenManager
             return (index >= 0 && index < screenList.Count) ? screenList[index] : null;
         }
 
+        public bool ActivateDrawingTool(string toolName, int screenIndex)
+        {
+            PlayerScreen player = GetScreenAt(screenIndex) as PlayerScreen;
+            if (player == null || !player.Full)
+                return false;
+
+            SetActiveScreen(player);
+            return player.view.ActivateDrawingTool(toolName);
+        }
+
         public void RemoveFirstEmpty()
         {
             foreach (AbstractScreen screen in screenList)

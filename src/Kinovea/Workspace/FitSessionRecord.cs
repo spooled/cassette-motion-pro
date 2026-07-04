@@ -50,6 +50,19 @@ namespace CassetteMotionPro.Workspace
         public string CleatPositionBefore { get; set; }
         public string CleatPositionAfter { get; set; }
 
+        public string KneeAngleBefore { get; set; }
+        public string KneeAngleAfter { get; set; }
+        public string HipAngleBefore { get; set; }
+        public string HipAngleAfter { get; set; }
+        public string AnkleAngleBefore { get; set; }
+        public string AnkleAngleAfter { get; set; }
+        public string TorsoAngleBefore { get; set; }
+        public string TorsoAngleAfter { get; set; }
+        public string ShoulderAngleBefore { get; set; }
+        public string ShoulderAngleAfter { get; set; }
+        public string ElbowAngleBefore { get; set; }
+        public string ElbowAngleAfter { get; set; }
+
         public DateTime CreatedUtc { get; set; }
         public DateTime ModifiedUtc { get; set; }
 

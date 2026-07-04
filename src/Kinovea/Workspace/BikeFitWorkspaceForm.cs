@@ -19,6 +19,7 @@ namespace CassetteMotionPro.Workspace
         private readonly ClientRecord client;
         private readonly FitSessionRepository repository;
         private readonly Action<string> openVideo;
+        private readonly Action<string> openBodyAngleGuide;
         private readonly ListView sessionList = new ListView();
         private readonly TextBox txtTitle = new TextBox();
         private readonly DateTimePicker dtpDate = new DateTimePicker();
@@ -29,13 +30,14 @@ namespace CassetteMotionPro.Workspace
         private readonly Dictionary<string, TextBox> measurementBoxes = new Dictionary<string, TextBox>();
         private FitSessionRecord currentSession;
 
-        public BikeFitWorkspaceForm(ClientRecord client, Action<string> openVideo)
+        public BikeFitWorkspaceForm(ClientRecord client, Action<string> openVideo, Action<string> openBodyAngleGuide)
         {
             if (client == null)
                 throw new ArgumentNullException("client");
 
             this.client = client;
             this.openVideo = openVideo;
+            this.openBodyAngleGuide = openBodyAngleGuide;
             repository = new FitSessionRepository(client);
 
             Text = "Bike Fit Workspace - Cassette Motion Pro";
@@ -142,6 +144,7 @@ namespace CassetteMotionPro.Workspace
             tabs.TabPages.Add(BuildOverviewTab());
             tabs.TabPages.Add(BuildMediaTab());
             tabs.TabPages.Add(BuildMeasurementsTab());
+            tabs.TabPages.Add(BuildBodyAnglesTab());
             tabs.TabPages.Add(BuildNotesTab());
 
             Panel actions = new Panel();
@@ -310,6 +313,59 @@ namespace CassetteMotionPro.Workspace
             content.Controls.Add(txtNotes);
             content.Controls.Add(label);
             page.Controls.Add(content);
+            return page;
+        }
+
+        private TabPage BuildBodyAnglesTab()
+        {
+            TabPage page = NewTab("Body Angles");
+            TableLayoutPanel table = new TableLayoutPanel();
+            table.Dock = DockStyle.Top;
+            table.AutoSize = true;
+            table.Padding = new Padding(24, 22, 24, 18);
+            table.ColumnCount = 3;
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 175));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+
+            AddMeasurementHeader(table);
+            AddMeasurementRow(table, "Knee angle", "KneeAngle");
+            AddMeasurementRow(table, "Hip angle", "HipAngle");
+            AddMeasurementRow(table, "Ankle angle", "AnkleAngle");
+            AddMeasurementRow(table, "Torso angle", "TorsoAngle");
+            AddMeasurementRow(table, "Shoulder angle", "ShoulderAngle");
+            AddMeasurementRow(table, "Elbow angle", "ElbowAngle");
+
+            Label guidance = new Label();
+            guidance.Text = "The guided overlay places markers at the shoulder, elbow, hand, hip, knee, ankle, and toe, then displays all six angles on the video.";
+            guidance.Dock = DockStyle.Fill;
+            guidance.ForeColor = Color.FromArgb(92, 104, 98);
+            guidance.Padding = new Padding(0, 12, 0, 4);
+            int guidanceRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 68));
+            table.Controls.Add(guidance, 0, guidanceRow);
+            table.SetColumnSpan(guidance, 3);
+
+            FlowLayoutPanel actions = new FlowLayoutPanel();
+            actions.Dock = DockStyle.Fill;
+            actions.FlowDirection = FlowDirection.LeftToRight;
+
+            Button measureBefore = CreateButton("Measure Before Video", false);
+            measureBefore.Size = new Size(170, 38);
+            measureBefore.Click += delegate { StartBodyAngleGuide("BeforeVideoPath"); };
+            Button measureAfter = CreateButton("Measure After Video", true);
+            measureAfter.Size = new Size(170, 38);
+            measureAfter.Click += delegate { StartBodyAngleGuide("AfterVideoPath"); };
+            actions.Controls.Add(measureBefore);
+            actions.Controls.Add(measureAfter);
+
+            int actionRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
+            table.Controls.Add(actions, 0, actionRow);
+            table.SetColumnSpan(actions, 3);
+
+            page.AutoScroll = true;
+            page.Controls.Add(table);
             return page;
         }
 
@@ -508,6 +564,18 @@ namespace CassetteMotionPro.Workspace
             SetMeasurement("CrankLengthAfter", session.CrankLengthAfter);
             SetMeasurement("CleatPositionBefore", session.CleatPositionBefore);
             SetMeasurement("CleatPositionAfter", session.CleatPositionAfter);
+            SetMeasurement("KneeAngleBefore", session.KneeAngleBefore);
+            SetMeasurement("KneeAngleAfter", session.KneeAngleAfter);
+            SetMeasurement("HipAngleBefore", session.HipAngleBefore);
+            SetMeasurement("HipAngleAfter", session.HipAngleAfter);
+            SetMeasurement("AnkleAngleBefore", session.AnkleAngleBefore);
+            SetMeasurement("AnkleAngleAfter", session.AnkleAngleAfter);
+            SetMeasurement("TorsoAngleBefore", session.TorsoAngleBefore);
+            SetMeasurement("TorsoAngleAfter", session.TorsoAngleAfter);
+            SetMeasurement("ShoulderAngleBefore", session.ShoulderAngleBefore);
+            SetMeasurement("ShoulderAngleAfter", session.ShoulderAngleAfter);
+            SetMeasurement("ElbowAngleBefore", session.ElbowAngleBefore);
+            SetMeasurement("ElbowAngleAfter", session.ElbowAngleAfter);
         }
 
         private void SetMedia(string key, string value)
@@ -563,7 +631,38 @@ namespace CassetteMotionPro.Workspace
             currentSession.CrankLengthAfter = measurementBoxes["CrankLengthAfter"].Text.Trim();
             currentSession.CleatPositionBefore = measurementBoxes["CleatPositionBefore"].Text.Trim();
             currentSession.CleatPositionAfter = measurementBoxes["CleatPositionAfter"].Text.Trim();
+            currentSession.KneeAngleBefore = measurementBoxes["KneeAngleBefore"].Text.Trim();
+            currentSession.KneeAngleAfter = measurementBoxes["KneeAngleAfter"].Text.Trim();
+            currentSession.HipAngleBefore = measurementBoxes["HipAngleBefore"].Text.Trim();
+            currentSession.HipAngleAfter = measurementBoxes["HipAngleAfter"].Text.Trim();
+            currentSession.AnkleAngleBefore = measurementBoxes["AnkleAngleBefore"].Text.Trim();
+            currentSession.AnkleAngleAfter = measurementBoxes["AnkleAngleAfter"].Text.Trim();
+            currentSession.TorsoAngleBefore = measurementBoxes["TorsoAngleBefore"].Text.Trim();
+            currentSession.TorsoAngleAfter = measurementBoxes["TorsoAngleAfter"].Text.Trim();
+            currentSession.ShoulderAngleBefore = measurementBoxes["ShoulderAngleBefore"].Text.Trim();
+            currentSession.ShoulderAngleAfter = measurementBoxes["ShoulderAngleAfter"].Text.Trim();
+            currentSession.ElbowAngleBefore = measurementBoxes["ElbowAngleBefore"].Text.Trim();
+            currentSession.ElbowAngleAfter = measurementBoxes["ElbowAngleAfter"].Text.Trim();
             repository.Save(currentSession);
+        }
+
+        private void StartBodyAngleGuide(string mediaKey)
+        {
+            string path = mediaBoxes[mediaKey].Text;
+            if (!ValidateVideo(path))
+                return;
+
+            SaveCurrentSession();
+            MessageBox.Show(this,
+                "The Bike Fit Angles tool will be active when the video opens.\n\n" +
+                "1. Pause at the measurement frame.\n" +
+                "2. Click the rider to place the overlay.\n" +
+                "3. Drag each marker onto the matching body landmark.\n" +
+                "4. Record the six displayed values in the Body Angles tab.",
+                "Bike Fit Angle Guide", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            Close();
+            if (openBodyAngleGuide != null)
+                openBodyAngleGuide(path);
         }
 
         private void BrowseVideo(string key)

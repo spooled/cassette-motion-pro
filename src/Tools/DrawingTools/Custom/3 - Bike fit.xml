@@ -16,6 +16,7 @@
     <Point name="knee" value="110;300" color="#d33682" />
     <Point name="ankle" value="40;420" color="#6c71c4" />
     <Point name="tip of foot" value="60;450" color="#2aa198" />
+    <Point name="torso horizontal reference" value="150;260" color="#85928c" />
   </Points>
   <Segments>
     <Segment name="Head" point1="0" point2="1" style="Solid" width="2" color="#dc322f"/>
@@ -25,14 +26,16 @@
     <Segment name="Thigh" point1="4" point2="5" style="Solid" width="2" color="#d33682"/>
     <Segment name="Leg" point1="5" point2="6" style="Solid" width="2" color="#6c71c4"/>
     <Segment name="Foot" point1="6" point2="7" style="Solid" width="2" color="#2aa198"/>
+    <Segment name="Torso horizontal" point1="4" point2="8" style="Dash" width="1" color="#85928c"/>
   </Segments>
   <Angles>
   	<!-- Angle directions for a bike looking to the right. -->
-    <Angle name="arm/torso" origin="1" leg1="4" leg2="2" signed="true" ccw="true" supplementary="false" radius="30" color="#b58900"/>
+    <Angle name="shoulder" origin="1" leg1="4" leg2="2" signed="true" ccw="true" supplementary="false" radius="30" color="#b58900"/>
     <Angle name="knee" origin="5" leg1="4" leg2="6" signed="true" ccw="true" supplementary="false" radius="40" color="#d33682"/>
     <Angle name="hip" origin="4" leg1="1" leg2="5" signed="true" ccw="false" supplementary="false" radius="30" color="#268bd2"/>
     <Angle name="elbow" origin="2" leg1="1" leg2="3" signed="true" ccw="false" supplementary="false" radius="20" color="#dc322f"/>
     <Angle name="ankle" origin="6" leg1="5" leg2="7" signed="true" ccw="false" supplementary="false" radius="20" color="#6c71c4"/>
+    <Angle name="torso" origin="4" leg1="8" leg2="1" signed="false" ccw="true" supplementary="false" radius="45" color="#85928c"/>
   </Angles>
 
   <!-- Interaction -->
@@ -70,6 +73,7 @@
         <DistanceToPoint point="1"/>
       </Constraint>
       <Impacts>
+        <VerticalAlign point="8"/>
         <KeepAngle origin="4" leg1="1" leg2="5"/>
         <KeepAngle origin="5" leg1="4" leg2="6"/>
         <KeepAngle origin="6" leg1="5" leg2="7"/>
@@ -96,7 +100,10 @@
       <Constraint type="DistanceToPoint" optionGroup="Lock segments lengths">
         <DistanceToPoint point="6"/>
       </Constraint>
-  	</Handle>
+   	</Handle>
+    <Handle type="Point" name="torso horizontal reference" reference="8">
+      <Constraint type="HorizontalSlide"/>
+    </Handle>
   </Handles>
   
   <Capabilities flipHorizontal="true"/>

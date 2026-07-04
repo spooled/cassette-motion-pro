@@ -41,7 +41,9 @@
 
 ## 0.4 - Measurement library
 
-- Body-angle tools: hip, knee, shoulder, elbow, ankle, back, and torso
+- [x] Guided posture overlay for hip, knee, shoulder, elbow, ankle, and torso
+- [x] Before/After body-angle values stored with each fit session
+- [x] One-click launch from the fit workspace into the angle overlay
 - Bicycle-fit tools: saddle height/setback, handlebar drop/reach, knee-over-pedal,
   plumb line, bottom bracket, pedal spindle, and foot tracking
 - Reusable overlay templates

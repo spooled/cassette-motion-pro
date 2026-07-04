@@ -1,0 +1,16 @@
+Cassette Motion Pro v0.4.0 Update
+==================================
+
+This update adds guided body-angle measurement tools.
+
+1. Extract Cassette-Motion-Pro-0.4.0-update.zip.
+2. Open the extracted folder and upload its contents, not the outer folder.
+3. In GitHub choose Add file, then Upload files.
+4. Drag everything from INSIDE the extracted folder onto GitHub.
+5. Confirm paths begin with README.md, docs/, installer/, and src/.
+6. Make sure src/Tools/DrawingTools/Custom/3 - Bike fit.xml is listed.
+7. Commit with: Add v0.4.0 guided body angle tools
+
+Then edit .github/workflows/build.yml and change VERSION: 0.3.4 to
+VERSION: 0.4.0. Commit the change and download the 0.4.0 installer after the
+final Actions run receives a green check.
