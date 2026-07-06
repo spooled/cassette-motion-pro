@@ -1,0 +1,14 @@
+Cassette Motion Pro v0.4.1 Fix
+================================
+
+This update fixes the missing Body Angles landmark overlay.
+
+1. Extract Cassette-Motion-Pro-0.4.1-fix.zip.
+2. Open the extracted folder and upload its contents, not the outer folder.
+3. In GitHub choose Add file, then Upload files.
+4. Drag everything from INSIDE the extracted folder onto GitHub.
+5. Commit with: Fix v0.4.1 body angle overlay activation
+
+Then edit .github/workflows/build.yml and change VERSION to 0.4.1. Commit the
+change and wait for the Actions run to receive a green check. Download and run
+the new 0.4.1 installer before testing the Body Angles buttons again.

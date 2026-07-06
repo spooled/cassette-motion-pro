@@ -48,6 +48,11 @@
   plumb line, bottom bracket, pedal spindle, and foot tracking
 - Reusable overlay templates
 
+## 0.4.1 - Body-angle activation fix
+
+- [x] Wait for the selected video to finish loading before activating the overlay
+- [x] Show clear loading, ready, and failure status messages
+
 ## 0.5 - Reports
 
 - Branded PDF reports

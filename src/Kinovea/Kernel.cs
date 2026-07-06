@@ -59,6 +59,7 @@ namespace Kinovea.Root
         private ScreenManagerKernel screenManager;
         private Stopwatch stopwatch = new Stopwatch();
         private ClientRepository clientRepository;
+        private System.Windows.Forms.Timer bodyAngleActivationTimer;
         
         #region Menus
 
@@ -723,8 +724,41 @@ namespace Kinovea.Root
 
             NotificationCenter.RaiseLoadVideoAsked(path, target);
             screenManager.OrganizeScreens();
-            screenManager.ActivateDrawingTool("Bikefit", target);
-            statusLabel.Text = "Bike Fit Angles active: click the video to place the guided overlay.";
+            ActivateBodyAngleToolWhenReady(target);
+        }
+
+        private void ActivateBodyAngleToolWhenReady(int target)
+        {
+            if (bodyAngleActivationTimer != null)
+            {
+                bodyAngleActivationTimer.Stop();
+                bodyAngleActivationTimer.Dispose();
+            }
+
+            int attempts = 0;
+            bodyAngleActivationTimer = new System.Windows.Forms.Timer();
+            bodyAngleActivationTimer.Interval = 150;
+            bodyAngleActivationTimer.Tick += delegate
+            {
+                attempts++;
+                if (screenManager.ActivateDrawingTool("Bikefit", target))
+                {
+                    bodyAngleActivationTimer.Stop();
+                    bodyAngleActivationTimer.Dispose();
+                    bodyAngleActivationTimer = null;
+                    statusLabel.Text = "Bike Fit Angles active: click the rider to place the guided overlay.";
+                }
+                else if (attempts >= 40)
+                {
+                    bodyAngleActivationTimer.Stop();
+                    bodyAngleActivationTimer.Dispose();
+                    bodyAngleActivationTimer = null;
+                    statusLabel.Text = "The Bike Fit Angles tool could not start. Reopen the fit workspace and try again.";
+                }
+            };
+
+            statusLabel.Text = "Loading video and preparing the Bike Fit Angles tool...";
+            bodyAngleActivationTimer.Start();
         }
 
         private void QueueClientWorkspace(ClientRecord client)
