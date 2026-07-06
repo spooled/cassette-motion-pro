@@ -165,6 +165,11 @@ namespace CassetteMotionPro.Workspace
             save.Width = 130;
             save.Click += Save_Click;
 
+            Button report = CreateButton("Generate Report", false);
+            report.Dock = DockStyle.Right;
+            report.Width = 145;
+            report.Click += GenerateReport_Click;
+
             saveHint.Text = "Autosaves to this client’s Measurements folder.";
             saveHint.Dock = DockStyle.Left;
             saveHint.Width = 360;
@@ -173,6 +178,7 @@ namespace CassetteMotionPro.Workspace
 
             actions.Controls.Add(close);
             actions.Controls.Add(save);
+            actions.Controls.Add(report);
             actions.Controls.Add(saveHint);
             parent.Controls.Add(tabs);
             parent.Controls.Add(actions);
@@ -600,6 +606,25 @@ namespace CassetteMotionPro.Workspace
             catch (Exception exception)
             {
                 MessageBox.Show(this, "The fit session could not be saved.\n\n" + exception.Message, "Bike Fit Workspace", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void GenerateReport_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                SaveCurrentSession();
+                string reportPath = FitSessionReportGenerator.Generate(client, currentSession);
+                UpdateSaveHint("Report saved to the client’s Reports folder.");
+                MessageBox.Show(this,
+                    "The report was saved in this client’s Reports folder.\n\n" + reportPath,
+                    "Report created",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "The report could not be created.\n\n" + exception.Message, "Report", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

@@ -1,0 +1,31 @@
+Cassette Motion Pro v0.5.0
+==========================
+
+This update adds the first client report generator.
+
+What changed:
+- Adds a Generate Report button to the Bike Fit Workspace.
+- Saves the fit session before generating the report.
+- Creates a branded HTML report inside the client Reports folder.
+- Includes session details, goals, notes, bike measurements, and body angles.
+- Keeps the v0.4.2 Save & Close behavior.
+
+Upload steps:
+
+1. Extract Cassette-Motion-Pro-0.5.0-report-update.zip.
+2. Open the extracted folder.
+3. Upload everything INSIDE the extracted folder to the GitHub repository root.
+4. Commit with: Add v0.5.0 basic client reports
+
+Then edit .github/workflows/build.yml and change VERSION to 0.5.0. Commit the
+change and wait for the Actions run to receive a green check.
+
+Test checklist:
+
+1. Open a client.
+2. Open the Bike Fit Workspace.
+3. Enter a few measurements and notes.
+4. Click Generate Report.
+5. Confirm the app says the report was saved.
+6. Open the client Reports folder.
+7. Open the .html report and confirm the saved values appear.

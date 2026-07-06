@@ -61,6 +61,8 @@
 
 ## 0.5 - Reports
 
+- [x] Basic branded HTML report saved to the client Reports folder
+- [x] Include session overview, goals, bike measurements, body angles, and notes
 - Branded PDF reports
 - Before/after images, measurements, and recommendations
 - Annotated image and video export
