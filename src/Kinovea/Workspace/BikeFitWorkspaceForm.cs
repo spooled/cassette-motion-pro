@@ -26,6 +26,7 @@ namespace CassetteMotionPro.Workspace
         private readonly ComboBox cmbStatus = new ComboBox();
         private readonly TextBox txtGoals = new TextBox();
         private readonly TextBox txtNotes = new TextBox();
+        private readonly Label saveHint = new Label();
         private readonly Dictionary<string, TextBox> mediaBoxes = new Dictionary<string, TextBox>();
         private readonly Dictionary<string, TextBox> measurementBoxes = new Dictionary<string, TextBox>();
         private FitSessionRecord currentSession;
@@ -47,6 +48,7 @@ namespace CassetteMotionPro.Workspace
             ClientSize = new Size(1180, 760);
             MinimumSize = new Size(980, 650);
             StartPosition = FormStartPosition.CenterParent;
+            FormClosing += BikeFitWorkspaceForm_FormClosing;
 
             BuildInterface();
             RefreshSessions(Guid.Empty);
@@ -153,9 +155,9 @@ namespace CassetteMotionPro.Workspace
             actions.Padding = new Padding(24, 14, 24, 14);
             actions.BackColor = Color.White;
 
-            Button close = CreateButton("Close", false);
+            Button close = CreateButton("Save && Close", false);
             close.Dock = DockStyle.Right;
-            close.Width = 100;
+            close.Width = 120;
             close.Click += delegate { Close(); };
 
             Button save = CreateButton("Save Session", true);
@@ -163,10 +165,9 @@ namespace CassetteMotionPro.Workspace
             save.Width = 130;
             save.Click += Save_Click;
 
-            Label saveHint = new Label();
-            saveHint.Text = "Save before opening videos.";
+            saveHint.Text = "Autosaves to this client’s Measurements folder.";
             saveHint.Dock = DockStyle.Left;
-            saveHint.Width = 220;
+            saveHint.Width = 360;
             saveHint.TextAlign = ContentAlignment.MiddleLeft;
             saveHint.ForeColor = Color.FromArgb(92, 104, 98);
 
@@ -594,9 +595,26 @@ namespace CassetteMotionPro.Workspace
             {
                 SaveCurrentSession();
                 RefreshSessions(currentSession.Id);
+                UpdateSaveHint("Saved to the client’s Measurements folder.");
             }
             catch (Exception exception)
             {
+                MessageBox.Show(this, "The fit session could not be saved.\n\n" + exception.Message, "Bike Fit Workspace", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void BikeFitWorkspaceForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (currentSession == null)
+                return;
+
+            try
+            {
+                SaveCurrentSession();
+            }
+            catch (Exception exception)
+            {
+                e.Cancel = true;
                 MessageBox.Show(this, "The fit session could not be saved.\n\n" + exception.Message, "Bike Fit Workspace", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -606,7 +624,11 @@ namespace CassetteMotionPro.Workspace
             if (currentSession == null)
                 currentSession = new FitSessionRecord();
 
-            currentSession.Title = txtTitle.Text.Trim();
+            string title = txtTitle.Text.Trim();
+            if (string.IsNullOrEmpty(title))
+                title = "Bike Fit - " + dtpDate.Value.ToString("MMM d, yyyy");
+
+            currentSession.Title = title;
             currentSession.SessionDate = dtpDate.Value.Date;
             currentSession.Status = Convert.ToString(cmbStatus.SelectedItem);
             currentSession.Goals = txtGoals.Text.Trim();
@@ -644,6 +666,13 @@ namespace CassetteMotionPro.Workspace
             currentSession.ElbowAngleBefore = measurementBoxes["ElbowAngleBefore"].Text.Trim();
             currentSession.ElbowAngleAfter = measurementBoxes["ElbowAngleAfter"].Text.Trim();
             repository.Save(currentSession);
+        }
+
+        private void UpdateSaveHint(string message)
+        {
+            if (saveHint == null)
+                return;
+            saveHint.Text = message;
         }
 
         private void StartBodyAngleGuide(string mediaKey)

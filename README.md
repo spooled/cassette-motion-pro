@@ -5,7 +5,7 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.4.1 body-angle activation fix
+## Current milestone: 0.4.2 safer workspace saving
 
 - Complete Kinovea source imported under `src/`
 - Application output renamed to `CassetteMotionPro.exe`
@@ -29,6 +29,8 @@ can be incorporated with minimal changes to the playback and annotation engine.
   elbow angles
 - Reliable automatic overlay activation after the selected video finishes loading
 - Persistent Before/After body-angle chart for every fit session
+- Workspace sessions save automatically when closing the fit workspace
+- Clear save message showing that sessions live in the client Measurements folder
 
 The expanded body-angle measurement library and report generator remain future
 milestones. See [docs/roadmap.md](docs/roadmap.md).

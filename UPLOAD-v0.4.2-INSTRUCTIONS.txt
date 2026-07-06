@@ -1,0 +1,30 @@
+Cassette Motion Pro v0.4.2
+==========================
+
+This update improves saving in the Bike Fit Workspace.
+
+What changed:
+- The workspace saves the current fit session when you close it.
+- The bottom button now says Save & Close.
+- The save message explains that sessions live in the client Measurements folder.
+- The v0.4.1 Body Angles overlay fix is still included.
+
+Upload steps:
+
+1. Extract Cassette-Motion-Pro-0.4.2-save-update.zip.
+2. Open the extracted folder.
+3. Upload everything INSIDE the extracted folder to the GitHub repository root.
+4. Commit with: Add v0.4.2 safer workspace saving
+
+Then edit .github/workflows/build.yml and change VERSION to 0.4.2. Commit the
+change and wait for the Actions run to receive a green check.
+
+Test checklist:
+
+1. Open a client.
+2. Open the Bike Fit Workspace.
+3. Enter notes or measurements.
+4. Click Save & Close.
+5. Reopen the same client and workspace.
+6. Confirm the session and values are still there.
+7. Test Measure Before Video and Measure After Video again.

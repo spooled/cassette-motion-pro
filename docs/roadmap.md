@@ -53,6 +53,12 @@
 - [x] Wait for the selected video to finish loading before activating the overlay
 - [x] Show clear loading, ready, and failure status messages
 
+## 0.4.2 - Safer workspace saving
+
+- [x] Save the current fit session automatically when closing the workspace
+- [x] Keep video launch and body-angle launch saving the session first
+- [x] Show a clearer save message in the workspace footer
+
 ## 0.5 - Reports
 
 - Branded PDF reports
