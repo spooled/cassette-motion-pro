@@ -65,6 +65,7 @@
 - [x] Include session overview, goals, bike measurements, body angles, and notes
 - [x] Open the client Reports folder from the Bike Fit Workspace
 - [x] Add print/save-PDF button, before/after placeholders, and change column
+- [x] Add before/after report image selection and include selected images in reports
 - Branded PDF reports
 - Before/after images, measurements, and recommendations
 - Annotated image and video export

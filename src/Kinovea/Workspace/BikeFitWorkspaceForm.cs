@@ -29,6 +29,7 @@ namespace CassetteMotionPro.Workspace
         private readonly TextBox txtNotes = new TextBox();
         private readonly Label saveHint = new Label();
         private readonly Dictionary<string, TextBox> mediaBoxes = new Dictionary<string, TextBox>();
+        private readonly Dictionary<string, TextBox> imageBoxes = new Dictionary<string, TextBox>();
         private readonly Dictionary<string, TextBox> measurementBoxes = new Dictionary<string, TextBox>();
         private FitSessionRecord currentSession;
 
@@ -146,6 +147,7 @@ namespace CassetteMotionPro.Workspace
             tabs.Padding = new Point(18, 8);
             tabs.TabPages.Add(BuildOverviewTab());
             tabs.TabPages.Add(BuildMediaTab());
+            tabs.TabPages.Add(BuildReportImagesTab());
             tabs.TabPages.Add(BuildMeasurementsTab());
             tabs.TabPages.Add(BuildBodyAnglesTab());
             tabs.TabPages.Add(BuildNotesTab());
@@ -305,6 +307,36 @@ namespace CassetteMotionPro.Workspace
             return page;
         }
 
+        private TabPage BuildReportImagesTab()
+        {
+            TabPage page = NewTab("Report Images");
+            TableLayoutPanel table = new TableLayoutPanel();
+            table.Dock = DockStyle.Top;
+            table.AutoSize = true;
+            table.Padding = new Padding(24, 22, 24, 18);
+            table.ColumnCount = 4;
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 86));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 72));
+
+            AddImageRow(table, "Before image", "BeforeReportImagePath");
+            AddImageRow(table, "After image", "AfterReportImagePath");
+
+            Label hint = new Label();
+            hint.Text = "Choose the before and after images you want shown in the report. Images are copied into this client's Photos folder.";
+            hint.Dock = DockStyle.Fill;
+            hint.ForeColor = Color.FromArgb(92, 104, 98);
+            int row = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
+            table.Controls.Add(hint, 1, row);
+            table.SetColumnSpan(hint, 3);
+
+            page.AutoScroll = true;
+            page.Controls.Add(table);
+            return page;
+        }
+
         private TabPage BuildNotesTab()
         {
             TabPage page = NewTab("Notes");
@@ -406,6 +438,34 @@ namespace CassetteMotionPro.Workspace
             open.Click += delegate { OpenSingle(key); };
 
             table.Controls.Add(label, 0, row);
+            table.Controls.Add(path, 1, row);
+            table.Controls.Add(browse, 2, row);
+            table.Controls.Add(open, 3, row);
+        }
+
+        private void AddImageRow(TableLayoutPanel table, string labelText, string key)
+        {
+            int row = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
+
+            TextBox path = new TextBox();
+            path.Dock = DockStyle.Fill;
+            path.ReadOnly = true;
+            path.BorderStyle = BorderStyle.FixedSingle;
+            path.Margin = new Padding(0, 8, 8, 8);
+            imageBoxes.Add(key, path);
+
+            Button browse = CreateButton("Browse…", false);
+            browse.Margin = new Padding(0, 6, 8, 6);
+            browse.Dock = DockStyle.Fill;
+            browse.Click += delegate { BrowseReportImage(key); };
+
+            Button open = CreateButton("Open", false);
+            open.Margin = new Padding(0, 6, 0, 6);
+            open.Dock = DockStyle.Fill;
+            open.Click += delegate { OpenReportImage(key); };
+
+            table.Controls.Add(FieldLabel(labelText), 0, row);
             table.Controls.Add(path, 1, row);
             table.Controls.Add(browse, 2, row);
             table.Controls.Add(open, 3, row);
@@ -558,6 +618,8 @@ namespace CassetteMotionPro.Workspace
                 afterPath = string.IsNullOrEmpty(session.RightVideoPath) ? session.FrontVideoPath : session.RightVideoPath;
             SetMedia("BeforeVideoPath", beforePath);
             SetMedia("AfterVideoPath", afterPath);
+            SetImage("BeforeReportImagePath", session.BeforeReportImagePath);
+            SetImage("AfterReportImagePath", session.AfterReportImagePath);
 
             SetMeasurement("SaddleHeightBefore", session.SaddleHeightBefore);
             SetMeasurement("SaddleHeightAfter", session.SaddleHeightAfter);
@@ -594,6 +656,11 @@ namespace CassetteMotionPro.Workspace
         private void SetMedia(string key, string value)
         {
             mediaBoxes[key].Text = value ?? string.Empty;
+        }
+
+        private void SetImage(string key, string value)
+        {
+            imageBoxes[key].Text = value ?? string.Empty;
         }
 
         private void SetMeasurement(string key, string value)
@@ -679,6 +746,8 @@ namespace CassetteMotionPro.Workspace
             currentSession.Notes = txtNotes.Text.Trim();
             currentSession.BeforeVideoPath = mediaBoxes["BeforeVideoPath"].Text;
             currentSession.AfterVideoPath = mediaBoxes["AfterVideoPath"].Text;
+            currentSession.BeforeReportImagePath = imageBoxes["BeforeReportImagePath"].Text;
+            currentSession.AfterReportImagePath = imageBoxes["AfterReportImagePath"].Text;
             currentSession.SaddleHeightBefore = measurementBoxes["SaddleHeightBefore"].Text.Trim();
             currentSession.SaddleHeightAfter = measurementBoxes["SaddleHeightAfter"].Text.Trim();
             currentSession.SaddleSetbackBefore = measurementBoxes["SaddleSetbackBefore"].Text.Trim();
@@ -792,6 +861,66 @@ namespace CassetteMotionPro.Workspace
 
             File.Copy(sourcePath, destinationPath, false);
             return destinationPath;
+        }
+
+        private void BrowseReportImage(string key)
+        {
+            using (OpenFileDialog dialog = new OpenFileDialog())
+            {
+                string viewName = key.StartsWith("Before") ? "Before" : "After";
+                dialog.Title = "Choose " + viewName.ToLowerInvariant() + " report image";
+                dialog.Filter = "Image files|*.jpg;*.jpeg;*.png;*.bmp;*.gif|All files|*.*";
+                dialog.RestoreDirectory = true;
+                if (Directory.Exists(client.PhotosPath))
+                    dialog.InitialDirectory = client.PhotosPath;
+                if (dialog.ShowDialog(this) == DialogResult.OK)
+                {
+                    try
+                    {
+                        SaveCurrentSession();
+                        imageBoxes[key].Text = ImportReportImage(dialog.FileName, viewName);
+                        SaveCurrentSession();
+                        UpdateSaveHint(viewName + " report image saved to the client’s Photos folder.");
+                    }
+                    catch (Exception exception)
+                    {
+                        MessageBox.Show(this, "The report image could not be imported into the client folder.\n\n" + exception.Message, "Report image", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+
+        private string ImportReportImage(string sourcePath, string viewName)
+        {
+            string sessionFolderName = string.Format("{0:yyyy-MM-dd}_{1}", currentSession.SessionDate, currentSession.Id.ToString("N").Substring(0, 8));
+            string destinationDirectory = Path.Combine(client.PhotosPath, "Fit Sessions", sessionFolderName, "Report Images");
+            Directory.CreateDirectory(destinationDirectory);
+
+            string extension = Path.GetExtension(sourcePath);
+            string destinationPath = Path.Combine(destinationDirectory, viewName + extension);
+            if (string.Equals(Path.GetFullPath(sourcePath), Path.GetFullPath(destinationPath), StringComparison.OrdinalIgnoreCase))
+                return destinationPath;
+
+            if (File.Exists(destinationPath))
+            {
+                string name = Path.GetFileNameWithoutExtension(destinationPath);
+                destinationPath = Path.Combine(destinationDirectory, name + "_" + DateTime.Now.ToString("HHmmss") + extension);
+            }
+
+            File.Copy(sourcePath, destinationPath, false);
+            return destinationPath;
+        }
+
+        private void OpenReportImage(string key)
+        {
+            string path = imageBoxes[key].Text;
+            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+            {
+                MessageBox.Show(this, "Choose an existing image file first.", "Image required", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            Process.Start(path);
         }
 
         private void OpenSingle(string key)
