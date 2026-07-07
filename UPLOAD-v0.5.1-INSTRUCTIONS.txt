@@ -1,0 +1,31 @@
+Cassette Motion Pro v0.5.1
+==========================
+
+This update polishes reports.
+
+What changed:
+- Adds an Open Reports button to the Bike Fit Workspace.
+- Adds a Print / Save PDF button inside generated HTML reports.
+- Adds Before and After image placeholders to reports.
+- Adds a Change column to before/after measurement tables.
+- Keeps the v0.5.0 Generate Report workflow.
+
+Upload steps:
+
+1. Extract Cassette-Motion-Pro-0.5.1-report-polish.zip.
+2. Open the extracted folder.
+3. Upload everything INSIDE the extracted folder to the GitHub repository root.
+4. Commit with: Polish v0.5.1 reports
+
+Then edit .github/workflows/build.yml and change VERSION to 0.5.1. Commit the
+change and wait for the Actions run to receive a green check.
+
+Test checklist:
+
+1. Open a client.
+2. Open the Bike Fit Workspace.
+3. Enter before/after values, notes, and body angles.
+4. Click Generate Report.
+5. Click Open Reports.
+6. Open the .html report and confirm the Change column appears.
+7. Click Print / Save PDF in the report.

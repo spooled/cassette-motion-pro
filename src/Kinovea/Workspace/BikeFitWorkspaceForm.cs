@@ -8,6 +8,7 @@ GNU General Public License version 2.
 using CassetteMotionPro.Clients;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
@@ -170,15 +171,20 @@ namespace CassetteMotionPro.Workspace
             report.Width = 145;
             report.Click += GenerateReport_Click;
 
+            Button openReports = CreateButton("Open Reports", false);
+            openReports.Dock = DockStyle.Right;
+            openReports.Width = 125;
+            openReports.Click += OpenReports_Click;
+
             saveHint.Text = "Autosaves to this client’s Measurements folder.";
-            saveHint.Dock = DockStyle.Left;
-            saveHint.Width = 360;
+            saveHint.Dock = DockStyle.Fill;
             saveHint.TextAlign = ContentAlignment.MiddleLeft;
             saveHint.ForeColor = Color.FromArgb(92, 104, 98);
 
             actions.Controls.Add(close);
             actions.Controls.Add(save);
             actions.Controls.Add(report);
+            actions.Controls.Add(openReports);
             actions.Controls.Add(saveHint);
             parent.Controls.Add(tabs);
             parent.Controls.Add(actions);
@@ -625,6 +631,19 @@ namespace CassetteMotionPro.Workspace
             catch (Exception exception)
             {
                 MessageBox.Show(this, "The report could not be created.\n\n" + exception.Message, "Report", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void OpenReports_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                Directory.CreateDirectory(client.ReportsPath);
+                Process.Start(client.ReportsPath);
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "The Reports folder could not be opened.\n\n" + exception.Message, "Reports", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

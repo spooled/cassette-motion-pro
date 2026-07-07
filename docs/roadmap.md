@@ -63,6 +63,8 @@
 
 - [x] Basic branded HTML report saved to the client Reports folder
 - [x] Include session overview, goals, bike measurements, body angles, and notes
+- [x] Open the client Reports folder from the Bike Fit Workspace
+- [x] Add print/save-PDF button, before/after placeholders, and change column
 - Branded PDF reports
 - Before/after images, measurements, and recommendations
 - Annotated image and video export
