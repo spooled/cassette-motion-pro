@@ -322,9 +322,10 @@ namespace CassetteMotionPro.Workspace
 
             AddImageRow(table, "Before image", "BeforeReportImagePath");
             AddImageRow(table, "After image", "AfterReportImagePath");
+            AddImageRow(table, "Side-by-side image", "SideBySideReportImagePath");
 
             Label hint = new Label();
-            hint.Text = "Choose the before and after images you want shown in the report. Images are copied into this client's Photos folder.";
+            hint.Text = "Choose the images you want shown in the report. Use side-by-side for one combined before/after export. Images are copied into this client's Photos folder.";
             hint.Dock = DockStyle.Fill;
             hint.ForeColor = Color.FromArgb(92, 104, 98);
             int row = table.RowCount++;
@@ -620,6 +621,7 @@ namespace CassetteMotionPro.Workspace
             SetMedia("AfterVideoPath", afterPath);
             SetImage("BeforeReportImagePath", session.BeforeReportImagePath);
             SetImage("AfterReportImagePath", session.AfterReportImagePath);
+            SetImage("SideBySideReportImagePath", session.SideBySideReportImagePath);
 
             SetMeasurement("SaddleHeightBefore", session.SaddleHeightBefore);
             SetMeasurement("SaddleHeightAfter", session.SaddleHeightAfter);
@@ -748,6 +750,7 @@ namespace CassetteMotionPro.Workspace
             currentSession.AfterVideoPath = mediaBoxes["AfterVideoPath"].Text;
             currentSession.BeforeReportImagePath = imageBoxes["BeforeReportImagePath"].Text;
             currentSession.AfterReportImagePath = imageBoxes["AfterReportImagePath"].Text;
+            currentSession.SideBySideReportImagePath = imageBoxes["SideBySideReportImagePath"].Text;
             currentSession.SaddleHeightBefore = measurementBoxes["SaddleHeightBefore"].Text.Trim();
             currentSession.SaddleHeightAfter = measurementBoxes["SaddleHeightAfter"].Text.Trim();
             currentSession.SaddleSetbackBefore = measurementBoxes["SaddleSetbackBefore"].Text.Trim();
@@ -867,7 +870,7 @@ namespace CassetteMotionPro.Workspace
         {
             using (OpenFileDialog dialog = new OpenFileDialog())
             {
-                string viewName = key.StartsWith("Before") ? "Before" : "After";
+                string viewName = GetReportImageViewName(key);
                 dialog.Title = "Choose " + viewName.ToLowerInvariant() + " report image";
                 dialog.Filter = "Image files|*.jpg;*.jpeg;*.png;*.bmp;*.gif|All files|*.*";
                 dialog.RestoreDirectory = true;
@@ -888,6 +891,15 @@ namespace CassetteMotionPro.Workspace
                     }
                 }
             }
+        }
+
+        private string GetReportImageViewName(string key)
+        {
+            if (key.StartsWith("Before"))
+                return "Before";
+            if (key.StartsWith("After"))
+                return "After";
+            return "Side-by-side";
         }
 
         private string ImportReportImage(string sourcePath, string viewName)

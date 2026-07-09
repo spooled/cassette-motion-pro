@@ -32,6 +32,7 @@ namespace CassetteMotionPro.Workspace
         public string AfterVideoPath { get; set; }
         public string BeforeReportImagePath { get; set; }
         public string AfterReportImagePath { get; set; }
+        public string SideBySideReportImagePath { get; set; }
 
         public string SaddleHeightBefore { get; set; }
         public string SaddleHeightAfter { get; set; }

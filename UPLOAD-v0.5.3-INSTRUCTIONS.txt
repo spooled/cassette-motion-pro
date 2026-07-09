@@ -1,0 +1,31 @@
+Cassette Motion Pro v0.5.3
+==========================
+
+This update adds side-by-side report image support.
+
+What changed:
+- Adds a Side-by-side image selector to the Report Images tab.
+- Copies the chosen image into the client Photos folder.
+- Saves that image choice with the fit session.
+- Shows the side-by-side image full-width in generated reports.
+- Keeps the existing Before image and After image selectors.
+
+Upload steps:
+
+1. Extract Cassette-Motion-Pro-0.5.3-side-by-side-report-image.zip.
+2. Open the extracted folder.
+3. Upload everything INSIDE the extracted folder to the GitHub repository root.
+4. Commit with: Add v0.5.3 side-by-side report image
+
+Then edit .github/workflows/build.yml and change VERSION to 0.5.3. Commit the
+change and wait for the Actions run to receive a green check.
+
+Test checklist:
+
+1. Open a client.
+2. Open the Bike Fit Workspace.
+3. Open the Report Images tab.
+4. Browse for a side-by-side image.
+5. Click Generate Report.
+6. Open the report and confirm the side-by-side image appears full-width.
+7. Reopen the session and confirm the side-by-side image path is still there.
