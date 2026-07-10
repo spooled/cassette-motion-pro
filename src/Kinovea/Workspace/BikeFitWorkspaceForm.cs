@@ -149,6 +149,7 @@ namespace CassetteMotionPro.Workspace
             tabs.TabPages.Add(BuildMediaTab());
             tabs.TabPages.Add(BuildReportImagesTab());
             tabs.TabPages.Add(BuildMeasurementsTab());
+            tabs.TabPages.Add(BuildBikeMeasurementGuideTab());
             tabs.TabPages.Add(BuildBodyAnglesTab());
             tabs.TabPages.Add(BuildNotesTab());
 
@@ -338,6 +339,42 @@ namespace CassetteMotionPro.Workspace
             return page;
         }
 
+        private TabPage BuildBikeMeasurementGuideTab()
+        {
+            TabPage page = NewTab("Bike Measurement Guide");
+            TableLayoutPanel table = new TableLayoutPanel();
+            table.Dock = DockStyle.Top;
+            table.AutoSize = true;
+            table.Padding = new Padding(24, 22, 24, 18);
+            table.ColumnCount = 4;
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 165));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 118));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 118));
+
+            AddGuideHeader(table);
+            AddBikeMeasurementGuideRow(table, "Saddle height", "Measure from the center of the bottom bracket to the top of the saddle along the seat tube line.", "SaddleHeight");
+            AddBikeMeasurementGuideRow(table, "Saddle setback", "Measure the horizontal distance from the bottom bracket vertical line to the saddle nose.", "SaddleSetback");
+            AddBikeMeasurementGuideRow(table, "Saddle tip to grip reach", "Measure from the saddle tip to the center of the hand grip or hood contact point.", "SaddleTipToGripReach");
+            AddBikeMeasurementGuideRow(table, "Handlebar X", "Measure the horizontal handlebar coordinate from the bottom bracket to the handlebar or hood contact point.", "HandlebarX");
+            AddBikeMeasurementGuideRow(table, "Handlebar Y", "Measure the vertical handlebar coordinate from the bottom bracket to the handlebar or hood contact point.", "HandlebarY");
+            AddBikeMeasurementGuideRow(table, "Handlebar reach", "Measure the horizontal distance from saddle reference or bottom bracket reference to the handlebar contact point.", "HandlebarReach");
+            AddBikeMeasurementGuideRow(table, "Handlebar drop", "Measure the vertical drop from saddle top to handlebar or hood contact point.", "HandlebarDrop");
+
+            Label hint = new Label();
+            hint.Text = "Tip: open the video, use the line/ruler tools, then type the result into the Measurements tab. Full automatic point-to-value transfer will come later.";
+            hint.Dock = DockStyle.Fill;
+            hint.ForeColor = Color.FromArgb(92, 104, 98);
+            int row = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 70));
+            table.Controls.Add(hint, 0, row);
+            table.SetColumnSpan(hint, 4);
+
+            page.AutoScroll = true;
+            page.Controls.Add(table);
+            return page;
+        }
+
         private TabPage BuildNotesTab()
         {
             TabPage page = NewTab("Notes");
@@ -479,6 +516,40 @@ namespace CassetteMotionPro.Workspace
             table.Controls.Add(FieldLabel("Measurement"), 0, row);
             table.Controls.Add(HeaderLabel("BEFORE"), 1, row);
             table.Controls.Add(HeaderLabel("AFTER"), 2, row);
+        }
+
+        private void AddGuideHeader(TableLayoutPanel table)
+        {
+            int row = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+            table.Controls.Add(FieldLabel("Measurement"), 0, row);
+            table.Controls.Add(HeaderLabel("CLICK / MEASURE GUIDE"), 1, row);
+            table.Controls.Add(HeaderLabel("BEFORE"), 2, row);
+            table.Controls.Add(HeaderLabel("AFTER"), 3, row);
+        }
+
+        private void AddBikeMeasurementGuideRow(TableLayoutPanel table, string labelText, string instructions, string measurementKey)
+        {
+            int row = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 72));
+
+            Label instructionLabel = FieldLabel(instructions);
+            instructionLabel.Padding = new Padding(0, 6, 12, 6);
+
+            Button before = CreateButton("Open Before", false);
+            before.Margin = new Padding(0, 14, 8, 14);
+            before.Dock = DockStyle.Fill;
+            before.Click += delegate { StartBikeMeasurementGuide("BeforeVideoPath", labelText, instructions, measurementKey + "Before"); };
+
+            Button after = CreateButton("Open After", true);
+            after.Margin = new Padding(0, 14, 0, 14);
+            after.Dock = DockStyle.Fill;
+            after.Click += delegate { StartBikeMeasurementGuide("AfterVideoPath", labelText, instructions, measurementKey + "After"); };
+
+            table.Controls.Add(FieldLabel(labelText), 0, row);
+            table.Controls.Add(instructionLabel, 1, row);
+            table.Controls.Add(before, 2, row);
+            table.Controls.Add(after, 3, row);
         }
 
         private void AddMeasurementRow(TableLayoutPanel table, string labelText, string key)
@@ -808,6 +879,30 @@ namespace CassetteMotionPro.Workspace
             Close();
             if (openBodyAngleGuide != null)
                 openBodyAngleGuide(path);
+        }
+
+        private void StartBikeMeasurementGuide(string mediaKey, string measurementName, string instructions, string targetField)
+        {
+            string path = mediaBoxes[mediaKey].Text;
+            if (!ValidateVideo(path))
+                return;
+
+            SaveCurrentSession();
+            MessageBox.Show(this,
+                measurementName + "\n\n" +
+                instructions + "\n\n" +
+                "Suggested workflow:\n" +
+                "1. Pause on a clear side-view frame.\n" +
+                "2. Use the line/ruler tool to click the requested points.\n" +
+                "3. Read the value shown by the tool.\n" +
+                "4. Return to the Measurements tab and enter it in: " + targetField + ".",
+                "Bike Measurement Guide",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+
+            Close();
+            if (openVideo != null)
+                openVideo(path);
         }
 
         private void BrowseVideo(string key)

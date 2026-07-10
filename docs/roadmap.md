@@ -71,6 +71,14 @@
 - Before/after images, measurements, and recommendations
 - Annotated image and video export
 
+## 0.6 - Guided bike measurements
+
+- [x] Add a Bike Measurement Guide tab
+- [x] Provide guided recipes for saddle height, saddle setback, saddle-tip-to-grip reach, Handlebar X/Y, handlebar reach, and handlebar drop
+- [x] Open the selected before/after video directly from each measurement guide
+- Automatic point-to-value transfer
+- Calibration-aware measurement capture
+
 ## 1.0 - Professional release
 
 - Installer signing and release automation
