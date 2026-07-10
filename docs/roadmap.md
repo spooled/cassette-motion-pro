@@ -76,6 +76,8 @@
 - [x] Add a Bike Measurement Guide tab
 - [x] Provide guided recipes for saddle height, saddle setback, saddle-tip-to-grip reach, Handlebar X/Y, handlebar reach, and handlebar drop
 - [x] Open the selected before/after video directly from each measurement guide
+- [x] Replace the separate video-click guide with a Bike Metrics tab
+- [x] Add metric rows with Before/After values, how-to-measure guidance, and Assist placeholders
 - Automatic point-to-value transfer
 - Calibration-aware measurement capture
 

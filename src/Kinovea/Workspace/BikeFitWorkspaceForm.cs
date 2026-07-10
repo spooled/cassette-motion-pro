@@ -148,8 +148,7 @@ namespace CassetteMotionPro.Workspace
             tabs.TabPages.Add(BuildOverviewTab());
             tabs.TabPages.Add(BuildMediaTab());
             tabs.TabPages.Add(BuildReportImagesTab());
-            tabs.TabPages.Add(BuildMeasurementsTab());
-            tabs.TabPages.Add(BuildBikeMeasurementGuideTab());
+            tabs.TabPages.Add(BuildBikeMetricsTab());
             tabs.TabPages.Add(BuildBodyAnglesTab());
             tabs.TabPages.Add(BuildNotesTab());
 
@@ -271,37 +270,39 @@ namespace CassetteMotionPro.Workspace
             return page;
         }
 
-        private TabPage BuildMeasurementsTab()
+        private TabPage BuildBikeMetricsTab()
         {
-            TabPage page = NewTab("Measurements");
+            TabPage page = NewTab("Bike Metrics");
             TableLayoutPanel table = new TableLayoutPanel();
             table.Dock = DockStyle.Top;
             table.AutoSize = true;
             table.Padding = new Padding(24, 22, 24, 18);
-            table.ColumnCount = 3;
-            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 175));
-            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            table.ColumnCount = 5;
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 165));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 118));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 118));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 95));
 
-            AddMeasurementHeader(table);
-            AddMeasurementRow(table, "Saddle height", "SaddleHeight");
-            AddMeasurementRow(table, "Saddle setback", "SaddleSetback");
-            AddMeasurementRow(table, "Saddle tip to grip reach", "SaddleTipToGripReach");
-            AddMeasurementRow(table, "Handlebar X", "HandlebarX");
-            AddMeasurementRow(table, "Handlebar Y", "HandlebarY");
-            AddMeasurementRow(table, "Handlebar reach", "HandlebarReach");
-            AddMeasurementRow(table, "Handlebar drop", "HandlebarDrop");
-            AddMeasurementRow(table, "Crank length", "CrankLength");
-            AddMeasurementRow(table, "Cleat position", "CleatPosition");
+            AddBikeMetricHeader(table);
+            AddBikeMetricRow(table, "Saddle height", "BB center → saddle top along the seat tube line.", "SaddleHeight");
+            AddBikeMetricRow(table, "Saddle setback", "BB vertical line → saddle nose, measured horizontally.", "SaddleSetback");
+            AddBikeMetricRow(table, "Saddle tip to grip reach", "Saddle tip → grip/hood contact point.", "SaddleTipToGripReach");
+            AddBikeMetricRow(table, "Handlebar X", "BB center → handlebar/hood contact point, horizontal coordinate.", "HandlebarX");
+            AddBikeMetricRow(table, "Handlebar Y", "BB center → handlebar/hood contact point, vertical coordinate.", "HandlebarY");
+            AddBikeMetricRow(table, "Handlebar reach", "Reference point → handlebar/hood contact point, horizontal reach.", "HandlebarReach");
+            AddBikeMetricRow(table, "Handlebar drop", "Saddle top → handlebar/hood contact point, vertical drop.", "HandlebarDrop");
+            AddBikeMetricRow(table, "Crank length", "Crank center → pedal spindle.", "CrankLength");
+            AddBikeMetricRow(table, "Cleat position", "Shoe/cleat reference point → cleat center.", "CleatPosition");
 
             Label hint = new Label();
-            hint.Text = "Enter the unit with the value (for example, 742 mm).";
+            hint.Text = "Enter the unit with the value (for example, 742 mm). Assist is a placeholder for the future image-based guided measurement tool.";
             hint.Dock = DockStyle.Fill;
             hint.ForeColor = Color.FromArgb(92, 104, 98);
             int row = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
-            table.Controls.Add(hint, 1, row);
-            table.SetColumnSpan(hint, 2);
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
+            table.Controls.Add(hint, 0, row);
+            table.SetColumnSpan(hint, 5);
 
             page.AutoScroll = true;
             page.Controls.Add(table);
@@ -333,42 +334,6 @@ namespace CassetteMotionPro.Workspace
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
             table.Controls.Add(hint, 1, row);
             table.SetColumnSpan(hint, 3);
-
-            page.AutoScroll = true;
-            page.Controls.Add(table);
-            return page;
-        }
-
-        private TabPage BuildBikeMeasurementGuideTab()
-        {
-            TabPage page = NewTab("Bike Measurement Guide");
-            TableLayoutPanel table = new TableLayoutPanel();
-            table.Dock = DockStyle.Top;
-            table.AutoSize = true;
-            table.Padding = new Padding(24, 22, 24, 18);
-            table.ColumnCount = 4;
-            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 165));
-            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 118));
-            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 118));
-
-            AddGuideHeader(table);
-            AddBikeMeasurementGuideRow(table, "Saddle height", "Measure from the center of the bottom bracket to the top of the saddle along the seat tube line.", "SaddleHeight");
-            AddBikeMeasurementGuideRow(table, "Saddle setback", "Measure the horizontal distance from the bottom bracket vertical line to the saddle nose.", "SaddleSetback");
-            AddBikeMeasurementGuideRow(table, "Saddle tip to grip reach", "Measure from the saddle tip to the center of the hand grip or hood contact point.", "SaddleTipToGripReach");
-            AddBikeMeasurementGuideRow(table, "Handlebar X", "Measure the horizontal handlebar coordinate from the bottom bracket to the handlebar or hood contact point.", "HandlebarX");
-            AddBikeMeasurementGuideRow(table, "Handlebar Y", "Measure the vertical handlebar coordinate from the bottom bracket to the handlebar or hood contact point.", "HandlebarY");
-            AddBikeMeasurementGuideRow(table, "Handlebar reach", "Measure the horizontal distance from saddle reference or bottom bracket reference to the handlebar contact point.", "HandlebarReach");
-            AddBikeMeasurementGuideRow(table, "Handlebar drop", "Measure the vertical drop from saddle top to handlebar or hood contact point.", "HandlebarDrop");
-
-            Label hint = new Label();
-            hint.Text = "Tip: open the video, use the line/ruler tools, then type the result into the Measurements tab. Full automatic point-to-value transfer will come later.";
-            hint.Dock = DockStyle.Fill;
-            hint.ForeColor = Color.FromArgb(92, 104, 98);
-            int row = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 70));
-            table.Controls.Add(hint, 0, row);
-            table.SetColumnSpan(hint, 4);
 
             page.AutoScroll = true;
             page.Controls.Add(table);
@@ -518,17 +483,18 @@ namespace CassetteMotionPro.Workspace
             table.Controls.Add(HeaderLabel("AFTER"), 2, row);
         }
 
-        private void AddGuideHeader(TableLayoutPanel table)
+        private void AddBikeMetricHeader(TableLayoutPanel table)
         {
             int row = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
-            table.Controls.Add(FieldLabel("Measurement"), 0, row);
-            table.Controls.Add(HeaderLabel("CLICK / MEASURE GUIDE"), 1, row);
+            table.Controls.Add(FieldLabel("Metric"), 0, row);
+            table.Controls.Add(HeaderLabel("HOW TO MEASURE"), 1, row);
             table.Controls.Add(HeaderLabel("BEFORE"), 2, row);
             table.Controls.Add(HeaderLabel("AFTER"), 3, row);
+            table.Controls.Add(HeaderLabel("ASSIST"), 4, row);
         }
 
-        private void AddBikeMeasurementGuideRow(TableLayoutPanel table, string labelText, string instructions, string measurementKey)
+        private void AddBikeMetricRow(TableLayoutPanel table, string labelText, string instructions, string key)
         {
             int row = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 72));
@@ -536,20 +502,21 @@ namespace CassetteMotionPro.Workspace
             Label instructionLabel = FieldLabel(instructions);
             instructionLabel.Padding = new Padding(0, 6, 12, 6);
 
-            Button before = CreateButton("Open Before", false);
-            before.Margin = new Padding(0, 14, 8, 14);
-            before.Dock = DockStyle.Fill;
-            before.Click += delegate { StartBikeMeasurementGuide("BeforeVideoPath", labelText, instructions, measurementKey + "Before"); };
+            TextBox before = NewMeasurementBox();
+            TextBox after = NewMeasurementBox();
+            measurementBoxes.Add(key + "Before", before);
+            measurementBoxes.Add(key + "After", after);
 
-            Button after = CreateButton("Open After", true);
-            after.Margin = new Padding(0, 14, 0, 14);
-            after.Dock = DockStyle.Fill;
-            after.Click += delegate { StartBikeMeasurementGuide("AfterVideoPath", labelText, instructions, measurementKey + "After"); };
+            Button assist = CreateButton("Assist", false);
+            assist.Margin = new Padding(0, 14, 0, 14);
+            assist.Dock = DockStyle.Fill;
+            assist.Click += delegate { ShowBikeMetricAssistPlaceholder(labelText, instructions); };
 
             table.Controls.Add(FieldLabel(labelText), 0, row);
             table.Controls.Add(instructionLabel, 1, row);
             table.Controls.Add(before, 2, row);
             table.Controls.Add(after, 3, row);
+            table.Controls.Add(assist, 4, row);
         }
 
         private void AddMeasurementRow(TableLayoutPanel table, string labelText, string key)
@@ -881,28 +848,20 @@ namespace CassetteMotionPro.Workspace
                 openBodyAngleGuide(path);
         }
 
-        private void StartBikeMeasurementGuide(string mediaKey, string measurementName, string instructions, string targetField)
+        private void ShowBikeMetricAssistPlaceholder(string measurementName, string instructions)
         {
-            string path = mediaBoxes[mediaKey].Text;
-            if (!ValidateVideo(path))
-                return;
-
-            SaveCurrentSession();
             MessageBox.Show(this,
                 measurementName + "\n\n" +
                 instructions + "\n\n" +
-                "Suggested workflow:\n" +
-                "1. Pause on a clear side-view frame.\n" +
-                "2. Use the line/ruler tool to click the requested points.\n" +
-                "3. Read the value shown by the tool.\n" +
-                "4. Return to the Measurements tab and enter it in: " + targetField + ".",
-                "Bike Measurement Guide",
+                "Assist will become the image-based guided measurement tool.\n\n" +
+                "Planned workflow:\n" +
+                "1. Choose a side-view bike image.\n" +
+                "2. Calibrate the scale.\n" +
+                "3. Click the requested landmarks.\n" +
+                "4. Cassette Motion Pro fills the metric automatically.",
+                "Bike Metrics Assist",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
-
-            Close();
-            if (openVideo != null)
-                openVideo(path);
         }
 
         private void BrowseVideo(string key)

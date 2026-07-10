@@ -1,0 +1,30 @@
+Cassette Motion Pro v0.6.1
+==========================
+
+This update reshapes bike measurement into Bike Metrics.
+
+What changed:
+- Renames the measurement area to Bike Metrics.
+- Removes the separate video-click measurement guide tab.
+- Adds how-to-measure guidance directly beside each metric.
+- Keeps Before and After input boxes in the same row.
+- Adds Assist placeholders for future image-based guided measurement.
+
+Upload steps:
+
+1. Extract Cassette-Motion-Pro-0.6.1-bike-metrics.zip.
+2. Open the extracted folder.
+3. Upload everything INSIDE the extracted folder to the GitHub repository root.
+4. Commit with: Add v0.6.1 bike metrics
+
+Then edit .github/workflows/build.yml and change VERSION to 0.6.1. Commit the
+change and wait for the Actions run to receive a green check.
+
+Test checklist:
+
+1. Open a client.
+2. Open the Bike Fit Workspace.
+3. Confirm there is a Bike Metrics tab.
+4. Enter Before and After values.
+5. Click Assist and confirm the future image-based workflow message appears.
+6. Save, reopen the session, and confirm values remain saved.
