@@ -1,0 +1,31 @@
+Cassette Motion Pro v0.6.2
+==========================
+
+This update adds a measurement reference image to Bike Metrics.
+
+What changed:
+- Adds a Measurement image control at the top of Bike Metrics.
+- Lets you browse for a measurement image.
+- Lets you reuse Before, After, or Side-by-side images as the measurement image.
+- Saves the measurement image with the fit session.
+- Shows the measurement image in generated reports.
+- Updates Assist so it points toward the selected measurement image.
+
+Upload steps:
+
+1. Extract Cassette-Motion-Pro-0.6.2-measurement-reference-image.zip.
+2. Open the extracted folder.
+3. Upload everything INSIDE the extracted folder to the GitHub repository root.
+4. Commit with: Add v0.6.2 measurement reference image
+
+Then edit .github/workflows/build.yml and change VERSION to 0.6.2. Commit the
+change and wait for the Actions run to receive a green check.
+
+Test checklist:
+
+1. Open a client.
+2. Open the Bike Fit Workspace.
+3. Open Bike Metrics.
+4. Browse for a measurement image or click Use Before, Use After, or Use Side-by-side.
+5. Click Assist and confirm it references the measurement image.
+6. Generate a report and confirm Measurement Reference Image appears.

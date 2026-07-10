@@ -284,6 +284,7 @@ namespace CassetteMotionPro.Workspace
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 118));
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 95));
 
+            AddMeasurementReferenceImageControls(table);
             AddBikeMetricHeader(table);
             AddBikeMetricRow(table, "Saddle height", "BB center → saddle top along the seat tube line.", "SaddleHeight");
             AddBikeMetricRow(table, "Saddle setback", "BB vertical line → saddle nose, measured horizontally.", "SaddleSetback");
@@ -474,6 +475,60 @@ namespace CassetteMotionPro.Workspace
             table.Controls.Add(open, 3, row);
         }
 
+        private void AddMeasurementReferenceImageControls(TableLayoutPanel table)
+        {
+            int row = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 96));
+
+            Panel panel = new Panel();
+            panel.Dock = DockStyle.Fill;
+            panel.Padding = new Padding(0, 8, 0, 8);
+
+            TextBox path = new TextBox();
+            path.Dock = DockStyle.Top;
+            path.ReadOnly = true;
+            path.BorderStyle = BorderStyle.FixedSingle;
+            path.Margin = new Padding(0, 0, 0, 8);
+            imageBoxes.Add("MeasurementReferenceImagePath", path);
+
+            FlowLayoutPanel buttons = new FlowLayoutPanel();
+            buttons.Dock = DockStyle.Bottom;
+            buttons.Height = 38;
+            buttons.FlowDirection = FlowDirection.LeftToRight;
+
+            Button browse = CreateButton("Browse…", false);
+            browse.Size = new Size(86, 32);
+            browse.Click += delegate { BrowseReportImage("MeasurementReferenceImagePath"); };
+
+            Button useBefore = CreateButton("Use Before", false);
+            useBefore.Size = new Size(98, 32);
+            useBefore.Click += delegate { UseMeasurementReferenceImage("BeforeReportImagePath", "Before image"); };
+
+            Button useAfter = CreateButton("Use After", false);
+            useAfter.Size = new Size(90, 32);
+            useAfter.Click += delegate { UseMeasurementReferenceImage("AfterReportImagePath", "After image"); };
+
+            Button useSideBySide = CreateButton("Use Side-by-side", false);
+            useSideBySide.Size = new Size(128, 32);
+            useSideBySide.Click += delegate { UseMeasurementReferenceImage("SideBySideReportImagePath", "Side-by-side image"); };
+
+            Button open = CreateButton("Open", true);
+            open.Size = new Size(70, 32);
+            open.Click += delegate { OpenReportImage("MeasurementReferenceImagePath"); };
+
+            buttons.Controls.Add(browse);
+            buttons.Controls.Add(useBefore);
+            buttons.Controls.Add(useAfter);
+            buttons.Controls.Add(useSideBySide);
+            buttons.Controls.Add(open);
+            panel.Controls.Add(buttons);
+            panel.Controls.Add(path);
+
+            table.Controls.Add(FieldLabel("Measurement image"), 0, row);
+            table.Controls.Add(panel, 1, row);
+            table.SetColumnSpan(panel, 4);
+        }
+
         private void AddMeasurementHeader(TableLayoutPanel table)
         {
             int row = table.RowCount++;
@@ -660,6 +715,7 @@ namespace CassetteMotionPro.Workspace
             SetImage("BeforeReportImagePath", session.BeforeReportImagePath);
             SetImage("AfterReportImagePath", session.AfterReportImagePath);
             SetImage("SideBySideReportImagePath", session.SideBySideReportImagePath);
+            SetImage("MeasurementReferenceImagePath", session.MeasurementReferenceImagePath);
 
             SetMeasurement("SaddleHeightBefore", session.SaddleHeightBefore);
             SetMeasurement("SaddleHeightAfter", session.SaddleHeightAfter);
@@ -789,6 +845,7 @@ namespace CassetteMotionPro.Workspace
             currentSession.BeforeReportImagePath = imageBoxes["BeforeReportImagePath"].Text;
             currentSession.AfterReportImagePath = imageBoxes["AfterReportImagePath"].Text;
             currentSession.SideBySideReportImagePath = imageBoxes["SideBySideReportImagePath"].Text;
+            currentSession.MeasurementReferenceImagePath = imageBoxes["MeasurementReferenceImagePath"].Text;
             currentSession.SaddleHeightBefore = measurementBoxes["SaddleHeightBefore"].Text.Trim();
             currentSession.SaddleHeightAfter = measurementBoxes["SaddleHeightAfter"].Text.Trim();
             currentSession.SaddleSetbackBefore = measurementBoxes["SaddleSetbackBefore"].Text.Trim();
@@ -850,18 +907,37 @@ namespace CassetteMotionPro.Workspace
 
         private void ShowBikeMetricAssistPlaceholder(string measurementName, string instructions)
         {
+            string referencePath = imageBoxes.ContainsKey("MeasurementReferenceImagePath") ? imageBoxes["MeasurementReferenceImagePath"].Text : string.Empty;
+            string referenceLine = string.IsNullOrEmpty(referencePath) ?
+                "No measurement reference image is selected yet." :
+                "Measurement reference image:\n" + referencePath;
+
             MessageBox.Show(this,
                 measurementName + "\n\n" +
                 instructions + "\n\n" +
+                referenceLine + "\n\n" +
                 "Assist will become the image-based guided measurement tool.\n\n" +
                 "Planned workflow:\n" +
-                "1. Choose a side-view bike image.\n" +
+                "1. Use the selected measurement reference image.\n" +
                 "2. Calibrate the scale.\n" +
                 "3. Click the requested landmarks.\n" +
                 "4. Cassette Motion Pro fills the metric automatically.",
                 "Bike Metrics Assist",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
+        }
+
+        private void UseMeasurementReferenceImage(string sourceKey, string label)
+        {
+            if (!imageBoxes.ContainsKey(sourceKey) || string.IsNullOrEmpty(imageBoxes[sourceKey].Text))
+            {
+                MessageBox.Show(this, "Choose a " + label.ToLowerInvariant() + " first.", "Measurement image", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            imageBoxes["MeasurementReferenceImagePath"].Text = imageBoxes[sourceKey].Text;
+            SaveCurrentSession();
+            UpdateSaveHint("Measurement image set from " + label + ".");
         }
 
         private void BrowseVideo(string key)
@@ -953,6 +1029,8 @@ namespace CassetteMotionPro.Workspace
                 return "Before";
             if (key.StartsWith("After"))
                 return "After";
+            if (key.StartsWith("Measurement"))
+                return "Measurement reference";
             return "Side-by-side";
         }
 
