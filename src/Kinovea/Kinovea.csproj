@@ -180,6 +180,9 @@
     <Compile Include="Workspace\FitSessionRecord.cs" />
     <Compile Include="Workspace\FitSessionRepository.cs" />
     <Compile Include="Workspace\FitSessionReportGenerator.cs" />
+    <Compile Include="Workspace\ImageMeasurementAssistantForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Workspace\BikeFitWorkspaceForm.cs">
       <SubType>Form</SubType>
     </Compile>

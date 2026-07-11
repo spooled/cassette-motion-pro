@@ -908,23 +908,19 @@ namespace CassetteMotionPro.Workspace
         private void ShowBikeMetricAssistPlaceholder(string measurementName, string instructions)
         {
             string referencePath = imageBoxes.ContainsKey("MeasurementReferenceImagePath") ? imageBoxes["MeasurementReferenceImagePath"].Text : string.Empty;
-            string referenceLine = string.IsNullOrEmpty(referencePath) ?
-                "No measurement reference image is selected yet." :
-                "Measurement reference image:\n" + referencePath;
+            if (string.IsNullOrEmpty(referencePath) || !File.Exists(referencePath))
+            {
+                MessageBox.Show(this,
+                    "Choose a Measurement image first.\n\n" +
+                    "Use Browse, Use Before, Use After, or Use Side-by-side at the top of Bike Metrics.",
+                    "Bike Metrics Assist",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
 
-            MessageBox.Show(this,
-                measurementName + "\n\n" +
-                instructions + "\n\n" +
-                referenceLine + "\n\n" +
-                "Assist will become the image-based guided measurement tool.\n\n" +
-                "Planned workflow:\n" +
-                "1. Use the selected measurement reference image.\n" +
-                "2. Calibrate the scale.\n" +
-                "3. Click the requested landmarks.\n" +
-                "4. Cassette Motion Pro fills the metric automatically.",
-                "Bike Metrics Assist",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
+            using (ImageMeasurementAssistantForm form = new ImageMeasurementAssistantForm(referencePath, measurementName, instructions))
+                form.ShowDialog(this);
         }
 
         private void UseMeasurementReferenceImage(string sourceKey, string label)

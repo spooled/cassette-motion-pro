@@ -82,6 +82,15 @@
 - Automatic point-to-value transfer
 - Calibration-aware measurement capture
 
+## 0.7 - Image measurement assistant
+
+- [x] Add first Image Measurement Assistant screen
+- [x] Open the selected Measurement Reference Image from Bike Metrics Assist
+- [x] Show selected metric, instructions, and planned calibration/landmark/save steps
+- Calibration click workflow
+- Landmark click workflow
+- Save calculated value back to Bike Metrics
+
 ## 1.0 - Professional release
 
 - Installer signing and release automation

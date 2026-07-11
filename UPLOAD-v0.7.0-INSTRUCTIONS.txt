@@ -1,0 +1,31 @@
+Cassette Motion Pro v0.7.0
+==========================
+
+This update adds the first Image Measurement Assistant screen.
+
+What changed:
+- Adds an Image Measurement Assistant screen.
+- Opens the selected Measurement Reference Image from Bike Metrics Assist.
+- Shows the selected bike metric and how-to-measure instructions.
+- Shows planned steps for calibration, landmark clicking, and saving the metric.
+- Calculation and automatic save-back are planned for the next phase.
+
+Upload steps:
+
+1. Extract Cassette-Motion-Pro-0.7.0-image-measurement-assistant.zip.
+2. Open the extracted folder.
+3. Upload everything INSIDE the extracted folder to the GitHub repository root.
+4. Commit with: Add v0.7.0 image measurement assistant
+
+Then edit .github/workflows/build.yml and change VERSION to 0.7.0. Commit the
+change and wait for the Actions run to receive a green check.
+
+Test checklist:
+
+1. Open a client.
+2. Open the Bike Fit Workspace.
+3. Open Bike Metrics.
+4. Choose a Measurement image.
+5. Click Assist on Saddle height or another metric.
+6. Confirm the assistant opens and displays the image.
+7. Click the planned step buttons and confirm the Coming soon message appears.
