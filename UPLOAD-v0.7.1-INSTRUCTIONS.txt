@@ -1,0 +1,35 @@
+Cassette Motion Pro v0.7.1
+==========================
+
+This update adds one-button Before + After image combine.
+
+What changed:
+- Adds a Combine Before + After button on the Report Images tab.
+- Adds a Combine B+A button beside the Bike Metrics measurement image tools.
+- Creates a side-by-side JPG from the selected Before image and After image.
+- Saves the combined image inside the client's Photos folder.
+- Automatically sets the combined image as the Side-by-side report image.
+- Automatically sets the combined image as the Measurement Reference Image for Bike Metrics.
+
+Upload steps:
+
+1. Extract Cassette-Motion-Pro-0.7.1-combine-before-after-image.zip.
+2. Open the extracted folder.
+3. Upload everything INSIDE the extracted folder to the GitHub repository root.
+4. Commit with: Add v0.7.1 before after image combine
+
+Then edit .github/workflows/build.yml and change VERSION to 0.7.1. Commit the
+change and wait for the Actions run to receive a green check.
+
+Test checklist:
+
+1. Open a client.
+2. Open the Bike Fit Workspace.
+3. Open Report Images.
+4. Choose a Before image.
+5. Choose an After image.
+6. Click Combine Before + After.
+7. Confirm the Side-by-side image field fills in.
+8. Open Bike Metrics.
+9. Confirm the Measurement image field also uses the combined side-by-side image.
+10. Click Assist and confirm the combined image opens in the assistant.

@@ -10,6 +10,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Windows.Forms;
 
@@ -327,8 +329,23 @@ namespace CassetteMotionPro.Workspace
             AddImageRow(table, "After image", "AfterReportImagePath");
             AddImageRow(table, "Side-by-side image", "SideBySideReportImagePath");
 
+            FlowLayoutPanel combineActions = new FlowLayoutPanel();
+            combineActions.Dock = DockStyle.Fill;
+            combineActions.FlowDirection = FlowDirection.LeftToRight;
+            combineActions.Padding = new Padding(0, 8, 0, 4);
+
+            Button combine = CreateButton("Combine Before + After", true);
+            combine.Size = new Size(190, 34);
+            combine.Click += delegate { CombineBeforeAfterImages(true); };
+            combineActions.Controls.Add(combine);
+
+            int actionRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
+            table.Controls.Add(combineActions, 1, actionRow);
+            table.SetColumnSpan(combineActions, 3);
+
             Label hint = new Label();
-            hint.Text = "Choose the images you want shown in the report. Use side-by-side for one combined before/after export. Images are copied into this client's Photos folder.";
+            hint.Text = "Choose the before and after images, then click Combine Before + After. The combined image is saved to this client's Photos folder and used as the measurement reference image.";
             hint.Dock = DockStyle.Fill;
             hint.ForeColor = Color.FromArgb(92, 104, 98);
             int row = table.RowCount++;
@@ -512,6 +529,10 @@ namespace CassetteMotionPro.Workspace
             useSideBySide.Size = new Size(128, 32);
             useSideBySide.Click += delegate { UseMeasurementReferenceImage("SideBySideReportImagePath", "Side-by-side image"); };
 
+            Button combine = CreateButton("Combine B+A", false);
+            combine.Size = new Size(112, 32);
+            combine.Click += delegate { CombineBeforeAfterImages(true); };
+
             Button open = CreateButton("Open", true);
             open.Size = new Size(70, 32);
             open.Click += delegate { OpenReportImage("MeasurementReferenceImagePath"); };
@@ -520,6 +541,7 @@ namespace CassetteMotionPro.Workspace
             buttons.Controls.Add(useBefore);
             buttons.Controls.Add(useAfter);
             buttons.Controls.Add(useSideBySide);
+            buttons.Controls.Add(combine);
             buttons.Controls.Add(open);
             panel.Controls.Add(buttons);
             panel.Controls.Add(path);
@@ -912,7 +934,7 @@ namespace CassetteMotionPro.Workspace
             {
                 MessageBox.Show(this,
                     "Choose a Measurement image first.\n\n" +
-                    "Use Browse, Use Before, Use After, or Use Side-by-side at the top of Bike Metrics.",
+                    "Use Browse, Use Before, Use After, Use Side-by-side, or Combine B+A at the top of Bike Metrics.",
                     "Bike Metrics Assist",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
@@ -934,6 +956,50 @@ namespace CassetteMotionPro.Workspace
             imageBoxes["MeasurementReferenceImagePath"].Text = imageBoxes[sourceKey].Text;
             SaveCurrentSession();
             UpdateSaveHint("Measurement image set from " + label + ".");
+        }
+
+        private void CombineBeforeAfterImages(bool useAsMeasurementReference)
+        {
+            string beforePath = imageBoxes.ContainsKey("BeforeReportImagePath") ? imageBoxes["BeforeReportImagePath"].Text : string.Empty;
+            string afterPath = imageBoxes.ContainsKey("AfterReportImagePath") ? imageBoxes["AfterReportImagePath"].Text : string.Empty;
+
+            if (string.IsNullOrEmpty(beforePath) || !File.Exists(beforePath))
+            {
+                MessageBox.Show(this, "Choose a before image first.", "Combine Before + After", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            if (string.IsNullOrEmpty(afterPath) || !File.Exists(afterPath))
+            {
+                MessageBox.Show(this, "Choose an after image first.", "Combine Before + After", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                Cursor previousCursor = Cursor.Current;
+                Cursor.Current = Cursors.WaitCursor;
+                try
+                {
+                    SaveCurrentSession();
+                    string combinedPath = CreateBeforeAfterCombinedImage(beforePath, afterPath);
+                    imageBoxes["SideBySideReportImagePath"].Text = combinedPath;
+
+                    if (useAsMeasurementReference)
+                        imageBoxes["MeasurementReferenceImagePath"].Text = combinedPath;
+
+                    SaveCurrentSession();
+                    UpdateSaveHint("Before + after image combined and saved to the client’s Photos folder.");
+                }
+                finally
+                {
+                    Cursor.Current = previousCursor;
+                }
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "The before and after images could not be combined.\n\n" + exception.Message, "Combine Before + After", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void BrowseVideo(string key)
@@ -1049,6 +1115,67 @@ namespace CassetteMotionPro.Workspace
 
             File.Copy(sourcePath, destinationPath, false);
             return destinationPath;
+        }
+
+        private string CreateBeforeAfterCombinedImage(string beforePath, string afterPath)
+        {
+            string sessionFolderName = string.Format("{0:yyyy-MM-dd}_{1}", currentSession.SessionDate, currentSession.Id.ToString("N").Substring(0, 8));
+            string destinationDirectory = Path.Combine(client.PhotosPath, "Fit Sessions", sessionFolderName, "Report Images");
+            Directory.CreateDirectory(destinationDirectory);
+
+            string destinationPath = Path.Combine(destinationDirectory, "Before_After_Side_by_side.jpg");
+            if (File.Exists(destinationPath))
+                destinationPath = Path.Combine(destinationDirectory, "Before_After_Side_by_side_" + DateTime.Now.ToString("HHmmss") + ".jpg");
+
+            using (Image before = Image.FromFile(beforePath))
+            using (Image after = Image.FromFile(afterPath))
+            {
+                const int labelHeight = 46;
+                const int padding = 18;
+                const int gap = 16;
+                int commonImageHeight = Math.Min(900, Math.Max(before.Height, after.Height));
+
+                int beforeWidth = ScaleWidth(before, commonImageHeight);
+                int afterWidth = ScaleWidth(after, commonImageHeight);
+                int canvasWidth = beforeWidth + afterWidth + gap + (padding * 2);
+                int canvasHeight = commonImageHeight + labelHeight + (padding * 2);
+
+                using (Bitmap combined = new Bitmap(canvasWidth, canvasHeight))
+                using (Graphics graphics = Graphics.FromImage(combined))
+                using (Brush background = new SolidBrush(Color.FromArgb(18, 24, 31)))
+                using (Brush labelBrush = new SolidBrush(Color.White))
+                using (Brush accentBrush = new SolidBrush(Color.FromArgb(184, 243, 74)))
+                using (Font labelFont = new Font("Segoe UI", 18F, FontStyle.Bold))
+                using (Pen dividerPen = new Pen(Color.FromArgb(76, 91, 106), 2F))
+                {
+                    graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                    graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                    graphics.FillRectangle(background, 0, 0, canvasWidth, canvasHeight);
+
+                    Rectangle beforeRectangle = new Rectangle(padding, padding + labelHeight, beforeWidth, commonImageHeight);
+                    Rectangle afterRectangle = new Rectangle(padding + beforeWidth + gap, padding + labelHeight, afterWidth, commonImageHeight);
+
+                    graphics.DrawString("BEFORE", labelFont, accentBrush, beforeRectangle.Left, padding + 8);
+                    graphics.DrawString("AFTER", labelFont, labelBrush, afterRectangle.Left, padding + 8);
+                    graphics.DrawLine(dividerPen, padding + beforeWidth + (gap / 2), padding + 8, padding + beforeWidth + (gap / 2), canvasHeight - padding);
+
+                    graphics.DrawImage(before, beforeRectangle);
+                    graphics.DrawImage(after, afterRectangle);
+
+                    combined.Save(destinationPath, ImageFormat.Jpeg);
+                }
+            }
+
+            return destinationPath;
+        }
+
+        private static int ScaleWidth(Image image, int targetHeight)
+        {
+            if (image == null || image.Height <= 0)
+                return targetHeight;
+
+            return Math.Max(1, (int)Math.Round((double)image.Width * targetHeight / image.Height));
         }
 
         private void OpenReportImage(string key)

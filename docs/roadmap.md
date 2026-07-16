@@ -87,6 +87,7 @@
 - [x] Add first Image Measurement Assistant screen
 - [x] Open the selected Measurement Reference Image from Bike Metrics Assist
 - [x] Show selected metric, instructions, and planned calibration/landmark/save steps
+- [x] Combine selected Before and After images into one side-by-side measurement reference image
 - Calibration click workflow
 - Landmark click workflow
 - Save calculated value back to Bike Metrics
