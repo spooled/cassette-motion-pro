@@ -31,12 +31,14 @@ namespace CassetteMotionPro.Workspace
         private Label status;
         private Label scaleLabel;
         private Label resultLabel;
+        private Button flipSign;
         private Button saveBefore;
         private Button saveAfter;
         private Image loadedImage;
         private ClickMode mode;
         private double millimetersPerPixel;
         private double measuredMillimeters;
+        private bool resultIsNegative;
 
         public string ResultValue { get; private set; }
         public string ResultSide { get; private set; }
@@ -111,7 +113,8 @@ namespace CassetteMotionPro.Workspace
                 "3. Enter the real length in mm.\n" +
                 "4. Click Measure Points.\n" +
                 "5. Click the two measurement points.\n" +
-                "6. Save to Before or After.";
+                "6. Use Make Negative when needed.\n" +
+                "7. Save to Before or After.";
             guide.Dock = DockStyle.Top;
             guide.Height = 174;
             guide.ForeColor = Color.FromArgb(74, 87, 81);
@@ -137,24 +140,30 @@ namespace CassetteMotionPro.Workspace
 
             Button calibrate = CreateButton("1. Calibrate Scale", false);
             Button measure = CreateButton("2. Measure Points", false);
+            flipSign = CreateButton("Make Negative", false);
             saveBefore = CreateButton("Save to Before", false);
             saveAfter = CreateButton("Save to After", true);
             calibrate.Dock = DockStyle.Top;
             measure.Dock = DockStyle.Top;
+            flipSign.Dock = DockStyle.Top;
             saveBefore.Dock = DockStyle.Top;
             saveAfter.Dock = DockStyle.Top;
             calibrate.Height = 40;
             measure.Height = 40;
+            flipSign.Height = 40;
             saveBefore.Height = 40;
             saveAfter.Height = 40;
             calibrate.Margin = new Padding(0, 10, 0, 0);
             measure.Margin = new Padding(0, 10, 0, 0);
+            flipSign.Margin = new Padding(0, 10, 0, 0);
             saveBefore.Margin = new Padding(0, 10, 0, 0);
             saveAfter.Margin = new Padding(0, 10, 0, 0);
             calibrate.Click += Calibrate_Click;
             measure.Click += Measure_Click;
+            flipSign.Click += FlipSign_Click;
             saveBefore.Click += delegate { SaveResult("Before"); };
             saveAfter.Click += delegate { SaveResult("After"); };
+            flipSign.Enabled = false;
             saveBefore.Enabled = false;
             saveAfter.Enabled = false;
 
@@ -172,6 +181,7 @@ namespace CassetteMotionPro.Workspace
             side.Controls.Add(close);
             side.Controls.Add(saveAfter);
             side.Controls.Add(saveBefore);
+            side.Controls.Add(flipSign);
             side.Controls.Add(measure);
             side.Controls.Add(calibrate);
             side.Controls.Add(resultLabel);
@@ -193,6 +203,9 @@ namespace CassetteMotionPro.Workspace
             calibrationPoints.Clear();
             measurementPoints.Clear();
             measuredMillimeters = 0;
+            resultIsNegative = false;
+            flipSign.Enabled = false;
+            flipSign.Text = "Make Negative";
             saveBefore.Enabled = false;
             saveAfter.Enabled = false;
             resultLabel.Text = "Result: --";
@@ -211,6 +224,9 @@ namespace CassetteMotionPro.Workspace
             mode = ClickMode.Measurement;
             measurementPoints.Clear();
             measuredMillimeters = 0;
+            resultIsNegative = false;
+            flipSign.Enabled = false;
+            flipSign.Text = "Make Negative";
             saveBefore.Enabled = false;
             saveAfter.Enabled = false;
             resultLabel.Text = "Result: --";
@@ -281,8 +297,10 @@ namespace CassetteMotionPro.Workspace
             if (measurementPoints.Count == 2)
             {
                 measuredMillimeters = Distance(measurementPoints[0], measurementPoints[1]) * millimetersPerPixel;
-                resultLabel.Text = "Result: " + measuredMillimeters.ToString("0.0", CultureInfo.InvariantCulture) + " mm";
-                status.Text = "Measurement ready. Save it to Before or After.";
+                resultIsNegative = false;
+                UpdateResultLabel();
+                status.Text = "Measurement ready. Use Make Negative if this value should save below zero.";
+                flipSign.Enabled = true;
                 saveBefore.Enabled = true;
                 saveAfter.Enabled = true;
                 mode = ClickMode.None;
@@ -290,15 +308,37 @@ namespace CassetteMotionPro.Workspace
             }
         }
 
+        private void FlipSign_Click(object sender, EventArgs e)
+        {
+            if (measuredMillimeters <= 0)
+                return;
+
+            resultIsNegative = !resultIsNegative;
+            UpdateResultLabel();
+            status.Text = resultIsNegative ? "Negative value selected. Save to Before or After." : "Positive value selected. Save to Before or After.";
+        }
+
         private void SaveResult(string side)
         {
             if (measuredMillimeters <= 0)
                 return;
 
-            ResultValue = measuredMillimeters.ToString("0.0", CultureInfo.InvariantCulture) + " mm";
+            ResultValue = GetSignedMeasurement().ToString("0.0", CultureInfo.InvariantCulture) + " mm";
             ResultSide = side;
             DialogResult = DialogResult.OK;
             Close();
+        }
+
+        private void UpdateResultLabel()
+        {
+            double signedMeasurement = GetSignedMeasurement();
+            resultLabel.Text = "Result: " + signedMeasurement.ToString("0.0", CultureInfo.InvariantCulture) + " mm";
+            flipSign.Text = resultIsNegative ? "Make Positive" : "Make Negative";
+        }
+
+        private double GetSignedMeasurement()
+        {
+            return resultIsNegative ? -measuredMillimeters : measuredMillimeters;
         }
 
         private void Picture_Paint(object sender, PaintEventArgs e)

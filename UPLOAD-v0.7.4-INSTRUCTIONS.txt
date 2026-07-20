@@ -1,0 +1,33 @@
+Cassette Motion Pro v0.7.4
+==========================
+
+This update makes side-by-side-only images easier to use.
+
+What changed:
+- Keeps the v0.7.3 negative measurement workflow.
+- Lets you choose only a Side-by-side image without adding separate Before and After images.
+- Automatically sets the chosen Side-by-side image as the Bike Metrics Measurement image.
+- Keeps Combine Before + After available if you do want the app to create the side-by-side image for you.
+
+Upload steps:
+
+1. Extract Cassette-Motion-Pro-0.7.4-side-by-side-only-image.zip.
+2. Open the extracted folder.
+3. Upload everything INSIDE the extracted folder to the GitHub repository root.
+4. Commit with: Add v0.7.4 side by side only image workflow
+
+Then edit .github/workflows/build.yml and change VERSION to 0.7.4. Commit the
+change and wait for the Actions run to receive a green check.
+
+Test checklist:
+
+1. Open a client.
+2. Open the Bike Fit Workspace.
+3. Open Report Images.
+4. Choose only a Side-by-side image.
+5. Confirm the status says it was set as the Bike Metrics measurement image.
+6. Open Bike Metrics.
+7. Confirm the Measurement image field uses the side-by-side image.
+8. Click Assist on Saddle height or another bike metric.
+9. Confirm the assistant opens the side-by-side image.
+10. Optional: test measuring and saving a value.

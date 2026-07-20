@@ -345,7 +345,7 @@ namespace CassetteMotionPro.Workspace
             table.SetColumnSpan(combineActions, 3);
 
             Label hint = new Label();
-            hint.Text = "Choose the before and after images, then click Combine Before + After. The combined image is saved to this client's Photos folder and used as the measurement reference image.";
+            hint.Text = "You can use one side-by-side image by itself. Choose Side-by-side image and it will also become the Bike Metrics measurement image. Only use Before/After images if you want the app to combine them for you.";
             hint.Dock = DockStyle.Fill;
             hint.ForeColor = Color.FromArgb(92, 104, 98);
             int row = table.RowCount++;
@@ -1085,8 +1085,13 @@ namespace CassetteMotionPro.Workspace
                     {
                         SaveCurrentSession();
                         imageBoxes[key].Text = ImportReportImage(dialog.FileName, viewName);
+                        if (key == "SideBySideReportImagePath" && imageBoxes.ContainsKey("MeasurementReferenceImagePath"))
+                            imageBoxes["MeasurementReferenceImagePath"].Text = imageBoxes[key].Text;
                         SaveCurrentSession();
-                        UpdateSaveHint(viewName + " report image saved to the client’s Photos folder.");
+                        if (key == "SideBySideReportImagePath")
+                            UpdateSaveHint("Side-by-side image saved and set as the Bike Metrics measurement image.");
+                        else
+                            UpdateSaveHint(viewName + " report image saved to the client’s Photos folder.");
                     }
                     catch (Exception exception)
                     {

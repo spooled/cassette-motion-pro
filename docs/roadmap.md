@@ -91,6 +91,8 @@
 - [x] Calibration click workflow for a known length
 - [x] Two-point measurement click workflow
 - [x] Save calculated value back to Bike Metrics Before or After
+- [x] Negative value support for measurements such as saddle setback
+- [x] Side-by-side-only image workflow for reports and Bike Metrics
 
 ## 1.0 - Professional release
 
