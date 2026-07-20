@@ -587,7 +587,7 @@ namespace CassetteMotionPro.Workspace
             Button assist = CreateButton("Assist", false);
             assist.Margin = new Padding(0, 14, 0, 14);
             assist.Dock = DockStyle.Fill;
-            assist.Click += delegate { ShowBikeMetricAssistPlaceholder(labelText, instructions); };
+            assist.Click += delegate { ShowBikeMetricAssist(labelText, instructions, key); };
 
             table.Controls.Add(FieldLabel(labelText), 0, row);
             table.Controls.Add(instructionLabel, 1, row);
@@ -927,7 +927,7 @@ namespace CassetteMotionPro.Workspace
                 openBodyAngleGuide(path);
         }
 
-        private void ShowBikeMetricAssistPlaceholder(string measurementName, string instructions)
+        private void ShowBikeMetricAssist(string measurementName, string instructions, string metricKey)
         {
             string referencePath = imageBoxes.ContainsKey("MeasurementReferenceImagePath") ? imageBoxes["MeasurementReferenceImagePath"].Text : string.Empty;
             if (string.IsNullOrEmpty(referencePath) || !File.Exists(referencePath))
@@ -942,7 +942,18 @@ namespace CassetteMotionPro.Workspace
             }
 
             using (ImageMeasurementAssistantForm form = new ImageMeasurementAssistantForm(referencePath, measurementName, instructions))
-                form.ShowDialog(this);
+            {
+                if (form.ShowDialog(this) != DialogResult.OK)
+                    return;
+
+                string measurementKey = metricKey + form.ResultSide;
+                if (!measurementBoxes.ContainsKey(measurementKey))
+                    return;
+
+                measurementBoxes[measurementKey].Text = form.ResultValue;
+                SaveCurrentSession();
+                UpdateSaveHint(measurementName + " " + form.ResultSide.ToLowerInvariant() + " measurement saved from the image assistant.");
+            }
         }
 
         private void UseMeasurementReferenceImage(string sourceKey, string label)

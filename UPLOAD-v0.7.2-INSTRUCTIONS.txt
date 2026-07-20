@@ -1,0 +1,41 @@
+Cassette Motion Pro v0.7.2
+==========================
+
+This update adds the first real click-to-measure Bike Metrics workflow.
+
+What changed:
+- Keeps the v0.7.1 one-button Before + After image combine.
+- Replaces the Image Measurement Assistant placeholder with a real workflow.
+- Click two calibration points and enter the known length in millimeters.
+- Click two measurement points and review the calculated result.
+- Save the result directly to the selected Bike Metrics row as Before or After.
+
+Upload steps:
+
+1. Extract Cassette-Motion-Pro-0.7.2-click-measure-bike-metrics.zip.
+2. Open the extracted folder.
+3. Upload everything INSIDE the extracted folder to the GitHub repository root.
+4. Commit with: Add v0.7.2 click measure bike metrics
+
+Then edit .github/workflows/build.yml and change VERSION to 0.7.2. Commit the
+change and wait for the Actions run to receive a green check.
+
+Test checklist:
+
+1. Open a client.
+2. Open the Bike Fit Workspace.
+3. Open Report Images.
+4. Choose a Before image.
+5. Choose an After image.
+6. Click Combine Before + After.
+7. Confirm the Side-by-side image field fills in.
+8. Open Bike Metrics.
+9. Confirm the Measurement image field also uses the combined side-by-side image.
+10. Click Assist on Saddle height or another bike metric.
+11. Click Calibrate Scale.
+12. Click two points with a known real-world length.
+13. Enter the known length in millimeters.
+14. Click Measure Points.
+15. Click the two measurement points.
+16. Click Save to Before or Save to After.
+17. Confirm the Bike Metrics value fills in and the session saves.
