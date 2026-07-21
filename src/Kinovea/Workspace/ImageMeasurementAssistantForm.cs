@@ -105,6 +105,7 @@ namespace CassetteMotionPro.Workspace
             picture.MouseUp += Picture_MouseUp;
             picture.MouseWheel += Picture_MouseWheel;
             picture.MouseEnter += delegate { picture.Focus(); };
+            picture.Resize += delegate { CenterImageIfItFits(); };
             picture.Paint += Picture_Paint;
 
             Panel side = new Panel();
@@ -166,15 +167,19 @@ namespace CassetteMotionPro.Workspace
 
             Button zoomOut = CreateButton("−", false);
             Button zoomReset = CreateButton("Reset Zoom", false);
+            Button zoomCenter = CreateButton("Center Image", false);
             Button zoomIn = CreateButton("+", false);
-            zoomOut.Size = new Size(42, 32);
-            zoomReset.Size = new Size(104, 32);
-            zoomIn.Size = new Size(42, 32);
+            zoomOut.Size = new Size(36, 32);
+            zoomReset.Size = new Size(86, 32);
+            zoomCenter.Size = new Size(96, 32);
+            zoomIn.Size = new Size(36, 32);
             zoomOut.Click += delegate { ZoomAroundCenter(0.8F); };
             zoomReset.Click += delegate { ResetZoom(); };
+            zoomCenter.Click += delegate { CenterImage(); };
             zoomIn.Click += delegate { ZoomAroundCenter(1.25F); };
             zoomPanel.Controls.Add(zoomOut);
             zoomPanel.Controls.Add(zoomReset);
+            zoomPanel.Controls.Add(zoomCenter);
             zoomPanel.Controls.Add(zoomIn);
 
             Button calibrate = CreateButton("1. Calibrate Scale", false);
@@ -317,6 +322,7 @@ namespace CassetteMotionPro.Workspace
                 return;
 
             panOffset = new PointF(panStartOffset.X + e.X - panStart.X, panStartOffset.Y + e.Y - panStart.Y);
+            ClampPanOffset();
             picture.Invalidate();
         }
 
@@ -525,24 +531,9 @@ namespace CassetteMotionPro.Workspace
             if (loadedImage == null || picture.ClientSize.Width <= 0 || picture.ClientSize.Height <= 0)
                 return Rectangle.Empty;
 
-            double imageRatio = loadedImage.Width / (double)loadedImage.Height;
-            double boxRatio = picture.ClientSize.Width / (double)picture.ClientSize.Height;
-            int width;
-            int height;
-
-            if (imageRatio > boxRatio)
-            {
-                width = picture.ClientSize.Width;
-                height = (int)Math.Round(width / imageRatio);
-            }
-            else
-            {
-                height = picture.ClientSize.Height;
-                width = (int)Math.Round(height * imageRatio);
-            }
-
-            width = Math.Max(1, (int)Math.Round(width * zoomFactor));
-            height = Math.Max(1, (int)Math.Round(height * zoomFactor));
+            Size scaledSize = GetZoomedImageSize();
+            int width = scaledSize.Width;
+            int height = scaledSize.Height;
 
             int left = (int)Math.Round(((picture.ClientSize.Width - width) / 2.0) + panOffset.X);
             int top = (int)Math.Round(((picture.ClientSize.Height - height) / 2.0) + panOffset.Y);
@@ -572,6 +563,7 @@ namespace CassetteMotionPro.Workspace
                 panOffset = new PointF(panOffset.X + focusPoint.X - afterZoom.X, panOffset.Y + focusPoint.Y - afterZoom.Y);
             }
 
+            ClampPanOffset();
             picture.Invalidate();
         }
 
@@ -580,6 +572,67 @@ namespace CassetteMotionPro.Workspace
             zoomFactor = 1F;
             panOffset = PointF.Empty;
             picture.Invalidate();
+        }
+
+        private void CenterImage()
+        {
+            panOffset = PointF.Empty;
+            ClampPanOffset();
+            picture.Invalidate();
+        }
+
+        private void CenterImageIfItFits()
+        {
+            ClampPanOffset();
+            picture.Invalidate();
+        }
+
+        private void ClampPanOffset()
+        {
+            if (loadedImage == null || picture.ClientSize.Width <= 0 || picture.ClientSize.Height <= 0)
+                return;
+
+            Size scaledSize = GetZoomedImageSize();
+            float panX = panOffset.X;
+            float panY = panOffset.Y;
+
+            panX = ClampPanAxis(panX, scaledSize.Width, picture.ClientSize.Width);
+            panY = ClampPanAxis(panY, scaledSize.Height, picture.ClientSize.Height);
+            panOffset = new PointF(panX, panY);
+        }
+
+        private static float ClampPanAxis(float panValue, int imageSize, int viewportSize)
+        {
+            if (imageSize <= viewportSize)
+                return 0F;
+
+            float centeredStart = (viewportSize - imageSize) / 2F;
+            float minimumPan = viewportSize - imageSize - centeredStart;
+            float maximumPan = -centeredStart;
+            return Math.Max(minimumPan, Math.Min(maximumPan, panValue));
+        }
+
+        private Size GetZoomedImageSize()
+        {
+            double imageRatio = loadedImage.Width / (double)loadedImage.Height;
+            double boxRatio = picture.ClientSize.Width / (double)picture.ClientSize.Height;
+            int width;
+            int height;
+
+            if (imageRatio > boxRatio)
+            {
+                width = picture.ClientSize.Width;
+                height = (int)Math.Round(width / imageRatio);
+            }
+            else
+            {
+                height = picture.ClientSize.Height;
+                width = (int)Math.Round(height * imageRatio);
+            }
+
+            width = Math.Max(1, (int)Math.Round(width * zoomFactor));
+            height = Math.Max(1, (int)Math.Round(height * zoomFactor));
+            return new Size(width, height);
         }
 
         private static double Distance(PointF first, PointF second)

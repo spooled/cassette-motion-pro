@@ -708,7 +708,7 @@ namespace Kinovea.Root
 
             clientRepository.MarkOpened(client);
             statusLabel.Text = string.Format("Fit session: {0} · {1}", client.DisplayName, client.BikeDescription);
-            using (BikeFitWorkspaceForm form = new BikeFitWorkspaceForm(client, OpenFromPath, OpenBodyAngleGuide))
+            using (BikeFitWorkspaceForm form = new BikeFitWorkspaceForm(client, OpenFromPath, OpenBeforeAfterPair, OpenBodyAngleGuide))
                 form.ShowDialog(mainWindow);
             BuildRecentClientMenus();
         }
@@ -1346,6 +1346,49 @@ namespace Kinovea.Root
                     MessageBox.Show(ScreenManagerLang.LoadMovie_FileNotOpened, ScreenManagerLang.LoadMovie_Error, MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 }
             }
+        }
+
+        private void OpenBeforeAfterPair(string beforePath, string afterPath)
+        {
+            if (string.IsNullOrEmpty(beforePath) || string.IsNullOrEmpty(afterPath) || !File.Exists(beforePath) || !File.Exists(afterPath))
+                return;
+
+            EnsureTwoPlaybackScreens();
+            LoadVideoInTargetScreen(beforePath, 0);
+            LoadVideoInTargetScreen(afterPath, 1);
+            screenManager.OrganizeScreens();
+        }
+
+        private void EnsureTwoPlaybackScreens()
+        {
+            for (int index = screenManager.ScreenCount - 1; index >= 0; index--)
+            {
+                AbstractScreen screen = screenManager.GetScreenAt(index);
+                if (screen != null && !(screen is PlayerScreen))
+                    screenManager.RemoveScreen(screen);
+            }
+
+            if (screenManager.ScreenCount == 0)
+            {
+                screenManager.AddPlayerScreen();
+                screenManager.AddPlayerScreen();
+            }
+            else if (screenManager.ScreenCount == 1)
+            {
+                screenManager.AddPlayerScreen();
+            }
+        }
+
+        private void LoadVideoInTargetScreen(string path, int targetScreen)
+        {
+            ScreenDescriptorPlayback sdp = new ScreenDescriptorPlayback();
+            sdp.FullPath = path;
+            sdp.IsReplayWatcher = false;
+            sdp.Stretch = false;
+            sdp.Autoplay = false;
+            sdp.SpeedPercentage = PreferencesManager.PlayerPreferences.DefaultReplaySpeed;
+
+            LoaderVideo.LoadVideoInScreen(screenManager, path, targetScreen, sdp);
         }
         private void ToggleFullScreen()
         {

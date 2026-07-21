@@ -1,0 +1,30 @@
+Cassette Motion Pro v0.7.10 - Before/After Video Side-by-side Fix
+
+What changed:
+- Fixes the Open Before + After video button.
+- Before video opens on the left.
+- After video opens on the right.
+- The app creates two playback panes when needed.
+- If a camera/capture pane is open, the app clears it so the two videos can open side by side.
+- Keeps the v0.7.9 centered before/after reference image update.
+
+How to upload:
+1. Extract this zip.
+2. Open your GitHub repo: https://github.com/spooled/cassette-motion-pro
+3. Upload/replace these folders from the extracted package:
+   - .github
+   - docs
+   - installer
+   - src
+4. Upload/replace the root files too if GitHub asks.
+5. Commit with this message:
+   Add v0.7.10 before after video side by side fix
+6. Go to Actions and wait for the build to finish.
+7. Download the Windows installer/portable artifact from the successful run.
+
+What to test:
+1. Open Bike Fit Workspace.
+2. Choose a Before video and an After video.
+3. Click Open Before + After.
+4. Confirm Before is on the left and After is on the right.
+5. Confirm the two videos are side by side.

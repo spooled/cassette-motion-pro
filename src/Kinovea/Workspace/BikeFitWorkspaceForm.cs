@@ -22,6 +22,7 @@ namespace CassetteMotionPro.Workspace
         private readonly ClientRecord client;
         private readonly FitSessionRepository repository;
         private readonly Action<string> openVideo;
+        private readonly Action<string, string> openVideoPair;
         private readonly Action<string> openBodyAngleGuide;
         private readonly ListView sessionList = new ListView();
         private readonly TextBox txtTitle = new TextBox();
@@ -35,13 +36,14 @@ namespace CassetteMotionPro.Workspace
         private readonly Dictionary<string, TextBox> measurementBoxes = new Dictionary<string, TextBox>();
         private FitSessionRecord currentSession;
 
-        public BikeFitWorkspaceForm(ClientRecord client, Action<string> openVideo, Action<string> openBodyAngleGuide)
+        public BikeFitWorkspaceForm(ClientRecord client, Action<string> openVideo, Action<string, string> openVideoPair, Action<string> openBodyAngleGuide)
         {
             if (client == null)
                 throw new ArgumentNullException("client");
 
             this.client = client;
             this.openVideo = openVideo;
+            this.openVideoPair = openVideoPair;
             this.openBodyAngleGuide = openBodyAngleGuide;
             repository = new FitSessionRepository(client);
 
@@ -1150,35 +1152,39 @@ namespace CassetteMotionPro.Workspace
                 const int labelHeight = 46;
                 const int padding = 18;
                 const int gap = 16;
-                int commonImageHeight = Math.Min(900, Math.Max(before.Height, after.Height));
-
-                int beforeWidth = ScaleWidth(before, commonImageHeight);
-                int afterWidth = ScaleWidth(after, commonImageHeight);
-                int canvasWidth = beforeWidth + afterWidth + gap + (padding * 2);
-                int canvasHeight = commonImageHeight + labelHeight + (padding * 2);
+                const int panelWidth = 850;
+                const int panelHeight = 900;
+                int canvasWidth = (panelWidth * 2) + gap + (padding * 2);
+                int canvasHeight = panelHeight + labelHeight + (padding * 2);
 
                 using (Bitmap combined = new Bitmap(canvasWidth, canvasHeight))
                 using (Graphics graphics = Graphics.FromImage(combined))
                 using (Brush background = new SolidBrush(Color.FromArgb(18, 24, 31)))
+                using (Brush imagePanelBrush = new SolidBrush(Color.FromArgb(8, 12, 16)))
                 using (Brush labelBrush = new SolidBrush(Color.White))
                 using (Brush accentBrush = new SolidBrush(Color.FromArgb(184, 243, 74)))
                 using (Font labelFont = new Font("Segoe UI", 18F, FontStyle.Bold))
                 using (Pen dividerPen = new Pen(Color.FromArgb(76, 91, 106), 2F))
+                using (Pen panelPen = new Pen(Color.FromArgb(76, 91, 106), 1F))
                 {
                     graphics.SmoothingMode = SmoothingMode.AntiAlias;
                     graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
                     graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
                     graphics.FillRectangle(background, 0, 0, canvasWidth, canvasHeight);
 
-                    Rectangle beforeRectangle = new Rectangle(padding, padding + labelHeight, beforeWidth, commonImageHeight);
-                    Rectangle afterRectangle = new Rectangle(padding + beforeWidth + gap, padding + labelHeight, afterWidth, commonImageHeight);
+                    Rectangle beforePanel = new Rectangle(padding, padding + labelHeight, panelWidth, panelHeight);
+                    Rectangle afterPanel = new Rectangle(padding + panelWidth + gap, padding + labelHeight, panelWidth, panelHeight);
 
-                    graphics.DrawString("BEFORE", labelFont, accentBrush, beforeRectangle.Left, padding + 8);
-                    graphics.DrawString("AFTER", labelFont, labelBrush, afterRectangle.Left, padding + 8);
-                    graphics.DrawLine(dividerPen, padding + beforeWidth + (gap / 2), padding + 8, padding + beforeWidth + (gap / 2), canvasHeight - padding);
+                    graphics.DrawString("BEFORE", labelFont, accentBrush, beforePanel.Left, padding + 8);
+                    graphics.DrawString("AFTER", labelFont, labelBrush, afterPanel.Left, padding + 8);
+                    graphics.DrawLine(dividerPen, padding + panelWidth + (gap / 2), padding + 8, padding + panelWidth + (gap / 2), canvasHeight - padding);
 
-                    graphics.DrawImage(before, beforeRectangle);
-                    graphics.DrawImage(after, afterRectangle);
+                    graphics.FillRectangle(imagePanelBrush, beforePanel);
+                    graphics.FillRectangle(imagePanelBrush, afterPanel);
+                    graphics.DrawRectangle(panelPen, beforePanel);
+                    graphics.DrawRectangle(panelPen, afterPanel);
+                    graphics.DrawImage(before, GetCenteredImageRectangle(before, beforePanel));
+                    graphics.DrawImage(after, GetCenteredImageRectangle(after, afterPanel));
 
                     combined.Save(destinationPath, ImageFormat.Jpeg);
                 }
@@ -1187,12 +1193,19 @@ namespace CassetteMotionPro.Workspace
             return destinationPath;
         }
 
-        private static int ScaleWidth(Image image, int targetHeight)
+        private static Rectangle GetCenteredImageRectangle(Image image, Rectangle bounds)
         {
-            if (image == null || image.Height <= 0)
-                return targetHeight;
+            if (image == null || image.Width <= 0 || image.Height <= 0)
+                return bounds;
 
-            return Math.Max(1, (int)Math.Round((double)image.Width * targetHeight / image.Height));
+            double widthScale = bounds.Width / (double)image.Width;
+            double heightScale = bounds.Height / (double)image.Height;
+            double scale = Math.Min(widthScale, heightScale);
+            int width = Math.Max(1, (int)Math.Round(image.Width * scale));
+            int height = Math.Max(1, (int)Math.Round(image.Height * scale));
+            int left = bounds.Left + ((bounds.Width - width) / 2);
+            int top = bounds.Top + ((bounds.Height - height) / 2);
+            return new Rectangle(left, top, width, height);
         }
 
         private void OpenReportImage(string key)
@@ -1226,7 +1239,11 @@ namespace CassetteMotionPro.Workspace
                 return;
             SaveCurrentSession();
             Close();
-            if (openVideo != null)
+            if (openVideoPair != null)
+            {
+                openVideoPair(first, second);
+            }
+            else if (openVideo != null)
             {
                 openVideo(first);
                 openVideo(second);
