@@ -1,0 +1,39 @@
+Cassette Motion Pro v0.8.0 - Report Polish
+
+What changed:
+- Redesigns generated fit reports so they look more professional and client-ready.
+- Adds a stronger report header with session summary cards.
+- Improves image presentation in the report.
+- Organizes bike metrics into clearer bike-fit sections:
+  - Contact points
+  - Handlebar position
+  - Foot interface
+  - Body Angles
+  - Recommendations and Notes
+- Keeps the Before measurements report toggle.
+- Keeps the report image display toggles.
+- Updates app/build/installer/report versions to 0.8.0.
+
+How to upload:
+1. Extract this zip.
+2. Open your GitHub repo: https://github.com/spooled/cassette-motion-pro
+3. Upload/replace these folders from the extracted package:
+   - .github
+   - docs
+   - installer
+   - src
+4. Upload/replace README.md too.
+5. Important: make sure .github uploads as a real folder named .github.
+6. Commit with this message:
+   Add v0.8.0 report polish
+7. Go to Actions and wait for the build to finish.
+
+What to test:
+1. Confirm GitHub Actions creates:
+   - CassetteMotionPro-Portable-0.8.0
+   - CassetteMotionPro-Installer-0.8.0
+2. Generate a report.
+3. Confirm it has the redesigned header and cleaner bike-fit sections.
+4. Test Show Before measurements in report on and off.
+5. Test image display checkboxes on and off.
+6. Click Print / Save PDF from the report and confirm the PDF view looks good.
