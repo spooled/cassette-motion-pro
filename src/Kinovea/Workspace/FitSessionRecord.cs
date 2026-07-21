@@ -34,6 +34,11 @@ namespace CassetteMotionPro.Workspace
         public string AfterReportImagePath { get; set; }
         public string SideBySideReportImagePath { get; set; }
         public string MeasurementReferenceImagePath { get; set; }
+        public bool HideBeforeMeasurementsInReport { get; set; }
+        public bool HideSideBySideImageInReport { get; set; }
+        public bool HideBeforeImageInReport { get; set; }
+        public bool HideAfterImageInReport { get; set; }
+        public bool HideMeasurementReferenceImageInReport { get; set; }
 
         public string SaddleHeightBefore { get; set; }
         public string SaddleHeightAfter { get; set; }

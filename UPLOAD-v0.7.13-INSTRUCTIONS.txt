@@ -1,0 +1,34 @@
+Cassette Motion Pro v0.7.13 - Report Image Display Toggles
+
+What changed:
+- Adds Show in report checkboxes on the Report Images tab.
+- You can choose whether the report shows:
+  - Side-by-side image
+  - Before image
+  - After image
+  - Measurement reference image
+- Image display choices are saved per fit session.
+- Existing sessions default to showing all report images.
+- Keeps the v0.7.12 Before measurements report toggle.
+
+How to upload:
+1. Extract this zip.
+2. Open your GitHub repo: https://github.com/spooled/cassette-motion-pro
+3. Upload/replace these folders from the extracted package:
+   - .github
+   - docs
+   - installer
+   - src
+4. Important: make sure .github uploads as a real folder named .github.
+5. Commit with this message:
+   Add v0.7.13 report image display toggles
+6. Go to Actions and wait for the build to finish.
+
+What to test:
+1. Open a client and fit session.
+2. Go to Report Images.
+3. Confirm all Show in report image options are checked by default.
+4. Generate a report and confirm the images appear.
+5. Uncheck Before image or After image.
+6. Generate another report and confirm the unchecked image is hidden.
+7. Close and reopen the session and confirm the checkbox choices are remembered.

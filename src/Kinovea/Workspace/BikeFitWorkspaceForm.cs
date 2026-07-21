@@ -31,6 +31,11 @@ namespace CassetteMotionPro.Workspace
         private readonly TextBox txtGoals = new TextBox();
         private readonly TextBox txtNotes = new TextBox();
         private readonly Label saveHint = new Label();
+        private readonly CheckBox chkShowBeforeMeasurementsInReport = new CheckBox();
+        private readonly CheckBox chkShowSideBySideImageInReport = new CheckBox();
+        private readonly CheckBox chkShowBeforeImageInReport = new CheckBox();
+        private readonly CheckBox chkShowAfterImageInReport = new CheckBox();
+        private readonly CheckBox chkShowMeasurementReferenceImageInReport = new CheckBox();
         private readonly Dictionary<string, TextBox> mediaBoxes = new Dictionary<string, TextBox>();
         private readonly Dictionary<string, TextBox> imageBoxes = new Dictionary<string, TextBox>();
         private readonly Dictionary<string, TextBox> measurementBoxes = new Dictionary<string, TextBox>();
@@ -182,6 +187,18 @@ namespace CassetteMotionPro.Workspace
             openReports.Width = 125;
             openReports.Click += OpenReports_Click;
 
+            chkShowBeforeMeasurementsInReport.Text = "Show Before measurements in report";
+            chkShowBeforeMeasurementsInReport.Checked = true;
+            chkShowBeforeMeasurementsInReport.Dock = DockStyle.Right;
+            chkShowBeforeMeasurementsInReport.Width = 245;
+            chkShowBeforeMeasurementsInReport.TextAlign = ContentAlignment.MiddleLeft;
+            chkShowBeforeMeasurementsInReport.ForeColor = Color.FromArgb(24, 31, 29);
+            chkShowBeforeMeasurementsInReport.CheckedChanged += delegate
+            {
+                if (currentSession != null)
+                    UpdateSaveHint(chkShowBeforeMeasurementsInReport.Checked ? "Report will show Before, After, and Change." : "Report will show After/final measurements only.");
+            };
+
             saveHint.Text = "Autosaves to this client’s Measurements folder.";
             saveHint.Dock = DockStyle.Fill;
             saveHint.TextAlign = ContentAlignment.MiddleLeft;
@@ -191,6 +208,7 @@ namespace CassetteMotionPro.Workspace
             actions.Controls.Add(save);
             actions.Controls.Add(report);
             actions.Controls.Add(openReports);
+            actions.Controls.Add(chkShowBeforeMeasurementsInReport);
             actions.Controls.Add(saveHint);
             parent.Controls.Add(tabs);
             parent.Controls.Add(actions);
@@ -330,6 +348,7 @@ namespace CassetteMotionPro.Workspace
             AddImageRow(table, "Before image", "BeforeReportImagePath");
             AddImageRow(table, "After image", "AfterReportImagePath");
             AddImageRow(table, "Side-by-side image", "SideBySideReportImagePath");
+            AddReportImageDisplayOptions(table);
 
             FlowLayoutPanel combineActions = new FlowLayoutPanel();
             combineActions.Dock = DockStyle.Fill;
@@ -358,6 +377,51 @@ namespace CassetteMotionPro.Workspace
             page.AutoScroll = true;
             page.Controls.Add(table);
             return page;
+        }
+
+        private void AddReportImageDisplayOptions(TableLayoutPanel table)
+        {
+            Label label = new Label();
+            label.Text = "Show in report";
+            label.Dock = DockStyle.Fill;
+            label.TextAlign = ContentAlignment.MiddleLeft;
+            label.ForeColor = Color.FromArgb(74, 87, 81);
+
+            FlowLayoutPanel options = new FlowLayoutPanel();
+            options.Dock = DockStyle.Fill;
+            options.FlowDirection = FlowDirection.LeftToRight;
+            options.WrapContents = true;
+            options.Padding = new Padding(0, 4, 0, 4);
+
+            ConfigureReportImageCheckbox(chkShowSideBySideImageInReport, "Side-by-side");
+            ConfigureReportImageCheckbox(chkShowBeforeImageInReport, "Before");
+            ConfigureReportImageCheckbox(chkShowAfterImageInReport, "After");
+            ConfigureReportImageCheckbox(chkShowMeasurementReferenceImageInReport, "Measurement reference");
+
+            options.Controls.Add(chkShowSideBySideImageInReport);
+            options.Controls.Add(chkShowBeforeImageInReport);
+            options.Controls.Add(chkShowAfterImageInReport);
+            options.Controls.Add(chkShowMeasurementReferenceImageInReport);
+
+            int row = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 62));
+            table.Controls.Add(label, 0, row);
+            table.Controls.Add(options, 1, row);
+            table.SetColumnSpan(options, 3);
+        }
+
+        private void ConfigureReportImageCheckbox(CheckBox checkbox, string text)
+        {
+            checkbox.Text = text;
+            checkbox.Checked = true;
+            checkbox.AutoSize = true;
+            checkbox.Margin = new Padding(0, 8, 18, 4);
+            checkbox.ForeColor = Color.FromArgb(24, 31, 29);
+            checkbox.CheckedChanged += delegate
+            {
+                if (currentSession != null)
+                    UpdateSaveHint("Report image display options updated.");
+            };
         }
 
         private TabPage BuildNotesTab()
@@ -727,6 +791,7 @@ namespace CassetteMotionPro.Workspace
                 cmbStatus.SelectedIndex = 0;
             txtGoals.Text = session.Goals ?? string.Empty;
             txtNotes.Text = session.Notes ?? string.Empty;
+            chkShowBeforeMeasurementsInReport.Checked = !session.HideBeforeMeasurementsInReport;
 
             string beforePath = session.BeforeVideoPath;
             if (string.IsNullOrEmpty(beforePath))
@@ -740,6 +805,10 @@ namespace CassetteMotionPro.Workspace
             SetImage("AfterReportImagePath", session.AfterReportImagePath);
             SetImage("SideBySideReportImagePath", session.SideBySideReportImagePath);
             SetImage("MeasurementReferenceImagePath", session.MeasurementReferenceImagePath);
+            chkShowSideBySideImageInReport.Checked = !session.HideSideBySideImageInReport;
+            chkShowBeforeImageInReport.Checked = !session.HideBeforeImageInReport;
+            chkShowAfterImageInReport.Checked = !session.HideAfterImageInReport;
+            chkShowMeasurementReferenceImageInReport.Checked = !session.HideMeasurementReferenceImageInReport;
 
             SetMeasurement("SaddleHeightBefore", session.SaddleHeightBefore);
             SetMeasurement("SaddleHeightAfter", session.SaddleHeightAfter);
@@ -870,6 +939,11 @@ namespace CassetteMotionPro.Workspace
             currentSession.AfterReportImagePath = imageBoxes["AfterReportImagePath"].Text;
             currentSession.SideBySideReportImagePath = imageBoxes["SideBySideReportImagePath"].Text;
             currentSession.MeasurementReferenceImagePath = imageBoxes["MeasurementReferenceImagePath"].Text;
+            currentSession.HideBeforeMeasurementsInReport = !chkShowBeforeMeasurementsInReport.Checked;
+            currentSession.HideSideBySideImageInReport = !chkShowSideBySideImageInReport.Checked;
+            currentSession.HideBeforeImageInReport = !chkShowBeforeImageInReport.Checked;
+            currentSession.HideAfterImageInReport = !chkShowAfterImageInReport.Checked;
+            currentSession.HideMeasurementReferenceImageInReport = !chkShowMeasurementReferenceImageInReport.Checked;
             currentSession.SaddleHeightBefore = measurementBoxes["SaddleHeightBefore"].Text.Trim();
             currentSession.SaddleHeightAfter = measurementBoxes["SaddleHeightAfter"].Text.Trim();
             currentSession.SaddleSetbackBefore = measurementBoxes["SaddleSetbackBefore"].Text.Trim();
