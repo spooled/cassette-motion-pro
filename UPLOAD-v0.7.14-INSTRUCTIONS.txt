@@ -1,0 +1,31 @@
+Cassette Motion Pro v0.7.14 - Version Label Cleanup
+
+What changed:
+- Fixes old version labels that still showed 0.7.7 or 0.7.13.
+- Updates the home/README milestone to 0.7.14.
+- Updates GitHub Actions artifacts to 0.7.14.
+- Updates installer version to 0.7.14.
+- Updates app assembly/project version to 0.7.14.0.
+- Updates generated report footer to v0.7.14.
+- Keeps the v0.7.13 report image display toggles.
+
+How to upload:
+1. Extract this zip.
+2. Open your GitHub repo: https://github.com/spooled/cassette-motion-pro
+3. Upload/replace these folders from the extracted package:
+   - .github
+   - docs
+   - installer
+   - src
+4. Upload/replace README.md too.
+5. Important: make sure .github uploads as a real folder named .github.
+6. Commit with this message:
+   Add v0.7.14 version label cleanup
+7. Go to Actions and wait for the build to finish.
+
+What to test:
+1. Confirm GitHub Actions creates:
+   - CassetteMotionPro-Portable-0.7.14
+   - CassetteMotionPro-Installer-0.7.14
+2. Open the app and confirm the home/about/version area no longer shows 0.7.7.
+3. Generate a report and confirm the footer shows v0.7.14.
