@@ -1,0 +1,31 @@
+Cassette Motion Pro v0.7.11 - Installer Artifact Fix
+
+What changed:
+- Fixes the missing installer artifact in GitHub Actions.
+- Includes the .github/workflows/build.yml file in this upload package.
+- Updates the build version to 0.7.11.
+- Runs NSIS from inside src\Installer so the installer is created where GitHub uploads it from.
+- Keeps the v0.7.10 Before/After video side-by-side fix.
+
+How to upload:
+1. Extract this zip.
+2. Open your GitHub repo: https://github.com/spooled/cassette-motion-pro
+3. Upload/replace these folders from the extracted package:
+   - .github
+   - docs
+   - installer
+   - src
+4. Important: make sure .github uploads as a real folder named .github.
+5. Commit with this message:
+   Add v0.7.11 installer artifact fix
+6. Go to Actions and wait for the build to finish.
+
+What you should see after the run succeeds:
+- CassetteMotionPro-Portable-0.7.11
+- CassetteMotionPro-Installer-0.7.11
+
+If you still do not see the installer:
+1. Open the Actions run.
+2. Click the build job.
+3. Open the Build installer step.
+4. Send a screenshot of the last red error line.
