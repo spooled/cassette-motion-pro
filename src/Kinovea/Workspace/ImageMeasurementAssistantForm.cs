@@ -37,8 +37,15 @@ namespace CassetteMotionPro.Workspace
         private Button saveAfter;
         private Image loadedImage;
         private ClickMode mode;
+        private float zoomFactor = 1F;
+        private PointF panOffset = PointF.Empty;
+        private bool isPanning;
+        private Point panStart;
+        private PointF panStartOffset;
         private double millimetersPerPixel;
         private double measuredMillimeters;
+        private double manualSignedMillimeters;
+        private bool hasManualSignedMeasurement;
         private bool resultIsNegative;
 
         public string ResultValue { get; private set; }
@@ -89,10 +96,15 @@ namespace CassetteMotionPro.Workspace
             picture = new PictureBox();
             picture.Dock = DockStyle.Fill;
             picture.BackColor = Color.FromArgb(13, 19, 17);
-            picture.SizeMode = PictureBoxSizeMode.Zoom;
+            picture.SizeMode = PictureBoxSizeMode.Normal;
+            picture.TabStop = true;
             loadedImage = Image.FromFile(imagePath);
-            picture.Image = loadedImage;
             picture.MouseClick += Picture_MouseClick;
+            picture.MouseDown += Picture_MouseDown;
+            picture.MouseMove += Picture_MouseMove;
+            picture.MouseUp += Picture_MouseUp;
+            picture.MouseWheel += Picture_MouseWheel;
+            picture.MouseEnter += delegate { picture.Focus(); };
             picture.Paint += Picture_Paint;
 
             Panel side = new Panel();
@@ -121,7 +133,8 @@ namespace CassetteMotionPro.Workspace
                 "4. Click Measure Points.\n" +
                 "5. Click the two measurement points" + (horizontalMeasurement ? " from left to right." : ".") + "\n" +
                 "6. Use Make Negative when needed.\n" +
-                "7. Save to Before or After.";
+                "7. Or enter a manual signed value.\n" +
+                "8. Save to Before or After.";
             guide.Dock = DockStyle.Top;
             guide.Height = 174;
             guide.ForeColor = Color.FromArgb(74, 87, 81);
@@ -145,28 +158,52 @@ namespace CassetteMotionPro.Workspace
             resultLabel.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             resultLabel.ForeColor = Color.FromArgb(24, 31, 29);
 
+            FlowLayoutPanel zoomPanel = new FlowLayoutPanel();
+            zoomPanel.Dock = DockStyle.Top;
+            zoomPanel.Height = 38;
+            zoomPanel.FlowDirection = FlowDirection.LeftToRight;
+            zoomPanel.WrapContents = false;
+
+            Button zoomOut = CreateButton("−", false);
+            Button zoomReset = CreateButton("Reset Zoom", false);
+            Button zoomIn = CreateButton("+", false);
+            zoomOut.Size = new Size(42, 32);
+            zoomReset.Size = new Size(104, 32);
+            zoomIn.Size = new Size(42, 32);
+            zoomOut.Click += delegate { ZoomAroundCenter(0.8F); };
+            zoomReset.Click += delegate { ResetZoom(); };
+            zoomIn.Click += delegate { ZoomAroundCenter(1.25F); };
+            zoomPanel.Controls.Add(zoomOut);
+            zoomPanel.Controls.Add(zoomReset);
+            zoomPanel.Controls.Add(zoomIn);
+
             Button calibrate = CreateButton("1. Calibrate Scale", false);
             Button measure = CreateButton("2. Measure Points", false);
+            Button manual = CreateButton("Enter Manual Value", false);
             flipSign = CreateButton("Make Negative", false);
             saveBefore = CreateButton("Save to Before", false);
             saveAfter = CreateButton("Save to After", true);
             calibrate.Dock = DockStyle.Top;
             measure.Dock = DockStyle.Top;
+            manual.Dock = DockStyle.Top;
             flipSign.Dock = DockStyle.Top;
             saveBefore.Dock = DockStyle.Top;
             saveAfter.Dock = DockStyle.Top;
             calibrate.Height = 40;
             measure.Height = 40;
+            manual.Height = 40;
             flipSign.Height = 40;
             saveBefore.Height = 40;
             saveAfter.Height = 40;
             calibrate.Margin = new Padding(0, 10, 0, 0);
             measure.Margin = new Padding(0, 10, 0, 0);
+            manual.Margin = new Padding(0, 10, 0, 0);
             flipSign.Margin = new Padding(0, 10, 0, 0);
             saveBefore.Margin = new Padding(0, 10, 0, 0);
             saveAfter.Margin = new Padding(0, 10, 0, 0);
             calibrate.Click += Calibrate_Click;
             measure.Click += Measure_Click;
+            manual.Click += Manual_Click;
             flipSign.Click += FlipSign_Click;
             saveBefore.Click += delegate { SaveResult("Before"); };
             saveAfter.Click += delegate { SaveResult("After"); };
@@ -189,8 +226,10 @@ namespace CassetteMotionPro.Workspace
             side.Controls.Add(saveAfter);
             side.Controls.Add(saveBefore);
             side.Controls.Add(flipSign);
+            side.Controls.Add(manual);
             side.Controls.Add(measure);
             side.Controls.Add(calibrate);
+            side.Controls.Add(zoomPanel);
             side.Controls.Add(resultLabel);
             side.Controls.Add(scaleLabel);
             side.Controls.Add(status);
@@ -210,6 +249,8 @@ namespace CassetteMotionPro.Workspace
             calibrationPoints.Clear();
             measurementPoints.Clear();
             measuredMillimeters = 0;
+            hasManualSignedMeasurement = false;
+            manualSignedMillimeters = 0;
             resultIsNegative = false;
             flipSign.Enabled = false;
             flipSign.Text = "Make Negative";
@@ -231,6 +272,8 @@ namespace CassetteMotionPro.Workspace
             mode = ClickMode.Measurement;
             measurementPoints.Clear();
             measuredMillimeters = 0;
+            hasManualSignedMeasurement = false;
+            manualSignedMillimeters = 0;
             resultIsNegative = false;
             flipSign.Enabled = false;
             flipSign.Text = "Make Negative";
@@ -243,6 +286,9 @@ namespace CassetteMotionPro.Workspace
 
         private void Picture_MouseClick(object sender, MouseEventArgs e)
         {
+            if (e.Button != MouseButtons.Left)
+                return;
+
             PointF imagePoint;
             if (!TryConvertControlPointToImagePoint(e.Location, out imagePoint))
                 return;
@@ -251,6 +297,41 @@ namespace CassetteMotionPro.Workspace
                 AddCalibrationPoint(imagePoint);
             else if (mode == ClickMode.Measurement)
                 AddMeasurementPoint(imagePoint);
+        }
+
+        private void Picture_MouseDown(object sender, MouseEventArgs e)
+        {
+            picture.Focus();
+            if (e.Button == MouseButtons.Right || e.Button == MouseButtons.Middle)
+            {
+                isPanning = true;
+                panStart = e.Location;
+                panStartOffset = panOffset;
+                picture.Cursor = Cursors.SizeAll;
+            }
+        }
+
+        private void Picture_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!isPanning)
+                return;
+
+            panOffset = new PointF(panStartOffset.X + e.X - panStart.X, panStartOffset.Y + e.Y - panStart.Y);
+            picture.Invalidate();
+        }
+
+        private void Picture_MouseUp(object sender, MouseEventArgs e)
+        {
+            if (!isPanning)
+                return;
+
+            isPanning = false;
+            picture.Cursor = Cursors.Default;
+        }
+
+        private void Picture_MouseWheel(object sender, MouseEventArgs e)
+        {
+            ZoomAtPoint(e.Delta > 0 ? 1.15F : 0.87F, e.Location);
         }
 
         private void AddCalibrationPoint(PointF imagePoint)
@@ -275,7 +356,7 @@ namespace CassetteMotionPro.Workspace
                 }
 
                 double knownMillimeters;
-                if (!PromptForMillimeters(this, "Known length", "Enter the real length between those two points in millimeters:", out knownMillimeters))
+                if (!PromptForMillimeters(this, "Known length", "Enter the real positive length between those two calibration points in millimeters:", out knownMillimeters))
                 {
                     calibrationPoints.Clear();
                     status.Text = "Calibration cancelled. Click Calibrate Scale to try again.";
@@ -304,6 +385,8 @@ namespace CassetteMotionPro.Workspace
             if (measurementPoints.Count == 2)
             {
                 measuredMillimeters = MeasurementDistance(measurementPoints[0], measurementPoints[1]) * millimetersPerPixel;
+                hasManualSignedMeasurement = false;
+                manualSignedMillimeters = 0;
                 resultIsNegative = false;
                 UpdateResultLabel();
                 status.Text = horizontalMeasurement ? "Horizontal measurement ready. Use Make Negative if setback should save below zero." : "Measurement ready. Use Make Negative if this value should save below zero.";
@@ -317,7 +400,7 @@ namespace CassetteMotionPro.Workspace
 
         private void FlipSign_Click(object sender, EventArgs e)
         {
-            if (measuredMillimeters <= 0)
+            if (measuredMillimeters <= 0 || hasManualSignedMeasurement)
                 return;
 
             resultIsNegative = !resultIsNegative;
@@ -325,12 +408,30 @@ namespace CassetteMotionPro.Workspace
             status.Text = resultIsNegative ? "Negative value selected. Save to Before or After." : "Positive value selected. Save to Before or After.";
         }
 
-        private void SaveResult(string side)
+        private void Manual_Click(object sender, EventArgs e)
         {
-            if (measuredMillimeters <= 0)
+            double signedMillimeters;
+            if (!PromptForSignedMillimeters(this, "Manual measurement", "Enter the measurement value in millimeters. Negative values are OK, like -9:", out signedMillimeters))
                 return;
 
-            ResultValue = GetSignedMeasurement().ToString("0.0", CultureInfo.InvariantCulture) + " mm";
+            manualSignedMillimeters = signedMillimeters;
+            hasManualSignedMeasurement = true;
+            measuredMillimeters = Math.Abs(signedMillimeters);
+            resultIsNegative = signedMillimeters < 0;
+            resultLabel.Text = "Result: " + signedMillimeters.ToString("0.0", CultureInfo.InvariantCulture) + " mm";
+            flipSign.Enabled = false;
+            saveBefore.Enabled = true;
+            saveAfter.Enabled = true;
+            status.Text = "Manual value ready. Save it to Before or After.";
+        }
+
+        private void SaveResult(string side)
+        {
+            if (!hasManualSignedMeasurement && measuredMillimeters <= 0)
+                return;
+
+            double value = hasManualSignedMeasurement ? manualSignedMillimeters : GetSignedMeasurement();
+            ResultValue = value.ToString("0.0", CultureInfo.InvariantCulture) + " mm";
             ResultSide = side;
             DialogResult = DialogResult.OK;
             Close();
@@ -351,6 +452,12 @@ namespace CassetteMotionPro.Workspace
         private void Picture_Paint(object sender, PaintEventArgs e)
         {
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            e.Graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            Rectangle imageRectangle = GetZoomedImageRectangle();
+            if (loadedImage != null && imageRectangle.Width > 0 && imageRectangle.Height > 0)
+                e.Graphics.DrawImage(loadedImage, imageRectangle);
+
             DrawLine(e.Graphics, calibrationPoints, Color.FromArgb(184, 243, 74), "C");
             DrawLine(e.Graphics, measurementPoints, Color.FromArgb(255, 176, 74), "M", horizontalMeasurement);
         }
@@ -434,9 +541,45 @@ namespace CassetteMotionPro.Workspace
                 width = (int)Math.Round(height * imageRatio);
             }
 
-            int left = (picture.ClientSize.Width - width) / 2;
-            int top = (picture.ClientSize.Height - height) / 2;
+            width = Math.Max(1, (int)Math.Round(width * zoomFactor));
+            height = Math.Max(1, (int)Math.Round(height * zoomFactor));
+
+            int left = (int)Math.Round(((picture.ClientSize.Width - width) / 2.0) + panOffset.X);
+            int top = (int)Math.Round(((picture.ClientSize.Height - height) / 2.0) + panOffset.Y);
             return new Rectangle(left, top, width, height);
+        }
+
+        private void ZoomAroundCenter(float multiplier)
+        {
+            ZoomAtPoint(multiplier, new Point(picture.ClientSize.Width / 2, picture.ClientSize.Height / 2));
+        }
+
+        private void ZoomAtPoint(float multiplier, Point focusPoint)
+        {
+            if (loadedImage == null)
+                return;
+
+            PointF imagePoint;
+            bool hasFocusImagePoint = TryConvertControlPointToImagePoint(focusPoint, out imagePoint);
+            float newZoom = Math.Max(1F, Math.Min(8F, zoomFactor * multiplier));
+            if (Math.Abs(newZoom - zoomFactor) < 0.001F)
+                return;
+
+            zoomFactor = newZoom;
+            if (hasFocusImagePoint)
+            {
+                PointF afterZoom = ConvertImagePointToControlPoint(imagePoint);
+                panOffset = new PointF(panOffset.X + focusPoint.X - afterZoom.X, panOffset.Y + focusPoint.Y - afterZoom.Y);
+            }
+
+            picture.Invalidate();
+        }
+
+        private void ResetZoom()
+        {
+            zoomFactor = 1F;
+            panOffset = PointF.Empty;
+            picture.Invalidate();
         }
 
         private static double Distance(PointF first, PointF second)
@@ -500,7 +643,60 @@ namespace CassetteMotionPro.Workspace
                     if (double.TryParse(raw, NumberStyles.Float, CultureInfo.CurrentCulture, out value) && value > 0)
                         return true;
 
-                    MessageBox.Show(owner, "Enter a number greater than zero, like 172.5.", title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(owner, "Calibration length must be positive, like 172.5. Use Enter Manual Value later for negative measurements such as -9.", title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+
+            return false;
+        }
+
+        private static bool PromptForSignedMillimeters(IWin32Window owner, string title, string prompt, out double value)
+        {
+            value = 0;
+            using (Form form = new Form())
+            using (Label label = new Label())
+            using (TextBox input = new TextBox())
+            using (Button ok = new Button())
+            using (Button cancel = new Button())
+            {
+                form.Text = title;
+                form.Font = new Font("Segoe UI", 9F);
+                form.ClientSize = new Size(390, 148);
+                form.FormBorderStyle = FormBorderStyle.FixedDialog;
+                form.StartPosition = FormStartPosition.CenterParent;
+                form.MinimizeBox = false;
+                form.MaximizeBox = false;
+                form.ShowInTaskbar = false;
+
+                label.Text = prompt;
+                label.SetBounds(14, 14, 360, 36);
+                input.SetBounds(14, 58, 360, 24);
+                input.Text = "-9";
+
+                ok.Text = "OK";
+                ok.DialogResult = DialogResult.OK;
+                ok.SetBounds(204, 104, 82, 28);
+                cancel.Text = "Cancel";
+                cancel.DialogResult = DialogResult.Cancel;
+                cancel.SetBounds(292, 104, 82, 28);
+
+                form.Controls.Add(label);
+                form.Controls.Add(input);
+                form.Controls.Add(ok);
+                form.Controls.Add(cancel);
+                form.AcceptButton = ok;
+                form.CancelButton = cancel;
+
+                while (form.ShowDialog(owner) == DialogResult.OK)
+                {
+                    string raw = input.Text.Trim().Replace("mm", string.Empty).Trim();
+                    if (double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out value) && Math.Abs(value) > 0)
+                        return true;
+
+                    if (double.TryParse(raw, NumberStyles.Float, CultureInfo.CurrentCulture, out value) && Math.Abs(value) > 0)
+                        return true;
+
+                    MessageBox.Show(owner, "Enter a non-zero number, like -9 or 9.", title, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
 

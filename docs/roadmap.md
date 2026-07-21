@@ -94,6 +94,8 @@
 - [x] Negative value support for measurements such as saddle setback
 - [x] Side-by-side-only image workflow for reports and Bike Metrics
 - [x] Horizontal-only measurement mode for saddle setback
+- [x] Zoom and pan support for more precise measurement clicks
+- [x] Manual signed measurement entry for negative values such as saddle setback
 
 ## 1.0 - Professional release
 

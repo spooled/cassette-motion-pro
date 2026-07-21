@@ -1,0 +1,37 @@
+Cassette Motion Pro v0.7.7
+==========================
+
+This update fixes signed values like -9 mm.
+
+What changed:
+- Keeps the v0.7.6 zoom/pan measurement assistant.
+- Adds Enter Manual Value in the Image Measurement Assistant.
+- Manual values can be positive or negative, such as -9 mm.
+- Clarifies that calibration length must be positive.
+- Lets you save the manual signed value to Before or After.
+
+Upload steps:
+
+1. Extract Cassette-Motion-Pro-0.7.7-signed-manual-measurements.zip.
+2. Open the extracted folder.
+3. Upload everything INSIDE the extracted folder to the GitHub repository root.
+4. Commit with: Add v0.7.7 signed manual measurements
+
+Then edit .github/workflows/build.yml and change VERSION to 0.7.7. Commit the
+change and wait for the Actions run to receive a green check.
+
+Test checklist:
+
+1. Open a client.
+2. Open the Bike Fit Workspace.
+3. Open Report Images.
+4. Choose only a Side-by-side image.
+5. Confirm the status says it was set as the Bike Metrics measurement image.
+6. Open Bike Metrics.
+7. Confirm the Measurement image field uses the side-by-side image.
+8. Click Assist on Saddle setback.
+9. Click Enter Manual Value.
+10. Type -9.
+11. Click Save to Before or Save to After.
+12. Confirm Bike Metrics shows -9.0 mm.
+13. Also confirm calibration still requires a positive known length.
