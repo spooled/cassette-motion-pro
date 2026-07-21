@@ -93,6 +93,7 @@
 - [x] Save calculated value back to Bike Metrics Before or After
 - [x] Negative value support for measurements such as saddle setback
 - [x] Side-by-side-only image workflow for reports and Bike Metrics
+- [x] Horizontal-only measurement mode for saddle setback
 
 ## 1.0 - Professional release
 

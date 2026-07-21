@@ -1,0 +1,37 @@
+Cassette Motion Pro v0.7.5
+==========================
+
+This update makes Saddle Setback use a horizontal-only measurement tool.
+
+What changed:
+- Keeps the v0.7.4 side-by-side image workflow.
+- Saddle Setback Assist now measures horizontal distance only.
+- Other Bike Metrics still use the normal point-to-point distance tool.
+- The Make Negative / Make Positive button still works for saddle setback.
+
+Upload steps:
+
+1. Extract Cassette-Motion-Pro-0.7.5-horizontal-saddle-setback.zip.
+2. Open the extracted folder.
+3. Upload everything INSIDE the extracted folder to the GitHub repository root.
+4. Commit with: Add v0.7.5 horizontal saddle setback tool
+
+Then edit .github/workflows/build.yml and change VERSION to 0.7.5. Commit the
+change and wait for the Actions run to receive a green check.
+
+Test checklist:
+
+1. Open a client.
+2. Open the Bike Fit Workspace.
+3. Open Report Images.
+4. Choose only a Side-by-side image.
+5. Confirm the status says it was set as the Bike Metrics measurement image.
+6. Open Bike Metrics.
+7. Confirm the Measurement image field uses the side-by-side image.
+8. Click Assist on Saddle setback.
+9. Calibrate scale.
+10. Click the bottom bracket reference point.
+11. Click the saddle nose point.
+12. Confirm the result measures horizontal distance only.
+13. Click Make Negative if needed.
+14. Save to Before or After.

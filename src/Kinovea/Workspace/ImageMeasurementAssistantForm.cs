@@ -25,6 +25,7 @@ namespace CassetteMotionPro.Workspace
         }
 
         private readonly string imagePath;
+        private readonly bool horizontalMeasurement;
         private readonly List<PointF> calibrationPoints = new List<PointF>();
         private readonly List<PointF> measurementPoints = new List<PointF>();
         private PictureBox picture;
@@ -44,6 +45,11 @@ namespace CassetteMotionPro.Workspace
         public string ResultSide { get; private set; }
 
         public ImageMeasurementAssistantForm(string imagePath, string measurementName, string instructions)
+            : this(imagePath, measurementName, instructions, false)
+        {
+        }
+
+        public ImageMeasurementAssistantForm(string imagePath, string measurementName, string instructions, bool horizontalMeasurement)
         {
             if (string.IsNullOrEmpty(imagePath))
                 throw new ArgumentNullException("imagePath");
@@ -51,6 +57,7 @@ namespace CassetteMotionPro.Workspace
                 throw new FileNotFoundException("The measurement reference image could not be found.", imagePath);
 
             this.imagePath = imagePath;
+            this.horizontalMeasurement = horizontalMeasurement;
 
             Text = "Image Measurement Assistant - " + measurementName;
             Font = new Font("Segoe UI", 9F);
@@ -112,7 +119,7 @@ namespace CassetteMotionPro.Workspace
                 "2. Click two points for a known length.\n" +
                 "3. Enter the real length in mm.\n" +
                 "4. Click Measure Points.\n" +
-                "5. Click the two measurement points.\n" +
+                "5. Click the two measurement points" + (horizontalMeasurement ? " from left to right." : ".") + "\n" +
                 "6. Use Make Negative when needed.\n" +
                 "7. Save to Before or After.";
             guide.Dock = DockStyle.Top;
@@ -296,10 +303,10 @@ namespace CassetteMotionPro.Workspace
 
             if (measurementPoints.Count == 2)
             {
-                measuredMillimeters = Distance(measurementPoints[0], measurementPoints[1]) * millimetersPerPixel;
+                measuredMillimeters = MeasurementDistance(measurementPoints[0], measurementPoints[1]) * millimetersPerPixel;
                 resultIsNegative = false;
                 UpdateResultLabel();
-                status.Text = "Measurement ready. Use Make Negative if this value should save below zero.";
+                status.Text = horizontalMeasurement ? "Horizontal measurement ready. Use Make Negative if setback should save below zero." : "Measurement ready. Use Make Negative if this value should save below zero.";
                 flipSign.Enabled = true;
                 saveBefore.Enabled = true;
                 saveAfter.Enabled = true;
@@ -345,10 +352,15 @@ namespace CassetteMotionPro.Workspace
         {
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             DrawLine(e.Graphics, calibrationPoints, Color.FromArgb(184, 243, 74), "C");
-            DrawLine(e.Graphics, measurementPoints, Color.FromArgb(255, 176, 74), "M");
+            DrawLine(e.Graphics, measurementPoints, Color.FromArgb(255, 176, 74), "M", horizontalMeasurement);
         }
 
         private void DrawLine(Graphics graphics, IList<PointF> imagePoints, Color color, string label)
+        {
+            DrawLine(graphics, imagePoints, color, label, false);
+        }
+
+        private void DrawLine(Graphics graphics, IList<PointF> imagePoints, Color color, string label, bool horizontalOnly)
         {
             if (imagePoints == null || imagePoints.Count == 0)
                 return;
@@ -363,7 +375,12 @@ namespace CassetteMotionPro.Workspace
             using (Font font = new Font("Segoe UI", 9F, FontStyle.Bold))
             {
                 if (controlPoints.Count == 2)
-                    graphics.DrawLine(pen, controlPoints[0], controlPoints[1]);
+                {
+                    if (horizontalOnly)
+                        graphics.DrawLine(pen, controlPoints[0].X, controlPoints[0].Y, controlPoints[1].X, controlPoints[0].Y);
+                    else
+                        graphics.DrawLine(pen, controlPoints[0], controlPoints[1]);
+                }
 
                 for (int i = 0; i < controlPoints.Count; i++)
                 {
@@ -427,6 +444,14 @@ namespace CassetteMotionPro.Workspace
             double dx = first.X - second.X;
             double dy = first.Y - second.Y;
             return Math.Sqrt((dx * dx) + (dy * dy));
+        }
+
+        private double MeasurementDistance(PointF first, PointF second)
+        {
+            if (horizontalMeasurement)
+                return Math.Abs(first.X - second.X);
+
+            return Distance(first, second);
         }
 
         private static bool PromptForMillimeters(IWin32Window owner, string title, string prompt, out double value)

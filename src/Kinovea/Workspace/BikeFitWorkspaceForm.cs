@@ -941,7 +941,8 @@ namespace CassetteMotionPro.Workspace
                 return;
             }
 
-            using (ImageMeasurementAssistantForm form = new ImageMeasurementAssistantForm(referencePath, measurementName, instructions))
+            bool horizontalMeasurement = string.Equals(metricKey, "SaddleSetback", StringComparison.OrdinalIgnoreCase);
+            using (ImageMeasurementAssistantForm form = new ImageMeasurementAssistantForm(referencePath, measurementName, instructions, horizontalMeasurement))
             {
                 if (form.ShowDialog(this) != DialogResult.OK)
                     return;
