@@ -153,7 +153,7 @@ namespace CassetteMotionPro.Workspace
                 "2. Click two points for a known length.\n" +
                 "3. Enter the real length in mm.\n" +
                 "4. Click Measure Points.\n" +
-                "5. Choose Free, Horizontal, or Vertical.\n" +
+                "5. Choose Distance, Distance (horizontal), or Distance (vertical).\n" +
                 "6. Hold Shift on the second click to auto-lock.\n" +
                 "7. Save to Before or After.";
             guide.Dock = DockStyle.Top;
@@ -195,12 +195,12 @@ namespace CassetteMotionPro.Workspace
             axisMode = new ComboBox();
             axisMode.DropDownStyle = ComboBoxStyle.DropDownList;
             axisMode.Width = 145;
-            axisMode.Items.AddRange(new object[] { "Free", "Horizontal", "Vertical" });
+            axisMode.Items.AddRange(new object[] { "Distance", "Distance (horizontal)", "Distance (vertical)" });
             axisMode.SelectedIndex = GetDefaultAxisIndex();
             axisMode.SelectedIndexChanged += delegate
             {
                 activeMeasurementAxis = GetSelectedAxis();
-                status.Text = "Measurement mode: " + GetAxisLabel(activeMeasurementAxis) + ". Hold Shift on the second click to auto-lock from point direction.";
+                status.Text = "Measurement tool: " + GetAxisLabel(activeMeasurementAxis) + ". Hold Shift on the second click to auto-lock from point direction.";
                 picture.Invalidate();
             };
 
@@ -336,7 +336,7 @@ namespace CassetteMotionPro.Workspace
             saveBefore.Enabled = false;
             saveAfter.Enabled = false;
             resultLabel.Text = "Result: --";
-            status.Text = "Measurement: click the first point. Use Free, Horizontal, Vertical, or hold Shift on the second click to auto-lock.";
+            status.Text = "Measurement: click the first point. Use Distance, Distance (horizontal), Distance (vertical), or hold Shift on the second click to auto-lock.";
             picture.Invalidate();
         }
 
@@ -777,12 +777,12 @@ namespace CassetteMotionPro.Workspace
         private static string GetAxisLabel(MeasurementAxis axis)
         {
             if (axis == MeasurementAxis.Horizontal)
-                return "Horizontal";
+                return "Distance (horizontal)";
 
             if (axis == MeasurementAxis.Vertical)
-                return "Vertical";
+                return "Distance (vertical)";
 
-            return "Free";
+            return "Distance";
         }
 
         private static bool PromptForMillimeters(IWin32Window owner, string title, string prompt, out double value)

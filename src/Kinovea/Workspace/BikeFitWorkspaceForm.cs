@@ -308,7 +308,7 @@ namespace CassetteMotionPro.Workspace
 
             AddMeasurementReferenceImageControls(table);
             AddBikeMetricHeader(table);
-            AddBikeMetricRow(table, "Saddle height", "BB center → saddle top along the seat tube line.", "SaddleHeight");
+            AddBikeMetricRow(table, "Saddle height", "Use Distance: BB center → saddle top along the seat tube / saddle-height line.", "SaddleHeight");
             AddBikeMetricRow(table, "Saddle setback", "BB vertical line → saddle nose, measured horizontally.", "SaddleSetback");
             AddBikeMetricRow(table, "Saddle tip to grip reach", "Saddle tip → grip/hood contact point.", "SaddleTipToGripReach");
             AddBikeMetricRow(table, "Handlebar X", "BB center → handlebar/hood contact point, horizontal coordinate.", "HandlebarX");
