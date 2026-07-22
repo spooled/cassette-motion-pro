@@ -17,6 +17,13 @@ namespace CassetteMotionPro.Workspace
 {
     public class ImageMeasurementAssistantForm : Form
     {
+        public enum DefaultMeasurementAxis
+        {
+            Free,
+            Horizontal,
+            Vertical
+        }
+
         private enum ClickMode
         {
             None,
@@ -32,7 +39,7 @@ namespace CassetteMotionPro.Workspace
         }
 
         private readonly string imagePath;
-        private readonly bool horizontalMeasurement;
+        private readonly DefaultMeasurementAxis defaultMeasurementAxis;
         private readonly List<PointF> calibrationPoints = new List<PointF>();
         private readonly List<PointF> measurementPoints = new List<PointF>();
         private PictureBox picture;
@@ -61,11 +68,16 @@ namespace CassetteMotionPro.Workspace
         public string ResultSide { get; private set; }
 
         public ImageMeasurementAssistantForm(string imagePath, string measurementName, string instructions)
-            : this(imagePath, measurementName, instructions, false)
+            : this(imagePath, measurementName, instructions, DefaultMeasurementAxis.Free)
         {
         }
 
         public ImageMeasurementAssistantForm(string imagePath, string measurementName, string instructions, bool horizontalMeasurement)
+            : this(imagePath, measurementName, instructions, horizontalMeasurement ? DefaultMeasurementAxis.Horizontal : DefaultMeasurementAxis.Free)
+        {
+        }
+
+        public ImageMeasurementAssistantForm(string imagePath, string measurementName, string instructions, DefaultMeasurementAxis defaultMeasurementAxis)
         {
             if (string.IsNullOrEmpty(imagePath))
                 throw new ArgumentNullException("imagePath");
@@ -73,7 +85,7 @@ namespace CassetteMotionPro.Workspace
                 throw new FileNotFoundException("The measurement reference image could not be found.", imagePath);
 
             this.imagePath = imagePath;
-            this.horizontalMeasurement = horizontalMeasurement;
+            this.defaultMeasurementAxis = defaultMeasurementAxis;
 
             Text = "Image Measurement Assistant - " + measurementName;
             Font = new Font("Segoe UI", 9F);
@@ -184,7 +196,7 @@ namespace CassetteMotionPro.Workspace
             axisMode.DropDownStyle = ComboBoxStyle.DropDownList;
             axisMode.Width = 145;
             axisMode.Items.AddRange(new object[] { "Free", "Horizontal", "Vertical" });
-            axisMode.SelectedIndex = horizontalMeasurement ? 1 : 0;
+            axisMode.SelectedIndex = GetDefaultAxisIndex();
             axisMode.SelectedIndexChanged += delegate
             {
                 activeMeasurementAxis = GetSelectedAxis();
@@ -704,12 +716,34 @@ namespace CassetteMotionPro.Workspace
         private MeasurementAxis GetSelectedAxis()
         {
             if (axisMode == null)
-                return horizontalMeasurement ? MeasurementAxis.Horizontal : MeasurementAxis.Free;
+                return ConvertDefaultAxis(defaultMeasurementAxis);
 
             if (axisMode.SelectedIndex == 1)
                 return MeasurementAxis.Horizontal;
 
             if (axisMode.SelectedIndex == 2)
+                return MeasurementAxis.Vertical;
+
+            return MeasurementAxis.Free;
+        }
+
+        private int GetDefaultAxisIndex()
+        {
+            if (defaultMeasurementAxis == DefaultMeasurementAxis.Horizontal)
+                return 1;
+
+            if (defaultMeasurementAxis == DefaultMeasurementAxis.Vertical)
+                return 2;
+
+            return 0;
+        }
+
+        private MeasurementAxis ConvertDefaultAxis(DefaultMeasurementAxis axis)
+        {
+            if (axis == DefaultMeasurementAxis.Horizontal)
+                return MeasurementAxis.Horizontal;
+
+            if (axis == DefaultMeasurementAxis.Vertical)
                 return MeasurementAxis.Vertical;
 
             return MeasurementAxis.Free;

@@ -5,7 +5,7 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.8.2 installer upload staging fix
+## Current milestone: 0.8.4 Windows bundle artifact
 
 - Complete Kinovea source imported under `src/`
 - Application output renamed to `CassetteMotionPro.exe`
@@ -50,6 +50,10 @@ can be incorporated with minimal changes to the playback and annotation engine.
 - Saddle setback Assist uses a horizontal-only distance measurement
 - Zoom and pan controls in the Image Measurement Assistant for more precise clicks
 - Manual signed measurement entry for values such as `-9 mm`
+- Bike Metrics Assist opens saddle setback, handlebar X, handlebar Y, and
+  saddle-tip-to-grip reach with the correct horizontal/vertical distance mode
+- GitHub Actions publishes a combined Windows bundle artifact containing both
+  the portable zip and installer executable
 
 The expanded body-angle measurement library and polished PDF report generator
 remain future milestones. See [docs/roadmap.md](docs/roadmap.md).

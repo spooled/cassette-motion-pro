@@ -1,0 +1,60 @@
+Cassette Motion Pro v0.8.3 - Bike Metric Axis Defaults
+
+This update makes the Image Measurement Assistant open in the right distance
+mode for common bike metrics.
+
+What changed:
+
+- Saddle setback opens in Horizontal mode.
+- Handlebar X opens in Horizontal mode.
+- Handlebar Y opens in Vertical mode.
+- Saddle tip to grip reach opens in Horizontal mode.
+- Other measurements still open in Free mode.
+- You can still manually switch between Free, Horizontal, and Vertical.
+- Holding Shift on the second measurement click still auto-locks the line.
+- Keeps the installer upload staging fix from v0.8.2.
+- Updates app/build/installer/report versions to 0.8.3.
+
+Upload steps:
+
+1. Open your GitHub repository:
+   https://github.com/spooled/cassette-motion-pro
+
+2. Upload everything from this package to the repo root.
+
+   Important:
+   - Include the hidden .github folder.
+   - The workflow file must end up here:
+
+     .github/workflows/build.yml
+
+3. Commit with this message:
+
+   Add v0.8.3 bike metric axis defaults
+
+4. Go to Actions.
+
+5. Open the newest successful run.
+
+6. Download:
+
+   CassetteMotionPro-Portable-0.8.3
+
+   or:
+
+   CassetteMotionPro-Installer-0.8.3
+
+What to test:
+
+1. Open Bike Fit Workspace.
+2. Go to Bike Metrics.
+3. Choose a Measurement Reference Image.
+4. Click Assist for Saddle setback.
+   - It should open with Measurement set to Horizontal.
+5. Click Assist for Handlebar X.
+   - It should open with Measurement set to Horizontal.
+6. Click Assist for Handlebar Y.
+   - It should open with Measurement set to Vertical.
+7. Click Assist for Saddle tip to grip reach.
+   - It should open with Measurement set to Horizontal.
+8. Confirm you can still change the mode manually if needed.

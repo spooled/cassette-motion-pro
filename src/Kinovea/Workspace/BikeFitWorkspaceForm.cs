@@ -1017,8 +1017,8 @@ namespace CassetteMotionPro.Workspace
                 return;
             }
 
-            bool horizontalMeasurement = string.Equals(metricKey, "SaddleSetback", StringComparison.OrdinalIgnoreCase);
-            using (ImageMeasurementAssistantForm form = new ImageMeasurementAssistantForm(referencePath, measurementName, instructions, horizontalMeasurement))
+            ImageMeasurementAssistantForm.DefaultMeasurementAxis defaultAxis = GetDefaultBikeMetricAxis(metricKey);
+            using (ImageMeasurementAssistantForm form = new ImageMeasurementAssistantForm(referencePath, measurementName, instructions, defaultAxis))
             {
                 if (form.ShowDialog(this) != DialogResult.OK)
                     return;
@@ -1031,6 +1031,21 @@ namespace CassetteMotionPro.Workspace
                 SaveCurrentSession();
                 UpdateSaveHint(measurementName + " " + form.ResultSide.ToLowerInvariant() + " measurement saved from the image assistant.");
             }
+        }
+
+        private ImageMeasurementAssistantForm.DefaultMeasurementAxis GetDefaultBikeMetricAxis(string metricKey)
+        {
+            if (string.Equals(metricKey, "SaddleSetback", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(metricKey, "SaddleTipToGripReach", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(metricKey, "HandlebarX", StringComparison.OrdinalIgnoreCase))
+            {
+                return ImageMeasurementAssistantForm.DefaultMeasurementAxis.Horizontal;
+            }
+
+            if (string.Equals(metricKey, "HandlebarY", StringComparison.OrdinalIgnoreCase))
+                return ImageMeasurementAssistantForm.DefaultMeasurementAxis.Vertical;
+
+            return ImageMeasurementAssistantForm.DefaultMeasurementAxis.Free;
         }
 
         private void UseMeasurementReferenceImage(string sourceKey, string label)

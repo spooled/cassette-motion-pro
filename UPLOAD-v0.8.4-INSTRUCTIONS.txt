@@ -1,0 +1,63 @@
+Cassette Motion Pro v0.8.4 - Windows Bundle Artifact
+
+This update makes the GitHub Actions downloads easier to find.
+
+What changed:
+
+- Keeps all v0.8.3 Bike Metrics axis defaults.
+- Keeps the installer upload staging fix.
+- Adds one clear combined artifact:
+
+  CassetteMotionPro-Windows-0.8.4
+
+- That Windows bundle should contain:
+
+  CassetteMotionPro-Portable-0.8.4.zip
+  CassetteMotionPro-Installer-0.8.4.exe
+
+- The workflow still uploads the portable app and installer separately too.
+- Updates app/build/installer/report versions to 0.8.4.
+
+Upload steps:
+
+1. Open your GitHub repository:
+   https://github.com/spooled/cassette-motion-pro
+
+2. Upload everything from this package to the repo root.
+
+   Important:
+   - Include the hidden .github folder.
+   - The workflow file must end up here:
+
+     .github/workflows/build.yml
+
+3. Commit with this message:
+
+   Add v0.8.4 Windows bundle artifact
+
+4. Go to Actions.
+
+5. Open the newest successful run.
+
+6. At the bottom of the run page, download:
+
+   CassetteMotionPro-Windows-0.8.4
+
+7. Open that downloaded zip.
+
+8. You should see:
+
+   CassetteMotionPro-Portable-0.8.4.zip
+   CassetteMotionPro-Installer-0.8.4.exe
+
+What to test:
+
+1. Confirm the Windows bundle artifact appears.
+2. Confirm the installer .exe is inside the bundle.
+3. Run the installer on Windows.
+4. Confirm Cassette Motion Pro opens.
+5. Confirm Bike Metrics Assist still opens these modes:
+   - Saddle setback: Horizontal
+   - Handlebar X: Horizontal
+   - Handlebar Y: Vertical
+   - Saddle tip to grip reach: Horizontal
