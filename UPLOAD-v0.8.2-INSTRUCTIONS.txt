@@ -1,0 +1,50 @@
+Cassette Motion Pro v0.8.2 - Installer Upload Staging Fix
+
+This is a small GitHub Actions packaging fix.
+
+What changed:
+
+- Keeps the app/features from v0.8.1.
+- Updates app/build/installer/report versions to 0.8.2.
+- Makes the installer upload more reliable by copying the generated installer
+  into:
+
+  dist/installer/
+
+- Uploads the installer artifact from that staged folder.
+- Fails clearly if no installer .exe is created, instead of silently showing no
+  installer artifact.
+
+Upload steps:
+
+1. Open your GitHub repository:
+   https://github.com/spooled/cassette-motion-pro
+
+2. Upload everything from this package to the repo root.
+
+   Important:
+   - Include the hidden .github folder.
+   - The workflow file must end up here:
+
+     .github/workflows/build.yml
+
+3. Commit with this message:
+
+   Add v0.8.2 installer upload staging fix
+
+4. Go to Actions.
+
+5. Open the newest successful run.
+
+6. At the bottom of the run page, look for both artifacts:
+
+   CassetteMotionPro-Portable-0.8.2
+   CassetteMotionPro-Installer-0.8.2
+
+What to test:
+
+1. Download CassetteMotionPro-Portable-0.8.2 first.
+2. Confirm the app still opens.
+3. Download CassetteMotionPro-Installer-0.8.2.
+4. Run the installer on Windows.
+5. Confirm it installs Cassette Motion Pro and launches.

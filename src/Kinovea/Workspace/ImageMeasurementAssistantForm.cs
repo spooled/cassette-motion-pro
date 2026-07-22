@@ -24,6 +24,13 @@ namespace CassetteMotionPro.Workspace
             Measurement
         }
 
+        private enum MeasurementAxis
+        {
+            Free,
+            Horizontal,
+            Vertical
+        }
+
         private readonly string imagePath;
         private readonly bool horizontalMeasurement;
         private readonly List<PointF> calibrationPoints = new List<PointF>();
@@ -32,6 +39,7 @@ namespace CassetteMotionPro.Workspace
         private Label status;
         private Label scaleLabel;
         private Label resultLabel;
+        private ComboBox axisMode;
         private Button flipSign;
         private Button saveBefore;
         private Button saveAfter;
@@ -47,6 +55,7 @@ namespace CassetteMotionPro.Workspace
         private double manualSignedMillimeters;
         private bool hasManualSignedMeasurement;
         private bool resultIsNegative;
+        private MeasurementAxis activeMeasurementAxis = MeasurementAxis.Free;
 
         public string ResultValue { get; private set; }
         public string ResultSide { get; private set; }
@@ -132,18 +141,17 @@ namespace CassetteMotionPro.Workspace
                 "2. Click two points for a known length.\n" +
                 "3. Enter the real length in mm.\n" +
                 "4. Click Measure Points.\n" +
-                "5. Click the two measurement points" + (horizontalMeasurement ? " from left to right." : ".") + "\n" +
-                "6. Use Make Negative when needed.\n" +
-                "7. Or enter a manual signed value.\n" +
-                "8. Save to Before or After.";
+                "5. Choose Free, Horizontal, or Vertical.\n" +
+                "6. Hold Shift on the second click to auto-lock.\n" +
+                "7. Save to Before or After.";
             guide.Dock = DockStyle.Top;
-            guide.Height = 174;
+            guide.Height = 160;
             guide.ForeColor = Color.FromArgb(74, 87, 81);
 
             status = new Label();
             status.Text = "Start with Calibrate Scale.";
             status.Dock = DockStyle.Top;
-            status.Height = 54;
+            status.Height = 46;
             status.ForeColor = Color.FromArgb(24, 31, 29);
 
             scaleLabel = new Label();
@@ -159,9 +167,37 @@ namespace CassetteMotionPro.Workspace
             resultLabel.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             resultLabel.ForeColor = Color.FromArgb(24, 31, 29);
 
+            FlowLayoutPanel axisPanel = new FlowLayoutPanel();
+            axisPanel.Dock = DockStyle.Top;
+            axisPanel.Height = 36;
+            axisPanel.FlowDirection = FlowDirection.LeftToRight;
+            axisPanel.WrapContents = false;
+
+            Label axisLabel = new Label();
+            axisLabel.Text = "Measurement:";
+            axisLabel.TextAlign = ContentAlignment.MiddleLeft;
+            axisLabel.Width = 92;
+            axisLabel.Height = 32;
+            axisLabel.ForeColor = Color.FromArgb(74, 87, 81);
+
+            axisMode = new ComboBox();
+            axisMode.DropDownStyle = ComboBoxStyle.DropDownList;
+            axisMode.Width = 145;
+            axisMode.Items.AddRange(new object[] { "Free", "Horizontal", "Vertical" });
+            axisMode.SelectedIndex = horizontalMeasurement ? 1 : 0;
+            axisMode.SelectedIndexChanged += delegate
+            {
+                activeMeasurementAxis = GetSelectedAxis();
+                status.Text = "Measurement mode: " + GetAxisLabel(activeMeasurementAxis) + ". Hold Shift on the second click to auto-lock from point direction.";
+                picture.Invalidate();
+            };
+
+            axisPanel.Controls.Add(axisLabel);
+            axisPanel.Controls.Add(axisMode);
+
             FlowLayoutPanel zoomPanel = new FlowLayoutPanel();
             zoomPanel.Dock = DockStyle.Top;
-            zoomPanel.Height = 38;
+            zoomPanel.Height = 36;
             zoomPanel.FlowDirection = FlowDirection.LeftToRight;
             zoomPanel.WrapContents = false;
 
@@ -194,18 +230,18 @@ namespace CassetteMotionPro.Workspace
             flipSign.Dock = DockStyle.Top;
             saveBefore.Dock = DockStyle.Top;
             saveAfter.Dock = DockStyle.Top;
-            calibrate.Height = 40;
-            measure.Height = 40;
-            manual.Height = 40;
-            flipSign.Height = 40;
-            saveBefore.Height = 40;
-            saveAfter.Height = 40;
-            calibrate.Margin = new Padding(0, 10, 0, 0);
-            measure.Margin = new Padding(0, 10, 0, 0);
-            manual.Margin = new Padding(0, 10, 0, 0);
-            flipSign.Margin = new Padding(0, 10, 0, 0);
-            saveBefore.Margin = new Padding(0, 10, 0, 0);
-            saveAfter.Margin = new Padding(0, 10, 0, 0);
+            calibrate.Height = 34;
+            measure.Height = 34;
+            manual.Height = 34;
+            flipSign.Height = 34;
+            saveBefore.Height = 34;
+            saveAfter.Height = 34;
+            calibrate.Margin = new Padding(0, 6, 0, 0);
+            measure.Margin = new Padding(0, 6, 0, 0);
+            manual.Margin = new Padding(0, 6, 0, 0);
+            flipSign.Margin = new Padding(0, 6, 0, 0);
+            saveBefore.Margin = new Padding(0, 6, 0, 0);
+            saveAfter.Margin = new Padding(0, 6, 0, 0);
             calibrate.Click += Calibrate_Click;
             measure.Click += Measure_Click;
             manual.Click += Manual_Click;
@@ -219,7 +255,7 @@ namespace CassetteMotionPro.Workspace
             Label imageLabel = new Label();
             imageLabel.Text = "Reference image:\n" + imagePath;
             imageLabel.Dock = DockStyle.Top;
-            imageLabel.Height = 64;
+            imageLabel.Height = 48;
             imageLabel.ForeColor = Color.FromArgb(92, 104, 98);
 
             Button close = CreateButton("Close", false);
@@ -235,6 +271,7 @@ namespace CassetteMotionPro.Workspace
             side.Controls.Add(measure);
             side.Controls.Add(calibrate);
             side.Controls.Add(zoomPanel);
+            side.Controls.Add(axisPanel);
             side.Controls.Add(resultLabel);
             side.Controls.Add(scaleLabel);
             side.Controls.Add(status);
@@ -257,6 +294,7 @@ namespace CassetteMotionPro.Workspace
             hasManualSignedMeasurement = false;
             manualSignedMillimeters = 0;
             resultIsNegative = false;
+            activeMeasurementAxis = MeasurementAxis.Free;
             flipSign.Enabled = false;
             flipSign.Text = "Make Negative";
             saveBefore.Enabled = false;
@@ -280,12 +318,13 @@ namespace CassetteMotionPro.Workspace
             hasManualSignedMeasurement = false;
             manualSignedMillimeters = 0;
             resultIsNegative = false;
+            activeMeasurementAxis = GetSelectedAxis();
             flipSign.Enabled = false;
             flipSign.Text = "Make Negative";
             saveBefore.Enabled = false;
             saveAfter.Enabled = false;
             resultLabel.Text = "Result: --";
-            status.Text = "Measurement: click the first measurement point.";
+            status.Text = "Measurement: click the first point. Use Free, Horizontal, Vertical, or hold Shift on the second click to auto-lock.";
             picture.Invalidate();
         }
 
@@ -380,22 +419,29 @@ namespace CassetteMotionPro.Workspace
 
         private void AddMeasurementPoint(PointF imagePoint)
         {
+            if (measurementPoints.Count == 1)
+            {
+                MeasurementAxis axis = GetMeasurementAxis(measurementPoints[0], imagePoint, (ModifierKeys & Keys.Shift) == Keys.Shift);
+                imagePoint = ApplyAxisLock(measurementPoints[0], imagePoint, axis);
+                activeMeasurementAxis = axis;
+            }
+
             measurementPoints.Add(imagePoint);
             if (measurementPoints.Count == 1)
             {
-                status.Text = "Measurement: click the second measurement point.";
+                status.Text = "Measurement: click the second point. Hold Shift to snap horizontal or vertical automatically.";
                 picture.Invalidate();
                 return;
             }
 
             if (measurementPoints.Count == 2)
             {
-                measuredMillimeters = MeasurementDistance(measurementPoints[0], measurementPoints[1]) * millimetersPerPixel;
+                measuredMillimeters = MeasurementDistance(measurementPoints[0], measurementPoints[1], activeMeasurementAxis) * millimetersPerPixel;
                 hasManualSignedMeasurement = false;
                 manualSignedMillimeters = 0;
                 resultIsNegative = false;
                 UpdateResultLabel();
-                status.Text = horizontalMeasurement ? "Horizontal measurement ready. Use Make Negative if setback should save below zero." : "Measurement ready. Use Make Negative if this value should save below zero.";
+                status.Text = GetAxisLabel(activeMeasurementAxis) + " measurement ready. Use Make Negative if this value should save below zero.";
                 flipSign.Enabled = true;
                 saveBefore.Enabled = true;
                 saveAfter.Enabled = true;
@@ -465,15 +511,15 @@ namespace CassetteMotionPro.Workspace
                 e.Graphics.DrawImage(loadedImage, imageRectangle);
 
             DrawLine(e.Graphics, calibrationPoints, Color.FromArgb(184, 243, 74), "C");
-            DrawLine(e.Graphics, measurementPoints, Color.FromArgb(255, 176, 74), "M", horizontalMeasurement);
+            DrawLine(e.Graphics, measurementPoints, Color.FromArgb(255, 176, 74), "M", activeMeasurementAxis);
         }
 
         private void DrawLine(Graphics graphics, IList<PointF> imagePoints, Color color, string label)
         {
-            DrawLine(graphics, imagePoints, color, label, false);
+            DrawLine(graphics, imagePoints, color, label, MeasurementAxis.Free);
         }
 
-        private void DrawLine(Graphics graphics, IList<PointF> imagePoints, Color color, string label, bool horizontalOnly)
+        private void DrawLine(Graphics graphics, IList<PointF> imagePoints, Color color, string label, MeasurementAxis axis)
         {
             if (imagePoints == null || imagePoints.Count == 0)
                 return;
@@ -489,8 +535,10 @@ namespace CassetteMotionPro.Workspace
             {
                 if (controlPoints.Count == 2)
                 {
-                    if (horizontalOnly)
+                    if (axis == MeasurementAxis.Horizontal)
                         graphics.DrawLine(pen, controlPoints[0].X, controlPoints[0].Y, controlPoints[1].X, controlPoints[0].Y);
+                    else if (axis == MeasurementAxis.Vertical)
+                        graphics.DrawLine(pen, controlPoints[0].X, controlPoints[0].Y, controlPoints[0].X, controlPoints[1].Y);
                     else
                         graphics.DrawLine(pen, controlPoints[0], controlPoints[1]);
                 }
@@ -642,12 +690,65 @@ namespace CassetteMotionPro.Workspace
             return Math.Sqrt((dx * dx) + (dy * dy));
         }
 
-        private double MeasurementDistance(PointF first, PointF second)
+        private double MeasurementDistance(PointF first, PointF second, MeasurementAxis axis)
         {
-            if (horizontalMeasurement)
+            if (axis == MeasurementAxis.Horizontal)
                 return Math.Abs(first.X - second.X);
 
+            if (axis == MeasurementAxis.Vertical)
+                return Math.Abs(first.Y - second.Y);
+
             return Distance(first, second);
+        }
+
+        private MeasurementAxis GetSelectedAxis()
+        {
+            if (axisMode == null)
+                return horizontalMeasurement ? MeasurementAxis.Horizontal : MeasurementAxis.Free;
+
+            if (axisMode.SelectedIndex == 1)
+                return MeasurementAxis.Horizontal;
+
+            if (axisMode.SelectedIndex == 2)
+                return MeasurementAxis.Vertical;
+
+            return MeasurementAxis.Free;
+        }
+
+        private MeasurementAxis GetMeasurementAxis(PointF first, PointF second, bool shiftPressed)
+        {
+            MeasurementAxis selected = GetSelectedAxis();
+            if (selected != MeasurementAxis.Free)
+                return selected;
+
+            if (!shiftPressed)
+                return MeasurementAxis.Free;
+
+            float dx = Math.Abs(second.X - first.X);
+            float dy = Math.Abs(second.Y - first.Y);
+            return dx >= dy ? MeasurementAxis.Horizontal : MeasurementAxis.Vertical;
+        }
+
+        private static PointF ApplyAxisLock(PointF first, PointF second, MeasurementAxis axis)
+        {
+            if (axis == MeasurementAxis.Horizontal)
+                return new PointF(second.X, first.Y);
+
+            if (axis == MeasurementAxis.Vertical)
+                return new PointF(first.X, second.Y);
+
+            return second;
+        }
+
+        private static string GetAxisLabel(MeasurementAxis axis)
+        {
+            if (axis == MeasurementAxis.Horizontal)
+                return "Horizontal";
+
+            if (axis == MeasurementAxis.Vertical)
+                return "Vertical";
+
+            return "Free";
         }
 
         private static bool PromptForMillimeters(IWin32Window owner, string title, string prompt, out double value)
