@@ -5,7 +5,7 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.9.2 installer workflow hardening
+## Current milestone: 0.9.4 installer NSIS hardening
 
 - Complete Kinovea source imported under `src/`
 - Application output renamed to `CassetteMotionPro.exe`
@@ -60,6 +60,10 @@ can be incorporated with minimal changes to the playback and annotation engine.
   (horizontal), and Distance (vertical)
 - Windows bundle uploads an installer build status file so missing installer
   artifacts are easier to diagnose in future updates
+- Guided Capture has a larger current-point prompt, Undo Last Point, Flip
+  Setback Sign, and a save confirmation preview
+- GitHub Actions installs NSIS through Chocolatey and calls the exact
+  `makensis.exe` path to make installer builds more reliable
 
 The expanded body-angle measurement library and polished PDF report generator
 remain future milestones. See [docs/roadmap.md](docs/roadmap.md).

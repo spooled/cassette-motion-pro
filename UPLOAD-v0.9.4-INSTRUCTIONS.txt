@@ -1,0 +1,60 @@
+Cassette Motion Pro v0.9.4 - Installer NSIS Hardening
+
+This update is focused on fixing the installer artifact problem.
+
+What changed:
+
+- Keeps v0.9.3 Guided Capture polish.
+- Replaces the third-party NSIS install action with Chocolatey NSIS install.
+- Finds the real makensis.exe path on the Windows runner.
+- Stores that makensis.exe path in the GitHub Actions environment.
+- Runs the installer build using the exact makensis.exe path.
+- Adds the NSIS path to INSTALLER-BUILD-STATUS.txt.
+- Keeps the Windows bundle status-file behavior from v0.9.2.
+- Updates app/build/installer/report versions to 0.9.4.
+
+Upload steps:
+
+1. Open your GitHub repository:
+   https://github.com/spooled/cassette-motion-pro
+
+2. Upload everything from this package to the repo root.
+
+   Important:
+   - Include the hidden .github folder.
+   - The workflow file must end up here:
+
+     .github/workflows/build.yml
+
+3. Commit with this message:
+
+   Add v0.9.4 installer NSIS hardening
+
+4. Go to Actions.
+
+5. Open the newest run.
+
+6. Download:
+
+   CassetteMotionPro-Windows-0.9.4
+
+What to check:
+
+1. Open the Windows bundle.
+2. Open INSTALLER-BUILD-STATUS.txt.
+3. If status says SUCCESS, confirm this file is present:
+
+   CassetteMotionPro-Installer-0.9.4.exe
+
+4. If status says FAILED or NOT RUN, send the Actions run link and the
+   INSTALLER-BUILD-STATUS.txt text.
+5. Also check that the portable zip is present:
+
+   CassetteMotionPro-Portable-0.9.4.zip
+
+Important:
+
+If the separate Installer artifact is not shown, first check the Windows bundle.
+The installer should be inside:
+
+CassetteMotionPro-Windows-0.9.4

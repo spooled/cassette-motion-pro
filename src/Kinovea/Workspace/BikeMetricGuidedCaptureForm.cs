@@ -37,8 +37,11 @@ namespace CassetteMotionPro.Workspace
 
         private PictureBox picture;
         private Label status;
+        private Label currentLandmarkLabel;
         private Label scaleLabel;
         private Label resultsLabel;
+        private Button undoLast;
+        private Button flipSetbackSign;
         private Button saveBefore;
         private Button saveAfter;
         private Image loadedImage;
@@ -141,8 +144,17 @@ namespace CassetteMotionPro.Workspace
             status = new Label();
             status.Text = "Start with Calibrate Scale.";
             status.Dock = DockStyle.Top;
-            status.Height = 50;
+            status.Height = 44;
             status.ForeColor = Color.FromArgb(24, 31, 29);
+
+            currentLandmarkLabel = new Label();
+            currentLandmarkLabel.Text = "Current point: --";
+            currentLandmarkLabel.Dock = DockStyle.Top;
+            currentLandmarkLabel.Height = 54;
+            currentLandmarkLabel.Font = new Font("Segoe UI", 13F, FontStyle.Bold);
+            currentLandmarkLabel.ForeColor = Color.FromArgb(13, 19, 17);
+            currentLandmarkLabel.BackColor = Color.FromArgb(238, 247, 219);
+            currentLandmarkLabel.Padding = new Padding(10, 8, 10, 8);
 
             scaleLabel = new Label();
             scaleLabel.Text = "Scale: not calibrated";
@@ -182,29 +194,41 @@ namespace CassetteMotionPro.Workspace
 
             Button calibrate = CreateButton("1. Calibrate Scale", false);
             Button capture = CreateButton("2. Start Guided Capture", false);
+            undoLast = CreateButton("Undo Last Point", false);
             Button clear = CreateButton("Clear Points", false);
+            flipSetbackSign = CreateButton("Flip Setback Sign", false);
             saveBefore = CreateButton("Save to Before", false);
             saveAfter = CreateButton("Save to After", true);
             calibrate.Dock = DockStyle.Top;
             capture.Dock = DockStyle.Top;
+            undoLast.Dock = DockStyle.Top;
             clear.Dock = DockStyle.Top;
+            flipSetbackSign.Dock = DockStyle.Top;
             saveBefore.Dock = DockStyle.Top;
             saveAfter.Dock = DockStyle.Top;
             calibrate.Height = 34;
             capture.Height = 34;
+            undoLast.Height = 34;
             clear.Height = 34;
+            flipSetbackSign.Height = 34;
             saveBefore.Height = 34;
             saveAfter.Height = 34;
             calibrate.Margin = new Padding(0, 6, 0, 0);
             capture.Margin = new Padding(0, 6, 0, 0);
+            undoLast.Margin = new Padding(0, 6, 0, 0);
             clear.Margin = new Padding(0, 6, 0, 0);
+            flipSetbackSign.Margin = new Padding(0, 6, 0, 0);
             saveBefore.Margin = new Padding(0, 6, 0, 0);
             saveAfter.Margin = new Padding(0, 6, 0, 0);
             calibrate.Click += Calibrate_Click;
             capture.Click += Capture_Click;
+            undoLast.Click += UndoLast_Click;
             clear.Click += Clear_Click;
+            flipSetbackSign.Click += FlipSetbackSign_Click;
             saveBefore.Click += delegate { SaveResult("Before"); };
             saveAfter.Click += delegate { SaveResult("After"); };
+            undoLast.Enabled = false;
+            flipSetbackSign.Enabled = false;
             saveBefore.Enabled = false;
             saveAfter.Enabled = false;
 
@@ -216,12 +240,15 @@ namespace CassetteMotionPro.Workspace
             side.Controls.Add(close);
             side.Controls.Add(saveAfter);
             side.Controls.Add(saveBefore);
+            side.Controls.Add(flipSetbackSign);
             side.Controls.Add(clear);
+            side.Controls.Add(undoLast);
             side.Controls.Add(capture);
             side.Controls.Add(calibrate);
             side.Controls.Add(zoomPanel);
             side.Controls.Add(resultsLabel);
             side.Controls.Add(scaleLabel);
+            side.Controls.Add(currentLandmarkLabel);
             side.Controls.Add(status);
             side.Controls.Add(guide);
             side.Controls.Add(title);
@@ -238,10 +265,13 @@ namespace CassetteMotionPro.Workspace
             calibrationPoints.Clear();
             landmarkPoints.Clear();
             calculatedValues.Clear();
+            undoLast.Enabled = false;
+            flipSetbackSign.Enabled = false;
             saveBefore.Enabled = false;
             saveAfter.Enabled = false;
             resultsLabel.Text = "Calculated metrics:\n--";
             status.Text = "Calibration: click the first point of a known length.";
+            currentLandmarkLabel.Text = "Current point: calibration point 1";
             picture.Invalidate();
         }
 
@@ -256,10 +286,13 @@ namespace CassetteMotionPro.Workspace
             mode = ClickMode.Landmarks;
             landmarkPoints.Clear();
             calculatedValues.Clear();
+            undoLast.Enabled = false;
+            flipSetbackSign.Enabled = false;
             saveBefore.Enabled = false;
             saveAfter.Enabled = false;
             resultsLabel.Text = "Calculated metrics:\n--";
             status.Text = "Click landmark 1 of 4: " + landmarkNames[0] + ".";
+            UpdateCurrentLandmarkInstruction();
             picture.Invalidate();
         }
 
@@ -267,10 +300,59 @@ namespace CassetteMotionPro.Workspace
         {
             landmarkPoints.Clear();
             calculatedValues.Clear();
+            undoLast.Enabled = calibrationPoints.Count > 0;
+            flipSetbackSign.Enabled = false;
             saveBefore.Enabled = false;
             saveAfter.Enabled = false;
             resultsLabel.Text = "Calculated metrics:\n--";
             status.Text = millimetersPerPixel > 0 ? "Points cleared. Click Start Guided Capture." : "Points cleared. Start with Calibrate Scale.";
+            currentLandmarkLabel.Text = "Current point: --";
+            picture.Invalidate();
+        }
+
+        private void UndoLast_Click(object sender, EventArgs e)
+        {
+            if (mode == ClickMode.Landmarks || landmarkPoints.Count > 0)
+            {
+                if (landmarkPoints.Count == 0)
+                    return;
+
+                landmarkPoints.RemoveAt(landmarkPoints.Count - 1);
+                calculatedValues.Clear();
+                flipSetbackSign.Enabled = false;
+                saveBefore.Enabled = false;
+                saveAfter.Enabled = false;
+                resultsLabel.Text = "Calculated metrics:\n--";
+                mode = ClickMode.Landmarks;
+                status.Text = landmarkPoints.Count == 0 ? "Click landmark 1 of 4: " + landmarkNames[0] + "." : "Last point removed. Continue guided capture.";
+                UpdateCurrentLandmarkInstruction();
+                undoLast.Enabled = landmarkPoints.Count > 0 || calibrationPoints.Count > 0;
+                picture.Invalidate();
+                return;
+            }
+
+            if (mode == ClickMode.Calibration && calibrationPoints.Count > 0)
+            {
+                calibrationPoints.RemoveAt(calibrationPoints.Count - 1);
+                status.Text = calibrationPoints.Count == 0 ? "Calibration: click the first point of a known length." : "Calibration: click the second point of the known length.";
+                currentLandmarkLabel.Text = calibrationPoints.Count == 0 ? "Current point: calibration point 1" : "Current point: calibration point 2";
+                undoLast.Enabled = calibrationPoints.Count > 0;
+                picture.Invalidate();
+            }
+        }
+
+        private void FlipSetbackSign_Click(object sender, EventArgs e)
+        {
+            if (calculatedValues == null || !calculatedValues.ContainsKey("SaddleSetback"))
+                return;
+
+            double setback;
+            if (!TryParseMillimeters(calculatedValues["SaddleSetback"], out setback))
+                return;
+
+            calculatedValues["SaddleSetback"] = FormatMillimeters(-setback);
+            UpdateResultsLabel();
+            status.Text = "Saddle setback sign flipped. Review values, then save to Before or After.";
             picture.Invalidate();
         }
 
@@ -292,9 +374,11 @@ namespace CassetteMotionPro.Workspace
         private void AddCalibrationPoint(PointF imagePoint)
         {
             calibrationPoints.Add(imagePoint);
+            undoLast.Enabled = true;
             if (calibrationPoints.Count == 1)
             {
                 status.Text = "Calibration: click the second point of the known length.";
+                currentLandmarkLabel.Text = "Current point: calibration point 2";
                 picture.Invalidate();
                 return;
             }
@@ -322,6 +406,8 @@ namespace CassetteMotionPro.Workspace
                 millimetersPerPixel = knownMillimeters / pixelDistance;
                 scaleLabel.Text = "Scale: " + millimetersPerPixel.ToString("0.0000", CultureInfo.InvariantCulture) + " mm/pixel";
                 status.Text = "Scale calibrated. Click Start Guided Capture.";
+                currentLandmarkLabel.Text = "Current point: ready for guided capture";
+                undoLast.Enabled = false;
                 mode = ClickMode.None;
                 picture.Invalidate();
             }
@@ -330,18 +416,22 @@ namespace CassetteMotionPro.Workspace
         private void AddLandmarkPoint(PointF imagePoint)
         {
             landmarkPoints.Add(imagePoint);
+            undoLast.Enabled = true;
             if (landmarkPoints.Count < landmarkNames.Length)
             {
                 status.Text = "Click landmark " + (landmarkPoints.Count + 1).ToString(CultureInfo.InvariantCulture) + " of 4: " + landmarkNames[landmarkPoints.Count] + ".";
+                UpdateCurrentLandmarkInstruction();
                 picture.Invalidate();
                 return;
             }
 
             CalculateMetrics();
             mode = ClickMode.None;
+            flipSetbackSign.Enabled = true;
             saveBefore.Enabled = true;
             saveAfter.Enabled = true;
             status.Text = "Guided capture complete. Review values, then save to Before or After.";
+            currentLandmarkLabel.Text = "Current point: complete";
             picture.Invalidate();
         }
 
@@ -365,13 +455,7 @@ namespace CassetteMotionPro.Workspace
             calculatedValues["HandlebarX"] = FormatMillimeters(handlebarX);
             calculatedValues["HandlebarY"] = FormatMillimeters(handlebarY);
 
-            resultsLabel.Text =
-                "Calculated metrics:\n" +
-                "Saddle height: " + calculatedValues["SaddleHeight"] + "\n" +
-                "Saddle setback: " + calculatedValues["SaddleSetback"] + "\n" +
-                "Saddle tip to grip: " + calculatedValues["SaddleTipToGripReach"] + "\n" +
-                "Handlebar X: " + calculatedValues["HandlebarX"] + "\n" +
-                "Handlebar Y: " + calculatedValues["HandlebarY"];
+            UpdateResultsLabel();
         }
 
         private void SaveResult(string side)
@@ -379,10 +463,59 @@ namespace CassetteMotionPro.Workspace
             if (calculatedValues == null || calculatedValues.Count == 0)
                 return;
 
+            DialogResult preview = MessageBox.Show(this,
+                "Save these guided measurements to " + side + "?\n\n" + BuildMetricsPreview(),
+                "Confirm Guided Capture",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+            if (preview != DialogResult.Yes)
+                return;
+
             ResultValues = new Dictionary<string, string>(calculatedValues);
             ResultSide = side;
             DialogResult = DialogResult.OK;
             Close();
+        }
+
+        private void UpdateCurrentLandmarkInstruction()
+        {
+            if (mode != ClickMode.Landmarks)
+                return;
+
+            int nextIndex = landmarkPoints.Count;
+            if (nextIndex >= landmarkNames.Length)
+            {
+                currentLandmarkLabel.Text = "Current point: complete";
+                return;
+            }
+
+            currentLandmarkLabel.Text = "Current point " + (nextIndex + 1).ToString(CultureInfo.InvariantCulture) + " of 4: " + landmarkNames[nextIndex];
+        }
+
+        private void UpdateResultsLabel()
+        {
+            resultsLabel.Text =
+                "Calculated metrics:\n" +
+                "Saddle height: " + GetCalculatedValue("SaddleHeight") + "\n" +
+                "Saddle setback: " + GetCalculatedValue("SaddleSetback") + "\n" +
+                "Saddle tip to grip: " + GetCalculatedValue("SaddleTipToGripReach") + "\n" +
+                "Handlebar X: " + GetCalculatedValue("HandlebarX") + "\n" +
+                "Handlebar Y: " + GetCalculatedValue("HandlebarY");
+        }
+
+        private string BuildMetricsPreview()
+        {
+            return
+                "Saddle height: " + GetCalculatedValue("SaddleHeight") + "\n" +
+                "Saddle setback: " + GetCalculatedValue("SaddleSetback") + "\n" +
+                "Saddle tip to grip: " + GetCalculatedValue("SaddleTipToGripReach") + "\n" +
+                "Handlebar X: " + GetCalculatedValue("HandlebarX") + "\n" +
+                "Handlebar Y: " + GetCalculatedValue("HandlebarY");
+        }
+
+        private string GetCalculatedValue(string key)
+        {
+            return calculatedValues.ContainsKey(key) ? calculatedValues[key] : "--";
         }
 
         private void Picture_MouseDown(object sender, MouseEventArgs e)
@@ -631,6 +764,19 @@ namespace CassetteMotionPro.Workspace
         private static string FormatMillimeters(double value)
         {
             return value.ToString("0.0", CultureInfo.InvariantCulture) + " mm";
+        }
+
+        private static bool TryParseMillimeters(string text, out double value)
+        {
+            value = 0;
+            if (string.IsNullOrEmpty(text))
+                return false;
+
+            string raw = text.Trim().Replace("mm", string.Empty).Trim();
+            if (double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out value))
+                return true;
+
+            return double.TryParse(raw, NumberStyles.Float, CultureInfo.CurrentCulture, out value);
         }
 
         private static bool PromptForMillimeters(IWin32Window owner, string title, string prompt, out double value)
