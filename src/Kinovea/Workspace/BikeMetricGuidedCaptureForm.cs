@@ -116,10 +116,20 @@ namespace CassetteMotionPro.Workspace
             picture.Resize += delegate { ClampPanOffset(); picture.Invalidate(); };
             picture.Paint += Picture_Paint;
 
-            Panel side = new Panel();
+            TableLayoutPanel side = new TableLayoutPanel();
             side.Dock = DockStyle.Fill;
+            side.ColumnCount = 1;
+            side.RowCount = 2;
+            side.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            side.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            side.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
             side.BackColor = Color.White;
-            side.Padding = new Padding(22);
+
+            Panel sideScroll = new Panel();
+            sideScroll.Dock = DockStyle.Fill;
+            sideScroll.AutoScroll = true;
+            sideScroll.BackColor = Color.White;
+            sideScroll.Padding = new Padding(22);
 
             Label eyebrow = new Label();
             eyebrow.Text = "GUIDED LANDMARK CAPTURE";
@@ -264,25 +274,27 @@ namespace CassetteMotionPro.Workspace
             close.Height = 40;
             close.Click += delegate { Close(); };
 
-            side.Controls.Add(close);
-            side.Controls.Add(saveAfter);
-            side.Controls.Add(saveBefore);
-            side.Controls.Add(flipSetbackSign);
-            side.Controls.Add(recalculate);
-            side.Controls.Add(clear);
-            side.Controls.Add(undoLast);
-            side.Controls.Add(capture);
-            side.Controls.Add(levelReference);
-            side.Controls.Add(calibrate);
-            side.Controls.Add(zoomPanel);
-            side.Controls.Add(resultsLabel);
-            side.Controls.Add(referenceLabel);
-            side.Controls.Add(scaleLabel);
-            side.Controls.Add(currentLandmarkLabel);
-            side.Controls.Add(status);
-            side.Controls.Add(guide);
-            side.Controls.Add(title);
-            side.Controls.Add(eyebrow);
+            sideScroll.Controls.Add(saveAfter);
+            sideScroll.Controls.Add(saveBefore);
+            sideScroll.Controls.Add(flipSetbackSign);
+            sideScroll.Controls.Add(recalculate);
+            sideScroll.Controls.Add(clear);
+            sideScroll.Controls.Add(undoLast);
+            sideScroll.Controls.Add(capture);
+            sideScroll.Controls.Add(levelReference);
+            sideScroll.Controls.Add(calibrate);
+            sideScroll.Controls.Add(zoomPanel);
+            sideScroll.Controls.Add(resultsLabel);
+            sideScroll.Controls.Add(referenceLabel);
+            sideScroll.Controls.Add(scaleLabel);
+            sideScroll.Controls.Add(currentLandmarkLabel);
+            sideScroll.Controls.Add(status);
+            sideScroll.Controls.Add(guide);
+            sideScroll.Controls.Add(title);
+            sideScroll.Controls.Add(eyebrow);
+
+            side.Controls.Add(sideScroll, 0, 0);
+            side.Controls.Add(close, 0, 1);
 
             root.Controls.Add(picture, 0, 0);
             root.Controls.Add(side, 1, 0);
