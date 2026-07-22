@@ -599,6 +599,10 @@ namespace CassetteMotionPro.Workspace
             combine.Size = new Size(112, 32);
             combine.Click += delegate { CombineBeforeAfterImages(true); };
 
+            Button guided = CreateButton("Guided Capture", true);
+            guided.Size = new Size(128, 32);
+            guided.Click += delegate { ShowGuidedBikeMetricCapture(); };
+
             Button open = CreateButton("Open", true);
             open.Size = new Size(70, 32);
             open.Click += delegate { OpenReportImage("MeasurementReferenceImagePath"); };
@@ -608,6 +612,7 @@ namespace CassetteMotionPro.Workspace
             buttons.Controls.Add(useAfter);
             buttons.Controls.Add(useSideBySide);
             buttons.Controls.Add(combine);
+            buttons.Controls.Add(guided);
             buttons.Controls.Add(open);
             panel.Controls.Add(buttons);
             panel.Controls.Add(path);
@@ -1030,6 +1035,37 @@ namespace CassetteMotionPro.Workspace
                 measurementBoxes[measurementKey].Text = form.ResultValue;
                 SaveCurrentSession();
                 UpdateSaveHint(measurementName + " " + form.ResultSide.ToLowerInvariant() + " measurement saved from the image assistant.");
+            }
+        }
+
+        private void ShowGuidedBikeMetricCapture()
+        {
+            string referencePath = imageBoxes.ContainsKey("MeasurementReferenceImagePath") ? imageBoxes["MeasurementReferenceImagePath"].Text : string.Empty;
+            if (string.IsNullOrEmpty(referencePath) || !File.Exists(referencePath))
+            {
+                MessageBox.Show(this,
+                    "Choose a Measurement image first.\n\n" +
+                    "Use Browse, Use Before, Use After, Use Side-by-side, or Combine B+A at the top of Bike Metrics.",
+                    "Guided Bike Metric Capture",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
+            using (BikeMetricGuidedCaptureForm form = new BikeMetricGuidedCaptureForm(referencePath))
+            {
+                if (form.ShowDialog(this) != DialogResult.OK)
+                    return;
+
+                foreach (KeyValuePair<string, string> metric in form.ResultValues)
+                {
+                    string measurementKey = metric.Key + form.ResultSide;
+                    if (measurementBoxes.ContainsKey(measurementKey))
+                        measurementBoxes[measurementKey].Text = metric.Value;
+                }
+
+                SaveCurrentSession();
+                UpdateSaveHint("Guided Bike Metrics saved to " + form.ResultSide.ToLowerInvariant() + ".");
             }
         }
 

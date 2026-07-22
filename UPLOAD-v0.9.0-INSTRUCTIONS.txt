@@ -1,0 +1,76 @@
+Cassette Motion Pro v0.9.0 - Guided Landmark Capture
+
+This update adds the first guided bike measurement workflow.
+
+What changed:
+
+- Adds a Guided Capture button at the top of the Bike Metrics tab.
+- Uses the selected Measurement image.
+- You calibrate the scale once.
+- Then you click four landmarks:
+
+  1. Bottom bracket center
+  2. Saddle top
+  3. Saddle tip
+  4. Grip / hood contact point
+
+- The app calculates and fills:
+
+  Saddle height
+  Saddle setback
+  Saddle tip to grip reach
+  Handlebar X
+  Handlebar Y
+
+- You choose whether to save those values to Before or After.
+- Keeps the individual Assist buttons for single-field measurements.
+- Keeps the Windows bundle artifact from v0.8.4.
+- Updates app/build/installer/report versions to 0.9.0.
+
+Upload steps:
+
+1. Open your GitHub repository:
+   https://github.com/spooled/cassette-motion-pro
+
+2. Upload everything from this package to the repo root.
+
+   Important:
+   - Include the hidden .github folder.
+   - The workflow file must end up here:
+
+     .github/workflows/build.yml
+
+3. Commit with this message:
+
+   Add v0.9.0 guided landmark capture
+
+4. Go to Actions.
+
+5. Open the newest successful run.
+
+6. Download:
+
+   CassetteMotionPro-Windows-0.9.0
+
+What to test:
+
+1. Open Bike Fit Workspace.
+2. Go to Bike Metrics.
+3. Choose a Measurement image.
+4. Click Guided Capture.
+5. Click Calibrate Scale.
+6. Click two points with a known real distance and enter that distance in mm.
+7. Click Start Guided Capture.
+8. Click the four landmarks in order:
+   - Bottom bracket center
+   - Saddle top
+   - Saddle tip
+   - Grip / hood contact point
+9. Confirm the calculated values appear.
+10. Click Save to Before or Save to After.
+11. Confirm these fields are filled:
+   - Saddle height
+   - Saddle setback
+   - Saddle tip to grip reach
+   - Handlebar X
+   - Handlebar Y
