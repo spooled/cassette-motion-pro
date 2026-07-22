@@ -1,0 +1,77 @@
+Cassette Motion Pro v0.9.5 - Guided Capture Accuracy
+
+This update improves Guided Capture measurement accuracy.
+
+What changed:
+
+- Keeps the working v0.9.4 installer workflow.
+- Adds optional Level Reference inside Guided Capture.
+- Level Reference uses two points on a true horizontal line, like:
+  - floor line
+  - axle line
+  - another known level reference in the image
+- If Level Reference is set, Guided Capture uses it to correct tilted photos for:
+  - saddle setback
+  - saddle tip to grip reach
+  - handlebar X
+  - handlebar Y
+- Saddle height still uses true angled Distance from BB center to saddle top.
+- Adds Recalculate Values.
+- Preview now shows:
+  - whether Level Reference was applied
+  - saddle setback convention: Behind BB = positive
+- Updates app/build/installer/report versions to 0.9.5.
+
+Upload steps:
+
+1. Open your GitHub repository:
+   https://github.com/spooled/cassette-motion-pro
+
+2. Upload everything from this package to the repo root.
+
+   Important:
+   - Include the hidden .github folder.
+   - The workflow file must end up here:
+
+     .github/workflows/build.yml
+
+3. Commit with this message:
+
+   Add v0.9.5 guided capture accuracy
+
+4. Go to Actions.
+
+5. Open the newest run.
+
+6. Download:
+
+   CassetteMotionPro-Windows-0.9.5
+
+What to test:
+
+1. Open Bike Fit Workspace.
+2. Go to Bike Metrics.
+3. Choose a Measurement image.
+4. Click Guided Capture.
+5. Click Calibrate Scale and set scale.
+6. Click Level Reference.
+7. Click two points on a true horizontal line.
+8. Confirm the blue L reference line appears.
+9. Click Start Guided Capture.
+10. Click the four landmarks:
+   - Bottom bracket center
+   - Saddle top
+   - Saddle tip
+   - Grip / hood contact point
+11. Confirm the preview says Level reference: Applied.
+12. Click Recalculate Values.
+13. Confirm values remain available.
+14. Save to Before or After.
+15. Confirm Bike Metrics fields update.
+
+Important measurement convention:
+
+Saddle setback uses:
+
+Behind BB = positive
+In front of BB = negative

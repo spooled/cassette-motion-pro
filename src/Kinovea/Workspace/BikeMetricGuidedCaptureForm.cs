@@ -21,11 +21,13 @@ namespace CassetteMotionPro.Workspace
         {
             None,
             Calibration,
+            LevelReference,
             Landmarks
         }
 
         private readonly string imagePath;
         private readonly List<PointF> calibrationPoints = new List<PointF>();
+        private readonly List<PointF> levelReferencePoints = new List<PointF>();
         private readonly List<PointF> landmarkPoints = new List<PointF>();
         private readonly string[] landmarkNames = new string[]
         {
@@ -39,8 +41,11 @@ namespace CassetteMotionPro.Workspace
         private Label status;
         private Label currentLandmarkLabel;
         private Label scaleLabel;
+        private Label referenceLabel;
         private Label resultsLabel;
+        private Button levelReference;
         private Button undoLast;
+        private Button recalculate;
         private Button flipSetbackSign;
         private Button saveBefore;
         private Button saveAfter;
@@ -129,14 +134,15 @@ namespace CassetteMotionPro.Workspace
             Label guide = new Label();
             guide.Text =
                 "1. Calibrate scale using a known bike length.\n" +
-                "2. Click Start Guided Capture.\n" +
-                "3. Click these points in order:\n" +
+                "2. Optional: click Level Reference using floor/axle line.\n" +
+                "3. Click Start Guided Capture.\n" +
+                "4. Click these points in order:\n" +
                 "   • Bottom bracket center\n" +
                 "   • Saddle top\n" +
                 "   • Saddle tip\n" +
                 "   • Grip / hood contact point\n" +
-                "4. Review calculated values.\n" +
-                "5. Save to Before or After.";
+                "5. Review calculated values.\n" +
+                "6. Save to Before or After.";
             guide.Dock = DockStyle.Top;
             guide.Height = 160;
             guide.ForeColor = Color.FromArgb(74, 87, 81);
@@ -162,10 +168,16 @@ namespace CassetteMotionPro.Workspace
             scaleLabel.Height = 30;
             scaleLabel.ForeColor = Color.FromArgb(92, 104, 98);
 
+            referenceLabel = new Label();
+            referenceLabel.Text = "Level reference: not set";
+            referenceLabel.Dock = DockStyle.Top;
+            referenceLabel.Height = 30;
+            referenceLabel.ForeColor = Color.FromArgb(92, 104, 98);
+
             resultsLabel = new Label();
             resultsLabel.Text = "Calculated metrics:\n--";
             resultsLabel.Dock = DockStyle.Top;
-            resultsLabel.Height = 142;
+            resultsLabel.Height = 178;
             resultsLabel.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             resultsLabel.ForeColor = Color.FromArgb(24, 31, 29);
 
@@ -193,41 +205,53 @@ namespace CassetteMotionPro.Workspace
             zoomPanel.Controls.Add(zoomIn);
 
             Button calibrate = CreateButton("1. Calibrate Scale", false);
-            Button capture = CreateButton("2. Start Guided Capture", false);
+            levelReference = CreateButton("2. Level Reference", false);
+            Button capture = CreateButton("3. Start Guided Capture", false);
             undoLast = CreateButton("Undo Last Point", false);
             Button clear = CreateButton("Clear Points", false);
+            recalculate = CreateButton("Recalculate Values", false);
             flipSetbackSign = CreateButton("Flip Setback Sign", false);
             saveBefore = CreateButton("Save to Before", false);
             saveAfter = CreateButton("Save to After", true);
             calibrate.Dock = DockStyle.Top;
+            levelReference.Dock = DockStyle.Top;
             capture.Dock = DockStyle.Top;
             undoLast.Dock = DockStyle.Top;
             clear.Dock = DockStyle.Top;
+            recalculate.Dock = DockStyle.Top;
             flipSetbackSign.Dock = DockStyle.Top;
             saveBefore.Dock = DockStyle.Top;
             saveAfter.Dock = DockStyle.Top;
             calibrate.Height = 34;
+            levelReference.Height = 34;
             capture.Height = 34;
             undoLast.Height = 34;
             clear.Height = 34;
+            recalculate.Height = 34;
             flipSetbackSign.Height = 34;
             saveBefore.Height = 34;
             saveAfter.Height = 34;
             calibrate.Margin = new Padding(0, 6, 0, 0);
+            levelReference.Margin = new Padding(0, 6, 0, 0);
             capture.Margin = new Padding(0, 6, 0, 0);
             undoLast.Margin = new Padding(0, 6, 0, 0);
             clear.Margin = new Padding(0, 6, 0, 0);
+            recalculate.Margin = new Padding(0, 6, 0, 0);
             flipSetbackSign.Margin = new Padding(0, 6, 0, 0);
             saveBefore.Margin = new Padding(0, 6, 0, 0);
             saveAfter.Margin = new Padding(0, 6, 0, 0);
             calibrate.Click += Calibrate_Click;
+            levelReference.Click += LevelReference_Click;
             capture.Click += Capture_Click;
             undoLast.Click += UndoLast_Click;
             clear.Click += Clear_Click;
+            recalculate.Click += Recalculate_Click;
             flipSetbackSign.Click += FlipSetbackSign_Click;
             saveBefore.Click += delegate { SaveResult("Before"); };
             saveAfter.Click += delegate { SaveResult("After"); };
+            levelReference.Enabled = false;
             undoLast.Enabled = false;
+            recalculate.Enabled = false;
             flipSetbackSign.Enabled = false;
             saveBefore.Enabled = false;
             saveAfter.Enabled = false;
@@ -241,12 +265,15 @@ namespace CassetteMotionPro.Workspace
             side.Controls.Add(saveAfter);
             side.Controls.Add(saveBefore);
             side.Controls.Add(flipSetbackSign);
+            side.Controls.Add(recalculate);
             side.Controls.Add(clear);
             side.Controls.Add(undoLast);
             side.Controls.Add(capture);
+            side.Controls.Add(levelReference);
             side.Controls.Add(calibrate);
             side.Controls.Add(zoomPanel);
             side.Controls.Add(resultsLabel);
+            side.Controls.Add(referenceLabel);
             side.Controls.Add(scaleLabel);
             side.Controls.Add(currentLandmarkLabel);
             side.Controls.Add(status);
@@ -263,15 +290,41 @@ namespace CassetteMotionPro.Workspace
         {
             mode = ClickMode.Calibration;
             calibrationPoints.Clear();
+            levelReferencePoints.Clear();
             landmarkPoints.Clear();
             calculatedValues.Clear();
+            levelReference.Enabled = false;
             undoLast.Enabled = false;
+            recalculate.Enabled = false;
             flipSetbackSign.Enabled = false;
             saveBefore.Enabled = false;
             saveAfter.Enabled = false;
             resultsLabel.Text = "Calculated metrics:\n--";
+            referenceLabel.Text = "Level reference: not set";
             status.Text = "Calibration: click the first point of a known length.";
             currentLandmarkLabel.Text = "Current point: calibration point 1";
+            picture.Invalidate();
+        }
+
+        private void LevelReference_Click(object sender, EventArgs e)
+        {
+            if (millimetersPerPixel <= 0)
+            {
+                MessageBox.Show(this, "Calibrate the scale first.", "Scale required", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            mode = ClickMode.LevelReference;
+            levelReferencePoints.Clear();
+            calculatedValues.Clear();
+            flipSetbackSign.Enabled = false;
+            recalculate.Enabled = false;
+            saveBefore.Enabled = false;
+            saveAfter.Enabled = false;
+            resultsLabel.Text = "Calculated metrics:\n--";
+            status.Text = "Level reference: click the first point on a true horizontal line, like floor or axle line.";
+            currentLandmarkLabel.Text = "Current point: level reference point 1";
+            undoLast.Enabled = false;
             picture.Invalidate();
         }
 
@@ -288,6 +341,7 @@ namespace CassetteMotionPro.Workspace
             calculatedValues.Clear();
             undoLast.Enabled = false;
             flipSetbackSign.Enabled = false;
+            recalculate.Enabled = false;
             saveBefore.Enabled = false;
             saveAfter.Enabled = false;
             resultsLabel.Text = "Calculated metrics:\n--";
@@ -298,13 +352,16 @@ namespace CassetteMotionPro.Workspace
 
         private void Clear_Click(object sender, EventArgs e)
         {
+            levelReferencePoints.Clear();
             landmarkPoints.Clear();
             calculatedValues.Clear();
-            undoLast.Enabled = calibrationPoints.Count > 0;
+            undoLast.Enabled = false;
             flipSetbackSign.Enabled = false;
+            recalculate.Enabled = false;
             saveBefore.Enabled = false;
             saveAfter.Enabled = false;
             resultsLabel.Text = "Calculated metrics:\n--";
+            referenceLabel.Text = "Level reference: not set";
             status.Text = millimetersPerPixel > 0 ? "Points cleared. Click Start Guided Capture." : "Points cleared. Start with Calibrate Scale.";
             currentLandmarkLabel.Text = "Current point: --";
             picture.Invalidate();
@@ -320,6 +377,7 @@ namespace CassetteMotionPro.Workspace
                 landmarkPoints.RemoveAt(landmarkPoints.Count - 1);
                 calculatedValues.Clear();
                 flipSetbackSign.Enabled = false;
+                recalculate.Enabled = false;
                 saveBefore.Enabled = false;
                 saveAfter.Enabled = false;
                 resultsLabel.Text = "Calculated metrics:\n--";
@@ -327,6 +385,17 @@ namespace CassetteMotionPro.Workspace
                 status.Text = landmarkPoints.Count == 0 ? "Click landmark 1 of 4: " + landmarkNames[0] + "." : "Last point removed. Continue guided capture.";
                 UpdateCurrentLandmarkInstruction();
                 undoLast.Enabled = landmarkPoints.Count > 0 || calibrationPoints.Count > 0;
+                picture.Invalidate();
+                return;
+            }
+
+            if (mode == ClickMode.LevelReference && levelReferencePoints.Count > 0)
+            {
+                levelReferencePoints.RemoveAt(levelReferencePoints.Count - 1);
+                referenceLabel.Text = "Level reference: not set";
+                status.Text = levelReferencePoints.Count == 0 ? "Level reference: click the first point on a true horizontal line." : "Level reference: click the second point.";
+                currentLandmarkLabel.Text = levelReferencePoints.Count == 0 ? "Current point: level reference point 1" : "Current point: level reference point 2";
+                undoLast.Enabled = levelReferencePoints.Count > 0;
                 picture.Invalidate();
                 return;
             }
@@ -339,6 +408,20 @@ namespace CassetteMotionPro.Workspace
                 undoLast.Enabled = calibrationPoints.Count > 0;
                 picture.Invalidate();
             }
+        }
+
+        private void Recalculate_Click(object sender, EventArgs e)
+        {
+            if (landmarkPoints.Count < landmarkNames.Length)
+                return;
+
+            CalculateMetrics();
+            flipSetbackSign.Enabled = true;
+            saveBefore.Enabled = true;
+            saveAfter.Enabled = true;
+            status.Text = "Values recalculated. Review values, then save to Before or After.";
+            currentLandmarkLabel.Text = "Current point: complete";
+            picture.Invalidate();
         }
 
         private void FlipSetbackSign_Click(object sender, EventArgs e)
@@ -367,6 +450,8 @@ namespace CassetteMotionPro.Workspace
 
             if (mode == ClickMode.Calibration)
                 AddCalibrationPoint(imagePoint);
+            else if (mode == ClickMode.LevelReference)
+                AddLevelReferencePoint(imagePoint);
             else if (mode == ClickMode.Landmarks)
                 AddLandmarkPoint(imagePoint);
         }
@@ -405,10 +490,54 @@ namespace CassetteMotionPro.Workspace
 
                 millimetersPerPixel = knownMillimeters / pixelDistance;
                 scaleLabel.Text = "Scale: " + millimetersPerPixel.ToString("0.0000", CultureInfo.InvariantCulture) + " mm/pixel";
-                status.Text = "Scale calibrated. Click Start Guided Capture.";
-                currentLandmarkLabel.Text = "Current point: ready for guided capture";
+                status.Text = "Scale calibrated. Optional: click Level Reference, or start Guided Capture.";
+                currentLandmarkLabel.Text = "Current point: ready for level reference or guided capture";
+                levelReference.Enabled = true;
                 undoLast.Enabled = false;
                 mode = ClickMode.None;
+                picture.Invalidate();
+            }
+        }
+
+        private void AddLevelReferencePoint(PointF imagePoint)
+        {
+            levelReferencePoints.Add(imagePoint);
+            undoLast.Enabled = true;
+            if (levelReferencePoints.Count == 1)
+            {
+                status.Text = "Level reference: click the second point on that same true horizontal line.";
+                currentLandmarkLabel.Text = "Current point: level reference point 2";
+                picture.Invalidate();
+                return;
+            }
+
+            if (levelReferencePoints.Count == 2)
+            {
+                double pixelDistance = Distance(levelReferencePoints[0], levelReferencePoints[1]);
+                if (pixelDistance <= 0)
+                {
+                    MessageBox.Show(this, "The level reference points are too close together.", "Level reference", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    levelReferencePoints.Clear();
+                    picture.Invalidate();
+                    return;
+                }
+
+                double angleDegrees = GetLevelReferenceAngleDegrees();
+                referenceLabel.Text = "Level reference: set (" + angleDegrees.ToString("0.0", CultureInfo.InvariantCulture) + "° tilt correction)";
+                status.Text = "Level reference set. Horizontal/vertical calculations will use this correction.";
+                currentLandmarkLabel.Text = "Current point: ready for guided capture";
+                mode = ClickMode.None;
+                undoLast.Enabled = false;
+
+                if (landmarkPoints.Count >= landmarkNames.Length)
+                {
+                    CalculateMetrics();
+                    flipSetbackSign.Enabled = true;
+                    recalculate.Enabled = true;
+                    saveBefore.Enabled = true;
+                    saveAfter.Enabled = true;
+                }
+
                 picture.Invalidate();
             }
         }
@@ -428,6 +557,7 @@ namespace CassetteMotionPro.Workspace
             CalculateMetrics();
             mode = ClickMode.None;
             flipSetbackSign.Enabled = true;
+            recalculate.Enabled = true;
             saveBefore.Enabled = true;
             saveAfter.Enabled = true;
             status.Text = "Guided capture complete. Review values, then save to Before or After.";
@@ -442,11 +572,15 @@ namespace CassetteMotionPro.Workspace
             PointF saddleTip = landmarkPoints[2];
             PointF grip = landmarkPoints[3];
 
+            PointF correctedBottomBracket = CorrectForLevel(bottomBracket);
+            PointF correctedSaddleTip = CorrectForLevel(saddleTip);
+            PointF correctedGrip = CorrectForLevel(grip);
+
             double saddleHeight = Distance(bottomBracket, saddleTop) * millimetersPerPixel;
-            double saddleSetback = (bottomBracket.X - saddleTip.X) * millimetersPerPixel;
-            double saddleTipToGripReach = (grip.X - saddleTip.X) * millimetersPerPixel;
-            double handlebarX = (grip.X - bottomBracket.X) * millimetersPerPixel;
-            double handlebarY = (bottomBracket.Y - grip.Y) * millimetersPerPixel;
+            double saddleSetback = (correctedBottomBracket.X - correctedSaddleTip.X) * millimetersPerPixel;
+            double saddleTipToGripReach = (correctedGrip.X - correctedSaddleTip.X) * millimetersPerPixel;
+            double handlebarX = (correctedGrip.X - correctedBottomBracket.X) * millimetersPerPixel;
+            double handlebarY = (correctedBottomBracket.Y - correctedGrip.Y) * millimetersPerPixel;
 
             calculatedValues = new Dictionary<string, string>();
             calculatedValues["SaddleHeight"] = FormatMillimeters(saddleHeight);
@@ -454,6 +588,8 @@ namespace CassetteMotionPro.Workspace
             calculatedValues["SaddleTipToGripReach"] = FormatMillimeters(saddleTipToGripReach);
             calculatedValues["HandlebarX"] = FormatMillimeters(handlebarX);
             calculatedValues["HandlebarY"] = FormatMillimeters(handlebarY);
+            calculatedValues["LevelReference"] = levelReferencePoints.Count == 2 ? "Applied" : "Not set";
+            calculatedValues["SaddleSetbackConvention"] = "Behind BB = positive";
 
             UpdateResultsLabel();
         }
@@ -500,7 +636,9 @@ namespace CassetteMotionPro.Workspace
                 "Saddle setback: " + GetCalculatedValue("SaddleSetback") + "\n" +
                 "Saddle tip to grip: " + GetCalculatedValue("SaddleTipToGripReach") + "\n" +
                 "Handlebar X: " + GetCalculatedValue("HandlebarX") + "\n" +
-                "Handlebar Y: " + GetCalculatedValue("HandlebarY");
+                "Handlebar Y: " + GetCalculatedValue("HandlebarY") + "\n" +
+                "Level reference: " + GetCalculatedValue("LevelReference") + "\n" +
+                "Setback convention: " + GetCalculatedValue("SaddleSetbackConvention");
         }
 
         private string BuildMetricsPreview()
@@ -510,7 +648,9 @@ namespace CassetteMotionPro.Workspace
                 "Saddle setback: " + GetCalculatedValue("SaddleSetback") + "\n" +
                 "Saddle tip to grip: " + GetCalculatedValue("SaddleTipToGripReach") + "\n" +
                 "Handlebar X: " + GetCalculatedValue("HandlebarX") + "\n" +
-                "Handlebar Y: " + GetCalculatedValue("HandlebarY");
+                "Handlebar Y: " + GetCalculatedValue("HandlebarY") + "\n\n" +
+                "Level reference: " + GetCalculatedValue("LevelReference") + "\n" +
+                "Saddle setback convention: " + GetCalculatedValue("SaddleSetbackConvention");
         }
 
         private string GetCalculatedValue(string key)
@@ -564,6 +704,7 @@ namespace CassetteMotionPro.Workspace
                 e.Graphics.DrawImage(loadedImage, imageRectangle);
 
             DrawLine(e.Graphics, calibrationPoints, Color.FromArgb(184, 243, 74), "C");
+            DrawLine(e.Graphics, levelReferencePoints, Color.FromArgb(74, 145, 255), "L");
             DrawLandmarks(e.Graphics);
         }
 
@@ -752,6 +893,37 @@ namespace CassetteMotionPro.Workspace
             width = Math.Max(1, (int)Math.Round(width * zoomFactor));
             height = Math.Max(1, (int)Math.Round(height * zoomFactor));
             return new Size(width, height);
+        }
+
+        private PointF CorrectForLevel(PointF point)
+        {
+            if (levelReferencePoints.Count != 2)
+                return point;
+
+            PointF origin = levelReferencePoints[0];
+            double angle = GetLevelReferenceAngleRadians();
+            double cos = Math.Cos(-angle);
+            double sin = Math.Sin(-angle);
+            double dx = point.X - origin.X;
+            double dy = point.Y - origin.Y;
+            double x = (dx * cos) - (dy * sin);
+            double y = (dx * sin) + (dy * cos);
+            return new PointF((float)x, (float)y);
+        }
+
+        private double GetLevelReferenceAngleRadians()
+        {
+            if (levelReferencePoints.Count != 2)
+                return 0;
+
+            PointF first = levelReferencePoints[0];
+            PointF second = levelReferencePoints[1];
+            return Math.Atan2(second.Y - first.Y, second.X - first.X);
+        }
+
+        private double GetLevelReferenceAngleDegrees()
+        {
+            return GetLevelReferenceAngleRadians() * 180.0 / Math.PI;
         }
 
         private static double Distance(PointF first, PointF second)
