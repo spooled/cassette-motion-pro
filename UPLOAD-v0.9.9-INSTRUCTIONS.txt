@@ -1,0 +1,58 @@
+Cassette Motion Pro v0.9.9 - Guided Capture Clarity
+
+This update makes Guided Capture easier to follow while you click bike
+measurement points.
+
+What changed:
+
+- Keeps the v0.9.8 scrollable Guided Capture side panel.
+- Adds a clearer “next point” hint under the current point.
+- Adds an on-image prompt showing what point to click next.
+- Adds a highlighted crosshair around the mouse while capture mode is active.
+- Makes clicked landmark dots and labels larger/easier to read.
+- Keeps Guided Capture report trace.
+- Keeps the saddle setback convention:
+  - Behind BB = negative
+  - In front of BB = positive
+- Updates app/build/installer/report versions to 0.9.9.
+
+Upload steps:
+
+1. Open your GitHub repository:
+   https://github.com/spooled/cassette-motion-pro
+
+2. Upload everything from this package to the repo root.
+
+   Important:
+   - Include the hidden .github folder.
+   - The workflow file must end up here:
+
+     .github/workflows/build.yml
+
+3. Commit with this message:
+
+   Add v0.9.9 guided capture clarity
+
+4. Go to Actions.
+
+5. Open the newest run.
+
+6. Download:
+
+   CassetteMotionPro-Windows-0.9.9
+
+What to test:
+
+1. Open Bike Fit Workspace.
+2. Go to Bike Metrics.
+3. Choose a Measurement image.
+4. Open Guided Capture.
+5. Calibrate Scale.
+6. Optional: set Level Reference.
+7. Start Guided Capture.
+8. Confirm the side panel clearly says which point is next.
+9. Move the mouse over the image and confirm the crosshair cue appears.
+10. Click all four landmarks and confirm the saved point labels are easier to read.
+11. Scroll the right panel and confirm Save to Before / Save to After are reachable.
+12. Save a Guided Capture and generate a report.
+13. Confirm the Measurement Capture Trace table still appears.

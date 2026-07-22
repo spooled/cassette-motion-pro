@@ -40,6 +40,7 @@ namespace CassetteMotionPro.Workspace
         private PictureBox picture;
         private Label status;
         private Label currentLandmarkLabel;
+        private Label nextPointHintLabel;
         private Label scaleLabel;
         private Label referenceLabel;
         private Label resultsLabel;
@@ -54,7 +55,9 @@ namespace CassetteMotionPro.Workspace
         private float zoomFactor = 1F;
         private PointF panOffset = PointF.Empty;
         private bool isPanning;
+        private bool hasMousePosition;
         private Point panStart;
+        private Point mousePosition;
         private PointF panStartOffset;
         private double millimetersPerPixel;
         private Dictionary<string, string> calculatedValues = new Dictionary<string, string>();
@@ -112,6 +115,7 @@ namespace CassetteMotionPro.Workspace
             picture.MouseMove += Picture_MouseMove;
             picture.MouseUp += Picture_MouseUp;
             picture.MouseWheel += Picture_MouseWheel;
+            picture.MouseLeave += Picture_MouseLeave;
             picture.MouseEnter += delegate { picture.Focus(); };
             picture.Resize += delegate { ClampPanOffset(); picture.Invalidate(); };
             picture.Paint += Picture_Paint;
@@ -174,6 +178,15 @@ namespace CassetteMotionPro.Workspace
             currentLandmarkLabel.ForeColor = Color.FromArgb(13, 19, 17);
             currentLandmarkLabel.BackColor = Color.FromArgb(238, 247, 219);
             currentLandmarkLabel.Padding = new Padding(10, 8, 10, 8);
+
+            nextPointHintLabel = new Label();
+            nextPointHintLabel.Text = "Tip: zoom in, then click exactly on the target point.";
+            nextPointHintLabel.Dock = DockStyle.Top;
+            nextPointHintLabel.Height = 54;
+            nextPointHintLabel.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            nextPointHintLabel.ForeColor = Color.FromArgb(74, 87, 81);
+            nextPointHintLabel.BackColor = Color.FromArgb(247, 250, 244);
+            nextPointHintLabel.Padding = new Padding(10, 8, 10, 8);
 
             scaleLabel = new Label();
             scaleLabel.Text = "Scale: not calibrated";
@@ -287,6 +300,7 @@ namespace CassetteMotionPro.Workspace
             sideScroll.Controls.Add(resultsLabel);
             sideScroll.Controls.Add(referenceLabel);
             sideScroll.Controls.Add(scaleLabel);
+            sideScroll.Controls.Add(nextPointHintLabel);
             sideScroll.Controls.Add(currentLandmarkLabel);
             sideScroll.Controls.Add(status);
             sideScroll.Controls.Add(guide);
@@ -318,6 +332,7 @@ namespace CassetteMotionPro.Workspace
             referenceLabel.Text = "Level reference: not set";
             status.Text = "Calibration: click the first point of a known length.";
             currentLandmarkLabel.Text = "Current point: calibration point 1";
+            nextPointHintLabel.Text = "Click point 1 of 2 on a known distance, like crank length or wheelbase.";
             picture.Invalidate();
         }
 
@@ -339,6 +354,7 @@ namespace CassetteMotionPro.Workspace
             resultsLabel.Text = "Calculated metrics:\n--";
             status.Text = "Level reference: click the first point on a true horizontal line, like floor or axle line.";
             currentLandmarkLabel.Text = "Current point: level reference point 1";
+            nextPointHintLabel.Text = "Click point 1 of 2 on the floor, axle line, or another true horizontal reference.";
             undoLast.Enabled = false;
             picture.Invalidate();
         }
@@ -379,6 +395,7 @@ namespace CassetteMotionPro.Workspace
             referenceLabel.Text = "Level reference: not set";
             status.Text = millimetersPerPixel > 0 ? "Points cleared. Click Start Guided Capture." : "Points cleared. Start with Calibrate Scale.";
             currentLandmarkLabel.Text = "Current point: --";
+            nextPointHintLabel.Text = millimetersPerPixel > 0 ? "Scale is still set. Start Guided Capture when ready." : "Tip: calibrate scale first, then set level reference if the camera is tilted.";
             picture.Invalidate();
         }
 
@@ -410,6 +427,7 @@ namespace CassetteMotionPro.Workspace
                 referenceLabel.Text = "Level reference: not set";
                 status.Text = levelReferencePoints.Count == 0 ? "Level reference: click the first point on a true horizontal line." : "Level reference: click the second point.";
                 currentLandmarkLabel.Text = levelReferencePoints.Count == 0 ? "Current point: level reference point 1" : "Current point: level reference point 2";
+                nextPointHintLabel.Text = levelReferencePoints.Count == 0 ? "Click point 1 of 2 on a level line." : "Click point 2 of 2 on that same level line.";
                 undoLast.Enabled = levelReferencePoints.Count > 0;
                 picture.Invalidate();
                 return;
@@ -420,6 +438,7 @@ namespace CassetteMotionPro.Workspace
                 calibrationPoints.RemoveAt(calibrationPoints.Count - 1);
                 status.Text = calibrationPoints.Count == 0 ? "Calibration: click the first point of a known length." : "Calibration: click the second point of the known length.";
                 currentLandmarkLabel.Text = calibrationPoints.Count == 0 ? "Current point: calibration point 1" : "Current point: calibration point 2";
+                nextPointHintLabel.Text = calibrationPoints.Count == 0 ? "Click point 1 of 2 on a known distance." : "Click point 2 of 2 on that same known distance.";
                 undoLast.Enabled = calibrationPoints.Count > 0;
                 picture.Invalidate();
             }
@@ -436,6 +455,7 @@ namespace CassetteMotionPro.Workspace
             saveAfter.Enabled = true;
             status.Text = "Values recalculated. Review values, then save to Before or After.";
             currentLandmarkLabel.Text = "Current point: complete";
+            nextPointHintLabel.Text = "Review the numbers, then choose Save to Before or Save to After.";
             picture.Invalidate();
         }
 
@@ -451,6 +471,7 @@ namespace CassetteMotionPro.Workspace
             calculatedValues["SaddleSetback"] = FormatMillimeters(-setback);
             UpdateResultsLabel();
             status.Text = "Saddle setback sign flipped. Review values, then save to Before or After.";
+            nextPointHintLabel.Text = "Reminder: behind the bottom bracket should be negative.";
             picture.Invalidate();
         }
 
@@ -479,6 +500,7 @@ namespace CassetteMotionPro.Workspace
             {
                 status.Text = "Calibration: click the second point of the known length.";
                 currentLandmarkLabel.Text = "Current point: calibration point 2";
+                nextPointHintLabel.Text = "Click point 2 of 2 on the other end of that known distance.";
                 picture.Invalidate();
                 return;
             }
@@ -507,6 +529,7 @@ namespace CassetteMotionPro.Workspace
                 scaleLabel.Text = "Scale: " + millimetersPerPixel.ToString("0.0000", CultureInfo.InvariantCulture) + " mm/pixel";
                 status.Text = "Scale calibrated. Optional: click Level Reference, or start Guided Capture.";
                 currentLandmarkLabel.Text = "Current point: ready for level reference or guided capture";
+                nextPointHintLabel.Text = "Next: use Level Reference if the image is tilted, or Start Guided Capture.";
                 levelReference.Enabled = true;
                 undoLast.Enabled = false;
                 mode = ClickMode.None;
@@ -522,6 +545,7 @@ namespace CassetteMotionPro.Workspace
             {
                 status.Text = "Level reference: click the second point on that same true horizontal line.";
                 currentLandmarkLabel.Text = "Current point: level reference point 2";
+                nextPointHintLabel.Text = "Click point 2 of 2 on that same level line.";
                 picture.Invalidate();
                 return;
             }
@@ -541,6 +565,7 @@ namespace CassetteMotionPro.Workspace
                 referenceLabel.Text = "Level reference: set (" + angleDegrees.ToString("0.0", CultureInfo.InvariantCulture) + "° tilt correction)";
                 status.Text = "Level reference set. Horizontal/vertical calculations will use this correction.";
                 currentLandmarkLabel.Text = "Current point: ready for guided capture";
+                nextPointHintLabel.Text = "Next: click Start Guided Capture and follow the landmark order.";
                 mode = ClickMode.None;
                 undoLast.Enabled = false;
 
@@ -577,6 +602,7 @@ namespace CassetteMotionPro.Workspace
             saveAfter.Enabled = true;
             status.Text = "Guided capture complete. Review values, then save to Before or After.";
             currentLandmarkLabel.Text = "Current point: complete";
+            nextPointHintLabel.Text = "Review the calculated metrics below, then save to Before or After.";
             picture.Invalidate();
         }
 
@@ -640,10 +666,29 @@ namespace CassetteMotionPro.Workspace
             if (nextIndex >= landmarkNames.Length)
             {
                 currentLandmarkLabel.Text = "Current point: complete";
+                nextPointHintLabel.Text = "Review the calculated metrics, then save to Before or After.";
                 return;
             }
 
             currentLandmarkLabel.Text = "Current point " + (nextIndex + 1).ToString(CultureInfo.InvariantCulture) + " of 4: " + landmarkNames[nextIndex];
+            nextPointHintLabel.Text = GetLandmarkHint(nextIndex);
+        }
+
+        private string GetLandmarkHint(int index)
+        {
+            if (index == 0)
+                return "Click the exact center of the bottom bracket/crank spindle.";
+
+            if (index == 1)
+                return "Click the top of the saddle where saddle height is measured.";
+
+            if (index == 2)
+                return "Click the front tip/nose of the saddle. Behind BB will calculate as negative.";
+
+            if (index == 3)
+                return "Click the hand contact point on the grip or hood.";
+
+            return "Zoom in if needed, then click the landmark.";
         }
 
         private void UpdateResultsLabel()
@@ -690,12 +735,26 @@ namespace CassetteMotionPro.Workspace
 
         private void Picture_MouseMove(object sender, MouseEventArgs e)
         {
+            hasMousePosition = true;
+            mousePosition = e.Location;
+
             if (!isPanning)
+            {
+                if (mode != ClickMode.None)
+                    picture.Invalidate();
                 return;
+            }
 
             panOffset = new PointF(panStartOffset.X + e.X - panStart.X, panStartOffset.Y + e.Y - panStart.Y);
             ClampPanOffset();
             picture.Invalidate();
+        }
+
+        private void Picture_MouseLeave(object sender, EventArgs e)
+        {
+            hasMousePosition = false;
+            if (mode != ClickMode.None)
+                picture.Invalidate();
         }
 
         private void Picture_MouseUp(object sender, MouseEventArgs e)
@@ -724,6 +783,7 @@ namespace CassetteMotionPro.Workspace
             DrawLine(e.Graphics, calibrationPoints, Color.FromArgb(184, 243, 74), "C");
             DrawLine(e.Graphics, levelReferencePoints, Color.FromArgb(74, 145, 255), "L");
             DrawLandmarks(e.Graphics);
+            DrawActiveClickCue(e.Graphics);
         }
 
         private void DrawLine(Graphics graphics, IList<PointF> imagePoints, Color color, string label)
@@ -735,10 +795,10 @@ namespace CassetteMotionPro.Workspace
             foreach (PointF imagePoint in imagePoints)
                 controlPoints.Add(ConvertImagePointToControlPoint(imagePoint));
 
-            using (Pen pen = new Pen(color, 3F))
+            using (Pen pen = new Pen(color, 4F))
             using (Brush brush = new SolidBrush(color))
             using (Brush textBrush = new SolidBrush(Color.FromArgb(13, 19, 17)))
-            using (Font font = new Font("Segoe UI", 9F, FontStyle.Bold))
+            using (Font font = new Font("Segoe UI", 10F, FontStyle.Bold))
             {
                 if (controlPoints.Count == 2)
                     graphics.DrawLine(pen, controlPoints[0], controlPoints[1]);
@@ -746,7 +806,7 @@ namespace CassetteMotionPro.Workspace
                 for (int i = 0; i < controlPoints.Count; i++)
                 {
                     PointF point = controlPoints[i];
-                    RectangleF circle = new RectangleF(point.X - 8, point.Y - 8, 16, 16);
+                    RectangleF circle = new RectangleF(point.X - 10, point.Y - 10, 20, 20);
                     graphics.FillEllipse(brush, circle);
                     graphics.DrawString(label + (i + 1).ToString(CultureInfo.InvariantCulture), font, textBrush, point.X + 10, point.Y - 12);
                 }
@@ -759,18 +819,23 @@ namespace CassetteMotionPro.Workspace
                 return;
 
             using (Brush brush = new SolidBrush(Color.FromArgb(255, 176, 74)))
+            using (Brush labelBrush = new SolidBrush(Color.FromArgb(220, 13, 19, 17)))
             using (Brush textBrush = new SolidBrush(Color.White))
-            using (Pen guidePen = new Pen(Color.FromArgb(255, 176, 74), 2F))
-            using (Font font = new Font("Segoe UI", 9F, FontStyle.Bold))
+            using (Pen guidePen = new Pen(Color.FromArgb(255, 176, 74), 3F))
+            using (Font font = new Font("Segoe UI", 10F, FontStyle.Bold))
             {
                 guidePen.DashStyle = DashStyle.Dash;
 
                 for (int i = 0; i < landmarkPoints.Count; i++)
                 {
                     PointF point = ConvertImagePointToControlPoint(landmarkPoints[i]);
-                    RectangleF circle = new RectangleF(point.X - 8, point.Y - 8, 16, 16);
+                    RectangleF circle = new RectangleF(point.X - 11, point.Y - 11, 22, 22);
                     graphics.FillEllipse(brush, circle);
-                    graphics.DrawString((i + 1).ToString(CultureInfo.InvariantCulture) + ". " + landmarkNames[i], font, textBrush, point.X + 10, point.Y - 12);
+                    string label = (i + 1).ToString(CultureInfo.InvariantCulture) + ". " + landmarkNames[i];
+                    SizeF labelSize = graphics.MeasureString(label, font);
+                    RectangleF labelRectangle = new RectangleF(point.X + 14, point.Y - 16, labelSize.Width + 12, labelSize.Height + 6);
+                    graphics.FillRectangle(labelBrush, labelRectangle);
+                    graphics.DrawString(label, font, textBrush, labelRectangle.Left + 6, labelRectangle.Top + 3);
                 }
 
                 if (landmarkPoints.Count >= 4)
@@ -787,6 +852,59 @@ namespace CassetteMotionPro.Workspace
                     graphics.DrawLine(guidePen, bottomBracket.X, bottomBracket.Y, bottomBracket.X, grip.Y);
                 }
             }
+        }
+
+        private void DrawActiveClickCue(Graphics graphics)
+        {
+            string prompt = GetActiveClickPrompt();
+            if (string.IsNullOrEmpty(prompt))
+                return;
+
+            using (Font promptFont = new Font("Segoe UI", 12F, FontStyle.Bold))
+            using (Brush panelBrush = new SolidBrush(Color.FromArgb(225, 13, 19, 17)))
+            using (Brush accentBrush = new SolidBrush(Color.FromArgb(184, 243, 74)))
+            using (Brush textBrush = new SolidBrush(Color.White))
+            using (Pen accentPen = new Pen(Color.FromArgb(184, 243, 74), 3F))
+            using (Pen shadowPen = new Pen(Color.FromArgb(190, 13, 19, 17), 5F))
+            {
+                RectangleF promptBox = new RectangleF(18, 18, Math.Min(560, picture.ClientSize.Width - 36), 62);
+                graphics.FillRectangle(panelBrush, promptBox);
+                graphics.FillRectangle(accentBrush, promptBox.Left, promptBox.Top, 8, promptBox.Height);
+                graphics.DrawString(prompt, promptFont, textBrush, new RectangleF(promptBox.Left + 18, promptBox.Top + 10, promptBox.Width - 28, promptBox.Height - 14));
+
+                if (!hasMousePosition)
+                    return;
+
+                Rectangle imageRectangle = GetZoomedImageRectangle();
+                if (!imageRectangle.Contains(mousePosition))
+                    return;
+
+                int radius = 18;
+                graphics.DrawEllipse(shadowPen, mousePosition.X - radius, mousePosition.Y - radius, radius * 2, radius * 2);
+                graphics.DrawEllipse(accentPen, mousePosition.X - radius, mousePosition.Y - radius, radius * 2, radius * 2);
+                graphics.DrawLine(accentPen, mousePosition.X - radius - 10, mousePosition.Y, mousePosition.X - 6, mousePosition.Y);
+                graphics.DrawLine(accentPen, mousePosition.X + 6, mousePosition.Y, mousePosition.X + radius + 10, mousePosition.Y);
+                graphics.DrawLine(accentPen, mousePosition.X, mousePosition.Y - radius - 10, mousePosition.X, mousePosition.Y - 6);
+                graphics.DrawLine(accentPen, mousePosition.X, mousePosition.Y + 6, mousePosition.X, mousePosition.Y + radius + 10);
+            }
+        }
+
+        private string GetActiveClickPrompt()
+        {
+            if (mode == ClickMode.Calibration)
+                return "Click calibration point " + (calibrationPoints.Count + 1).ToString(CultureInfo.InvariantCulture) + " of 2";
+
+            if (mode == ClickMode.LevelReference)
+                return "Click level reference point " + (levelReferencePoints.Count + 1).ToString(CultureInfo.InvariantCulture) + " of 2";
+
+            if (mode == ClickMode.Landmarks)
+            {
+                int nextIndex = landmarkPoints.Count;
+                if (nextIndex < landmarkNames.Length)
+                    return "Click landmark " + (nextIndex + 1).ToString(CultureInfo.InvariantCulture) + " of 4: " + landmarkNames[nextIndex];
+            }
+
+            return string.Empty;
         }
 
         private bool TryConvertControlPointToImagePoint(Point controlPoint, out PointF imagePoint)
