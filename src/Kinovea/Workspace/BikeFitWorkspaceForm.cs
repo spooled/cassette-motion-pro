@@ -1064,9 +1064,29 @@ namespace CassetteMotionPro.Workspace
                         measurementBoxes[measurementKey].Text = metric.Value;
                 }
 
+                ApplyGuidedCaptureTrace(form);
+
                 SaveCurrentSession();
                 UpdateSaveHint("Guided Bike Metrics saved to " + form.ResultSide.ToLowerInvariant() + ".");
             }
+        }
+
+        private void ApplyGuidedCaptureTrace(BikeMetricGuidedCaptureForm form)
+        {
+            if (currentSession == null || form == null)
+                return;
+
+            if (string.Equals(form.ResultSide, "Before", StringComparison.OrdinalIgnoreCase))
+            {
+                currentSession.BikeMetricsCaptureMethodBefore = form.CaptureMethod;
+                currentSession.BikeMetricsLevelReferenceBefore = form.LevelReferenceStatus;
+                currentSession.BikeMetricsSetbackConventionBefore = form.SaddleSetbackConvention;
+                return;
+            }
+
+            currentSession.BikeMetricsCaptureMethodAfter = form.CaptureMethod;
+            currentSession.BikeMetricsLevelReferenceAfter = form.LevelReferenceStatus;
+            currentSession.BikeMetricsSetbackConventionAfter = form.SaddleSetbackConvention;
         }
 
         private ImageMeasurementAssistantForm.DefaultMeasurementAxis GetDefaultBikeMetricAxis(string metricKey)

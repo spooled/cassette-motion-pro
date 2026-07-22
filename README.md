@@ -5,7 +5,7 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.9.5 guided capture accuracy
+## Current milestone: 0.9.7 guided capture report trace
 
 - Complete Kinovea source imported under `src/`
 - Application output renamed to `CassetteMotionPro.exe`
@@ -66,6 +66,10 @@ can be incorporated with minimal changes to the playback and annotation engine.
   `makensis.exe` path to make installer builds more reliable
 - Guided Capture supports an optional level reference line for tilted images,
   Recalculate Values, and explicit saddle setback convention
+- Guided Capture saddle setback convention is behind BB = negative and in front
+  of BB = positive
+- Guided Capture saves measurement trace data and reports capture method, level
+  reference status, and saddle setback convention in generated reports
 
 The expanded body-angle measurement library and polished PDF report generator
 remain future milestones. See [docs/roadmap.md](docs/roadmap.md).

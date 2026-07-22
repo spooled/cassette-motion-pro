@@ -58,6 +58,12 @@ namespace CassetteMotionPro.Workspace
         public string CrankLengthAfter { get; set; }
         public string CleatPositionBefore { get; set; }
         public string CleatPositionAfter { get; set; }
+        public string BikeMetricsCaptureMethodBefore { get; set; }
+        public string BikeMetricsCaptureMethodAfter { get; set; }
+        public string BikeMetricsLevelReferenceBefore { get; set; }
+        public string BikeMetricsLevelReferenceAfter { get; set; }
+        public string BikeMetricsSetbackConventionBefore { get; set; }
+        public string BikeMetricsSetbackConventionAfter { get; set; }
 
         public string KneeAngleBefore { get; set; }
         public string KneeAngleAfter { get; set; }

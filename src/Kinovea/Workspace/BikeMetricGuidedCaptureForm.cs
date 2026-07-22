@@ -61,6 +61,9 @@ namespace CassetteMotionPro.Workspace
 
         public Dictionary<string, string> ResultValues { get; private set; }
         public string ResultSide { get; private set; }
+        public string CaptureMethod { get; private set; }
+        public string LevelReferenceStatus { get; private set; }
+        public string SaddleSetbackConvention { get; private set; }
 
         public BikeMetricGuidedCaptureForm(string imagePath)
         {
@@ -577,7 +580,7 @@ namespace CassetteMotionPro.Workspace
             PointF correctedGrip = CorrectForLevel(grip);
 
             double saddleHeight = Distance(bottomBracket, saddleTop) * millimetersPerPixel;
-            double saddleSetback = (correctedBottomBracket.X - correctedSaddleTip.X) * millimetersPerPixel;
+            double saddleSetback = (correctedSaddleTip.X - correctedBottomBracket.X) * millimetersPerPixel;
             double saddleTipToGripReach = (correctedGrip.X - correctedSaddleTip.X) * millimetersPerPixel;
             double handlebarX = (correctedGrip.X - correctedBottomBracket.X) * millimetersPerPixel;
             double handlebarY = (correctedBottomBracket.Y - correctedGrip.Y) * millimetersPerPixel;
@@ -589,7 +592,7 @@ namespace CassetteMotionPro.Workspace
             calculatedValues["HandlebarX"] = FormatMillimeters(handlebarX);
             calculatedValues["HandlebarY"] = FormatMillimeters(handlebarY);
             calculatedValues["LevelReference"] = levelReferencePoints.Count == 2 ? "Applied" : "Not set";
-            calculatedValues["SaddleSetbackConvention"] = "Behind BB = positive";
+            calculatedValues["SaddleSetbackConvention"] = "Behind BB = negative";
 
             UpdateResultsLabel();
         }
@@ -609,6 +612,9 @@ namespace CassetteMotionPro.Workspace
 
             ResultValues = new Dictionary<string, string>(calculatedValues);
             ResultSide = side;
+            CaptureMethod = "Guided Capture";
+            LevelReferenceStatus = GetCalculatedValue("LevelReference");
+            SaddleSetbackConvention = GetCalculatedValue("SaddleSetbackConvention");
             DialogResult = DialogResult.OK;
             Close();
         }

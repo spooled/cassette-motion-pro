@@ -1,0 +1,62 @@
+Cassette Motion Pro v0.9.7 - Guided Capture Report Trace
+
+This update makes Guided Capture measurements easier to audit in reports.
+
+What changed:
+
+- Keeps v0.9.6 saddle setback convention:
+
+  Behind BB = negative
+  In front of BB = positive
+
+- Saves Guided Capture trace data to the fit session:
+  - Capture method
+  - Level reference status
+  - Saddle setback convention
+- Saves trace data separately for Before and After.
+- Adds a Measurement Capture Trace table to the report when trace data exists.
+- Older/manual sessions without trace data stay clean and do not show the trace table.
+- Updates app/build/installer/report versions to 0.9.7.
+
+Upload steps:
+
+1. Open your GitHub repository:
+   https://github.com/spooled/cassette-motion-pro
+
+2. Upload everything from this package to the repo root.
+
+   Important:
+   - Include the hidden .github folder.
+   - The workflow file must end up here:
+
+     .github/workflows/build.yml
+
+3. Commit with this message:
+
+   Add v0.9.7 guided capture report trace
+
+4. Go to Actions.
+
+5. Open the newest run.
+
+6. Download:
+
+   CassetteMotionPro-Windows-0.9.7
+
+What to test:
+
+1. Open Bike Fit Workspace.
+2. Go to Bike Metrics.
+3. Choose a Measurement image.
+4. Open Guided Capture.
+5. Calibrate Scale.
+6. Optional: set Level Reference.
+7. Complete the four landmarks.
+8. Save to Before or After.
+9. Generate a report.
+10. In the report, check Bike Measurements.
+11. Confirm a Measurement Capture Trace table appears with:
+    - Capture method: Guided Capture
+    - Level reference: Applied or Not set
+    - Saddle setback convention: Behind BB = negative
+12. Confirm the normal Bike Measurements tables still appear.
