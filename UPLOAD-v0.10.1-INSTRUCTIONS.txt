@@ -1,0 +1,59 @@
+Cassette Motion Pro v0.10.1 - Editable Guided Landmarks
+
+This update makes Guided Capture more accurate by letting you drag placed
+landmark points to fine-tune them before saving.
+
+What changed:
+
+- Keeps v0.10.0 Basic and Advanced landmark modes.
+- Left-drag any orange landmark point to adjust it.
+- Values recalculate after adjusting a completed landmark set.
+- The cursor changes to a hand when hovering over an editable landmark.
+- The selected point gets a bright ring while dragging.
+- Right-drag or middle-drag still pans the image.
+- Keeps Guided Capture report trace.
+- Keeps the saddle setback convention:
+  - Behind BB = negative
+  - In front of BB = positive
+- Updates app/build/installer/report versions to 0.10.1.
+
+Upload steps:
+
+1. Open your GitHub repository:
+   https://github.com/spooled/cassette-motion-pro
+
+2. Upload everything from this package to the repo root.
+
+   Important:
+   - Include the hidden .github folder.
+   - The workflow file must end up here:
+
+     .github/workflows/build.yml
+
+3. Commit with this message:
+
+   Add v0.10.1 editable guided landmarks
+
+4. Go to Actions.
+
+5. Open the newest run.
+
+6. Download:
+
+   CassetteMotionPro-Windows-0.10.1
+
+What to test:
+
+1. Open Bike Fit Workspace.
+2. Go to Bike Metrics.
+3. Choose a Measurement image.
+4. Open Guided Capture.
+5. Calibrate Scale.
+6. Start Guided Capture.
+7. Click the landmarks.
+8. Hover over an orange point and confirm the cursor changes to a hand.
+9. Left-drag an orange point to fine-tune it.
+10. Confirm the selected point shows a bright ring while dragging.
+11. Confirm the values update after dragging a completed set.
+12. Save to Before or After.
+13. Optional: repeat in Advanced landmarks mode.

@@ -67,7 +67,10 @@ namespace CassetteMotionPro.Workspace
         private float zoomFactor = 1F;
         private PointF panOffset = PointF.Empty;
         private bool isPanning;
+        private bool isDraggingLandmark;
         private bool hasMousePosition;
+        private bool suppressNextClick;
+        private int draggedLandmarkIndex = -1;
         private Point panStart;
         private Point mousePosition;
         private PointF panStartOffset;
@@ -175,8 +178,8 @@ namespace CassetteMotionPro.Workspace
                 "   • Saddle top\n" +
                 "   • Saddle tip\n" +
                 "   • Grip / hood contact point\n" +
-                "5. Review calculated values.\n" +
-                "6. Save to Before or After.";
+                "5. Drag any orange point to fine-tune it.\n" +
+                "6. Review values, then save to Before or After.";
             guide.Dock = DockStyle.Top;
             guide.Height = 160;
             guide.ForeColor = Color.FromArgb(74, 87, 81);
@@ -197,7 +200,7 @@ namespace CassetteMotionPro.Workspace
             currentLandmarkLabel.Padding = new Padding(10, 8, 10, 8);
 
             nextPointHintLabel = new Label();
-            nextPointHintLabel.Text = "Tip: zoom in, then click exactly on the target point.";
+            nextPointHintLabel.Text = "Tip: zoom in, click the point, then drag the orange dot if it needs adjustment.";
             nextPointHintLabel.Dock = DockStyle.Top;
             nextPointHintLabel.Height = 54;
             nextPointHintLabel.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
@@ -501,7 +504,7 @@ namespace CassetteMotionPro.Workspace
             saveAfter.Enabled = true;
             status.Text = "Values recalculated. Review values, then save to Before or After.";
             currentLandmarkLabel.Text = "Current point: complete";
-            nextPointHintLabel.Text = "Review the numbers, then choose Save to Before or Save to After.";
+            nextPointHintLabel.Text = "Review the numbers. Drag any orange point to fine-tune before saving.";
             picture.Invalidate();
         }
 
@@ -523,6 +526,12 @@ namespace CassetteMotionPro.Workspace
 
         private void Picture_MouseClick(object sender, MouseEventArgs e)
         {
+            if (suppressNextClick)
+            {
+                suppressNextClick = false;
+                return;
+            }
+
             if (e.Button != MouseButtons.Left)
                 return;
 
@@ -648,7 +657,7 @@ namespace CassetteMotionPro.Workspace
             saveAfter.Enabled = true;
             status.Text = "Guided capture complete. Review values, then save to Before or After.";
             currentLandmarkLabel.Text = "Current point: complete";
-            nextPointHintLabel.Text = "Review the calculated metrics below, then save to Before or After.";
+            nextPointHintLabel.Text = "Drag any orange point to fine-tune. Values update before saving.";
             picture.Invalidate();
         }
 
@@ -742,7 +751,7 @@ namespace CassetteMotionPro.Workspace
             if (nextIndex >= ActiveLandmarkNames.Length)
             {
                 currentLandmarkLabel.Text = "Current point: complete";
-                nextPointHintLabel.Text = "Review the calculated metrics, then save to Before or After.";
+                nextPointHintLabel.Text = "Drag any orange point to fine-tune. Values update before saving.";
                 return;
             }
 
@@ -822,6 +831,25 @@ namespace CassetteMotionPro.Workspace
         private void Picture_MouseDown(object sender, MouseEventArgs e)
         {
             picture.Focus();
+            hasMousePosition = true;
+            mousePosition = e.Location;
+
+            if (e.Button == MouseButtons.Left)
+            {
+                int landmarkIndex = FindNearestLandmarkIndex(e.Location);
+                if (landmarkIndex >= 0)
+                {
+                    isDraggingLandmark = true;
+                    draggedLandmarkIndex = landmarkIndex;
+                    suppressNextClick = true;
+                    picture.Cursor = Cursors.Hand;
+                    status.Text = "Adjusting landmark " + (landmarkIndex + 1).ToString(CultureInfo.InvariantCulture) + ": " + ActiveLandmarkNames[landmarkIndex] + ".";
+                    nextPointHintLabel.Text = "Drag to fine-tune this point. Release to keep the new position.";
+                    picture.Invalidate();
+                    return;
+                }
+            }
+
             if (e.Button == MouseButtons.Right || e.Button == MouseButtons.Middle)
             {
                 isPanning = true;
@@ -836,9 +864,31 @@ namespace CassetteMotionPro.Workspace
             hasMousePosition = true;
             mousePosition = e.Location;
 
+            if (isDraggingLandmark)
+            {
+                PointF imagePoint;
+                if (TryConvertControlPointToImagePoint(e.Location, out imagePoint) && draggedLandmarkIndex >= 0 && draggedLandmarkIndex < landmarkPoints.Count)
+                {
+                    landmarkPoints[draggedLandmarkIndex] = imagePoint;
+                    calculatedValues.Clear();
+                    if (landmarkPoints.Count >= ActiveLandmarkNames.Length && millimetersPerPixel > 0)
+                    {
+                        CalculateMetrics();
+                        flipSetbackSign.Enabled = true;
+                        recalculate.Enabled = true;
+                        saveBefore.Enabled = true;
+                        saveAfter.Enabled = true;
+                    }
+                    picture.Invalidate();
+                }
+                return;
+            }
+
             if (!isPanning)
             {
-                if (mode != ClickMode.None)
+                int hoverIndex = FindNearestLandmarkIndex(e.Location);
+                picture.Cursor = hoverIndex >= 0 ? Cursors.Hand : Cursors.Default;
+                if (mode != ClickMode.None || hoverIndex >= 0)
                     picture.Invalidate();
                 return;
             }
@@ -851,12 +901,37 @@ namespace CassetteMotionPro.Workspace
         private void Picture_MouseLeave(object sender, EventArgs e)
         {
             hasMousePosition = false;
-            if (mode != ClickMode.None)
+            if (!isDraggingLandmark && !isPanning)
+                picture.Cursor = Cursors.Default;
+            if (mode != ClickMode.None || landmarkPoints.Count > 0)
                 picture.Invalidate();
         }
 
         private void Picture_MouseUp(object sender, MouseEventArgs e)
         {
+            if (isDraggingLandmark)
+            {
+                isDraggingLandmark = false;
+                int adjustedIndex = draggedLandmarkIndex;
+                draggedLandmarkIndex = -1;
+                picture.Cursor = Cursors.Default;
+
+                if (landmarkPoints.Count >= ActiveLandmarkNames.Length && millimetersPerPixel > 0)
+                {
+                    CalculateMetrics();
+                    status.Text = "Landmark adjusted. Review updated values, then save to Before or After.";
+                    nextPointHintLabel.Text = "You can keep dragging any orange point to fine-tune it.";
+                }
+                else if (adjustedIndex >= 0 && adjustedIndex < ActiveLandmarkNames.Length)
+                {
+                    status.Text = "Landmark adjusted. Continue guided capture.";
+                    UpdateCurrentLandmarkInstruction();
+                }
+
+                picture.Invalidate();
+                return;
+            }
+
             if (!isPanning)
                 return;
 
@@ -929,6 +1004,11 @@ namespace CassetteMotionPro.Workspace
                     PointF point = ConvertImagePointToControlPoint(landmarkPoints[i]);
                     RectangleF circle = new RectangleF(point.X - 11, point.Y - 11, 22, 22);
                     graphics.FillEllipse(brush, circle);
+                    if (i == draggedLandmarkIndex)
+                    {
+                        using (Pen selectedPen = new Pen(Color.FromArgb(184, 243, 74), 4F))
+                            graphics.DrawEllipse(selectedPen, point.X - 17, point.Y - 17, 34, 34);
+                    }
                     string label = (i + 1).ToString(CultureInfo.InvariantCulture) + ". " + ActiveLandmarkNames[i];
                     SizeF labelSize = graphics.MeasureString(label, font);
                     RectangleF labelRectangle = new RectangleF(point.X + 14, point.Y - 16, labelSize.Width + 12, labelSize.Height + 6);
@@ -966,6 +1046,31 @@ namespace CassetteMotionPro.Workspace
                     graphics.DrawLine(guidePen, frontAxle, rearAxle);
                 }
             }
+        }
+
+        private int FindNearestLandmarkIndex(Point controlPoint)
+        {
+            if (landmarkPoints.Count == 0)
+                return -1;
+
+            int nearestIndex = -1;
+            double nearestDistance = double.MaxValue;
+            const double hitRadius = 18.0;
+
+            for (int i = 0; i < landmarkPoints.Count; i++)
+            {
+                PointF point = ConvertImagePointToControlPoint(landmarkPoints[i]);
+                double dx = point.X - controlPoint.X;
+                double dy = point.Y - controlPoint.Y;
+                double distance = Math.Sqrt((dx * dx) + (dy * dy));
+                if (distance <= hitRadius && distance < nearestDistance)
+                {
+                    nearestIndex = i;
+                    nearestDistance = distance;
+                }
+            }
+
+            return nearestIndex;
         }
 
         private void DrawActiveClickCue(Graphics graphics)
