@@ -1,0 +1,73 @@
+Cassette Motion Pro v0.10.0 - Advanced Bike Landmarks
+
+This update adds an optional Advanced Landmarks mode to Guided Capture.
+
+What changed:
+
+- Keeps the v0.9.9 Guided Capture clarity update.
+- Basic mode still uses the original 4 points.
+- Adds optional Advanced landmarks (8 points):
+  - Bottom bracket center
+  - Saddle top
+  - Saddle tip
+  - Grip / hood contact point
+  - Pedal spindle
+  - Handlebar center
+  - Front axle
+  - Rear axle
+- Advanced mode also calculates:
+  - Crank length
+  - Handlebar reach
+  - Handlebar drop
+  - Wheelbase preview
+- Keeps Guided Capture report trace.
+- Keeps the saddle setback convention:
+  - Behind BB = negative
+  - In front of BB = positive
+- Updates app/build/installer/report versions to 0.10.0.
+
+Upload steps:
+
+1. Open your GitHub repository:
+   https://github.com/spooled/cassette-motion-pro
+
+2. Upload everything from this package to the repo root.
+
+   Important:
+   - Include the hidden .github folder.
+   - The workflow file must end up here:
+
+     .github/workflows/build.yml
+
+3. Commit with this message:
+
+   Add v0.10.0 advanced bike landmarks
+
+4. Go to Actions.
+
+5. Open the newest run.
+
+6. Download:
+
+   CassetteMotionPro-Windows-0.10.0
+
+What to test:
+
+1. Open Bike Fit Workspace.
+2. Go to Bike Metrics.
+3. Choose a Measurement image.
+4. Open Guided Capture.
+5. Test Basic mode first:
+   - Leave Advanced landmarks unchecked.
+   - Calibrate Scale.
+   - Start Guided Capture.
+   - Confirm it asks for 4 points.
+   - Save to Before or After.
+6. Test Advanced mode:
+   - Check Advanced landmarks (8 points).
+   - Start Guided Capture.
+   - Confirm it asks for 8 points.
+   - Confirm Pedal spindle, Handlebar center, Front axle, and Rear axle are included.
+   - Confirm Crank length, Handlebar reach, and Handlebar drop appear in the results.
+7. Save a Guided Capture and generate a report.
+8. Confirm the Measurement Capture Trace table still appears.
