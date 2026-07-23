@@ -1086,12 +1086,14 @@ namespace CassetteMotionPro.Workspace
                 currentSession.BikeMetricsCaptureMethodBefore = form.CaptureMethod;
                 currentSession.BikeMetricsLevelReferenceBefore = form.LevelReferenceStatus;
                 currentSession.BikeMetricsSetbackConventionBefore = form.SaddleSetbackConvention;
+                currentSession.BikeMetricsCameraSetupBefore = form.CameraSetupStatus;
                 return;
             }
 
             currentSession.BikeMetricsCaptureMethodAfter = form.CaptureMethod;
             currentSession.BikeMetricsLevelReferenceAfter = form.LevelReferenceStatus;
             currentSession.BikeMetricsSetbackConventionAfter = form.SaddleSetbackConvention;
+            currentSession.BikeMetricsCameraSetupAfter = form.CameraSetupStatus;
         }
 
         private ImageMeasurementAssistantForm.DefaultMeasurementAxis GetDefaultBikeMetricAxis(string metricKey)

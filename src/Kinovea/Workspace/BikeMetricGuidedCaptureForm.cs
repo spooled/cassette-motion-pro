@@ -87,6 +87,7 @@ namespace CassetteMotionPro.Workspace
         public string CaptureMethod { get; private set; }
         public string LevelReferenceStatus { get; private set; }
         public string SaddleSetbackConvention { get; private set; }
+        public string CameraSetupStatus { get; private set; }
 
         public BikeMetricGuidedCaptureForm(string imagePath)
         {
@@ -96,6 +97,7 @@ namespace CassetteMotionPro.Workspace
                 throw new FileNotFoundException("The measurement reference image could not be found.", imagePath);
 
             this.imagePath = imagePath;
+            CameraSetupStatus = "Not confirmed";
 
             Text = "Guided Bike Metric Capture";
             Font = new Font("Segoe UI", 9F);
@@ -170,10 +172,10 @@ namespace CassetteMotionPro.Workspace
 
             Label guide = new Label();
             guide.Text =
-                "1. Calibrate scale using a known bike length.\n" +
-                "2. Optional: click Level Reference using floor/axle line.\n" +
-                "3. Click Start Guided Capture.\n" +
-                "4. Click these points in order:\n" +
+                "1. Review Camera Setup.\n" +
+                "2. Calibrate scale using a known bike length.\n" +
+                "3. Optional: click Level Reference using floor/axle line.\n" +
+                "4. Click Start Guided Capture.\n" +
                 "   • Bottom bracket center\n" +
                 "   • Saddle top\n" +
                 "   • Saddle tip\n" +
@@ -258,15 +260,17 @@ namespace CassetteMotionPro.Workspace
             advancedLandmarks.BackColor = Color.White;
             advancedLandmarks.CheckedChanged += AdvancedLandmarks_CheckedChanged;
 
-            Button calibrate = CreateButton("1. Calibrate Scale", false);
-            levelReference = CreateButton("2. Level Reference", false);
-            Button capture = CreateButton("3. Start Guided Capture", false);
+            Button cameraSetup = CreateButton("1. Camera Setup", false);
+            Button calibrate = CreateButton("2. Calibrate Scale", false);
+            levelReference = CreateButton("3. Level Reference", false);
+            Button capture = CreateButton("4. Start Guided Capture", false);
             undoLast = CreateButton("Undo Last Point", false);
             Button clear = CreateButton("Clear Points", false);
             recalculate = CreateButton("Recalculate Values", false);
             flipSetbackSign = CreateButton("Flip Setback Sign", false);
             saveBefore = CreateButton("Save to Before", false);
             saveAfter = CreateButton("Save to After", true);
+            cameraSetup.Dock = DockStyle.Top;
             calibrate.Dock = DockStyle.Top;
             levelReference.Dock = DockStyle.Top;
             capture.Dock = DockStyle.Top;
@@ -276,6 +280,7 @@ namespace CassetteMotionPro.Workspace
             flipSetbackSign.Dock = DockStyle.Top;
             saveBefore.Dock = DockStyle.Top;
             saveAfter.Dock = DockStyle.Top;
+            cameraSetup.Height = 34;
             calibrate.Height = 34;
             levelReference.Height = 34;
             capture.Height = 34;
@@ -285,6 +290,7 @@ namespace CassetteMotionPro.Workspace
             flipSetbackSign.Height = 34;
             saveBefore.Height = 34;
             saveAfter.Height = 34;
+            cameraSetup.Margin = new Padding(0, 6, 0, 0);
             calibrate.Margin = new Padding(0, 6, 0, 0);
             levelReference.Margin = new Padding(0, 6, 0, 0);
             capture.Margin = new Padding(0, 6, 0, 0);
@@ -294,6 +300,7 @@ namespace CassetteMotionPro.Workspace
             flipSetbackSign.Margin = new Padding(0, 6, 0, 0);
             saveBefore.Margin = new Padding(0, 6, 0, 0);
             saveAfter.Margin = new Padding(0, 6, 0, 0);
+            cameraSetup.Click += CameraSetup_Click;
             calibrate.Click += Calibrate_Click;
             levelReference.Click += LevelReference_Click;
             capture.Click += Capture_Click;
@@ -324,6 +331,7 @@ namespace CassetteMotionPro.Workspace
             sideScroll.Controls.Add(capture);
             sideScroll.Controls.Add(levelReference);
             sideScroll.Controls.Add(calibrate);
+            sideScroll.Controls.Add(cameraSetup);
             sideScroll.Controls.Add(advancedLandmarks);
             sideScroll.Controls.Add(zoomPanel);
             sideScroll.Controls.Add(resultsLabel);
@@ -342,6 +350,40 @@ namespace CassetteMotionPro.Workspace
             root.Controls.Add(picture, 0, 0);
             root.Controls.Add(side, 1, 0);
             Controls.Add(root);
+        }
+
+        private void CameraSetup_Click(object sender, EventArgs e)
+        {
+            string checklist =
+                "For the most accurate bike measurements:\n\n" +
+                "✓ Camera is straight side-on to the bike.\n" +
+                "✓ Camera is level, not tilted.\n" +
+                "✓ Bike is upright and not leaning.\n" +
+                "✓ Use 2x/telephoto or step farther back if possible.\n" +
+                "✓ Avoid ultra-wide lens distortion.\n" +
+                "✓ The calibration length is in the same plane as the bike.\n" +
+                "✓ Use Level Reference if the image is slightly tilted.\n\n" +
+                "Confirm camera setup for this Guided Capture?";
+
+            DialogResult result = MessageBox.Show(this,
+                checklist,
+                "Camera Setup / Accuracy Checklist",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Information);
+
+            CameraSetupStatus = result == DialogResult.Yes ? "Confirmed" : "Not confirmed";
+            status.Text = "Camera setup: " + CameraSetupStatus + ".";
+            nextPointHintLabel.Text = result == DialogResult.Yes ?
+                "Good. Next: calibrate scale using a known real length." :
+                "You can still continue, but measurements may be less accurate.";
+
+            if (calculatedValues != null && calculatedValues.Count > 0)
+            {
+                calculatedValues["CameraSetup"] = CameraSetupStatus;
+                UpdateResultsLabel();
+            }
+
+            picture.Invalidate();
         }
 
         private void Calibrate_Click(object sender, EventArgs e)
@@ -716,6 +758,7 @@ namespace CassetteMotionPro.Workspace
             calculatedValues["LevelReference"] = levelReferencePoints.Count == 2 ? "Applied" : "Not set";
             calculatedValues["SaddleSetbackConvention"] = "Behind BB = negative";
             calculatedValues["LandmarkMode"] = advancedLandmarks.Checked ? "Advanced 8-point" : "Basic 4-point";
+            calculatedValues["CameraSetup"] = CameraSetupStatus;
 
             UpdateResultsLabel();
         }
@@ -738,6 +781,7 @@ namespace CassetteMotionPro.Workspace
             CaptureMethod = advancedLandmarks.Checked ? "Guided Capture - Advanced Landmarks" : "Guided Capture";
             LevelReferenceStatus = GetCalculatedValue("LevelReference");
             SaddleSetbackConvention = GetCalculatedValue("SaddleSetbackConvention");
+            CameraSetupStatus = GetCalculatedValue("CameraSetup");
             DialogResult = DialogResult.OK;
             Close();
         }
@@ -803,6 +847,7 @@ namespace CassetteMotionPro.Workspace
                 "Handlebar drop: " + GetCalculatedValue("HandlebarDrop") + "\n" +
                 "Wheelbase: " + GetCalculatedValue("Wheelbase") + "\n" +
                 "Level reference: " + GetCalculatedValue("LevelReference") + "\n" +
+                "Camera setup: " + GetCalculatedValue("CameraSetup") + "\n" +
                 "Setback convention: " + GetCalculatedValue("SaddleSetbackConvention");
         }
 
@@ -820,6 +865,7 @@ namespace CassetteMotionPro.Workspace
                 "Wheelbase: " + GetCalculatedValue("Wheelbase") + "\n\n" +
                 "Landmark mode: " + GetCalculatedValue("LandmarkMode") + "\n" +
                 "Level reference: " + GetCalculatedValue("LevelReference") + "\n" +
+                "Camera setup: " + GetCalculatedValue("CameraSetup") + "\n" +
                 "Saddle setback convention: " + GetCalculatedValue("SaddleSetbackConvention");
         }
 

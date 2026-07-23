@@ -1,0 +1,52 @@
+Cassette Motion Pro v0.10.4 - Installer Resource Hardening
+
+This update fixes the Windows installer build when the old NSIS graphics/license
+resource folders are not present in the GitHub upload.
+
+What changed:
+
+- Keeps v0.10.3 Camera Accuracy Guide.
+- Removes missing NSIS custom graphics dependency.
+- Removes missing NSIS GPL text file dependency.
+- Adds installer source file listing to the GitHub Actions log.
+- Keeps the Windows bundle artifact with installer status text.
+- Updates app/build/installer/report versions to 0.10.4.
+
+Upload steps:
+
+1. Open your GitHub repository:
+   https://github.com/spooled/cassette-motion-pro
+
+2. Upload everything from this package to the repo root.
+
+   Important:
+   - Include the hidden .github folder.
+   - The workflow file must end up here:
+
+     .github/workflows/build.yml
+
+3. Commit with this message:
+
+   Add v0.10.4 installer resource hardening
+
+4. Go to Actions.
+
+5. Open the newest run.
+
+6. Download:
+
+   CassetteMotionPro-Windows-0.10.4
+
+What to test:
+
+1. Open Bike Fit Workspace.
+2. Go to Bike Metrics.
+3. Choose a Measurement image.
+4. Open Guided Capture.
+5. Wait for GitHub Actions to finish.
+6. Download CassetteMotionPro-Windows-0.10.4.
+7. Open INSTALLER-BUILD-STATUS.txt.
+8. Confirm it says Installer build status: SUCCESS.
+9. Confirm the bundle contains CassetteMotionPro-Installer-0.10.4.exe.
+10. Run the installer on Windows.
+11. Confirm the app opens after install.

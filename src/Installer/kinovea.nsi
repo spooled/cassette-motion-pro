@@ -6,9 +6,8 @@
 !include "MUI2.nsh"
 
 !ifndef VERSION
-!define VERSION "0.10.2"
+!define VERSION "0.10.4"
 !endif
-!define EXTRADIR "OtherFiles"
 !define BUILDDIR "..\Kinovea\Bin\x64\Release"
     
 ;--------------------------------
@@ -38,18 +37,6 @@
 ;--------------------------------
 ;Interface Configuration
 ;--------------------------------
-    ;Icons
-    !define MUI_ICON "graphics\install.ico"
-    !define MUI_UNICON "graphics\uninstall.ico"
-
-    ;Image on the header of the page. (150x57 pixels)
-    !define MUI_HEADERIMAGE
-    !define MUI_HEADERIMAGE_BITMAP "graphics\150x57.bmp"
-
-    ;Bitmap for the Welcome page and the Finish page (164x314 pixels)
-    !define MUI_WELCOMEFINISHPAGE_BITMAP "graphics\164x314.bmp"
-    !define MUI_UNWELCOMEFINISHPAGE_BITMAP "graphics\164x314.bmp"
-
     ;Show a message box with a warning when the user wants to close the installer.
     !define MUI_ABORTWARNING
 
@@ -79,7 +66,6 @@
 
     ;Installer
     !insertmacro MUI_PAGE_WELCOME
-    !insertmacro MUI_PAGE_LICENSE "${EXTRADIR}\GPLv2.txt"
     !insertmacro MUI_PAGE_DIRECTORY
     !insertmacro MUI_PAGE_STARTMENU Application $STARTMENU_FOLDER
     !insertmacro MUI_PAGE_INSTFILES
