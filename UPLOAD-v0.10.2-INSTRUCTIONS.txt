@@ -1,0 +1,56 @@
+Cassette Motion Pro v0.10.2 - Wheelbase Bike Metric
+
+This update makes wheelbase a permanent Bike Metrics value instead of just a
+Guided Capture preview.
+
+What changed:
+
+- Keeps v0.10.1 editable Guided Capture landmarks.
+- Adds Wheelbase as a Bike Metrics row with Before and After manual entry.
+- Advanced Guided Capture now saves Wheelbase into Bike Metrics.
+- Wheelbase appears in generated reports.
+- Wheelbase image-assist uses horizontal measurement by default.
+- Keeps Guided Capture report trace.
+- Updates app/build/installer/report versions to 0.10.2.
+
+Upload steps:
+
+1. Open your GitHub repository:
+   https://github.com/spooled/cassette-motion-pro
+
+2. Upload everything from this package to the repo root.
+
+   Important:
+   - Include the hidden .github folder.
+   - The workflow file must end up here:
+
+     .github/workflows/build.yml
+
+3. Commit with this message:
+
+   Add v0.10.2 wheelbase bike metric
+
+4. Go to Actions.
+
+5. Open the newest run.
+
+6. Download:
+
+   CassetteMotionPro-Windows-0.10.2
+
+What to test:
+
+1. Open Bike Fit Workspace.
+2. Go to Bike Metrics.
+3. Choose a Measurement image.
+4. Open Guided Capture.
+5. Confirm Bike Metrics has a Wheelbase row.
+6. Manually type a Wheelbase Before or After value, save, close, and reopen.
+7. Confirm the Wheelbase value reloads.
+8. Open Guided Capture.
+9. Check Advanced landmarks.
+10. Complete all 8 landmarks.
+11. Confirm Wheelbase appears in the calculated values.
+12. Save to Before or After.
+13. Confirm the Wheelbase row fills in Bike Metrics.
+14. Generate a report and confirm Wheelbase appears.

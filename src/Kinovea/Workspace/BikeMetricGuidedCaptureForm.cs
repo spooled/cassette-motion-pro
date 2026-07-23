@@ -817,7 +817,7 @@ namespace CassetteMotionPro.Workspace
                 "Crank length: " + GetCalculatedValue("CrankLength") + "\n" +
                 "Handlebar reach: " + GetCalculatedValue("HandlebarReach") + "\n" +
                 "Handlebar drop: " + GetCalculatedValue("HandlebarDrop") + "\n" +
-                "Wheelbase preview: " + GetCalculatedValue("Wheelbase") + "\n\n" +
+                "Wheelbase: " + GetCalculatedValue("Wheelbase") + "\n\n" +
                 "Landmark mode: " + GetCalculatedValue("LandmarkMode") + "\n" +
                 "Level reference: " + GetCalculatedValue("LevelReference") + "\n" +
                 "Saddle setback convention: " + GetCalculatedValue("SaddleSetbackConvention");

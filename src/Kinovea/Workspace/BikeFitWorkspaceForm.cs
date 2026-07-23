@@ -316,6 +316,7 @@ namespace CassetteMotionPro.Workspace
             AddBikeMetricRow(table, "Handlebar reach", "Reference point → handlebar/hood contact point, horizontal reach.", "HandlebarReach");
             AddBikeMetricRow(table, "Handlebar drop", "Saddle top → handlebar/hood contact point, vertical drop.", "HandlebarDrop");
             AddBikeMetricRow(table, "Crank length", "Crank center → pedal spindle.", "CrankLength");
+            AddBikeMetricRow(table, "Wheelbase", "Rear axle center → front axle center, measured horizontally.", "Wheelbase");
             AddBikeMetricRow(table, "Cleat position", "Shoe/cleat reference point → cleat center.", "CleatPosition");
 
             Label hint = new Label();
@@ -831,6 +832,8 @@ namespace CassetteMotionPro.Workspace
             SetMeasurement("HandlebarYAfter", session.HandlebarYAfter);
             SetMeasurement("CrankLengthBefore", session.CrankLengthBefore);
             SetMeasurement("CrankLengthAfter", session.CrankLengthAfter);
+            SetMeasurement("WheelbaseBefore", session.WheelbaseBefore);
+            SetMeasurement("WheelbaseAfter", session.WheelbaseAfter);
             SetMeasurement("CleatPositionBefore", session.CleatPositionBefore);
             SetMeasurement("CleatPositionAfter", session.CleatPositionAfter);
             SetMeasurement("KneeAngleBefore", session.KneeAngleBefore);
@@ -965,6 +968,8 @@ namespace CassetteMotionPro.Workspace
             currentSession.HandlebarYAfter = measurementBoxes["HandlebarYAfter"].Text.Trim();
             currentSession.CrankLengthBefore = measurementBoxes["CrankLengthBefore"].Text.Trim();
             currentSession.CrankLengthAfter = measurementBoxes["CrankLengthAfter"].Text.Trim();
+            currentSession.WheelbaseBefore = measurementBoxes["WheelbaseBefore"].Text.Trim();
+            currentSession.WheelbaseAfter = measurementBoxes["WheelbaseAfter"].Text.Trim();
             currentSession.CleatPositionBefore = measurementBoxes["CleatPositionBefore"].Text.Trim();
             currentSession.CleatPositionAfter = measurementBoxes["CleatPositionAfter"].Text.Trim();
             currentSession.KneeAngleBefore = measurementBoxes["KneeAngleBefore"].Text.Trim();
@@ -1093,7 +1098,8 @@ namespace CassetteMotionPro.Workspace
         {
             if (string.Equals(metricKey, "SaddleSetback", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(metricKey, "SaddleTipToGripReach", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(metricKey, "HandlebarX", StringComparison.OrdinalIgnoreCase))
+                string.Equals(metricKey, "HandlebarX", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(metricKey, "Wheelbase", StringComparison.OrdinalIgnoreCase))
             {
                 return ImageMeasurementAssistantForm.DefaultMeasurementAxis.Horizontal;
             }
