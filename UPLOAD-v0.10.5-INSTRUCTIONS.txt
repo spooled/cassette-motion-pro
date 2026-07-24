@@ -1,0 +1,56 @@
+Cassette Motion Pro v0.10.5 - Fit Summary Recommendations
+
+This update adds a polished Fit Summary section to the Bike Fit Workspace and
+generated reports.
+
+What changed:
+
+- Adds a new Fit Summary tab in the Bike Fit Workspace.
+- Adds fields for Main goal, Key findings, Changes made, Recommendations, and
+  Follow-up plan.
+- Saves those fields with each fit session.
+- Generated reports show a dedicated Fit Summary section when any summary field
+  is filled in.
+- Keeps the v0.10.4 installer resource hardening.
+- Updates app/build/installer/report versions to 0.10.5.
+
+Upload steps:
+
+1. Open your GitHub repository:
+   https://github.com/spooled/cassette-motion-pro
+
+2. Upload everything from this package to the repo root.
+
+   Important:
+   - Include the hidden .github folder.
+   - The workflow file must end up here:
+
+     .github/workflows/build.yml
+
+3. Commit with this message:
+
+   Add v0.10.5 fit summary recommendations
+
+4. Go to Actions.
+
+5. Open the newest run.
+
+6. Download:
+
+   CassetteMotionPro-Windows-0.10.5
+
+What to test:
+
+1. Open Bike Fit Workspace.
+2. Open or create a fit session.
+3. Go to the new Fit Summary tab.
+4. Fill in Main goal, Key findings, Changes made, Recommendations, and
+   Follow-up plan.
+5. Click Save Session.
+6. Click Generate Report.
+7. Confirm the report includes a Fit Summary section.
+8. Open INSTALLER-BUILD-STATUS.txt from the Windows bundle.
+9. Confirm it says Installer build status: SUCCESS.
+10. Confirm the bundle contains CassetteMotionPro-Installer-0.10.5.exe.
+11. Run the installer on Windows.
+12. Confirm the app opens after install.

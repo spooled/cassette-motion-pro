@@ -30,6 +30,11 @@ namespace CassetteMotionPro.Workspace
         private readonly ComboBox cmbStatus = new ComboBox();
         private readonly TextBox txtGoals = new TextBox();
         private readonly TextBox txtNotes = new TextBox();
+        private readonly TextBox txtFitSummaryMainGoal = new TextBox();
+        private readonly TextBox txtFitSummaryKeyFindings = new TextBox();
+        private readonly TextBox txtFitSummaryChangesMade = new TextBox();
+        private readonly TextBox txtFitSummaryRecommendations = new TextBox();
+        private readonly TextBox txtFitSummaryFollowUp = new TextBox();
         private readonly Label saveHint = new Label();
         private readonly CheckBox chkShowBeforeMeasurementsInReport = new CheckBox();
         private readonly CheckBox chkShowSideBySideImageInReport = new CheckBox();
@@ -155,6 +160,7 @@ namespace CassetteMotionPro.Workspace
             tabs.Dock = DockStyle.Fill;
             tabs.Padding = new Point(18, 8);
             tabs.TabPages.Add(BuildOverviewTab());
+            tabs.TabPages.Add(BuildFitSummaryTab());
             tabs.TabPages.Add(BuildMediaTab());
             tabs.TabPages.Add(BuildReportImagesTab());
             tabs.TabPages.Add(BuildBikeMetricsTab());
@@ -249,6 +255,39 @@ namespace CassetteMotionPro.Workspace
             return page;
         }
 
+        private TabPage BuildFitSummaryTab()
+        {
+            TabPage page = NewTab("Fit Summary");
+            TableLayoutPanel table = NewEditorTable();
+            table.Dock = DockStyle.Top;
+            table.AutoSize = true;
+
+            ConfigureSummaryBox(txtFitSummaryMainGoal);
+            ConfigureSummaryBox(txtFitSummaryKeyFindings);
+            ConfigureSummaryBox(txtFitSummaryChangesMade);
+            ConfigureSummaryBox(txtFitSummaryRecommendations);
+            ConfigureSummaryBox(txtFitSummaryFollowUp);
+
+            AddEditorRow(table, "Main goal", txtFitSummaryMainGoal, 78);
+            AddEditorRow(table, "Key findings", txtFitSummaryKeyFindings, 118);
+            AddEditorRow(table, "Changes made", txtFitSummaryChangesMade, 118);
+            AddEditorRow(table, "Recommendations", txtFitSummaryRecommendations, 118);
+            AddEditorRow(table, "Follow-up plan", txtFitSummaryFollowUp, 96);
+
+            Label help = new Label();
+            help.Text = "These fields create the polished Fit Summary section in the generated report. You can keep Notes as your raw fitter notes.";
+            help.Dock = DockStyle.Fill;
+            help.ForeColor = Color.FromArgb(92, 104, 98);
+            help.Padding = new Padding(0, 12, 0, 0);
+            int row = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 62));
+            table.Controls.Add(help, 1, row);
+
+            page.AutoScroll = true;
+            page.Controls.Add(table);
+            return page;
+        }
+
         private TabPage BuildMediaTab()
         {
             TabPage page = NewTab("Videos");
@@ -290,6 +329,13 @@ namespace CassetteMotionPro.Workspace
 
             page.Controls.Add(table);
             return page;
+        }
+
+        private static void ConfigureSummaryBox(TextBox box)
+        {
+            box.Multiline = true;
+            box.ScrollBars = ScrollBars.Vertical;
+            box.BorderStyle = BorderStyle.FixedSingle;
         }
 
         private TabPage BuildBikeMetricsTab()
@@ -797,6 +843,11 @@ namespace CassetteMotionPro.Workspace
                 cmbStatus.SelectedIndex = 0;
             txtGoals.Text = session.Goals ?? string.Empty;
             txtNotes.Text = session.Notes ?? string.Empty;
+            txtFitSummaryMainGoal.Text = session.FitSummaryMainGoal ?? string.Empty;
+            txtFitSummaryKeyFindings.Text = session.FitSummaryKeyFindings ?? string.Empty;
+            txtFitSummaryChangesMade.Text = session.FitSummaryChangesMade ?? string.Empty;
+            txtFitSummaryRecommendations.Text = session.FitSummaryRecommendations ?? string.Empty;
+            txtFitSummaryFollowUp.Text = session.FitSummaryFollowUp ?? string.Empty;
             chkShowBeforeMeasurementsInReport.Checked = !session.HideBeforeMeasurementsInReport;
 
             string beforePath = session.BeforeVideoPath;
@@ -941,6 +992,11 @@ namespace CassetteMotionPro.Workspace
             currentSession.Status = Convert.ToString(cmbStatus.SelectedItem);
             currentSession.Goals = txtGoals.Text.Trim();
             currentSession.Notes = txtNotes.Text.Trim();
+            currentSession.FitSummaryMainGoal = txtFitSummaryMainGoal.Text.Trim();
+            currentSession.FitSummaryKeyFindings = txtFitSummaryKeyFindings.Text.Trim();
+            currentSession.FitSummaryChangesMade = txtFitSummaryChangesMade.Text.Trim();
+            currentSession.FitSummaryRecommendations = txtFitSummaryRecommendations.Text.Trim();
+            currentSession.FitSummaryFollowUp = txtFitSummaryFollowUp.Text.Trim();
             currentSession.BeforeVideoPath = mediaBoxes["BeforeVideoPath"].Text;
             currentSession.AfterVideoPath = mediaBoxes["AfterVideoPath"].Text;
             currentSession.BeforeReportImagePath = imageBoxes["BeforeReportImagePath"].Text;

@@ -20,6 +20,11 @@ namespace CassetteMotionPro.Workspace
         public string Status { get; set; }
         public string Goals { get; set; }
         public string Notes { get; set; }
+        public string FitSummaryMainGoal { get; set; }
+        public string FitSummaryKeyFindings { get; set; }
+        public string FitSummaryChangesMade { get; set; }
+        public string FitSummaryRecommendations { get; set; }
+        public string FitSummaryFollowUp { get; set; }
 
         public string LeftVideoPath { get; set; }
         public string RightVideoPath { get; set; }
