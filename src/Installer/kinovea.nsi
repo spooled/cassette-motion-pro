@@ -170,10 +170,8 @@
     ;It is possible to build your installer with only one section, but if you want to use the components page and let the user choose what to install, you'll have to use more than one section.
 
 ;Main installer section.
+;TODO: terminate app.
 Section ""
-    ; Terminate the app if it's currently running to avoid locked files
-    nsExec::Exec "taskkill /F /IM CassetteMotionPro.exe"
-    Pop $0
 
     ; Main directory
     ; The build is setup to output the full set of files so we can copy everything.
@@ -222,9 +220,6 @@ FunctionEnd
 !macroend
 
 Section "Uninstall"
-    ; Terminate the app if it's currently running to avoid locked files
-    nsExec::Exec "taskkill /F /IM CassetteMotionPro.exe"
-    Pop $0
 
     ; Calling RMDir /r $INSTDIR or Delete "$INSTDIR\*.*" is unsafe.
     ; Concrete example: the user installs to the desktop by mistake, then runs the uninstaller to "fix" the problem, 

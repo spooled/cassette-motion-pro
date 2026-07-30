@@ -290,7 +290,7 @@ namespace Kinovea.Root
 
         public void RefreshUICulture()
         {
-            RefreshUICulture(true);
+            throw new NotImplementedException();
         }
 
         private void RefreshUICulture(bool subModules)
@@ -314,7 +314,7 @@ namespace Kinovea.Root
 
         public void PreferencesUpdated()
         {
-            PreferencesUpdated(true);
+            throw new NotImplementedException();
         }
 
         /// <summary>
