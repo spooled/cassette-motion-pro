@@ -83,7 +83,7 @@ namespace Kinovea.Root
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            FormSplashScreen splashForm = new FormSplashScreen();
+            CassetteSplashScreen splashForm = new CassetteSplashScreen();
             splashForm.Show();
             splashForm.Update();
 
