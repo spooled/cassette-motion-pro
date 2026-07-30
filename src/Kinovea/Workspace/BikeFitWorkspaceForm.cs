@@ -309,13 +309,16 @@ namespace CassetteMotionPro.Workspace
             AddClientFolderRow(table, "Photos", client.PhotosPath);
             AddClientFolderRow(table, "Side-by-Side", client.SideBySidePath);
             AddClientFolderRow(table, "Reports", client.ReportsPath);
-            AddSessionFolderRow(table, "Current session", "Open the saved session record for the active fit.");
-            AddSessionReportsRow(table, "Session reports", "Open the reports folder for the active fit session.");
             AddClientFolderRow(table, "Measurements", client.MeasurementsPath);
             AddClientFolderRow(table, "Notes", client.NotesPath);
+            AddSessionFolderRow(table, "Active session record", "Measurements → Sessions → active session");
+            AddSessionVideosRow(table, "Active videos", "Videos → Fit Sessions → active session");
+            AddSessionPhotosRow(table, "Active photos", "Photos → Fit Sessions → active session");
+            AddSessionSideBySideRow(table, "Active side-by-side", "Side-by-Side → Fit Sessions → active session");
+            AddSessionReportsRow(table, "Active reports", "Reports → Fit Sessions → active session");
 
             Label hint = new Label();
-            hint.Text = "Use these shortcuts when you want to check where a client’s files are being saved. Opening an existing client also creates any missing folders automatically.";
+            hint.Text = "Use these shortcuts when you want to check where a client’s files are being saved. The Active rows save the current session first, then open that session’s exact folder.";
             hint.Dock = DockStyle.Fill;
             hint.ForeColor = Color.FromArgb(92, 104, 98);
             hint.Padding = new Padding(0, 12, 0, 0);
@@ -353,27 +356,30 @@ namespace CassetteMotionPro.Workspace
 
         private void AddSessionFolderRow(TableLayoutPanel table, string labelText, string description)
         {
-            AddDynamicFolderRow(table, labelText, description, delegate
-            {
-                SaveCurrentSession();
-                Directory.CreateDirectory(currentSession.FolderPath);
-                Process.Start(currentSession.FolderPath);
-                UpdateSaveHint("Current session folder opened.");
-            });
+            AddDynamicFolderRow(table, labelText, description, GetSessionRecordFolderPath, "Active session record folder opened.");
+        }
+
+        private void AddSessionVideosRow(TableLayoutPanel table, string labelText, string description)
+        {
+            AddDynamicFolderRow(table, labelText, description, GetSessionVideosFolderPath, "Active session videos folder opened.");
+        }
+
+        private void AddSessionPhotosRow(TableLayoutPanel table, string labelText, string description)
+        {
+            AddDynamicFolderRow(table, labelText, description, GetSessionPhotosFolderPath, "Active session photos folder opened.");
+        }
+
+        private void AddSessionSideBySideRow(TableLayoutPanel table, string labelText, string description)
+        {
+            AddDynamicFolderRow(table, labelText, description, GetSessionSideBySideFolderPath, "Active session side-by-side folder opened.");
         }
 
         private void AddSessionReportsRow(TableLayoutPanel table, string labelText, string description)
         {
-            AddDynamicFolderRow(table, labelText, description, delegate
-            {
-                SaveCurrentSession();
-                string folderPath = FitSessionReportGenerator.GetSessionReportsPath(client, currentSession);
-                Process.Start(folderPath);
-                UpdateSaveHint("Current session Reports folder opened.");
-            });
+            AddDynamicFolderRow(table, labelText, description, GetSessionReportsFolderPath, "Active session reports folder opened.");
         }
 
-        private void AddDynamicFolderRow(TableLayoutPanel table, string labelText, string description, Action openAction)
+        private void AddDynamicFolderRow(TableLayoutPanel table, string labelText, string description, Func<string> folderProvider, string openedMessage)
         {
             int row = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
@@ -392,7 +398,11 @@ namespace CassetteMotionPro.Workspace
             {
                 try
                 {
-                    openAction();
+                    SaveCurrentSession();
+                    string folderPath = folderProvider();
+                    Directory.CreateDirectory(folderPath);
+                    Process.Start(folderPath);
+                    UpdateSaveHint(openedMessage);
                 }
                 catch (Exception exception)
                 {
@@ -403,6 +413,31 @@ namespace CassetteMotionPro.Workspace
             table.Controls.Add(FieldLabel(labelText), 0, row);
             table.Controls.Add(path, 1, row);
             table.Controls.Add(open, 2, row);
+        }
+
+        private string GetSessionRecordFolderPath()
+        {
+            return currentSession.FolderPath;
+        }
+
+        private string GetSessionVideosFolderPath()
+        {
+            return Path.Combine(client.VideosPath, "Fit Sessions", currentSession.StorageFolderName);
+        }
+
+        private string GetSessionPhotosFolderPath()
+        {
+            return Path.Combine(client.PhotosPath, "Fit Sessions", currentSession.StorageFolderName);
+        }
+
+        private string GetSessionSideBySideFolderPath()
+        {
+            return Path.Combine(client.SideBySidePath, "Fit Sessions", currentSession.StorageFolderName);
+        }
+
+        private string GetSessionReportsFolderPath()
+        {
+            return FitSessionReportGenerator.GetSessionReportsPath(client, currentSession);
         }
 
         private TabPage BuildFitSummaryTab()
@@ -1166,7 +1201,7 @@ namespace CassetteMotionPro.Workspace
             {
                 SaveCurrentSession();
                 RefreshSessions(currentSession.Id);
-                UpdateSaveHint("Saved \"" + currentSession.DisplayName + "\" to this client’s Fit Sessions folder.");
+                UpdateSaveHint("Saved \"" + currentSession.DisplayName + "\" to this client’s Measurements → Sessions folder.");
             }
             catch (Exception exception)
             {
@@ -1498,7 +1533,7 @@ namespace CassetteMotionPro.Workspace
             string folder = currentSession.Id == Guid.Empty ? "pending until saved" : currentSession.StorageFolderName;
             activeSessionStatus.Text = "Active session: " + currentSession.DisplayName + " · " + status + "\n" +
                 "Client: " + client.DisplayName + "\n" +
-                "Saves to: Measurements → Fit Sessions → " + folder;
+                "Session record: Measurements → Sessions → " + folder;
         }
 
         private void StartBodyAngleGuide(string mediaKey)
