@@ -41,6 +41,7 @@ namespace CassetteMotionPro.Workspace
         private readonly TextBox txtHandoffNextAppointment = new TextBox();
         private readonly TextBox txtHandoffInternalNotes = new TextBox();
         private readonly Label saveHint = new Label();
+        private readonly Label activeSessionStatus = new Label();
         private readonly CheckBox chkShowBeforeMeasurementsInReport = new CheckBox();
         private readonly CheckBox chkShowSideBySideImageInReport = new CheckBox();
         private readonly CheckBox chkShowBeforeImageInReport = new CheckBox();
@@ -103,9 +104,19 @@ namespace CassetteMotionPro.Workspace
             bike.AutoSize = true;
             bike.Location = new Point(30, 76);
 
+            activeSessionStatus.Text = "Active session\nChoose or create a fit session";
+            activeSessionStatus.Font = new Font("Segoe UI", 9F);
+            activeSessionStatus.ForeColor = Color.FromArgb(205, 216, 210);
+            activeSessionStatus.TextAlign = ContentAlignment.TopRight;
+            activeSessionStatus.AutoSize = false;
+            activeSessionStatus.Size = new Size(430, 72);
+            activeSessionStatus.Location = new Point(720, 19);
+            activeSessionStatus.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+
             header.Controls.Add(eyebrow);
             header.Controls.Add(title);
             header.Controls.Add(bike);
+            header.Controls.Add(activeSessionStatus);
 
             SplitContainer split = new SplitContainer();
             split.Dock = DockStyle.Fill;
@@ -1130,6 +1141,8 @@ namespace CassetteMotionPro.Workspace
             SetMeasurement("ShoulderAngleAfter", session.ShoulderAngleAfter);
             SetMeasurement("ElbowAngleBefore", session.ElbowAngleBefore);
             SetMeasurement("ElbowAngleAfter", session.ElbowAngleAfter);
+
+            UpdateActiveSessionStatus();
         }
 
         private void SetMedia(string key, string value)
@@ -1153,7 +1166,7 @@ namespace CassetteMotionPro.Workspace
             {
                 SaveCurrentSession();
                 RefreshSessions(currentSession.Id);
-                UpdateSaveHint("Saved to the client’s Measurements folder.");
+                UpdateSaveHint("Saved \"" + currentSession.DisplayName + "\" to this client’s Fit Sessions folder.");
             }
             catch (Exception exception)
             {
@@ -1441,6 +1454,7 @@ namespace CassetteMotionPro.Workspace
             currentSession.ElbowAngleBefore = measurementBoxes["ElbowAngleBefore"].Text.Trim();
             currentSession.ElbowAngleAfter = measurementBoxes["ElbowAngleAfter"].Text.Trim();
             repository.Save(currentSession);
+            UpdateActiveSessionStatus();
         }
 
         private string GetReportLogoStyle()
@@ -1467,6 +1481,24 @@ namespace CassetteMotionPro.Workspace
             if (saveHint == null)
                 return;
             saveHint.Text = message;
+        }
+
+        private void UpdateActiveSessionStatus()
+        {
+            if (activeSessionStatus == null)
+                return;
+
+            if (currentSession == null)
+            {
+                activeSessionStatus.Text = "Active session\nChoose or create a fit session";
+                return;
+            }
+
+            string status = string.IsNullOrWhiteSpace(currentSession.Status) ? "Assessment" : currentSession.Status.Trim();
+            string folder = currentSession.Id == Guid.Empty ? "pending until saved" : currentSession.StorageFolderName;
+            activeSessionStatus.Text = "Active session: " + currentSession.DisplayName + " · " + status + "\n" +
+                "Client: " + client.DisplayName + "\n" +
+                "Saves to: Measurements → Fit Sessions → " + folder;
         }
 
         private void StartBodyAngleGuide(string mediaKey)
