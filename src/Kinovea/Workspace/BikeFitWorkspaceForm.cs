@@ -302,7 +302,7 @@ namespace CassetteMotionPro.Workspace
             table.ColumnCount = 3;
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160));
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 240));
 
             AddClientFolderRow(table, "Client folder", client.FolderPath);
             AddClientFolderRow(table, "Videos", client.VideosPath);
@@ -316,9 +316,11 @@ namespace CassetteMotionPro.Workspace
             AddSessionPhotosRow(table, "Active photos", "Photos → Fit Sessions → active session");
             AddSessionSideBySideRow(table, "Active side-by-side", "Side-by-Side → Fit Sessions → active session");
             AddSessionReportsRow(table, "Active reports", "Reports → Fit Sessions → active session");
+            AddImportActionRow(table, "Add videos", "Copy before/after videos into this active fit session.", "Before Video", delegate { BrowseVideo("BeforeVideoPath"); }, "After Video", delegate { BrowseVideo("AfterVideoPath"); });
+            AddImportActionRow(table, "Add photos", "Copy before/after report photos into this active fit session.", "Before Photo", delegate { BrowseReportImage("BeforeReportImagePath"); }, "After Photo", delegate { BrowseReportImage("AfterReportImagePath"); });
 
             Label hint = new Label();
-            hint.Text = "Use these shortcuts when you want to check where a client’s files are being saved. The Active rows save the current session first, then open that session’s exact folder.";
+            hint.Text = "Use these shortcuts when you want to check where a client’s files are being saved. The Active rows save the current session first, then open that session’s exact folder. Add videos/photos copies the selected file into this fit session and updates the matching Videos or Report Images tab.";
             hint.Dock = DockStyle.Fill;
             hint.ForeColor = Color.FromArgb(92, 104, 98);
             hint.Padding = new Padding(0, 12, 0, 0);
@@ -377,6 +379,53 @@ namespace CassetteMotionPro.Workspace
         private void AddSessionReportsRow(TableLayoutPanel table, string labelText, string description)
         {
             AddDynamicFolderRow(table, labelText, description, GetSessionReportsFolderPath, "Active session reports folder opened.");
+        }
+
+        private void AddImportActionRow(TableLayoutPanel table, string labelText, string description, string firstButtonText, Action firstAction, string secondButtonText, Action secondAction)
+        {
+            int row = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
+
+            Label hint = new Label();
+            hint.Text = description;
+            hint.Dock = DockStyle.Fill;
+            hint.TextAlign = ContentAlignment.MiddleLeft;
+            hint.ForeColor = Color.FromArgb(92, 104, 98);
+            hint.AutoEllipsis = true;
+
+            FlowLayoutPanel actions = new FlowLayoutPanel();
+            actions.Dock = DockStyle.Fill;
+            actions.FlowDirection = FlowDirection.LeftToRight;
+            actions.WrapContents = false;
+            actions.Margin = new Padding(0, 8, 0, 8);
+
+            Button first = CreateButton(firstButtonText, false);
+            first.Size = new Size(112, 34);
+            first.Margin = new Padding(0, 0, 8, 0);
+            first.Click += delegate { RunImportAction(labelText, firstAction); };
+            actions.Controls.Add(first);
+
+            Button second = CreateButton(secondButtonText, false);
+            second.Size = new Size(112, 34);
+            second.Margin = new Padding(0, 0, 0, 0);
+            second.Click += delegate { RunImportAction(labelText, secondAction); };
+            actions.Controls.Add(second);
+
+            table.Controls.Add(FieldLabel(labelText), 0, row);
+            table.Controls.Add(hint, 1, row);
+            table.Controls.Add(actions, 2, row);
+        }
+
+        private void RunImportAction(string labelText, Action importAction)
+        {
+            try
+            {
+                importAction();
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "The " + labelText.ToLowerInvariant() + " action could not be completed.\n\n" + exception.Message, labelText, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void AddDynamicFolderRow(TableLayoutPanel table, string labelText, string description, Func<string> folderProvider, string openedMessage)
@@ -1732,6 +1781,7 @@ namespace CassetteMotionPro.Workspace
                             SaveCurrentSession();
                             mediaBoxes[key].Text = ImportVideo(dialog.FileName, viewName);
                             SaveCurrentSession();
+                            UpdateSaveHint(viewName + " video copied into this active fit session.");
                         }
                         finally
                         {
