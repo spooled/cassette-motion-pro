@@ -88,8 +88,7 @@ namespace CassetteMotionPro.Workspace
 
             if (string.IsNullOrEmpty(session.FolderPath))
             {
-                string folderName = string.Format("{0:yyyy-MM-dd}_{1}", session.SessionDate, session.Id.ToString("N").Substring(0, 8));
-                session.FolderPath = Path.Combine(RootPath, folderName);
+                session.FolderPath = Path.Combine(RootPath, session.StorageFolderName);
             }
 
             Directory.CreateDirectory(session.FolderPath);

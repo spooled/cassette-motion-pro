@@ -110,6 +110,17 @@ namespace CassetteMotionPro.Workspace
         }
 
         [XmlIgnore]
+        public string StorageFolderName
+        {
+            get
+            {
+                DateTime date = SessionDate == DateTime.MinValue ? DateTime.Today : SessionDate;
+                string id = Id == Guid.Empty ? "pending" : Id.ToString("N").Substring(0, 8);
+                return string.Format("{0:yyyy-MM-dd}_{1}", date, id);
+            }
+        }
+
+        [XmlIgnore]
         public string ManifestPath
         {
             get { return Path.Combine(FolderPath ?? string.Empty, "session.xml"); }

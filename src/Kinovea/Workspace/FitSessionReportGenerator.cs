@@ -26,7 +26,7 @@ namespace CassetteMotionPro.Workspace
         private const string StudioWebsite = "Add website";
         private const string PreparedByRole = "Professional Bike Fitting";
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "0.12.7";
+        private const string ReportVersion = "0.12.8";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
 
         public static string Generate(ClientRecord client, FitSessionRecord session)
@@ -35,13 +35,10 @@ namespace CassetteMotionPro.Workspace
                 throw new ArgumentNullException("client");
             if (session == null)
                 throw new ArgumentNullException("session");
-            if (string.IsNullOrEmpty(client.ReportsPath))
-                throw new InvalidOperationException("The client Reports folder is not available.");
-
-            Directory.CreateDirectory(client.ReportsPath);
+            string reportsPath = GetSessionReportsPath(client, session);
 
             string fileName = BuildFileName(session);
-            string path = Path.Combine(client.ReportsPath, fileName);
+            string path = Path.Combine(reportsPath, fileName);
             File.WriteAllText(path, BuildHtml(client, session, ResolveAbsoluteImageSource), Encoding.UTF8);
             return path;
         }
@@ -52,12 +49,9 @@ namespace CassetteMotionPro.Workspace
                 throw new ArgumentNullException("client");
             if (session == null)
                 throw new ArgumentNullException("session");
-            if (string.IsNullOrEmpty(client.ReportsPath))
-                throw new InvalidOperationException("The client Reports folder is not available.");
+            string reportsPath = GetSessionReportsPath(client, session);
 
-            Directory.CreateDirectory(client.ReportsPath);
-
-            string packageFolder = GetUniqueDirectoryPath(Path.Combine(client.ReportsPath, BuildPackageFolderName(client, session)));
+            string packageFolder = GetUniqueDirectoryPath(Path.Combine(reportsPath, BuildPackageFolderName(client, session)));
             string imagesFolder = Path.Combine(packageFolder, "Images");
             Directory.CreateDirectory(packageFolder);
             Directory.CreateDirectory(imagesFolder);
@@ -95,6 +89,20 @@ namespace CassetteMotionPro.Workspace
             string title = CleanFileName(string.IsNullOrWhiteSpace(session.Title) ? "Bike Fit Report" : session.Title);
             string date = session.SessionDate == DateTime.MinValue ? DateTime.Today.ToString("yyyy-MM-dd") : session.SessionDate.ToString("yyyy-MM-dd");
             return date + " - " + title + ".html";
+        }
+
+        public static string GetSessionReportsPath(ClientRecord client, FitSessionRecord session)
+        {
+            if (client == null)
+                throw new ArgumentNullException("client");
+            if (session == null)
+                throw new ArgumentNullException("session");
+            if (string.IsNullOrEmpty(client.ReportsPath))
+                throw new InvalidOperationException("The client Reports folder is not available.");
+
+            string reportsPath = Path.Combine(client.ReportsPath, "Fit Sessions", session.StorageFolderName);
+            Directory.CreateDirectory(reportsPath);
+            return reportsPath;
         }
 
         private static string BuildPackageReadmeText(ClientRecord client, FitSessionRecord session)

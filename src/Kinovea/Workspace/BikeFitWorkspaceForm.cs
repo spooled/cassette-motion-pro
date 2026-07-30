@@ -1178,9 +1178,9 @@ namespace CassetteMotionPro.Workspace
             {
                 SaveCurrentSession();
                 string reportPath = FitSessionReportGenerator.Generate(client, currentSession);
-                UpdateSaveHint("Report saved to the client’s Reports folder.");
+                UpdateSaveHint("Report saved to this session’s Reports folder.");
                 MessageBox.Show(this,
-                    "The report was saved in this client’s Reports folder.\n\n" + reportPath,
+                    "The report was saved in this fit session’s Reports folder.\n\n" + reportPath,
                     "Report created",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
@@ -1215,7 +1215,7 @@ namespace CassetteMotionPro.Workspace
                 Process.Start(packageFolder);
                 UpdateSaveHint("Report package created and opened.");
                 MessageBox.Show(this,
-                    "The report package was created in this client’s Reports folder.\n\n" +
+                    "The report package was created in this fit session’s Reports folder.\n\n" +
                     packageFolder + "\n\n" +
                     "It includes the report HTML and copied report images.",
                     "Report package created",
@@ -1234,10 +1234,10 @@ namespace CassetteMotionPro.Workspace
             {
                 SaveCurrentSession();
                 string zipPath = FitSessionReportGenerator.GeneratePackageZip(client, currentSession);
-                Process.Start(client.ReportsPath);
-                UpdateSaveHint("Zipped report package created in the Reports folder.");
+                Process.Start(Path.GetDirectoryName(zipPath));
+                UpdateSaveHint("Zipped report package created in this session’s Reports folder.");
                 MessageBox.Show(this,
-                    "The zipped report package was created in this client’s Reports folder.\n\n" +
+                    "The zipped report package was created in this fit session’s Reports folder.\n\n" +
                     zipPath,
                     "Zipped report package created",
                     MessageBoxButtons.OK,
@@ -1523,7 +1523,7 @@ namespace CassetteMotionPro.Workspace
                         imageBoxes["MeasurementReferenceImagePath"].Text = combinedPath;
 
                     SaveCurrentSession();
-                    UpdateSaveHint("Before + after image combined and saved to the client’s Photos folder.");
+                    UpdateSaveHint("Before + after image combined and saved to this session’s Side-by-Side folder.");
                 }
                 finally
                 {
@@ -1573,8 +1573,7 @@ namespace CassetteMotionPro.Workspace
 
         private string ImportVideo(string sourcePath, string viewName)
         {
-            string sessionFolderName = string.Format("{0:yyyy-MM-dd}_{1}", currentSession.SessionDate, currentSession.Id.ToString("N").Substring(0, 8));
-            string destinationDirectory = Path.Combine(client.VideosPath, "Fit Sessions", sessionFolderName, viewName);
+            string destinationDirectory = Path.Combine(client.VideosPath, "Fit Sessions", currentSession.StorageFolderName, viewName);
             Directory.CreateDirectory(destinationDirectory);
 
             string destinationPath = Path.Combine(destinationDirectory, Path.GetFileName(sourcePath));
@@ -1614,7 +1613,7 @@ namespace CassetteMotionPro.Workspace
                         if (key == "SideBySideReportImagePath")
                             UpdateSaveHint("Side-by-side image saved and set as the Bike Metrics measurement image.");
                         else
-                            UpdateSaveHint(viewName + " report image saved to the client’s Photos folder.");
+                            UpdateSaveHint(viewName + " report image saved to this session’s Photos folder.");
                     }
                     catch (Exception exception)
                     {
@@ -1637,8 +1636,7 @@ namespace CassetteMotionPro.Workspace
 
         private string ImportReportImage(string sourcePath, string viewName)
         {
-            string sessionFolderName = string.Format("{0:yyyy-MM-dd}_{1}", currentSession.SessionDate, currentSession.Id.ToString("N").Substring(0, 8));
-            string destinationDirectory = Path.Combine(client.PhotosPath, "Fit Sessions", sessionFolderName, "Report Images");
+            string destinationDirectory = Path.Combine(client.PhotosPath, "Fit Sessions", currentSession.StorageFolderName, "Report Images");
             Directory.CreateDirectory(destinationDirectory);
 
             string extension = Path.GetExtension(sourcePath);
@@ -1658,8 +1656,7 @@ namespace CassetteMotionPro.Workspace
 
         private string CreateBeforeAfterCombinedImage(string beforePath, string afterPath)
         {
-            string sessionFolderName = string.Format("{0:yyyy-MM-dd}_{1}", currentSession.SessionDate, currentSession.Id.ToString("N").Substring(0, 8));
-            string destinationDirectory = Path.Combine(client.SideBySidePath, "Fit Sessions", sessionFolderName);
+            string destinationDirectory = Path.Combine(client.SideBySidePath, "Fit Sessions", currentSession.StorageFolderName);
             Directory.CreateDirectory(destinationDirectory);
 
             string destinationPath = Path.Combine(destinationDirectory, "Before_After_Side_by_side.jpg");
