@@ -26,7 +26,7 @@ namespace CassetteMotionPro.Workspace
         private const string StudioWebsite = "Add website";
         private const string PreparedByRole = "Professional Bike Fitting";
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "0.12.9";
+        private const string ReportVersion = "0.13.0";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
 
         public static string Generate(ClientRecord client, FitSessionRecord session)
@@ -503,7 +503,11 @@ namespace CassetteMotionPro.Workspace
         private static string BuildHtml(ClientRecord client, FitSessionRecord session, Func<string, string> imageSourceResolver)
         {
             StringBuilder html = new StringBuilder();
-            string brandLogoDataUri = GetBrandLogoDataUri();
+            bool useCmBadge = string.Equals(session.ReportLogoStyle, "CM", StringComparison.OrdinalIgnoreCase);
+            bool hideBrandLogo = string.Equals(session.ReportLogoStyle, "None", StringComparison.OrdinalIgnoreCase);
+            string brandLogoDataUri = useCmBadge || hideBrandLogo
+                ? null
+                : GetBrandLogoDataUri();
             html.AppendLine("<!doctype html>");
             html.AppendLine("<html>");
             html.AppendLine("<head>");
@@ -584,9 +588,11 @@ namespace CassetteMotionPro.Workspace
             html.AppendLine("<div class=\"hero\">");
             html.AppendLine("<div class=\"hero-top\">");
             html.AppendLine("<div class=\"brand-lockup\">");
-            if (!string.IsNullOrEmpty(brandLogoDataUri))
+            if (useCmBadge)
+                html.AppendLine("<div class=\"brand-mark\">CM</div>");
+            else if (!hideBrandLogo && !string.IsNullOrEmpty(brandLogoDataUri))
                 html.AppendLine("<img class=\"brand-logo\" src=\"" + brandLogoDataUri + "\" alt=\"Cassette Motion Pro logo\">");
-            else
+            else if (!hideBrandLogo)
                 html.AppendLine("<div class=\"brand-mark\">CM</div>");
             html.AppendLine("<div>");
             html.AppendLine("<div class=\"eyebrow\">Cassette Motion Pro</div>");

@@ -46,6 +46,7 @@ namespace CassetteMotionPro.Workspace
         private readonly CheckBox chkShowBeforeImageInReport = new CheckBox();
         private readonly CheckBox chkShowAfterImageInReport = new CheckBox();
         private readonly CheckBox chkShowMeasurementReferenceImageInReport = new CheckBox();
+        private readonly ComboBox cmbReportLogoStyle = new ComboBox();
         private readonly Dictionary<string, TextBox> mediaBoxes = new Dictionary<string, TextBox>();
         private readonly Dictionary<string, TextBox> imageBoxes = new Dictionary<string, TextBox>();
         private readonly Dictionary<string, TextBox> measurementBoxes = new Dictionary<string, TextBox>();
@@ -297,6 +298,8 @@ namespace CassetteMotionPro.Workspace
             AddClientFolderRow(table, "Photos", client.PhotosPath);
             AddClientFolderRow(table, "Side-by-Side", client.SideBySidePath);
             AddClientFolderRow(table, "Reports", client.ReportsPath);
+            AddSessionFolderRow(table, "Current session", "Open the saved session record for the active fit.");
+            AddSessionReportsRow(table, "Session reports", "Open the reports folder for the active fit session.");
             AddClientFolderRow(table, "Measurements", client.MeasurementsPath);
             AddClientFolderRow(table, "Notes", client.NotesPath);
 
@@ -331,6 +334,60 @@ namespace CassetteMotionPro.Workspace
             open.Margin = new Padding(0, 8, 0, 8);
             open.Dock = DockStyle.Fill;
             open.Click += delegate { OpenClientFolder(folderPath, labelText); };
+
+            table.Controls.Add(FieldLabel(labelText), 0, row);
+            table.Controls.Add(path, 1, row);
+            table.Controls.Add(open, 2, row);
+        }
+
+        private void AddSessionFolderRow(TableLayoutPanel table, string labelText, string description)
+        {
+            AddDynamicFolderRow(table, labelText, description, delegate
+            {
+                SaveCurrentSession();
+                Directory.CreateDirectory(currentSession.FolderPath);
+                Process.Start(currentSession.FolderPath);
+                UpdateSaveHint("Current session folder opened.");
+            });
+        }
+
+        private void AddSessionReportsRow(TableLayoutPanel table, string labelText, string description)
+        {
+            AddDynamicFolderRow(table, labelText, description, delegate
+            {
+                SaveCurrentSession();
+                string folderPath = FitSessionReportGenerator.GetSessionReportsPath(client, currentSession);
+                Process.Start(folderPath);
+                UpdateSaveHint("Current session Reports folder opened.");
+            });
+        }
+
+        private void AddDynamicFolderRow(TableLayoutPanel table, string labelText, string description, Action openAction)
+        {
+            int row = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
+
+            Label path = new Label();
+            path.Text = description;
+            path.Dock = DockStyle.Fill;
+            path.TextAlign = ContentAlignment.MiddleLeft;
+            path.ForeColor = Color.FromArgb(92, 104, 98);
+            path.AutoEllipsis = true;
+
+            Button open = CreateButton("Open", false);
+            open.Margin = new Padding(0, 8, 0, 8);
+            open.Dock = DockStyle.Fill;
+            open.Click += delegate
+            {
+                try
+                {
+                    openAction();
+                }
+                catch (Exception exception)
+                {
+                    MessageBox.Show(this, "The " + labelText.ToLowerInvariant() + " folder could not be opened.\n\n" + exception.Message, labelText, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
 
             table.Controls.Add(FieldLabel(labelText), 0, row);
             table.Controls.Add(path, 1, row);
@@ -560,6 +617,36 @@ namespace CassetteMotionPro.Workspace
             table.Controls.Add(label, 0, row);
             table.Controls.Add(options, 1, row);
             table.SetColumnSpan(options, 3);
+
+            AddReportLogoStyleRow(table);
+        }
+
+        private void AddReportLogoStyleRow(TableLayoutPanel table)
+        {
+            Label label = new Label();
+            label.Text = "Report logo";
+            label.Dock = DockStyle.Fill;
+            label.TextAlign = ContentAlignment.MiddleLeft;
+            label.ForeColor = Color.FromArgb(74, 87, 81);
+
+            cmbReportLogoStyle.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbReportLogoStyle.Items.Add("Full Cassette logo");
+            cmbReportLogoStyle.Items.Add("CM badge");
+            cmbReportLogoStyle.Items.Add("No logo");
+            cmbReportLogoStyle.SelectedIndex = 0;
+            cmbReportLogoStyle.Dock = DockStyle.Left;
+            cmbReportLogoStyle.Width = 220;
+            cmbReportLogoStyle.SelectedIndexChanged += delegate
+            {
+                if (currentSession != null)
+                    UpdateSaveHint("Report logo option updated.");
+            };
+
+            int row = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 50));
+            table.Controls.Add(label, 0, row);
+            table.Controls.Add(cmbReportLogoStyle, 1, row);
+            table.SetColumnSpan(cmbReportLogoStyle, 3);
         }
 
         private void ConfigureReportImageCheckbox(CheckBox checkbox, string text)
@@ -1009,6 +1096,7 @@ namespace CassetteMotionPro.Workspace
             chkShowBeforeImageInReport.Checked = !session.HideBeforeImageInReport;
             chkShowAfterImageInReport.Checked = !session.HideAfterImageInReport;
             chkShowMeasurementReferenceImageInReport.Checked = !session.HideMeasurementReferenceImageInReport;
+            SetReportLogoStyle(session.ReportLogoStyle);
 
             SetMeasurement("SaddleHeightBefore", session.SaddleHeightBefore);
             SetMeasurement("SaddleHeightAfter", session.SaddleHeightAfter);
@@ -1319,6 +1407,7 @@ namespace CassetteMotionPro.Workspace
             currentSession.HideBeforeImageInReport = !chkShowBeforeImageInReport.Checked;
             currentSession.HideAfterImageInReport = !chkShowAfterImageInReport.Checked;
             currentSession.HideMeasurementReferenceImageInReport = !chkShowMeasurementReferenceImageInReport.Checked;
+            currentSession.ReportLogoStyle = GetReportLogoStyle();
             currentSession.SaddleHeightBefore = measurementBoxes["SaddleHeightBefore"].Text.Trim();
             currentSession.SaddleHeightAfter = measurementBoxes["SaddleHeightAfter"].Text.Trim();
             currentSession.SaddleSetbackBefore = measurementBoxes["SaddleSetbackBefore"].Text.Trim();
@@ -1352,6 +1441,25 @@ namespace CassetteMotionPro.Workspace
             currentSession.ElbowAngleBefore = measurementBoxes["ElbowAngleBefore"].Text.Trim();
             currentSession.ElbowAngleAfter = measurementBoxes["ElbowAngleAfter"].Text.Trim();
             repository.Save(currentSession);
+        }
+
+        private string GetReportLogoStyle()
+        {
+            if (cmbReportLogoStyle.SelectedIndex == 1)
+                return "CM";
+            if (cmbReportLogoStyle.SelectedIndex == 2)
+                return "None";
+            return "Full";
+        }
+
+        private void SetReportLogoStyle(string value)
+        {
+            if (string.Equals(value, "CM", StringComparison.OrdinalIgnoreCase))
+                cmbReportLogoStyle.SelectedIndex = 1;
+            else if (string.Equals(value, "None", StringComparison.OrdinalIgnoreCase))
+                cmbReportLogoStyle.SelectedIndex = 2;
+            else
+                cmbReportLogoStyle.SelectedIndex = 0;
         }
 
         private void UpdateSaveHint(string message)
