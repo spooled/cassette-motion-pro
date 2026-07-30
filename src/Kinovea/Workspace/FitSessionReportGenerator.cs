@@ -14,16 +14,48 @@ using System.IO.Compression;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
+using Kinovea.Services;
 
 namespace CassetteMotionPro.Workspace
 {
     public static class FitSessionReportGenerator
     {
         private const string StudioName = "Cassette Fit Studio";
-        private const string FitterName = "Cesar Correa";
-        private const string StudioPhone = "Add phone";
-        private const string StudioEmail = "Add email";
-        private const string StudioWebsite = "Add website";
+        private static string FitterName
+        {
+            get
+            {
+                var val = PreferencesManager.GeneralPreferences.FitterName;
+                return string.IsNullOrWhiteSpace(val) ? "Cesar Correa" : val;
+            }
+        }
+
+        private static string StudioPhone
+        {
+            get
+            {
+                var val = PreferencesManager.GeneralPreferences.StudioPhone;
+                return string.IsNullOrWhiteSpace(val) ? "Add phone" : val;
+            }
+        }
+
+        private static string StudioEmail
+        {
+            get
+            {
+                var val = PreferencesManager.GeneralPreferences.StudioEmail;
+                return string.IsNullOrWhiteSpace(val) ? "Add email" : val;
+            }
+        }
+
+        private static string StudioWebsite
+        {
+            get
+            {
+                var val = PreferencesManager.GeneralPreferences.StudioWebsite;
+                return string.IsNullOrWhiteSpace(val) ? "Add website" : val;
+            }
+        }
         private const string PreparedByRole = "Professional Bike Fitting";
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
 
