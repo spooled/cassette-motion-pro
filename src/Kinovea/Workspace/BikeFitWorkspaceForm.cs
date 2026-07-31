@@ -227,6 +227,11 @@ namespace CassetteMotionPro.Workspace
             openReports.Width = 86;
             openReports.Click += OpenReports_Click;
 
+            Button reviewSession = CreateButton("Review", true);
+            reviewSession.Dock = DockStyle.Right;
+            reviewSession.Width = 86;
+            reviewSession.Click += ReviewSession_Click;
+
             chkShowBeforeMeasurementsInReport.Text = "Show Before measurements in report";
             chkShowBeforeMeasurementsInReport.Checked = true;
             chkShowBeforeMeasurementsInReport.Dock = DockStyle.Right;
@@ -251,6 +256,7 @@ namespace CassetteMotionPro.Workspace
             actions.Controls.Add(reportPackage);
             actions.Controls.Add(zipReportPackage);
             actions.Controls.Add(openReports);
+            actions.Controls.Add(reviewSession);
             actions.Controls.Add(chkShowBeforeMeasurementsInReport);
             actions.Controls.Add(saveHint);
             parent.Controls.Add(tabs);
@@ -1295,6 +1301,93 @@ namespace CassetteMotionPro.Workspace
 
             UpdateSaveHint(issues.Count == 0 && warnings.Count == 0 ? "Bike Metrics review passed." : "Bike Metrics review found items to check.");
             MessageBox.Show(this, message, "Review Metrics", MessageBoxButtons.OK, icon);
+        }
+
+        private void ReviewSession_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                SaveCurrentSession();
+                List<string> ready = new List<string>();
+                List<string> missing = new List<string>();
+                List<string> optional = new List<string>();
+
+                ReviewTextField(ready, missing, "Session title", currentSession.Title, "Add a clear session title on the Overview tab.");
+                ReviewTextField(ready, optional, "Rider goals", currentSession.Goals, "Optional, but useful for the report story.");
+                ReviewFileField(ready, missing, "Before video", currentSession.BeforeVideoPath, "Use Client Files → Add videos → Before Video.");
+                ReviewFileField(ready, missing, "After video", currentSession.AfterVideoPath, "Use Client Files → Add videos → After Video.");
+                ReviewFileField(ready, optional, "Side-by-side report image", currentSession.SideBySideReportImagePath, "Use Report Images or Client Files to add before/after photos, then combine them.");
+                ReviewFileField(ready, optional, "Measurement reference image", currentSession.MeasurementReferenceImagePath, "Use Bike Metrics measurement reference image if you want the report to show it.");
+                ReviewMetricReady(ready, missing, "Saddle height After", "SaddleHeightAfter", "Add the final saddle height on Bike Metrics.");
+                ReviewMetricReady(ready, missing, "Saddle setback After", "SaddleSetbackAfter", "Add the final saddle setback on Bike Metrics. Behind BB should be negative.");
+                ReviewMetricReady(ready, missing, "Saddle tip to grip reach After", "SaddleTipToGripReachAfter", "Add the final saddle tip to grip reach on Bike Metrics.");
+                ReviewMetricReady(ready, missing, "Handlebar X After", "HandlebarXAfter", "Add final Handlebar X on Bike Metrics.");
+                ReviewMetricReady(ready, missing, "Handlebar Y After", "HandlebarYAfter", "Add final Handlebar Y on Bike Metrics.");
+                ReviewTextField(ready, optional, "Fit Summary", currentSession.FitSummaryMainGoal + currentSession.FitSummaryKeyFindings + currentSession.FitSummaryChangesMade + currentSession.FitSummaryRecommendations + currentSession.FitSummaryFollowUp, "Optional, but this makes the report feel much more professional.");
+
+                string message = BuildSessionReviewMessage(ready, missing, optional);
+                MessageBoxIcon icon = missing.Count == 0 ? MessageBoxIcon.Information : MessageBoxIcon.Warning;
+                UpdateSaveHint(missing.Count == 0 ? "Session review passed. Ready to preview or generate." : "Session review found items to complete before the report.");
+                MessageBox.Show(this, message, "Review Session", MessageBoxButtons.OK, icon);
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "The session review could not be completed.\n\n" + exception.Message, "Review Session", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void ReviewTextField(List<string> ready, List<string> missing, string label, string value, string nextAction)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                missing.Add(label + ": missing. Next action: " + nextAction);
+            else
+                ready.Add(label);
+        }
+
+        private void ReviewFileField(List<string> ready, List<string> missing, string label, string path, string nextAction)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                missing.Add(label + ": missing. Next action: " + nextAction);
+                return;
+            }
+
+            if (!File.Exists(path))
+            {
+                missing.Add(label + ": file path is saved, but the file was not found. Next action: re-add it from Client Files.");
+                return;
+            }
+
+            ready.Add(label);
+        }
+
+        private void ReviewMetricReady(List<string> ready, List<string> missing, string label, string measurementKey, string nextAction)
+        {
+            string value = GetMeasurementText(measurementKey);
+            if (string.IsNullOrWhiteSpace(value))
+                missing.Add(label + ": missing. Next action: " + nextAction);
+            else
+                ready.Add(label + " = " + value);
+        }
+
+        private string BuildSessionReviewMessage(List<string> ready, List<string> missing, List<string> optional)
+        {
+            string message = missing.Count == 0 ? "Session Review: ready for report.\n\n" : "Session Review: a few things still need attention.\n\n";
+
+            if (ready.Count > 0)
+                message += "Ready:\n- " + string.Join("\n- ", ready.ToArray()) + "\n\n";
+
+            if (missing.Count > 0)
+                message += "Complete before final report:\n- " + string.Join("\n- ", missing.ToArray()) + "\n\n";
+
+            if (optional.Count > 0)
+                message += "Optional polish:\n- " + string.Join("\n- ", optional.ToArray()) + "\n\n";
+
+            message += missing.Count == 0
+                ? "Next action: Preview the report, then Generate, Package, or Zip it."
+                : "Next action: fill the missing items, then press Review again.";
+
+            return message;
         }
 
         private void ReviewRequiredMetric(List<string> issues, string label, string metricKey, string nextAction)
