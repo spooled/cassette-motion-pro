@@ -180,6 +180,7 @@ namespace CassetteMotionPro.Workspace
             tabs.TabPages.Add(BuildClientFilesTab());
             tabs.TabPages.Add(BuildFitSummaryTab());
             tabs.TabPages.Add(BuildMediaTab());
+            tabs.TabPages.Add(BuildVideoAnalysisTab());
             tabs.TabPages.Add(BuildReportImagesTab());
             tabs.TabPages.Add(BuildBikeMetricsTab());
             tabs.TabPages.Add(BuildBodyAnglesTab());
@@ -826,6 +827,72 @@ namespace CassetteMotionPro.Workspace
             int row = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 62));
             table.Controls.Add(help, 1, row);
+
+            page.AutoScroll = true;
+            page.Controls.Add(table);
+            return page;
+        }
+
+        private TabPage BuildVideoAnalysisTab()
+        {
+            TabPage page = NewTab("Video Analysis");
+            TableLayoutPanel table = new TableLayoutPanel();
+            table.Dock = DockStyle.Top;
+            table.AutoSize = true;
+            table.Padding = new Padding(24, 24, 24, 18);
+            table.ColumnCount = 1;
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+
+            Label title = new Label();
+            title.Text = "Open the full bike-fit video controls";
+            title.Dock = DockStyle.Fill;
+            title.Font = new Font(Font.FontFamily, 16, FontStyle.Bold);
+            title.ForeColor = Color.FromArgb(26, 30, 34);
+            int titleRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
+            table.Controls.Add(title, 0, titleRow);
+
+            Label explanation = new Label();
+            explanation.Text = "These buttons close this session screen and open the selected video in Cassette Motion Pro’s main video player. That is where the hand tool, drawing tools, distance and angle tools, timeline, playback buttons, and joint controls appear.";
+            explanation.Dock = DockStyle.Fill;
+            explanation.ForeColor = Color.FromArgb(92, 104, 98);
+            int explanationRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 70));
+            table.Controls.Add(explanation, 0, explanationRow);
+
+            FlowLayoutPanel actions = new FlowLayoutPanel();
+            actions.Dock = DockStyle.Fill;
+            actions.FlowDirection = FlowDirection.LeftToRight;
+            actions.WrapContents = true;
+            actions.Padding = new Padding(0, 12, 0, 0);
+
+            Button before = CreateButton("Analyze Before Video", false);
+            before.Size = new Size(170, 38);
+            before.Click += delegate { OpenSingle("BeforeVideoPath"); };
+
+            Button after = CreateButton("Analyze After Video", true);
+            after.Size = new Size(170, 38);
+            after.Click += delegate { OpenSingle("AfterVideoPath"); };
+
+            Button pair = CreateButton("Analyze Before + After", false);
+            pair.Size = new Size(210, 38);
+            pair.Click += delegate { OpenPair("BeforeVideoPath", "AfterVideoPath"); };
+
+            actions.Controls.Add(before);
+            actions.Controls.Add(after);
+            actions.Controls.Add(pair);
+
+            int actionRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 70));
+            table.Controls.Add(actions, 0, actionRow);
+
+            Label reminder = new Label();
+            reminder.Text = "If you need to attach or replace files first, use the Videos tab or Client Files tab. Then come back here to open the real analysis controls.";
+            reminder.Dock = DockStyle.Fill;
+            reminder.ForeColor = Color.FromArgb(92, 104, 98);
+            int reminderRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 56));
+            table.Controls.Add(reminder, 0, reminderRow);
 
             page.AutoScroll = true;
             page.Controls.Add(table);
