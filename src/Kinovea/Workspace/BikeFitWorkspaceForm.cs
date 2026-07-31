@@ -188,53 +188,44 @@ namespace CassetteMotionPro.Workspace
 
             Panel actions = new Panel();
             actions.Dock = DockStyle.Bottom;
-            actions.Height = 70;
-            actions.Padding = new Padding(24, 14, 24, 14);
+            actions.Height = 96;
+            actions.Padding = new Padding(24, 10, 24, 10);
             actions.BackColor = Color.White;
 
             Button close = CreateButton("Save && Close", false);
-            close.Dock = DockStyle.Right;
             close.Width = 105;
             close.Click += delegate { Close(); };
 
             Button save = CreateButton("Save", true);
-            save.Dock = DockStyle.Right;
             save.Width = 82;
             save.Click += Save_Click;
 
             Button report = CreateButton("Generate", false);
-            report.Dock = DockStyle.Right;
             report.Width = 96;
             report.Click += GenerateReport_Click;
 
             Button previewReport = CreateButton("Preview", false);
-            previewReport.Dock = DockStyle.Right;
             previewReport.Width = 88;
             previewReport.Click += PreviewReport_Click;
 
             Button reportPackage = CreateButton("Package", false);
-            reportPackage.Dock = DockStyle.Right;
             reportPackage.Width = 92;
             reportPackage.Click += ReportPackage_Click;
 
             Button zipReportPackage = CreateButton("Zip", false);
-            zipReportPackage.Dock = DockStyle.Right;
             zipReportPackage.Width = 70;
             zipReportPackage.Click += ZipReportPackage_Click;
 
             Button openReports = CreateButton("Reports", false);
-            openReports.Dock = DockStyle.Right;
             openReports.Width = 86;
             openReports.Click += OpenReports_Click;
 
             Button reviewSession = CreateButton("Review", true);
-            reviewSession.Dock = DockStyle.Right;
             reviewSession.Width = 86;
             reviewSession.Click += ReviewSession_Click;
 
             chkShowBeforeMeasurementsInReport.Text = "Show Before measurements in report";
             chkShowBeforeMeasurementsInReport.Checked = true;
-            chkShowBeforeMeasurementsInReport.Dock = DockStyle.Right;
             chkShowBeforeMeasurementsInReport.Width = 215;
             chkShowBeforeMeasurementsInReport.TextAlign = ContentAlignment.MiddleLeft;
             chkShowBeforeMeasurementsInReport.ForeColor = Color.FromArgb(24, 31, 29);
@@ -245,19 +236,30 @@ namespace CassetteMotionPro.Workspace
             };
 
             saveHint.Text = "Autosaves to this client’s Measurements folder.";
-            saveHint.Dock = DockStyle.Fill;
+            saveHint.Dock = DockStyle.Top;
+            saveHint.Height = 26;
             saveHint.TextAlign = ContentAlignment.MiddleLeft;
             saveHint.ForeColor = Color.FromArgb(92, 104, 98);
 
-            actions.Controls.Add(close);
-            actions.Controls.Add(save);
-            actions.Controls.Add(report);
-            actions.Controls.Add(previewReport);
-            actions.Controls.Add(reportPackage);
-            actions.Controls.Add(zipReportPackage);
-            actions.Controls.Add(openReports);
-            actions.Controls.Add(reviewSession);
-            actions.Controls.Add(chkShowBeforeMeasurementsInReport);
+            FlowLayoutPanel actionButtons = new FlowLayoutPanel();
+            actionButtons.Dock = DockStyle.Bottom;
+            actionButtons.Height = 42;
+            actionButtons.FlowDirection = FlowDirection.RightToLeft;
+            actionButtons.WrapContents = false;
+            actionButtons.AutoScroll = true;
+            actionButtons.Padding = new Padding(0);
+
+            actionButtons.Controls.Add(close);
+            actionButtons.Controls.Add(save);
+            actionButtons.Controls.Add(report);
+            actionButtons.Controls.Add(previewReport);
+            actionButtons.Controls.Add(reportPackage);
+            actionButtons.Controls.Add(zipReportPackage);
+            actionButtons.Controls.Add(openReports);
+            actionButtons.Controls.Add(reviewSession);
+            actionButtons.Controls.Add(chkShowBeforeMeasurementsInReport);
+
+            actions.Controls.Add(actionButtons);
             actions.Controls.Add(saveHint);
             parent.Controls.Add(tabs);
             parent.Controls.Add(actions);
