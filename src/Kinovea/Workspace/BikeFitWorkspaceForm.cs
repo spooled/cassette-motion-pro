@@ -540,7 +540,16 @@ namespace CassetteMotionPro.Workspace
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 95));
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 86));
-            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 72));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 98));
+
+            Label analysisHint = new Label();
+            analysisHint.Text = "Use Analyze to close this session screen and open the video in the main player with the drawing tools, timeline, playback controls, and joint controls.";
+            analysisHint.Dock = DockStyle.Fill;
+            analysisHint.ForeColor = Color.FromArgb(92, 104, 98);
+            int analysisHintRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
+            table.Controls.Add(analysisHint, 1, analysisHintRow);
+            table.SetColumnSpan(analysisHint, 3);
 
             AddMediaRow(table, "Before", "BeforeVideoPath");
             AddMediaRow(table, "After", "AfterVideoPath");
@@ -550,8 +559,8 @@ namespace CassetteMotionPro.Workspace
             comparisons.FlowDirection = FlowDirection.LeftToRight;
             comparisons.Padding = new Padding(0, 18, 0, 0);
 
-            Button beforeAfter = CreateButton("Open Before + After", true);
-            beforeAfter.Size = new Size(190, 38);
+            Button beforeAfter = CreateButton("Analyze Before + After", true);
+            beforeAfter.Size = new Size(220, 38);
             beforeAfter.Click += delegate { OpenPair("BeforeVideoPath", "AfterVideoPath"); };
             comparisons.Controls.Add(beforeAfter);
 
@@ -561,7 +570,7 @@ namespace CassetteMotionPro.Workspace
             table.SetColumnSpan(comparisons, 3);
 
             Label hint = new Label();
-            hint.Text = "Opening the pair loads the before and after videos into Cassette Motion Pro’s synchronized dual-player workspace.";
+            hint.Text = "The bike-fit controls are in the video player workspace. The Videos tab saves which files belong to this session; Analyze opens the player controls for measuring and reviewing movement.";
             hint.Dock = DockStyle.Fill;
             hint.ForeColor = Color.FromArgb(92, 104, 98);
             int hintRow = table.RowCount++;
@@ -894,7 +903,7 @@ namespace CassetteMotionPro.Workspace
             browse.Dock = DockStyle.Fill;
             browse.Click += delegate { BrowseVideo(key); };
 
-            Button open = CreateButton("Open", false);
+            Button open = CreateButton("Analyze", false);
             open.Margin = new Padding(0, 6, 0, 6);
             open.Dock = DockStyle.Fill;
             open.Click += delegate { OpenSingle(key); };
