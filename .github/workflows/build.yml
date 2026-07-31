@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  VERSION: 0.13.7
+  VERSION: 0.13.8
 
 jobs:
   build:
@@ -259,6 +259,62 @@ jobs:
               throw "Architecture mismatch detected. Expected x64 $($plugin.Dll), got $packagedMachine at $packagedDll."
             }
           }
+
+      - name: Restore drawing and measurement tools
+        shell: pwsh
+        run: |
+          $output = "src\Kinovea\bin\x64\Release"
+          if (!(Test-Path $output)) {
+            throw "Expected x64 output folder was not found: $output"
+          }
+
+          $upstreamRoot = "$env:RUNNER_TEMP\kinovea-upstream"
+          if (!(Test-Path $upstreamRoot)) {
+            throw "Expected upstream Kinovea checkout was not found: $upstreamRoot"
+          }
+
+          $candidates = @(
+            "$upstreamRoot\DrawingTools",
+            "$upstreamRoot\src\DrawingTools",
+            "$upstreamRoot\src\Kinovea\DrawingTools",
+            "$upstreamRoot\src\Kinovea\Resources\DrawingTools",
+            "$upstreamRoot\Kinovea\DrawingTools"
+          )
+
+          $source = $null
+          foreach ($candidate in $candidates) {
+            if (Test-Path $candidate) {
+              $source = (Get-Item $candidate).FullName
+              break
+            }
+          }
+
+          if (-not $source) {
+            $source = Get-ChildItem $upstreamRoot -Directory -Recurse -Filter "DrawingTools" |
+              Where-Object { @(Get-ChildItem $_.FullName -Recurse -File -ErrorAction SilentlyContinue).Count -gt 0 } |
+              Select-Object -First 1 -ExpandProperty FullName
+          }
+
+          if (-not $source) {
+            throw "Kinovea DrawingTools folder was not found in the upstream checkout."
+          }
+
+          $target = Join-Path $output "DrawingTools"
+          Remove-Item $target -Recurse -Force -ErrorAction SilentlyContinue
+          robocopy $source $target /E /NFL /NDL /NJH /NJS /NP
+          $robocopyExitCode = $LASTEXITCODE
+          if ($robocopyExitCode -gt 7) {
+            throw "robocopy failed while restoring DrawingTools with exit code $robocopyExitCode."
+          }
+          $global:LASTEXITCODE = 0
+
+          $toolFiles = @(Get-ChildItem $target -Recurse -File -ErrorAction SilentlyContinue)
+          if ($toolFiles.Count -eq 0) {
+            throw "DrawingTools was copied but did not contain any files."
+          }
+
+          Write-Host "Restored DrawingTools from $source to $target"
+          $toolFiles | Select-Object -First 20 FullName, Length
 
       - name: Create portable settings folder
         shell: cmd
