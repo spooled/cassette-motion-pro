@@ -708,9 +708,22 @@ namespace Kinovea.Root
 
             clientRepository.MarkOpened(client);
             statusLabel.Text = string.Format("Fit session: {0} · {1}", client.DisplayName, client.BikeDescription);
-            using (BikeFitWorkspaceForm form = new BikeFitWorkspaceForm(client, OpenFromPath, OpenBeforeAfterPair, OpenBodyAngleGuide))
+            using (BikeFitWorkspaceForm form = new BikeFitWorkspaceForm(client, OpenFromPath, OpenBeforeAfterPair, PrepareClientAnalysisCaptureFolder, OpenBodyAngleGuide))
                 form.ShowDialog(mainWindow);
             BuildRecentClientMenus();
+        }
+
+        private void PrepareClientAnalysisCaptureFolder(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+                return;
+
+            Directory.CreateDirectory(path);
+            PreferencesManager.CapturePreferences.AddCaptureFolder(path);
+
+            // Make sure capture screens here and in other windows see the active client/session capture folder.
+            PreferencesUpdated(true);
+            statusLabel.Text = string.Format("Analysis capture folder: {0}", path);
         }
 
         private void OpenBodyAngleGuide(string path)

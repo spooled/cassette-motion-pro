@@ -23,6 +23,7 @@ namespace CassetteMotionPro.Workspace
         private readonly FitSessionRepository repository;
         private readonly Action<string> openVideo;
         private readonly Action<string, string> openVideoPair;
+        private readonly Action<string> prepareCaptureFolder;
         private readonly Action<string> openBodyAngleGuide;
         private readonly ListView sessionList = new ListView();
         private readonly TextBox txtTitle = new TextBox();
@@ -55,7 +56,7 @@ namespace CassetteMotionPro.Workspace
         private TabControl editorTabs;
         private FitSessionRecord currentSession;
 
-        public BikeFitWorkspaceForm(ClientRecord client, Action<string> openVideo, Action<string, string> openVideoPair, Action<string> openBodyAngleGuide)
+        public BikeFitWorkspaceForm(ClientRecord client, Action<string> openVideo, Action<string, string> openVideoPair, Action<string> prepareCaptureFolder, Action<string> openBodyAngleGuide)
         {
             if (client == null)
                 throw new ArgumentNullException("client");
@@ -63,6 +64,7 @@ namespace CassetteMotionPro.Workspace
             this.client = client;
             this.openVideo = openVideo;
             this.openVideoPair = openVideoPair;
+            this.prepareCaptureFolder = prepareCaptureFolder;
             this.openBodyAngleGuide = openBodyAngleGuide;
             repository = new FitSessionRepository(client);
 
@@ -493,6 +495,7 @@ namespace CassetteMotionPro.Workspace
             AddSessionVideosRow(table, "Active videos", "Videos → Fit Sessions → active session");
             AddSessionPhotosRow(table, "Active photos", "Photos → Fit Sessions → active session");
             AddSessionSideBySideRow(table, "Active side-by-side", "Side-by-Side → Fit Sessions → active session");
+            AddSessionAnalysisCapturesRow(table, "Analysis captures", "Client/session folder prepared before opening Kinovea tools");
             AddSessionReportsRow(table, "Active reports", "Reports → Fit Sessions → active session");
             AddImportActionRow(table, "Add videos", "Copy before/after videos into this active fit session.", "Before Video", delegate { BrowseVideo("BeforeVideoPath"); }, "After Video", delegate { BrowseVideo("AfterVideoPath"); });
             AddImportActionRow(table, "Add photos", "Copy before/after report photos into this active fit session.", "Before Photo", delegate { BrowseReportImage("BeforeReportImagePath"); }, "After Photo", delegate { BrowseReportImage("AfterReportImagePath"); });
@@ -552,6 +555,11 @@ namespace CassetteMotionPro.Workspace
         private void AddSessionSideBySideRow(TableLayoutPanel table, string labelText, string description)
         {
             AddDynamicFolderRow(table, labelText, description, GetSessionSideBySideFolderPath, "Active session side-by-side folder opened.");
+        }
+
+        private void AddSessionAnalysisCapturesRow(TableLayoutPanel table, string labelText, string description)
+        {
+            AddDynamicFolderRow(table, labelText, description, GetSessionAnalysisCapturesFolderPath, "Active session analysis captures folder opened.");
         }
 
         private void AddSessionReportsRow(TableLayoutPanel table, string labelText, string description)
@@ -660,6 +668,11 @@ namespace CassetteMotionPro.Workspace
         private string GetSessionSideBySideFolderPath()
         {
             return Path.Combine(client.SideBySidePath, "Fit Sessions", currentSession.StorageFolderName);
+        }
+
+        private string GetSessionAnalysisCapturesFolderPath()
+        {
+            return Path.Combine(client.FolderPath, "Analysis Captures", currentSession.StorageFolderName);
         }
 
         private string GetSessionReportsFolderPath()
@@ -1062,6 +1075,14 @@ namespace CassetteMotionPro.Workspace
             int reminderRow = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 56));
             table.Controls.Add(reminder, 0, reminderRow);
+
+            Label folderHint = new Label();
+            folderHint.Text = "When you open analysis from here, Cassette Motion Pro prepares this session folder for captures: Client folder → Analysis Captures → active session.";
+            folderHint.Dock = DockStyle.Fill;
+            folderHint.ForeColor = Color.FromArgb(92, 104, 98);
+            int folderHintRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
+            table.Controls.Add(folderHint, 0, folderHintRow);
 
             page.AutoScroll = true;
             page.Controls.Add(table);
@@ -2418,7 +2439,7 @@ namespace CassetteMotionPro.Workspace
             string path = mediaBoxes[key].Text;
             if (!ValidateVideo(path))
                 return;
-            SaveCurrentSession();
+            PrepareAnalysisCaptureFolder();
             Close();
             if (openVideo != null)
                 openVideo(path);
@@ -2430,7 +2451,7 @@ namespace CassetteMotionPro.Workspace
             string second = mediaBoxes[secondKey].Text;
             if (!ValidateVideo(first) || !ValidateVideo(second))
                 return;
-            SaveCurrentSession();
+            PrepareAnalysisCaptureFolder();
             Close();
             if (openVideoPair != null)
             {
@@ -2441,6 +2462,17 @@ namespace CassetteMotionPro.Workspace
                 openVideo(first);
                 openVideo(second);
             }
+        }
+
+        private void PrepareAnalysisCaptureFolder()
+        {
+            SaveCurrentSession();
+            Directory.CreateDirectory(GetSessionVideosFolderPath());
+            Directory.CreateDirectory(GetSessionPhotosFolderPath());
+            Directory.CreateDirectory(GetSessionAnalysisCapturesFolderPath());
+
+            if (prepareCaptureFolder != null)
+                prepareCaptureFolder(GetSessionAnalysisCapturesFolderPath());
         }
 
         private bool ValidateVideo(string path)
