@@ -346,7 +346,7 @@ namespace CassetteMotionPro.Workspace
             title.TextAlign = ContentAlignment.MiddleLeft;
 
             Label description = new Label();
-            description.Text = "Start with the client and session details, then capture or import the videos, use the full Kinovea tools for analysis, save measurements to this session, and generate the report from the client folder.";
+            description.Text = "Start with the client and session details, then open the videos in the full Kinovea analysis workspace. Do the measuring there first, capture the useful photos/video evidence, save the values to this session, and generate the report from the client folder.";
             description.Dock = DockStyle.Fill;
             description.ForeColor = Color.FromArgb(74, 87, 81);
 
@@ -360,12 +360,12 @@ namespace CassetteMotionPro.Workspace
             clientFiles.Size = new Size(112, 34);
             clientFiles.Click += delegate { SelectWorkspaceTab("Client Files"); };
 
-            Button startVideos = CreateButton("Start Videos", true);
-            startVideos.Size = new Size(116, 34);
+            Button startVideos = CreateButton("Open Analysis", true);
+            startVideos.Size = new Size(126, 34);
             startVideos.Click += delegate { SaveAndSelectVideos(); };
 
-            Button analyze = CreateButton("Analyze", false);
-            analyze.Size = new Size(96, 34);
+            Button analyze = CreateButton("Kinovea Tools", false);
+            analyze.Size = new Size(122, 34);
             analyze.Click += delegate { SelectWorkspaceTab("Video Analysis"); };
 
             buttons.Controls.Add(clientFiles);
@@ -373,7 +373,7 @@ namespace CassetteMotionPro.Workspace
             buttons.Controls.Add(analyze);
 
             Label path = new Label();
-            path.Text = "Client info → Videos → Kinovea tools → Bike Metrics → Report";
+            path.Text = "Client info → Kinovea tools → Capture/save media → Bike Metrics → Report";
             path.Dock = DockStyle.Fill;
             path.ForeColor = Color.FromArgb(92, 104, 98);
             path.TextAlign = ContentAlignment.MiddleLeft;
@@ -427,9 +427,9 @@ namespace CassetteMotionPro.Workspace
             AddWorkflowChecklistRow(card, "Fit goals", "Enter the rider goals and session notes before making changes.", "Goals", SelectOverviewGoals, HasFitGoals);
             AddWorkflowChecklistRow(card, "Before video", "Record/import the starting video into this client session.", "Videos", delegate { SelectWorkspaceTab("Videos"); }, delegate { return HasMediaFile("BeforeVideoPath"); });
             AddWorkflowChecklistRow(card, "After video", "Record/import the comparison/final video into this client session.", "Videos", delegate { SelectWorkspaceTab("Videos"); }, delegate { return HasMediaFile("AfterVideoPath"); });
-            AddWorkflowChecklistRow(card, "Analyze movement", "Open drawing, distance, angle, timeline, and playback controls.", "Analyze", delegate { SelectWorkspaceTab("Video Analysis"); }, delegate { return HasMediaFile("BeforeVideoPath") || HasMediaFile("AfterVideoPath"); });
-            AddWorkflowChecklistRow(card, "Bike Metrics", "Enter or capture saddle height, setback, reach, and handlebar X/Y.", "Metrics", delegate { SelectWorkspaceTab("Bike Metrics"); }, HasCoreBikeMetrics);
-            AddWorkflowChecklistRow(card, "Report images", "Choose side-by-side or before/after images for the report.", "Images", delegate { SelectWorkspaceTab("Report Images"); }, HasReportImage);
+            AddWorkflowChecklistRow(card, "Measure in Kinovea", "Use the drawing, distance, angle, timeline, playback, and side-by-side tools first.", "Tools", delegate { SelectWorkspaceTab("Video Analysis"); }, delegate { return HasMediaFile("BeforeVideoPath") || HasMediaFile("AfterVideoPath"); });
+            AddWorkflowChecklistRow(card, "Bike Metrics", "Save the measured saddle height, setback, reach, and handlebar X/Y values.", "Metrics", delegate { SelectWorkspaceTab("Bike Metrics"); }, HasCoreBikeMetrics);
+            AddWorkflowChecklistRow(card, "Report images", "Save/capture the useful analysis photos for the client report.", "Images", delegate { SelectWorkspaceTab("Report Images"); }, HasReportImage);
             AddWorkflowChecklistRow(card, "Preview report", "Review the client-facing report before saving or sending it.", "Preview", delegate { PreviewReport_Click(this, EventArgs.Empty); }, IsReportReady);
 
             panel.Controls.Add(card);
@@ -1013,7 +1013,7 @@ namespace CassetteMotionPro.Workspace
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
             Label title = new Label();
-            title.Text = "Open the full bike-fit video controls";
+            title.Text = "Measure in the full Kinovea video workspace";
             title.Dock = DockStyle.Fill;
             title.Font = new Font(Font.FontFamily, 16, FontStyle.Bold);
             title.ForeColor = Color.FromArgb(26, 30, 34);
@@ -1022,7 +1022,7 @@ namespace CassetteMotionPro.Workspace
             table.Controls.Add(title, 0, titleRow);
 
             Label explanation = new Label();
-            explanation.Text = "These buttons close this session screen and open the selected video in Cassette Motion Pro’s main video player. That is where the hand tool, drawing tools, distance and angle tools, timeline, playback buttons, and joint controls appear.";
+            explanation.Text = "Use these buttons to open the selected fit video in Cassette Motion Pro’s main video player. This is where you should do the actual measuring with the hand tool, drawing tools, distance and angle tools, timeline, playback buttons, side-by-side view, and joint controls.";
             explanation.Dock = DockStyle.Fill;
             explanation.ForeColor = Color.FromArgb(92, 104, 98);
             int explanationRow = table.RowCount++;
@@ -1056,7 +1056,7 @@ namespace CassetteMotionPro.Workspace
             table.Controls.Add(actions, 0, actionRow);
 
             Label reminder = new Label();
-            reminder.Text = "If you need to attach or replace files first, use the Videos tab or Client Files tab. Then come back here to open the real analysis controls.";
+            reminder.Text = "Recommended order: measure in the Kinovea tools first, capture/save the useful photos or video evidence, then return to this fit session to save Bike Metrics and report images into the client folder.";
             reminder.Dock = DockStyle.Fill;
             reminder.ForeColor = Color.FromArgb(92, 104, 98);
             int reminderRow = table.RowCount++;
@@ -1362,11 +1362,11 @@ namespace CassetteMotionPro.Workspace
             {
                 SaveCurrentSession();
                 SelectWorkspaceTab("Videos");
-                UpdateSaveHint("Client and fit details saved. Next step: add the Before and After videos.");
+                UpdateSaveHint("Client and fit details saved. Next step: add/open videos for Kinovea measurement.");
             }
             catch (Exception exception)
             {
-                MessageBox.Show(this, "The session could not be saved before opening Videos.\n\n" + exception.Message, "Start Videos", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, "The session could not be saved before opening analysis.\n\n" + exception.Message, "Open Analysis", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
