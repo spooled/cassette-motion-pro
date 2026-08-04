@@ -275,6 +275,14 @@ namespace CassetteMotionPro.Workspace
             TableLayoutPanel table = NewEditorTable();
             table.Dock = DockStyle.Top;
             table.AutoSize = true;
+
+            Control flow = BuildClientFirstFlow();
+            int flowRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 126));
+            table.Controls.Add(flow, 0, flowRow);
+            table.SetColumnSpan(flow, 2);
+
+            txtTitle.TextChanged += delegate { UpdateWorkflowChecklist(); };
             AddEditorRow(table, "Session title", txtTitle, 38);
 
             dtpDate.Format = DateTimePickerFormat.Long;
@@ -290,6 +298,7 @@ namespace CassetteMotionPro.Workspace
             txtGoals.Multiline = true;
             txtGoals.ScrollBars = ScrollBars.Vertical;
             txtGoals.Dock = DockStyle.Fill;
+            txtGoals.TextChanged += delegate { UpdateWorkflowChecklist(); };
             AddEditorRow(table, "Rider goals", txtGoals, 170);
 
             Label help = new Label();
@@ -304,13 +313,77 @@ namespace CassetteMotionPro.Workspace
 
             Control checklist = BuildWorkflowChecklist();
             int checklistRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 360));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 446));
             table.Controls.Add(checklist, 0, checklistRow);
             table.SetColumnSpan(checklist, 2);
 
             page.AutoScroll = true;
             page.Controls.Add(table);
             return page;
+        }
+
+        private Control BuildClientFirstFlow()
+        {
+            Panel panel = new Panel();
+            panel.Dock = DockStyle.Fill;
+            panel.BackColor = Color.White;
+            panel.Padding = new Padding(18, 14, 18, 12);
+
+            TableLayoutPanel layout = new TableLayoutPanel();
+            layout.Dock = DockStyle.Fill;
+            layout.ColumnCount = 2;
+            layout.RowCount = 2;
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 420));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+            Label title = new Label();
+            title.Text = "Client-first fit path";
+            title.Dock = DockStyle.Fill;
+            title.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
+            title.ForeColor = Color.FromArgb(24, 31, 29);
+            title.TextAlign = ContentAlignment.MiddleLeft;
+
+            Label description = new Label();
+            description.Text = "Start with the client and session details, then capture or import the videos, use the full Kinovea tools for analysis, save measurements to this session, and generate the report from the client folder.";
+            description.Dock = DockStyle.Fill;
+            description.ForeColor = Color.FromArgb(74, 87, 81);
+
+            FlowLayoutPanel buttons = new FlowLayoutPanel();
+            buttons.Dock = DockStyle.Fill;
+            buttons.FlowDirection = FlowDirection.LeftToRight;
+            buttons.WrapContents = false;
+            buttons.Padding = new Padding(0, 2, 0, 0);
+
+            Button clientFiles = CreateButton("Client Files", false);
+            clientFiles.Size = new Size(112, 34);
+            clientFiles.Click += delegate { SelectWorkspaceTab("Client Files"); };
+
+            Button startVideos = CreateButton("Start Videos", true);
+            startVideos.Size = new Size(116, 34);
+            startVideos.Click += delegate { SaveAndSelectVideos(); };
+
+            Button analyze = CreateButton("Analyze", false);
+            analyze.Size = new Size(96, 34);
+            analyze.Click += delegate { SelectWorkspaceTab("Video Analysis"); };
+
+            buttons.Controls.Add(clientFiles);
+            buttons.Controls.Add(startVideos);
+            buttons.Controls.Add(analyze);
+
+            Label path = new Label();
+            path.Text = "Client info → Videos → Kinovea tools → Bike Metrics → Report";
+            path.Dock = DockStyle.Fill;
+            path.ForeColor = Color.FromArgb(92, 104, 98);
+            path.TextAlign = ContentAlignment.MiddleLeft;
+
+            layout.Controls.Add(title, 0, 0);
+            layout.Controls.Add(buttons, 1, 0);
+            layout.Controls.Add(description, 0, 1);
+            layout.Controls.Add(path, 1, 1);
+            panel.Controls.Add(layout);
+            return panel;
         }
 
         private Control BuildWorkflowChecklist()
@@ -350,8 +423,10 @@ namespace CassetteMotionPro.Workspace
             card.SetColumnSpan(hint, 2);
 
             workflowChecklistItems.Clear();
-            AddWorkflowChecklistRow(card, "Before video", "Add the starting video for this fit.", "Videos", delegate { SelectWorkspaceTab("Videos"); }, delegate { return HasMediaFile("BeforeVideoPath"); });
-            AddWorkflowChecklistRow(card, "After video", "Add the comparison/final video for this fit.", "Videos", delegate { SelectWorkspaceTab("Videos"); }, delegate { return HasMediaFile("AfterVideoPath"); });
+            AddWorkflowChecklistRow(card, "Client info", "Confirm the client folder, bike, and contact info before recording.", "Client", delegate { SelectWorkspaceTab("Client Files"); }, HasClientFolder);
+            AddWorkflowChecklistRow(card, "Fit goals", "Enter the rider goals and session notes before making changes.", "Goals", SelectOverviewGoals, HasFitGoals);
+            AddWorkflowChecklistRow(card, "Before video", "Record/import the starting video into this client session.", "Videos", delegate { SelectWorkspaceTab("Videos"); }, delegate { return HasMediaFile("BeforeVideoPath"); });
+            AddWorkflowChecklistRow(card, "After video", "Record/import the comparison/final video into this client session.", "Videos", delegate { SelectWorkspaceTab("Videos"); }, delegate { return HasMediaFile("AfterVideoPath"); });
             AddWorkflowChecklistRow(card, "Analyze movement", "Open drawing, distance, angle, timeline, and playback controls.", "Analyze", delegate { SelectWorkspaceTab("Video Analysis"); }, delegate { return HasMediaFile("BeforeVideoPath") || HasMediaFile("AfterVideoPath"); });
             AddWorkflowChecklistRow(card, "Bike Metrics", "Enter or capture saddle height, setback, reach, and handlebar X/Y.", "Metrics", delegate { SelectWorkspaceTab("Bike Metrics"); }, HasCoreBikeMetrics);
             AddWorkflowChecklistRow(card, "Report images", "Choose side-by-side or before/after images for the report.", "Images", delegate { SelectWorkspaceTab("Report Images"); }, HasReportImage);
@@ -1281,6 +1356,26 @@ namespace CassetteMotionPro.Workspace
             return page;
         }
 
+        private void SaveAndSelectVideos()
+        {
+            try
+            {
+                SaveCurrentSession();
+                SelectWorkspaceTab("Videos");
+                UpdateSaveHint("Client and fit details saved. Next step: add the Before and After videos.");
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "The session could not be saved before opening Videos.\n\n" + exception.Message, "Start Videos", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void SelectOverviewGoals()
+        {
+            SelectWorkspaceTab("Overview");
+            txtGoals.Focus();
+        }
+
         private void SelectWorkspaceTab(string tabText)
         {
             if (editorTabs == null)
@@ -1308,6 +1403,19 @@ namespace CassetteMotionPro.Workspace
                 item.StatusLabel.Text = ready ? "Ready" : "Needs step";
                 item.StatusLabel.ForeColor = ready ? Color.FromArgb(60, 145, 76) : Color.FromArgb(181, 118, 35);
             }
+        }
+
+        private bool HasClientFolder()
+        {
+            return client != null &&
+                !string.IsNullOrWhiteSpace(client.FolderPath) &&
+                Directory.Exists(client.FolderPath);
+        }
+
+        private bool HasFitGoals()
+        {
+            return !string.IsNullOrWhiteSpace(txtTitle.Text) &&
+                !string.IsNullOrWhiteSpace(txtGoals.Text);
         }
 
         private bool HasMediaFile(string key)
