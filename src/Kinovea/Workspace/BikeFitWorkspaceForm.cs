@@ -51,6 +51,8 @@ namespace CassetteMotionPro.Workspace
         private readonly Dictionary<string, TextBox> mediaBoxes = new Dictionary<string, TextBox>();
         private readonly Dictionary<string, TextBox> imageBoxes = new Dictionary<string, TextBox>();
         private readonly Dictionary<string, TextBox> measurementBoxes = new Dictionary<string, TextBox>();
+        private readonly List<WorkflowChecklistItem> workflowChecklistItems = new List<WorkflowChecklistItem>();
+        private TabControl editorTabs;
         private FitSessionRecord currentSession;
 
         public BikeFitWorkspaceForm(ClientRecord client, Action<string> openVideo, Action<string, string> openVideoPair, Action<string> openBodyAngleGuide)
@@ -173,19 +175,20 @@ namespace CassetteMotionPro.Workspace
 
         private void BuildEditor(Control parent)
         {
-            TabControl tabs = new TabControl();
-            tabs.Dock = DockStyle.Fill;
-            tabs.Padding = new Point(18, 8);
-            tabs.TabPages.Add(BuildOverviewTab());
-            tabs.TabPages.Add(BuildClientFilesTab());
-            tabs.TabPages.Add(BuildFitSummaryTab());
-            tabs.TabPages.Add(BuildMediaTab());
-            tabs.TabPages.Add(BuildVideoAnalysisTab());
-            tabs.TabPages.Add(BuildReportImagesTab());
-            tabs.TabPages.Add(BuildBikeMetricsTab());
-            tabs.TabPages.Add(BuildBodyAnglesTab());
-            tabs.TabPages.Add(BuildHandoffTab());
-            tabs.TabPages.Add(BuildNotesTab());
+            editorTabs = new TabControl();
+            editorTabs.Dock = DockStyle.Fill;
+            editorTabs.Padding = new Point(18, 8);
+            editorTabs.SelectedIndexChanged += delegate { UpdateWorkflowChecklist(); };
+            editorTabs.TabPages.Add(BuildOverviewTab());
+            editorTabs.TabPages.Add(BuildClientFilesTab());
+            editorTabs.TabPages.Add(BuildFitSummaryTab());
+            editorTabs.TabPages.Add(BuildMediaTab());
+            editorTabs.TabPages.Add(BuildVideoAnalysisTab());
+            editorTabs.TabPages.Add(BuildReportImagesTab());
+            editorTabs.TabPages.Add(BuildBikeMetricsTab());
+            editorTabs.TabPages.Add(BuildBodyAnglesTab());
+            editorTabs.TabPages.Add(BuildHandoffTab());
+            editorTabs.TabPages.Add(BuildNotesTab());
 
             Panel actions = new Panel();
             actions.Dock = DockStyle.Bottom;
@@ -262,7 +265,7 @@ namespace CassetteMotionPro.Workspace
 
             actions.Controls.Add(actionButtons);
             actions.Controls.Add(saveHint);
-            parent.Controls.Add(tabs);
+            parent.Controls.Add(editorTabs);
             parent.Controls.Add(actions);
         }
 
@@ -270,6 +273,8 @@ namespace CassetteMotionPro.Workspace
         {
             TabPage page = NewTab("Overview");
             TableLayoutPanel table = NewEditorTable();
+            table.Dock = DockStyle.Top;
+            table.AutoSize = true;
             AddEditorRow(table, "Session title", txtTitle, 38);
 
             dtpDate.Format = DateTimePickerFormat.Long;
@@ -297,8 +302,97 @@ namespace CassetteMotionPro.Workspace
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
             table.Controls.Add(help, 1, row);
 
+            Control checklist = BuildWorkflowChecklist();
+            int checklistRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 360));
+            table.Controls.Add(checklist, 0, checklistRow);
+            table.SetColumnSpan(checklist, 2);
+
+            page.AutoScroll = true;
             page.Controls.Add(table);
             return page;
+        }
+
+        private Control BuildWorkflowChecklist()
+        {
+            Panel panel = new Panel();
+            panel.Dock = DockStyle.Fill;
+            panel.Padding = new Padding(0, 14, 0, 0);
+
+            TableLayoutPanel card = new TableLayoutPanel();
+            card.Dock = DockStyle.Fill;
+            card.BackColor = Color.White;
+            card.Padding = new Padding(18, 14, 18, 12);
+            card.ColumnCount = 4;
+            card.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 94));
+            card.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 210));
+            card.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            card.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 128));
+
+            Label title = new Label();
+            title.Text = "Fit Workflow";
+            title.Font = new Font("Segoe UI", 13F, FontStyle.Bold);
+            title.ForeColor = Color.FromArgb(24, 31, 29);
+            title.Dock = DockStyle.Fill;
+            title.TextAlign = ContentAlignment.MiddleLeft;
+
+            Label hint = new Label();
+            hint.Text = "Use this as your session roadmap. Green means that part is ready.";
+            hint.ForeColor = Color.FromArgb(92, 104, 98);
+            hint.Dock = DockStyle.Fill;
+            hint.TextAlign = ContentAlignment.MiddleLeft;
+
+            int headerRow = card.RowCount++;
+            card.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+            card.Controls.Add(title, 0, headerRow);
+            card.SetColumnSpan(title, 2);
+            card.Controls.Add(hint, 2, headerRow);
+            card.SetColumnSpan(hint, 2);
+
+            workflowChecklistItems.Clear();
+            AddWorkflowChecklistRow(card, "Before video", "Add the starting video for this fit.", "Videos", delegate { SelectWorkspaceTab("Videos"); }, delegate { return HasMediaFile("BeforeVideoPath"); });
+            AddWorkflowChecklistRow(card, "After video", "Add the comparison/final video for this fit.", "Videos", delegate { SelectWorkspaceTab("Videos"); }, delegate { return HasMediaFile("AfterVideoPath"); });
+            AddWorkflowChecklistRow(card, "Analyze movement", "Open drawing, distance, angle, timeline, and playback controls.", "Analyze", delegate { SelectWorkspaceTab("Video Analysis"); }, delegate { return HasMediaFile("BeforeVideoPath") || HasMediaFile("AfterVideoPath"); });
+            AddWorkflowChecklistRow(card, "Bike Metrics", "Enter or capture saddle height, setback, reach, and handlebar X/Y.", "Metrics", delegate { SelectWorkspaceTab("Bike Metrics"); }, HasCoreBikeMetrics);
+            AddWorkflowChecklistRow(card, "Report images", "Choose side-by-side or before/after images for the report.", "Images", delegate { SelectWorkspaceTab("Report Images"); }, HasReportImage);
+            AddWorkflowChecklistRow(card, "Preview report", "Review the client-facing report before saving or sending it.", "Preview", delegate { PreviewReport_Click(this, EventArgs.Empty); }, IsReportReady);
+
+            panel.Controls.Add(card);
+            return panel;
+        }
+
+        private void AddWorkflowChecklistRow(TableLayoutPanel table, string labelText, string description, string buttonText, Action action, Func<bool> isReady)
+        {
+            int row = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+
+            Label status = new Label();
+            status.Dock = DockStyle.Fill;
+            status.TextAlign = ContentAlignment.MiddleLeft;
+            status.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+
+            Label label = FieldLabel(labelText);
+            label.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+
+            Label detail = FieldLabel(description);
+            detail.ForeColor = Color.FromArgb(92, 104, 98);
+            detail.AutoEllipsis = true;
+
+            Button jump = CreateButton(buttonText, false);
+            jump.Dock = DockStyle.Fill;
+            jump.Margin = new Padding(8, 5, 0, 5);
+            jump.Click += delegate
+            {
+                if (action != null)
+                    action();
+                UpdateWorkflowChecklist();
+            };
+
+            table.Controls.Add(status, 0, row);
+            table.Controls.Add(label, 1, row);
+            table.Controls.Add(detail, 2, row);
+            table.Controls.Add(jump, 3, row);
+            workflowChecklistItems.Add(new WorkflowChecklistItem(status, isReady));
         }
 
         private TabPage BuildClientFilesTab()
@@ -1187,6 +1281,82 @@ namespace CassetteMotionPro.Workspace
             return page;
         }
 
+        private void SelectWorkspaceTab(string tabText)
+        {
+            if (editorTabs == null)
+                return;
+
+            foreach (TabPage page in editorTabs.TabPages)
+            {
+                if (string.Equals(page.Text, tabText, StringComparison.OrdinalIgnoreCase))
+                {
+                    editorTabs.SelectedTab = page;
+                    UpdateSaveHint("Opened " + tabText + " from the Fit Workflow checklist.");
+                    return;
+                }
+            }
+        }
+
+        private void UpdateWorkflowChecklist()
+        {
+            foreach (WorkflowChecklistItem item in workflowChecklistItems)
+            {
+                bool ready = false;
+                if (item.IsReady != null)
+                    ready = item.IsReady();
+
+                item.StatusLabel.Text = ready ? "Ready" : "Needs step";
+                item.StatusLabel.ForeColor = ready ? Color.FromArgb(60, 145, 76) : Color.FromArgb(181, 118, 35);
+            }
+        }
+
+        private bool HasMediaFile(string key)
+        {
+            if (!mediaBoxes.ContainsKey(key))
+                return false;
+
+            string path = mediaBoxes[key].Text;
+            return !string.IsNullOrWhiteSpace(path) && File.Exists(path);
+        }
+
+        private bool HasReportImage()
+        {
+            return HasImageFile("SideBySideReportImagePath") ||
+                HasImageFile("BeforeReportImagePath") ||
+                HasImageFile("AfterReportImagePath") ||
+                HasImageFile("MeasurementReferenceImagePath");
+        }
+
+        private bool HasImageFile(string key)
+        {
+            if (!imageBoxes.ContainsKey(key))
+                return false;
+
+            string path = imageBoxes[key].Text;
+            return !string.IsNullOrWhiteSpace(path) && File.Exists(path);
+        }
+
+        private bool HasCoreBikeMetrics()
+        {
+            return HasMeasurement("SaddleHeightAfter") &&
+                HasMeasurement("SaddleSetbackAfter") &&
+                HasMeasurement("SaddleTipToGripReachAfter") &&
+                HasMeasurement("HandlebarXAfter") &&
+                HasMeasurement("HandlebarYAfter");
+        }
+
+        private bool HasMeasurement(string key)
+        {
+            return measurementBoxes.ContainsKey(key) && !string.IsNullOrWhiteSpace(measurementBoxes[key].Text);
+        }
+
+        private bool IsReportReady()
+        {
+            return HasMediaFile("BeforeVideoPath") &&
+                HasMediaFile("AfterVideoPath") &&
+                HasCoreBikeMetrics();
+        }
+
         private void RefreshSessions(Guid selectId)
         {
             IList<FitSessionRecord> sessions = repository.LoadAll();
@@ -1311,6 +1481,7 @@ namespace CassetteMotionPro.Workspace
             SetMeasurement("ElbowAngleAfter", session.ElbowAngleAfter);
 
             UpdateActiveSessionStatus();
+            UpdateWorkflowChecklist();
         }
 
         private void SetMedia(string key, string value)
@@ -1710,6 +1881,7 @@ namespace CassetteMotionPro.Workspace
             currentSession.ElbowAngleAfter = measurementBoxes["ElbowAngleAfter"].Text.Trim();
             repository.Save(currentSession);
             UpdateActiveSessionStatus();
+            UpdateWorkflowChecklist();
         }
 
         private string GetReportLogoStyle()
@@ -2182,6 +2354,19 @@ namespace CassetteMotionPro.Workspace
             button.ForeColor = Color.FromArgb(13, 19, 17);
             button.Font = new Font("Segoe UI", 9F, primary ? FontStyle.Bold : FontStyle.Regular);
             return button;
+        }
+
+        private sealed class WorkflowChecklistItem
+        {
+            public WorkflowChecklistItem(Label statusLabel, Func<bool> isReady)
+            {
+                StatusLabel = statusLabel;
+                IsReady = isReady;
+            }
+
+            public Label StatusLabel { get; private set; }
+
+            public Func<bool> IsReady { get; private set; }
         }
     }
 }
