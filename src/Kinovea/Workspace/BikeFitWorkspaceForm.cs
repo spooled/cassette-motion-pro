@@ -348,7 +348,7 @@ namespace CassetteMotionPro.Workspace
             title.TextAlign = ContentAlignment.MiddleLeft;
 
             Label description = new Label();
-            description.Text = "Start with the client and session details, then open the videos in the full Kinovea analysis workspace. Do the measuring there first, capture the useful photos/video evidence, save the values to this session, and generate the report from the client folder.";
+            description.Text = "Start with the client and session details, then open the videos in the full Kinovea analysis workspace. Do the measuring there first, save useful photos/video evidence into the active Analysis Captures folder, return to this session, save the values, and generate the report from the client folder.";
             description.Dock = DockStyle.Fill;
             description.ForeColor = Color.FromArgb(74, 87, 81);
 
@@ -375,7 +375,7 @@ namespace CassetteMotionPro.Workspace
             buttons.Controls.Add(analyze);
 
             Label path = new Label();
-            path.Text = "Client info → Kinovea tools → Capture/save media → Bike Metrics → Report";
+            path.Text = "Client info → Kinovea tools → Analysis Captures → Bike Metrics → Report";
             path.Dock = DockStyle.Fill;
             path.ForeColor = Color.FromArgb(92, 104, 98);
             path.TextAlign = ContentAlignment.MiddleLeft;
@@ -429,7 +429,7 @@ namespace CassetteMotionPro.Workspace
             AddWorkflowChecklistRow(card, "Fit goals", "Enter the rider goals and session notes before making changes.", "Goals", SelectOverviewGoals, HasFitGoals);
             AddWorkflowChecklistRow(card, "Before video", "Record/import the starting video into this client session.", "Videos", delegate { SelectWorkspaceTab("Videos"); }, delegate { return HasMediaFile("BeforeVideoPath"); });
             AddWorkflowChecklistRow(card, "After video", "Record/import the comparison/final video into this client session.", "Videos", delegate { SelectWorkspaceTab("Videos"); }, delegate { return HasMediaFile("AfterVideoPath"); });
-            AddWorkflowChecklistRow(card, "Measure in Kinovea", "Use the drawing, distance, angle, timeline, playback, and side-by-side tools first.", "Tools", delegate { SelectWorkspaceTab("Video Analysis"); }, delegate { return HasMediaFile("BeforeVideoPath") || HasMediaFile("AfterVideoPath"); });
+            AddWorkflowChecklistRow(card, "Measure in Kinovea", "Open analysis, use the Kinovea tools, and save useful evidence into Analysis Captures.", "Tools", delegate { SelectWorkspaceTab("Video Analysis"); }, delegate { return HasMediaFile("BeforeVideoPath") || HasMediaFile("AfterVideoPath"); });
             AddWorkflowChecklistRow(card, "Bike Metrics", "Save the measured saddle height, setback, reach, and handlebar X/Y values.", "Metrics", delegate { SelectWorkspaceTab("Bike Metrics"); }, HasCoreBikeMetrics);
             AddWorkflowChecklistRow(card, "Report images", "Save/capture the useful analysis photos for the client report.", "Images", delegate { SelectWorkspaceTab("Report Images"); }, HasReportImage);
             AddWorkflowChecklistRow(card, "Preview report", "Review the client-facing report before saving or sending it.", "Preview", delegate { PreviewReport_Click(this, EventArgs.Empty); }, IsReportReady);
@@ -1060,16 +1060,21 @@ namespace CassetteMotionPro.Workspace
             pair.Size = new Size(210, 38);
             pair.Click += delegate { OpenPair("BeforeVideoPath", "AfterVideoPath"); };
 
+            Button captures = CreateButton("Open Captures Folder", false);
+            captures.Size = new Size(180, 38);
+            captures.Click += delegate { OpenAnalysisCapturesFolder(); };
+
             actions.Controls.Add(before);
             actions.Controls.Add(after);
             actions.Controls.Add(pair);
+            actions.Controls.Add(captures);
 
             int actionRow = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 70));
             table.Controls.Add(actions, 0, actionRow);
 
             Label reminder = new Label();
-            reminder.Text = "Recommended order: measure in the Kinovea tools first, capture/save the useful photos or video evidence, then return to this fit session to save Bike Metrics and report images into the client folder.";
+            reminder.Text = "Recommended order: open Before/After analysis, measure in the Kinovea tools first, save useful photos or video evidence into Analysis Captures, then return here to enter Bike Metrics and choose report images.";
             reminder.Dock = DockStyle.Fill;
             reminder.ForeColor = Color.FromArgb(92, 104, 98);
             int reminderRow = table.RowCount++;
@@ -1077,7 +1082,7 @@ namespace CassetteMotionPro.Workspace
             table.Controls.Add(reminder, 0, reminderRow);
 
             Label folderHint = new Label();
-            folderHint.Text = "When you open analysis from here, Cassette Motion Pro prepares this session folder for captures: Client folder → Analysis Captures → active session.";
+            folderHint.Text = "This build prepares the active capture destination before analysis: Client folder → Analysis Captures → active session. Use Open Captures Folder if you want to confirm it before or after measuring.";
             folderHint.Dock = DockStyle.Fill;
             folderHint.ForeColor = Color.FromArgb(92, 104, 98);
             int folderHintRow = table.RowCount++;
@@ -2464,6 +2469,20 @@ namespace CassetteMotionPro.Workspace
             }
         }
 
+        private void OpenAnalysisCapturesFolder()
+        {
+            try
+            {
+                PrepareAnalysisCaptureFolder();
+                Process.Start(GetSessionAnalysisCapturesFolderPath());
+                UpdateSaveHint("Analysis Captures folder is ready for this fit session.");
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "The Analysis Captures folder could not be opened.\n\n" + exception.Message, "Analysis Captures", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         private void PrepareAnalysisCaptureFolder()
         {
             SaveCurrentSession();
@@ -2473,6 +2492,8 @@ namespace CassetteMotionPro.Workspace
 
             if (prepareCaptureFolder != null)
                 prepareCaptureFolder(GetSessionAnalysisCapturesFolderPath());
+
+            UpdateSaveHint("Analysis Captures folder prepared for this fit session.");
         }
 
         private bool ValidateVideo(string path)
