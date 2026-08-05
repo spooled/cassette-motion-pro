@@ -43,6 +43,7 @@ namespace CassetteMotionPro.Workspace
         private readonly TextBox txtHandoffInternalNotes = new TextBox();
         private readonly Label saveHint = new Label();
         private readonly Label activeSessionStatus = new Label();
+        private readonly Label analysisCapturesStatus = new Label();
         private readonly CheckBox chkShowBeforeMeasurementsInReport = new CheckBox();
         private readonly CheckBox chkShowSideBySideImageInReport = new CheckBox();
         private readonly CheckBox chkShowBeforeImageInReport = new CheckBox();
@@ -1068,14 +1069,26 @@ namespace CassetteMotionPro.Workspace
             captures.Size = new Size(180, 38);
             captures.Click += delegate { OpenAnalysisCapturesFolder(); };
 
+            Button checkCaptures = CreateButton("Check Saved Evidence", true);
+            checkCaptures.Size = new Size(190, 38);
+            checkCaptures.Click += delegate { CheckSavedAnalysisEvidence(); };
+
             actions.Controls.Add(before);
             actions.Controls.Add(after);
             actions.Controls.Add(pair);
             actions.Controls.Add(captures);
+            actions.Controls.Add(checkCaptures);
 
             int actionRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 70));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 112));
             table.Controls.Add(actions, 0, actionRow);
+
+            analysisCapturesStatus.Text = "Evidence status: open analysis, save useful screenshots/exports, then click Check Saved Evidence.";
+            analysisCapturesStatus.Dock = DockStyle.Fill;
+            analysisCapturesStatus.ForeColor = Color.FromArgb(92, 104, 98);
+            int statusRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+            table.Controls.Add(analysisCapturesStatus, 0, statusRow);
 
             Label reminder = new Label();
             reminder.Text = "Recommended order: open Before/After analysis, measure in the Kinovea tools first, save useful photos or video evidence into Analysis Captures, then return here to enter Bike Metrics and choose report images.";
@@ -1528,20 +1541,43 @@ namespace CassetteMotionPro.Workspace
 
         private bool HasAnalysisCaptureEvidence()
         {
+            return CountAnalysisCaptureEvidenceFiles() > 0;
+        }
+
+        private int CountAnalysisCaptureEvidenceFiles()
+        {
             if (currentSession == null)
-                return false;
+                return 0;
 
             string folderPath = GetSessionAnalysisCapturesFolderPath();
             if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
-                return false;
+                return 0;
 
             try
             {
-                return Directory.GetFiles(folderPath, "*", SearchOption.AllDirectories).Length > 0;
+                return Directory.GetFiles(folderPath, "*", SearchOption.AllDirectories).Length;
             }
             catch
             {
-                return false;
+                return 0;
+            }
+        }
+
+        private void RefreshAnalysisCapturesStatus()
+        {
+            if (analysisCapturesStatus == null)
+                return;
+
+            int count = CountAnalysisCaptureEvidenceFiles();
+            if (count > 0)
+            {
+                analysisCapturesStatus.Text = "Evidence status: " + count + " saved file" + (count == 1 ? "" : "s") + " found in this session’s Analysis Captures folder.";
+                analysisCapturesStatus.ForeColor = Color.FromArgb(60, 145, 76);
+            }
+            else
+            {
+                analysisCapturesStatus.Text = "Evidence status: no saved files found yet. Save screenshots, exported frames, or clips from Kinovea into Analysis Captures.";
+                analysisCapturesStatus.ForeColor = Color.FromArgb(170, 104, 36);
             }
         }
 
@@ -1699,6 +1735,7 @@ namespace CassetteMotionPro.Workspace
 
             UpdateActiveSessionStatus();
             UpdateWorkflowChecklist();
+            RefreshAnalysisCapturesStatus();
         }
 
         private void SetMedia(string key, string value)
@@ -2557,6 +2594,7 @@ namespace CassetteMotionPro.Workspace
             {
                 PrepareAnalysisCaptureFolder();
                 Process.Start(GetSessionAnalysisCapturesFolderPath());
+                RefreshAnalysisCapturesStatus();
                 UpdateSaveHint("Analysis Captures folder is ready for this fit session.");
             }
             catch (Exception exception)
@@ -2576,6 +2614,39 @@ namespace CassetteMotionPro.Workspace
                 prepareCaptureFolder(GetSessionAnalysisCapturesFolderPath());
 
             UpdateSaveHint("Analysis Captures folder prepared for this fit session.");
+            RefreshAnalysisCapturesStatus();
+        }
+
+        private void CheckSavedAnalysisEvidence()
+        {
+            try
+            {
+                PrepareAnalysisCaptureFolder();
+                int count = CountAnalysisCaptureEvidenceFiles();
+                RefreshAnalysisCapturesStatus();
+                UpdateWorkflowChecklist();
+
+                if (count > 0)
+                {
+                    UpdateSaveHint(count + " saved evidence file" + (count == 1 ? "" : "s") + " found in Analysis Captures.");
+                    MessageBox.Show(this,
+                        count + " saved evidence file" + (count == 1 ? "" : "s") + " found in this session’s Analysis Captures folder.\n\n" +
+                        "Next: enter the final measured values in Bike Metrics, choose report images, then preview the report.",
+                        "Saved Evidence Found", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    UpdateSaveHint("No saved evidence files found yet in Analysis Captures.");
+                    MessageBox.Show(this,
+                        "No saved evidence files were found yet.\n\n" +
+                        "After measuring in Kinovea, save screenshots, exported frames, or clips into this session’s Analysis Captures folder, then check again.",
+                        "No Saved Evidence Yet", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "Saved evidence could not be checked.\n\n" + exception.Message, "Analysis Captures", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private bool ValidateVideo(string path)
