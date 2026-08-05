@@ -26,7 +26,7 @@ namespace CassetteMotionPro.Workspace
         private const string StudioWebsite = "Add website";
         private const string PreparedByRole = "Professional Bike Fitting";
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "0.14.5";
+        private const string ReportVersion = "0.14.6";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
 
         public static string Generate(ClientRecord client, FitSessionRecord session)
@@ -176,9 +176,8 @@ namespace CassetteMotionPro.Workspace
             AddSummaryMetric(text, "Knee angle", session.KneeAngleBefore, session.KneeAngleAfter, !session.HideBeforeMeasurementsInReport);
             AddSummaryMetric(text, "Hip angle", session.HipAngleBefore, session.HipAngleAfter, !session.HideBeforeMeasurementsInReport);
             AddSummaryMetric(text, "Ankle angle", session.AnkleAngleBefore, session.AnkleAngleAfter, !session.HideBeforeMeasurementsInReport);
-            AddSummaryMetric(text, "Torso angle", session.TorsoAngleBefore, session.TorsoAngleAfter, !session.HideBeforeMeasurementsInReport);
-            AddSummaryMetric(text, "Shoulder angle", session.ShoulderAngleBefore, session.ShoulderAngleAfter, !session.HideBeforeMeasurementsInReport);
-            AddSummaryMetric(text, "Elbow angle", session.ElbowAngleBefore, session.ElbowAngleAfter, !session.HideBeforeMeasurementsInReport);
+            AddSummaryMetric(text, "Body reach", session.TorsoAngleBefore, session.TorsoAngleAfter, !session.HideBeforeMeasurementsInReport);
+            AddSummaryMetric(text, "Back angle", session.ShoulderAngleBefore, session.ShoulderAngleAfter, !session.HideBeforeMeasurementsInReport);
             text.AppendLine();
 
             AddSummarySection(text, "Recommendations and notes", session.Notes);
@@ -710,9 +709,8 @@ namespace CassetteMotionPro.Workspace
                 Row("Knee angle", session.KneeAngleBefore, session.KneeAngleAfter),
                 Row("Hip angle", session.HipAngleBefore, session.HipAngleAfter),
                 Row("Ankle angle", session.AnkleAngleBefore, session.AnkleAngleAfter),
-                Row("Torso angle", session.TorsoAngleBefore, session.TorsoAngleAfter),
-                Row("Shoulder angle", session.ShoulderAngleBefore, session.ShoulderAngleAfter),
-                Row("Elbow angle", session.ElbowAngleBefore, session.ElbowAngleAfter)
+                Row("Body reach", session.TorsoAngleBefore, session.TorsoAngleAfter),
+                Row("Back angle", session.ShoulderAngleBefore, session.ShoulderAngleAfter)
             }, !session.HideBeforeMeasurementsInReport);
             html.AppendLine("</div>");
 

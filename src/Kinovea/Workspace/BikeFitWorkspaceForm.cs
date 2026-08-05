@@ -1176,12 +1176,11 @@ namespace CassetteMotionPro.Workspace
             AddMeasurementRow(table, "Knee angle", "KneeAngle");
             AddMeasurementRow(table, "Hip angle", "HipAngle");
             AddMeasurementRow(table, "Ankle angle", "AnkleAngle");
-            AddMeasurementRow(table, "Torso angle", "TorsoAngle");
-            AddMeasurementRow(table, "Shoulder angle", "ShoulderAngle");
-            AddMeasurementRow(table, "Elbow angle", "ElbowAngle");
+            AddMeasurementRow(table, "Body reach", "TorsoAngle");
+            AddMeasurementRow(table, "Back angle", "ShoulderAngle");
 
             Label guidance = new Label();
-            guidance.Text = "The guided overlay places markers at the shoulder, elbow, hand, hip, knee, ankle, and toe, then displays all six angles on the video.";
+            guidance.Text = "Use the Kinovea tools first, then record the rider angles you want in the report. Body reach uses the previous torso-angle field, and back angle uses the previous shoulder-angle field.";
             guidance.Dock = DockStyle.Fill;
             guidance.ForeColor = Color.FromArgb(92, 104, 98);
             guidance.Padding = new Padding(0, 12, 0, 4);
@@ -1697,8 +1696,6 @@ namespace CassetteMotionPro.Workspace
             SetMeasurement("TorsoAngleAfter", session.TorsoAngleAfter);
             SetMeasurement("ShoulderAngleBefore", session.ShoulderAngleBefore);
             SetMeasurement("ShoulderAngleAfter", session.ShoulderAngleAfter);
-            SetMeasurement("ElbowAngleBefore", session.ElbowAngleBefore);
-            SetMeasurement("ElbowAngleAfter", session.ElbowAngleAfter);
 
             UpdateActiveSessionStatus();
             UpdateWorkflowChecklist();
@@ -2098,8 +2095,6 @@ namespace CassetteMotionPro.Workspace
             currentSession.TorsoAngleAfter = measurementBoxes["TorsoAngleAfter"].Text.Trim();
             currentSession.ShoulderAngleBefore = measurementBoxes["ShoulderAngleBefore"].Text.Trim();
             currentSession.ShoulderAngleAfter = measurementBoxes["ShoulderAngleAfter"].Text.Trim();
-            currentSession.ElbowAngleBefore = measurementBoxes["ElbowAngleBefore"].Text.Trim();
-            currentSession.ElbowAngleAfter = measurementBoxes["ElbowAngleAfter"].Text.Trim();
             repository.Save(currentSession);
             UpdateActiveSessionStatus();
             UpdateWorkflowChecklist();
@@ -2161,7 +2156,7 @@ namespace CassetteMotionPro.Workspace
                 "1. Pause at the measurement frame.\n" +
                 "2. Click the rider to place the overlay.\n" +
                 "3. Drag each marker onto the matching body landmark.\n" +
-                "4. Record the six displayed values in the Body Angles tab.",
+                "4. Record knee, hip, ankle, body reach, and back angle in the Body Angles tab.",
                 "Bike Fit Angle Guide", MessageBoxButtons.OK, MessageBoxIcon.Information);
             Close();
             if (openBodyAngleGuide != null)
