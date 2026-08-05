@@ -1193,7 +1193,7 @@ namespace CassetteMotionPro.Workspace
             AddMeasurementRow(table, "Back angle", "ShoulderAngle");
 
             Label guidance = new Label();
-            guidance.Text = "Use the Kinovea tools first, then record the rider angles you want in the report. Body reach uses the previous torso-angle field, and back angle uses the previous shoulder-angle field.";
+            guidance.Text = "Recommended process: pause the video at the same crank position, use the Kinovea angle tools, then enter the Before and After values you want in the report.";
             guidance.Dock = DockStyle.Fill;
             guidance.ForeColor = Color.FromArgb(92, 104, 98);
             guidance.Padding = new Padding(0, 12, 0, 4);
@@ -1201,6 +1201,8 @@ namespace CassetteMotionPro.Workspace
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 68));
             table.Controls.Add(guidance, 0, guidanceRow);
             table.SetColumnSpan(guidance, 3);
+
+            AddBodyAngleGuide(table);
 
             FlowLayoutPanel actions = new FlowLayoutPanel();
             actions.Dock = DockStyle.Fill;
@@ -1223,6 +1225,53 @@ namespace CassetteMotionPro.Workspace
             page.AutoScroll = true;
             page.Controls.Add(table);
             return page;
+        }
+
+        private void AddBodyAngleGuide(TableLayoutPanel table)
+        {
+            GroupBox guide = new GroupBox();
+            guide.Text = "Body angle guide";
+            guide.Dock = DockStyle.Fill;
+            guide.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            guide.ForeColor = Color.FromArgb(37, 48, 43);
+            guide.Padding = new Padding(12, 8, 12, 12);
+
+            TableLayoutPanel guideTable = new TableLayoutPanel();
+            guideTable.Dock = DockStyle.Fill;
+            guideTable.ColumnCount = 2;
+            guideTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
+            guideTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+
+            AddBodyAngleGuideRow(guideTable, "Knee angle", "Click hip -> knee -> ankle. Use bottom of the pedal stroke for leg extension.");
+            AddBodyAngleGuideRow(guideTable, "Hip angle", "Click shoulder/torso point -> hip -> knee. Use the same crank position before and after.");
+            AddBodyAngleGuideRow(guideTable, "Ankle angle", "Click knee -> ankle -> toe/forefoot. Keep frame timing consistent.");
+            AddBodyAngleGuideRow(guideTable, "Body reach", "Use the rider contact points to record how stretched the rider looks on the bike.");
+            AddBodyAngleGuideRow(guideTable, "Back angle", "Use the hip-to-shoulder/back line to describe posture and back position.");
+
+            guide.Controls.Add(guideTable);
+
+            int guideRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 190));
+            table.Controls.Add(guide, 0, guideRow);
+            table.SetColumnSpan(guide, 3);
+        }
+
+        private void AddBodyAngleGuideRow(TableLayoutPanel table, string labelText, string instructions)
+        {
+            int row = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
+
+            Label label = FieldLabel(labelText);
+            label.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            label.ForeColor = Color.FromArgb(60, 145, 76);
+
+            Label instructionLabel = FieldLabel(instructions);
+            instructionLabel.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+            instructionLabel.ForeColor = Color.FromArgb(74, 87, 81);
+            instructionLabel.Padding = new Padding(0, 0, 0, 0);
+
+            table.Controls.Add(label, 0, row);
+            table.Controls.Add(instructionLabel, 1, row);
         }
 
         private void AddMediaRow(TableLayoutPanel table, string labelText, string key)
