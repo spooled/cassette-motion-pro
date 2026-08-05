@@ -286,6 +286,12 @@ namespace CassetteMotionPro.Workspace
             table.Controls.Add(flow, 0, flowRow);
             table.SetColumnSpan(flow, 2);
 
+            Control shortcuts = BuildWorkflowShortcutBar();
+            int shortcutsRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 96));
+            table.Controls.Add(shortcuts, 0, shortcutsRow);
+            table.SetColumnSpan(shortcuts, 2);
+
             txtTitle.TextChanged += delegate { UpdateWorkflowChecklist(); };
             AddEditorRow(table, "Session title", txtTitle, 38);
 
@@ -388,6 +394,47 @@ namespace CassetteMotionPro.Workspace
             layout.Controls.Add(path, 1, 1);
             panel.Controls.Add(layout);
             return panel;
+        }
+
+        private Control BuildWorkflowShortcutBar()
+        {
+            GroupBox group = new GroupBox();
+            group.Text = "Start Fit Workflow";
+            group.Dock = DockStyle.Fill;
+            group.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            group.ForeColor = Color.FromArgb(37, 48, 43);
+            group.Padding = new Padding(14, 8, 14, 12);
+
+            FlowLayoutPanel buttons = new FlowLayoutPanel();
+            buttons.Dock = DockStyle.Fill;
+            buttons.FlowDirection = FlowDirection.LeftToRight;
+            buttons.WrapContents = true;
+            buttons.Padding = new Padding(0, 4, 0, 0);
+
+            AddWorkflowShortcutButton(buttons, "1. Goals", true, SelectOverviewGoals);
+            AddWorkflowShortcutButton(buttons, "2. Videos", false, SaveAndSelectVideos);
+            AddWorkflowShortcutButton(buttons, "3. Analysis", false, delegate { SelectWorkspaceTab("Video Analysis"); });
+            AddWorkflowShortcutButton(buttons, "4. Metrics", false, delegate { SelectWorkspaceTab("Bike Metrics"); });
+            AddWorkflowShortcutButton(buttons, "5. Angles", false, delegate { SelectWorkspaceTab("Body Angles"); });
+            AddWorkflowShortcutButton(buttons, "6. Images", false, delegate { SelectWorkspaceTab("Report Images"); });
+            AddWorkflowShortcutButton(buttons, "7. Preview", false, delegate { PreviewReport_Click(this, EventArgs.Empty); });
+
+            group.Controls.Add(buttons);
+            return group;
+        }
+
+        private void AddWorkflowShortcutButton(FlowLayoutPanel buttons, string text, bool primary, Action action)
+        {
+            Button button = CreateButton(text, primary);
+            button.Size = new Size(112, 34);
+            button.Margin = new Padding(0, 4, 8, 4);
+            button.Click += delegate
+            {
+                if (action != null)
+                    action();
+                UpdateWorkflowChecklist();
+            };
+            buttons.Controls.Add(button);
         }
 
         private Control BuildWorkflowChecklist()
