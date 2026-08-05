@@ -48,6 +48,7 @@ namespace CassetteMotionPro.Workspace
         private readonly CheckBox chkShowBeforeImageInReport = new CheckBox();
         private readonly CheckBox chkShowAfterImageInReport = new CheckBox();
         private readonly CheckBox chkShowMeasurementReferenceImageInReport = new CheckBox();
+        private readonly CheckBox chkShowMeasurementCaptureTraceInReport = new CheckBox();
         private readonly ComboBox cmbReportLogoStyle = new ComboBox();
         private readonly Dictionary<string, TextBox> mediaBoxes = new Dictionary<string, TextBox>();
         private readonly Dictionary<string, TextBox> imageBoxes = new Dictionary<string, TextBox>();
@@ -902,14 +903,16 @@ namespace CassetteMotionPro.Workspace
             ConfigureReportImageCheckbox(chkShowBeforeImageInReport, "Before");
             ConfigureReportImageCheckbox(chkShowAfterImageInReport, "After");
             ConfigureReportImageCheckbox(chkShowMeasurementReferenceImageInReport, "Measurement reference");
+            ConfigureReportImageCheckbox(chkShowMeasurementCaptureTraceInReport, "Measurement trace");
 
             options.Controls.Add(chkShowSideBySideImageInReport);
             options.Controls.Add(chkShowBeforeImageInReport);
             options.Controls.Add(chkShowAfterImageInReport);
             options.Controls.Add(chkShowMeasurementReferenceImageInReport);
+            options.Controls.Add(chkShowMeasurementCaptureTraceInReport);
 
             int row = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 62));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 82));
             table.Controls.Add(label, 0, row);
             table.Controls.Add(options, 1, row);
             table.SetColumnSpan(options, 3);
@@ -955,7 +958,7 @@ namespace CassetteMotionPro.Workspace
             checkbox.CheckedChanged += delegate
             {
                 if (currentSession != null)
-                    UpdateSaveHint("Report image display options updated.");
+                    UpdateSaveHint("Report display options updated.");
             };
         }
 
@@ -1661,6 +1664,7 @@ namespace CassetteMotionPro.Workspace
             chkShowBeforeImageInReport.Checked = !session.HideBeforeImageInReport;
             chkShowAfterImageInReport.Checked = !session.HideAfterImageInReport;
             chkShowMeasurementReferenceImageInReport.Checked = !session.HideMeasurementReferenceImageInReport;
+            chkShowMeasurementCaptureTraceInReport.Checked = !session.HideMeasurementCaptureTraceInReport;
             SetReportLogoStyle(session.ReportLogoStyle);
 
             SetMeasurement("SaddleHeightBefore", session.SaddleHeightBefore);
@@ -2062,6 +2066,7 @@ namespace CassetteMotionPro.Workspace
             currentSession.HideBeforeImageInReport = !chkShowBeforeImageInReport.Checked;
             currentSession.HideAfterImageInReport = !chkShowAfterImageInReport.Checked;
             currentSession.HideMeasurementReferenceImageInReport = !chkShowMeasurementReferenceImageInReport.Checked;
+            currentSession.HideMeasurementCaptureTraceInReport = !chkShowMeasurementCaptureTraceInReport.Checked;
             currentSession.ReportLogoStyle = GetReportLogoStyle();
             currentSession.SaddleHeightBefore = measurementBoxes["SaddleHeightBefore"].Text.Trim();
             currentSession.SaddleHeightAfter = measurementBoxes["SaddleHeightAfter"].Text.Trim();

@@ -26,7 +26,7 @@ namespace CassetteMotionPro.Workspace
         private const string StudioWebsite = "Add website";
         private const string PreparedByRole = "Professional Bike Fitting";
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "0.14.4";
+        private const string ReportVersion = "0.14.5";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
 
         public static string Generate(ClientRecord client, FitSessionRecord session)
@@ -664,7 +664,7 @@ namespace CassetteMotionPro.Workspace
             html.AppendLine("<h2>Bike Measurements</h2>");
             html.AppendLine("<div class=\"section-kicker\">Position coordinates and contact-point measurements used to describe the bicycle setup.</div>");
             html.AppendLine("<div class=\"section-card\">");
-            if (HasBikeMetricsTrace(session))
+            if (!session.HideMeasurementCaptureTraceInReport && HasBikeMetricsTrace(session))
             {
                 html.AppendLine("<h3>Measurement capture trace</h3>");
                 AddMeasurementTable(html, new[]
