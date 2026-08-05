@@ -790,6 +790,7 @@ namespace CassetteMotionPro.Workspace
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 95));
 
             AddMeasurementReferenceImageControls(table);
+            AddBikeMetricsWorkflowGuide(table);
 
             FlowLayoutPanel reviewActions = new FlowLayoutPanel();
             reviewActions.Dock = DockStyle.Fill;
@@ -826,7 +827,7 @@ namespace CassetteMotionPro.Workspace
             AddBikeMetricRow(table, "Cleat position", "Shoe/cleat reference point → cleat center.", "CleatPosition");
 
             Label hint = new Label();
-            hint.Text = "Enter the unit with the value (for example, 742 mm). Assist is a placeholder for the future image-based guided measurement tool.";
+            hint.Text = "Enter the unit with the value (for example, 742 mm). Use Assist when you want guided image measurement, or enter values manually after measuring in Kinovea.";
             hint.Dock = DockStyle.Fill;
             hint.ForeColor = Color.FromArgb(92, 104, 98);
             int row = table.RowCount++;
@@ -837,6 +838,51 @@ namespace CassetteMotionPro.Workspace
             page.AutoScroll = true;
             page.Controls.Add(table);
             return page;
+        }
+
+        private void AddBikeMetricsWorkflowGuide(TableLayoutPanel table)
+        {
+            GroupBox guide = new GroupBox();
+            guide.Text = "Bike Metrics workflow";
+            guide.Dock = DockStyle.Fill;
+            guide.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            guide.ForeColor = Color.FromArgb(37, 48, 43);
+            guide.Padding = new Padding(12, 8, 12, 12);
+
+            TableLayoutPanel guideTable = new TableLayoutPanel();
+            guideTable.Dock = DockStyle.Fill;
+            guideTable.ColumnCount = 2;
+            guideTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
+            guideTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+
+            AddBikeMetricsWorkflowGuideRow(guideTable, "1. Open video tools", "Use Video Analysis to open Before, After, or Before + After in the full Kinovea workspace.");
+            AddBikeMetricsWorkflowGuideRow(guideTable, "2. Save evidence", "Save screenshots, exports, or short clips into the active session Analysis Captures folder.");
+            AddBikeMetricsWorkflowGuideRow(guideTable, "3. Record numbers", "Enter the final Before/After values here, or use Assist with the measurement reference image.");
+            AddBikeMetricsWorkflowGuideRow(guideTable, "4. Review report", "Use Review Metrics, then Preview/Generate so the report reflects the saved client session.");
+
+            guide.Controls.Add(guideTable);
+
+            int guideRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 156));
+            table.Controls.Add(guide, 0, guideRow);
+            table.SetColumnSpan(guide, 5);
+        }
+
+        private void AddBikeMetricsWorkflowGuideRow(TableLayoutPanel table, string labelText, string instructions)
+        {
+            int row = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
+
+            Label label = FieldLabel(labelText);
+            label.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            label.ForeColor = Color.FromArgb(60, 145, 76);
+
+            Label instructionLabel = FieldLabel(instructions);
+            instructionLabel.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+            instructionLabel.ForeColor = Color.FromArgb(74, 87, 81);
+
+            table.Controls.Add(label, 0, row);
+            table.Controls.Add(instructionLabel, 1, row);
         }
 
         private TabPage BuildReportImagesTab()
