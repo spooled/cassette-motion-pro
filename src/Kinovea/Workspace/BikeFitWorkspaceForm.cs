@@ -430,6 +430,7 @@ namespace CassetteMotionPro.Workspace
             AddWorkflowChecklistRow(card, "Before video", "Record/import the starting video into this client session.", "Videos", delegate { SelectWorkspaceTab("Videos"); }, delegate { return HasMediaFile("BeforeVideoPath"); });
             AddWorkflowChecklistRow(card, "After video", "Record/import the comparison/final video into this client session.", "Videos", delegate { SelectWorkspaceTab("Videos"); }, delegate { return HasMediaFile("AfterVideoPath"); });
             AddWorkflowChecklistRow(card, "Measure in Kinovea", "Open analysis, use the Kinovea tools, and save useful evidence into Analysis Captures.", "Tools", delegate { SelectWorkspaceTab("Video Analysis"); }, delegate { return HasMediaFile("BeforeVideoPath") || HasMediaFile("AfterVideoPath"); });
+            AddWorkflowChecklistRow(card, "Evidence saved", "Save screenshots, exported images, or useful video evidence into Analysis Captures.", "Captures", delegate { SelectWorkspaceTab("Video Analysis"); }, HasAnalysisCaptureEvidence);
             AddWorkflowChecklistRow(card, "Bike Metrics", "Save the measured saddle height, setback, reach, and handlebar X/Y values.", "Metrics", delegate { SelectWorkspaceTab("Bike Metrics"); }, HasCoreBikeMetrics);
             AddWorkflowChecklistRow(card, "Report images", "Save/capture the useful analysis photos for the client report.", "Images", delegate { SelectWorkspaceTab("Report Images"); }, HasReportImage);
             AddWorkflowChecklistRow(card, "Preview report", "Review the client-facing report before saving or sending it.", "Preview", delegate { PreviewReport_Click(this, EventArgs.Empty); }, IsReportReady);
@@ -1089,9 +1090,71 @@ namespace CassetteMotionPro.Workspace
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
             table.Controls.Add(folderHint, 0, folderHintRow);
 
+            Panel saveGuide = BuildAnalysisSaveGuide();
+            int saveGuideRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 188));
+            table.Controls.Add(saveGuide, 0, saveGuideRow);
+
             page.AutoScroll = true;
             page.Controls.Add(table);
             return page;
+        }
+
+        private Panel BuildAnalysisSaveGuide()
+        {
+            Panel panel = new Panel();
+            panel.Dock = DockStyle.Fill;
+            panel.BackColor = Color.White;
+            panel.Padding = new Padding(16, 12, 16, 12);
+
+            TableLayoutPanel guide = new TableLayoutPanel();
+            guide.Dock = DockStyle.Fill;
+            guide.ColumnCount = 3;
+            guide.RowCount = 0;
+            guide.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
+            guide.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            guide.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170));
+
+            Label title = new Label();
+            title.Text = "After measuring: what goes where";
+            title.Dock = DockStyle.Fill;
+            title.Font = new Font(Font.FontFamily, 11, FontStyle.Bold);
+            title.ForeColor = Color.FromArgb(24, 31, 29);
+            int headerRow = guide.RowCount++;
+            guide.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
+            guide.Controls.Add(title, 0, headerRow);
+            guide.SetColumnSpan(title, 3);
+
+            AddSaveGuideRow(guide, "Evidence", "Screenshots, exported frames, clips, and reference media saved from the Kinovea workspace.", "Analysis Captures");
+            AddSaveGuideRow(guide, "Final numbers", "Saddle height, setback, reach, handlebar X/Y, and body-angle values after you measure.", "Bike Metrics");
+            AddSaveGuideRow(guide, "Report visuals", "The images you actually want shown in the client report.", "Report Images");
+            AddSaveGuideRow(guide, "Client files", "Reports, packages, zips, notes, videos, and photos organized by this fit session.", "Client Files");
+
+            panel.Controls.Add(guide);
+            return panel;
+        }
+
+        private void AddSaveGuideRow(TableLayoutPanel table, string item, string description, string destination)
+        {
+            int row = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
+
+            Label itemLabel = FieldLabel(item);
+            itemLabel.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            itemLabel.TextAlign = ContentAlignment.MiddleLeft;
+
+            Label descriptionLabel = FieldLabel(description);
+            descriptionLabel.ForeColor = Color.FromArgb(92, 104, 98);
+            descriptionLabel.TextAlign = ContentAlignment.MiddleLeft;
+
+            Label destinationLabel = FieldLabel(destination);
+            destinationLabel.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            destinationLabel.ForeColor = Color.FromArgb(60, 145, 76);
+            destinationLabel.TextAlign = ContentAlignment.MiddleLeft;
+
+            table.Controls.Add(itemLabel, 0, row);
+            table.Controls.Add(descriptionLabel, 1, row);
+            table.Controls.Add(destinationLabel, 2, row);
         }
 
         private TabPage BuildBodyAnglesTab()
@@ -1459,6 +1522,25 @@ namespace CassetteMotionPro.Workspace
                 HasImageFile("BeforeReportImagePath") ||
                 HasImageFile("AfterReportImagePath") ||
                 HasImageFile("MeasurementReferenceImagePath");
+        }
+
+        private bool HasAnalysisCaptureEvidence()
+        {
+            if (currentSession == null)
+                return false;
+
+            string folderPath = GetSessionAnalysisCapturesFolderPath();
+            if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+                return false;
+
+            try
+            {
+                return Directory.GetFiles(folderPath, "*", SearchOption.AllDirectories).Length > 0;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private bool HasImageFile(string key)
