@@ -332,7 +332,7 @@ namespace CassetteMotionPro.Workspace
 
             Control checklist = BuildWorkflowChecklist();
             int checklistRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 446));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 610));
             table.Controls.Add(checklist, 0, checklistRow);
             table.SetColumnSpan(checklist, 2);
 
@@ -408,7 +408,7 @@ namespace CassetteMotionPro.Workspace
         private Control BuildWorkflowShortcutBar()
         {
             GroupBox group = new GroupBox();
-            group.Text = "Start Fit Workflow";
+            group.Text = "Simplified Fit Workflow";
             group.Dock = DockStyle.Fill;
             group.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             group.ForeColor = Color.FromArgb(37, 48, 43);
@@ -420,13 +420,10 @@ namespace CassetteMotionPro.Workspace
             buttons.WrapContents = true;
             buttons.Padding = new Padding(0, 4, 0, 0);
 
-            AddWorkflowShortcutButton(buttons, "1. Goals", true, SelectOverviewGoals);
-            AddWorkflowShortcutButton(buttons, "2. Videos", false, SaveAndSelectVideos);
-            AddWorkflowShortcutButton(buttons, "3. Analysis", false, delegate { SelectWorkspaceTab("Video Analysis"); });
-            AddWorkflowShortcutButton(buttons, "4. Metrics", false, delegate { SelectWorkspaceTab("Bike Metrics"); });
-            AddWorkflowShortcutButton(buttons, "5. Angles", false, delegate { SelectWorkspaceTab("Body Angles"); });
-            AddWorkflowShortcutButton(buttons, "6. Images", false, delegate { SelectWorkspaceTab("Report Images"); });
-            AddWorkflowShortcutButton(buttons, "7. Preview", false, delegate { PreviewReport_Click(this, EventArgs.Empty); });
+            AddWorkflowShortcutButton(buttons, "1. Client Info", true, SelectOverviewGoals);
+            AddWorkflowShortcutButton(buttons, "2. Capture + Measure", false, SaveAndSelectVideos);
+            AddWorkflowShortcutButton(buttons, "3. Fit Results", false, delegate { SelectWorkspaceTab("Bike Metrics"); });
+            AddWorkflowShortcutButton(buttons, "4. Report", false, delegate { SelectWorkspaceTab("Report Images"); });
 
             group.Controls.Add(buttons);
             return group;
@@ -476,7 +473,7 @@ namespace CassetteMotionPro.Workspace
         private void AddWorkflowShortcutButton(FlowLayoutPanel buttons, string text, bool primary, Action action)
         {
             Button button = CreateButton(text, primary);
-            button.Size = new Size(112, 34);
+            button.Size = new Size(158, 34);
             button.Margin = new Padding(0, 4, 8, 4);
             button.Click += delegate
             {
@@ -511,7 +508,7 @@ namespace CassetteMotionPro.Workspace
             title.TextAlign = ContentAlignment.MiddleLeft;
 
             Label hint = new Label();
-            hint.Text = "Use this as your session roadmap. Green means that part is ready.";
+            hint.Text = "Four stages: Client Info → Capture + Measure → Fit Results → Report. Green means ready.";
             hint.ForeColor = Color.FromArgb(92, 104, 98);
             hint.Dock = DockStyle.Fill;
             hint.TextAlign = ContentAlignment.MiddleLeft;
@@ -524,18 +521,40 @@ namespace CassetteMotionPro.Workspace
             card.SetColumnSpan(hint, 2);
 
             workflowChecklistItems.Clear();
+            AddWorkflowStageHeader(card, "1. Client Info", "Set up the person, bike, goals, and session before touching video.");
             AddWorkflowChecklistRow(card, "Client info", "Confirm the client folder, bike, and contact info before recording.", "Client", delegate { SelectWorkspaceTab("Client Files"); }, HasClientFolder);
             AddWorkflowChecklistRow(card, "Fit goals", "Enter the rider goals and session notes before making changes.", "Goals", SelectOverviewGoals, HasFitGoals);
+            AddWorkflowStageHeader(card, "2. Capture + Measure", "Use Kinovea tools, then save videos, screenshots, exports, or clips to this client session.");
             AddWorkflowChecklistRow(card, "Before video", "Record/import the starting video into this client session.", "Videos", delegate { SelectWorkspaceTab("Videos"); }, delegate { return HasMediaFile("BeforeVideoPath"); });
             AddWorkflowChecklistRow(card, "After video", "Record/import the comparison/final video into this client session.", "Videos", delegate { SelectWorkspaceTab("Videos"); }, delegate { return HasMediaFile("AfterVideoPath"); });
             AddWorkflowChecklistRow(card, "Measure in Kinovea", "Open analysis, use the Kinovea tools, and save useful evidence into Analysis Captures.", "Tools", delegate { SelectWorkspaceTab("Video Analysis"); }, delegate { return HasMediaFile("BeforeVideoPath") || HasMediaFile("AfterVideoPath"); });
             AddWorkflowChecklistRow(card, "Evidence saved", "Save screenshots, exported images, or useful video evidence into Analysis Captures.", "Captures", delegate { SelectWorkspaceTab("Video Analysis"); }, HasAnalysisCaptureEvidence);
+            AddWorkflowStageHeader(card, "3. Fit Results", "Enter the measured bike numbers and body angles you want reflected in the report.");
             AddWorkflowChecklistRow(card, "Bike Metrics", "Save the measured saddle height, setback, reach, and handlebar X/Y values.", "Metrics", delegate { SelectWorkspaceTab("Bike Metrics"); }, HasCoreBikeMetrics);
+            AddWorkflowStageHeader(card, "4. Report", "Choose report images, preview the client-facing report, then package/send it.");
             AddWorkflowChecklistRow(card, "Report images", "Save/capture the useful analysis photos for the client report.", "Images", delegate { SelectWorkspaceTab("Report Images"); }, HasReportImage);
             AddWorkflowChecklistRow(card, "Preview report", "Review the client-facing report before saving or sending it.", "Preview", delegate { PreviewReport_Click(this, EventArgs.Empty); }, IsReportReady);
 
             panel.Controls.Add(card);
             return panel;
+        }
+
+        private void AddWorkflowStageHeader(TableLayoutPanel table, string stageTitle, string description)
+        {
+            int row = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
+
+            Label header = new Label();
+            header.Dock = DockStyle.Fill;
+            header.TextAlign = ContentAlignment.MiddleLeft;
+            header.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            header.ForeColor = Color.FromArgb(37, 48, 43);
+            header.BackColor = Color.FromArgb(240, 246, 232);
+            header.Padding = new Padding(10, 0, 0, 0);
+            header.Text = stageTitle + "  —  " + description;
+
+            table.Controls.Add(header, 0, row);
+            table.SetColumnSpan(header, 4);
         }
 
         private void AddWorkflowChecklistRow(TableLayoutPanel table, string labelText, string description, string buttonText, Action action, Func<bool> isReady)
