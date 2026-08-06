@@ -24,6 +24,7 @@ namespace CassetteMotionPro.Workspace
         private readonly Action<string> openVideo;
         private readonly Action<string, string> openVideoPair;
         private readonly Action<string> prepareCaptureFolder;
+        private readonly Action<string> openLiveCaptureFolder;
         private readonly Action<string> openBodyAngleGuide;
         private readonly ListView sessionList = new ListView();
         private readonly TextBox txtTitle = new TextBox();
@@ -61,7 +62,7 @@ namespace CassetteMotionPro.Workspace
         private FitSessionRecord currentSession;
         private Action nextRecommendedStepActionHandler;
 
-        public BikeFitWorkspaceForm(ClientRecord client, Action<string> openVideo, Action<string, string> openVideoPair, Action<string> prepareCaptureFolder, Action<string> openBodyAngleGuide)
+        public BikeFitWorkspaceForm(ClientRecord client, Action<string> openVideo, Action<string, string> openVideoPair, Action<string> prepareCaptureFolder, Action<string> openLiveCaptureFolder, Action<string> openBodyAngleGuide)
         {
             if (client == null)
                 throw new ArgumentNullException("client");
@@ -70,6 +71,7 @@ namespace CassetteMotionPro.Workspace
             this.openVideo = openVideo;
             this.openVideoPair = openVideoPair;
             this.prepareCaptureFolder = prepareCaptureFolder;
+            this.openLiveCaptureFolder = openLiveCaptureFolder;
             this.openBodyAngleGuide = openBodyAngleGuide;
             repository = new FitSessionRepository(client);
 
@@ -617,10 +619,11 @@ namespace CassetteMotionPro.Workspace
             AddSessionAnalysisCapturesRow(table, "Analysis captures", "Client/session folder prepared before opening Kinovea tools");
             AddSessionReportsRow(table, "Active reports", "Reports → Fit Sessions → active session");
             AddImportActionRow(table, "Add videos", "Copy before/after videos into this active fit session.", "Before Video", delegate { BrowseVideo("BeforeVideoPath"); }, "After Video", delegate { BrowseVideo("AfterVideoPath"); });
+            AddImportActionRow(table, "Record live", "Open Kinovea live capture into this session’s Before or After video folder.", "Before Live", delegate { OpenLiveCaptureForVideo("BeforeVideoPath"); }, "After Live", delegate { OpenLiveCaptureForVideo("AfterVideoPath"); });
             AddImportActionRow(table, "Add photos", "Copy before/after report photos into this active fit session.", "Before Photo", delegate { BrowseReportImage("BeforeReportImagePath"); }, "After Photo", delegate { BrowseReportImage("AfterReportImagePath"); });
 
             Label hint = new Label();
-            hint.Text = "Use these shortcuts when you want to check where a client’s files are being saved. The Active rows save the current session first, then open that session’s exact folder. Add videos/photos copies the selected file into this fit session and updates the matching Videos or Report Images tab.";
+            hint.Text = "Use these shortcuts when you want to check where a client’s files are being saved. Record live opens Kinovea into this session’s Before/After video folder. Add videos/photos copies the selected file into this fit session and updates the matching Videos or Report Images tab.";
             hint.Dock = DockStyle.Fill;
             hint.ForeColor = Color.FromArgb(92, 104, 98);
             hint.Padding = new Padding(0, 12, 0, 0);
@@ -779,6 +782,11 @@ namespace CassetteMotionPro.Workspace
             return Path.Combine(client.VideosPath, "Fit Sessions", currentSession.StorageFolderName);
         }
 
+        private string GetSessionVideoViewFolderPath(string viewName)
+        {
+            return Path.Combine(GetSessionVideosFolderPath(), viewName);
+        }
+
         private string GetSessionPhotosFolderPath()
         {
             return Path.Combine(client.PhotosPath, "Fit Sessions", currentSession.StorageFolderName);
@@ -838,20 +846,21 @@ namespace CassetteMotionPro.Workspace
             TableLayoutPanel table = new TableLayoutPanel();
             table.Dock = DockStyle.Fill;
             table.Padding = new Padding(24, 22, 24, 18);
-            table.ColumnCount = 4;
+            table.ColumnCount = 5;
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 95));
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 86));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 126));
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 98));
 
             Label analysisHint = new Label();
-            analysisHint.Text = "Use Analyze to close this session screen and open the video in the main player with the drawing tools, timeline, playback controls, and joint controls.";
+            analysisHint.Text = "Use Browse to import a finished clip, or Record Live to open Kinovea capture pointed at this session’s Before/After video folder. Use Analyze for the main player tools after a clip is selected.";
             analysisHint.Dock = DockStyle.Fill;
             analysisHint.ForeColor = Color.FromArgb(92, 104, 98);
             int analysisHintRow = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
             table.Controls.Add(analysisHint, 1, analysisHintRow);
-            table.SetColumnSpan(analysisHint, 3);
+            table.SetColumnSpan(analysisHint, 4);
 
             AddMediaRow(table, "Before", "BeforeVideoPath");
             AddMediaRow(table, "After", "AfterVideoPath");
@@ -869,16 +878,16 @@ namespace CassetteMotionPro.Workspace
             int comparisonRow = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 78));
             table.Controls.Add(comparisons, 1, comparisonRow);
-            table.SetColumnSpan(comparisons, 3);
+            table.SetColumnSpan(comparisons, 4);
 
             Label hint = new Label();
-            hint.Text = "The bike-fit controls are in the video player workspace. The Videos tab saves which files belong to this session; Analyze opens the player controls for measuring and reviewing movement.";
+            hint.Text = "For a real fit, record as many live clips as needed into the Before/After folders, then come back and Browse/select the best clips for this session and report.";
             hint.Dock = DockStyle.Fill;
             hint.ForeColor = Color.FromArgb(92, 104, 98);
             int hintRow = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
             table.Controls.Add(hint, 1, hintRow);
-            table.SetColumnSpan(hint, 3);
+            table.SetColumnSpan(hint, 4);
 
             page.Controls.Add(table);
             return page;
@@ -1459,6 +1468,11 @@ namespace CassetteMotionPro.Workspace
             browse.Dock = DockStyle.Fill;
             browse.Click += delegate { BrowseVideo(key); };
 
+            Button record = CreateButton("Record Live", true);
+            record.Margin = new Padding(0, 6, 8, 6);
+            record.Dock = DockStyle.Fill;
+            record.Click += delegate { OpenLiveCaptureForVideo(key); };
+
             Button open = CreateButton("Analyze", false);
             open.Margin = new Padding(0, 6, 0, 6);
             open.Dock = DockStyle.Fill;
@@ -1467,7 +1481,8 @@ namespace CassetteMotionPro.Workspace
             table.Controls.Add(label, 0, row);
             table.Controls.Add(path, 1, row);
             table.Controls.Add(browse, 2, row);
-            table.Controls.Add(open, 3, row);
+            table.Controls.Add(record, 3, row);
+            table.Controls.Add(open, 4, row);
         }
 
         private void AddImageRow(TableLayoutPanel table, string labelText, string key)
@@ -2652,11 +2667,14 @@ namespace CassetteMotionPro.Workspace
         {
             using (OpenFileDialog dialog = new OpenFileDialog())
             {
-                string viewName = key.Replace("VideoPath", string.Empty);
+                string viewName = GetVideoViewName(key);
                 dialog.Title = "Import " + viewName.ToLowerInvariant() + " video";
                 dialog.Filter = "Video files|*.mp4;*.mov;*.avi;*.mkv;*.m4v;*.mpg;*.mpeg;*.wmv|All files|*.*";
                 dialog.RestoreDirectory = true;
-                if (Directory.Exists(client.VideosPath))
+                string sessionViewFolder = GetSessionVideoViewFolderPath(viewName);
+                if (Directory.Exists(sessionViewFolder))
+                    dialog.InitialDirectory = sessionViewFolder;
+                else if (Directory.Exists(client.VideosPath))
                     dialog.InitialDirectory = client.VideosPath;
                 if (dialog.ShowDialog(this) == DialogResult.OK)
                 {
@@ -2684,9 +2702,34 @@ namespace CassetteMotionPro.Workspace
             }
         }
 
+        private void OpenLiveCaptureForVideo(string key)
+        {
+            if (openLiveCaptureFolder == null)
+            {
+                MessageBox.Show(this, "Live capture is not available from this workspace yet.", "Live capture", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                string viewName = GetVideoViewName(key);
+                SaveCurrentSession();
+                Directory.CreateDirectory(GetSessionVideosFolderPath());
+                string destinationDirectory = GetSessionVideoViewFolderPath(viewName);
+                Directory.CreateDirectory(destinationDirectory);
+
+                Close();
+                openLiveCaptureFolder(destinationDirectory);
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "Live capture could not be opened for this session.\n\n" + exception.Message, "Live capture", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         private string ImportVideo(string sourcePath, string viewName)
         {
-            string destinationDirectory = Path.Combine(client.VideosPath, "Fit Sessions", currentSession.StorageFolderName, viewName);
+            string destinationDirectory = GetSessionVideoViewFolderPath(viewName);
             Directory.CreateDirectory(destinationDirectory);
 
             string destinationPath = Path.Combine(destinationDirectory, Path.GetFileName(sourcePath));
@@ -2702,6 +2745,11 @@ namespace CassetteMotionPro.Workspace
 
             File.Copy(sourcePath, destinationPath, false);
             return destinationPath;
+        }
+
+        private static string GetVideoViewName(string key)
+        {
+            return key.Replace("VideoPath", string.Empty);
         }
 
         private void BrowseReportImage(string key)
