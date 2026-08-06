@@ -44,6 +44,7 @@ namespace CassetteMotionPro.Workspace
         private readonly Label saveHint = new Label();
         private readonly Label activeSessionStatus = new Label();
         private readonly Label analysisCapturesStatus = new Label();
+        private readonly Label nextRecommendedStep = new Label();
         private readonly CheckBox chkShowBeforeMeasurementsInReport = new CheckBox();
         private readonly CheckBox chkShowSideBySideImageInReport = new CheckBox();
         private readonly CheckBox chkShowBeforeImageInReport = new CheckBox();
@@ -292,6 +293,12 @@ namespace CassetteMotionPro.Workspace
             table.Controls.Add(shortcuts, 0, shortcutsRow);
             table.SetColumnSpan(shortcuts, 2);
 
+            Control nextStep = BuildNextRecommendedStepPanel();
+            int nextStepRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 82));
+            table.Controls.Add(nextStep, 0, nextStepRow);
+            table.SetColumnSpan(nextStep, 2);
+
             txtTitle.TextChanged += delegate { UpdateWorkflowChecklist(); };
             AddEditorRow(table, "Session title", txtTitle, 38);
 
@@ -421,6 +428,23 @@ namespace CassetteMotionPro.Workspace
 
             group.Controls.Add(buttons);
             return group;
+        }
+
+        private Control BuildNextRecommendedStepPanel()
+        {
+            Panel panel = new Panel();
+            panel.Dock = DockStyle.Fill;
+            panel.BackColor = Color.FromArgb(247, 255, 229);
+            panel.Padding = new Padding(18, 12, 18, 12);
+
+            nextRecommendedStep.Dock = DockStyle.Fill;
+            nextRecommendedStep.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            nextRecommendedStep.ForeColor = Color.FromArgb(37, 48, 43);
+            nextRecommendedStep.TextAlign = ContentAlignment.MiddleLeft;
+            nextRecommendedStep.Text = "Next: enter rider goals.";
+
+            panel.Controls.Add(nextRecommendedStep);
+            return panel;
         }
 
         private void AddWorkflowShortcutButton(FlowLayoutPanel buttons, string text, bool primary, Action action)
@@ -1649,6 +1673,51 @@ namespace CassetteMotionPro.Workspace
                 item.StatusLabel.Text = ready ? "Ready" : "Needs step";
                 item.StatusLabel.ForeColor = ready ? Color.FromArgb(60, 145, 76) : Color.FromArgb(181, 118, 35);
             }
+
+            UpdateNextRecommendedStep();
+        }
+
+        private void UpdateNextRecommendedStep()
+        {
+            if (nextRecommendedStep == null)
+                return;
+
+            string message;
+            Color color;
+
+            if (!HasFitGoals())
+            {
+                message = "Next: enter rider goals and session notes before making changes.";
+                color = Color.FromArgb(181, 118, 35);
+            }
+            else if (!HasMediaFile("BeforeVideoPath") || !HasMediaFile("AfterVideoPath"))
+            {
+                message = "Next: add Before and After videos to the active client session.";
+                color = Color.FromArgb(181, 118, 35);
+            }
+            else if (!HasAnalysisCaptureEvidence())
+            {
+                message = "Next: open Kinovea tools and save screenshots, exports, or clips into Analysis Captures.";
+                color = Color.FromArgb(181, 118, 35);
+            }
+            else if (!HasCoreBikeMetrics())
+            {
+                message = "Next: enter the final Bike Metrics values after measuring in Kinovea.";
+                color = Color.FromArgb(181, 118, 35);
+            }
+            else if (!HasReportImage())
+            {
+                message = "Next: choose report images or a side-by-side image for the client report.";
+                color = Color.FromArgb(181, 118, 35);
+            }
+            else
+            {
+                message = "Ready: preview the report and confirm everything looks right.";
+                color = Color.FromArgb(60, 145, 76);
+            }
+
+            nextRecommendedStep.Text = message;
+            nextRecommendedStep.ForeColor = color;
         }
 
         private bool HasClientFolder()
