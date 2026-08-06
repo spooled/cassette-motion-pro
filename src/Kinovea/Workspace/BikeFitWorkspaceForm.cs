@@ -385,7 +385,7 @@ namespace CassetteMotionPro.Workspace
 
             Button analyze = CreateButton("Kinovea Tools", false);
             analyze.Size = new Size(122, 34);
-            analyze.Click += PrepareAndSelectVideoAnalysis;
+            analyze.Click += delegate { PrepareAndSelectVideoAnalysis(); };
 
             buttons.Controls.Add(clientFiles);
             buttons.Controls.Add(startVideos);
