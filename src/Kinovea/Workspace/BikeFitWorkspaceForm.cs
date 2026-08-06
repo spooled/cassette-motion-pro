@@ -45,6 +45,7 @@ namespace CassetteMotionPro.Workspace
         private readonly Label activeSessionStatus = new Label();
         private readonly Label analysisCapturesStatus = new Label();
         private readonly Label nextRecommendedStep = new Label();
+        private readonly Button nextRecommendedStepAction = new Button();
         private readonly CheckBox chkShowBeforeMeasurementsInReport = new CheckBox();
         private readonly CheckBox chkShowSideBySideImageInReport = new CheckBox();
         private readonly CheckBox chkShowBeforeImageInReport = new CheckBox();
@@ -58,6 +59,7 @@ namespace CassetteMotionPro.Workspace
         private readonly List<WorkflowChecklistItem> workflowChecklistItems = new List<WorkflowChecklistItem>();
         private TabControl editorTabs;
         private FitSessionRecord currentSession;
+        private Action nextRecommendedStepActionHandler;
 
         public BikeFitWorkspaceForm(ClientRecord client, Action<string> openVideo, Action<string, string> openVideoPair, Action<string> prepareCaptureFolder, Action<string> openBodyAngleGuide)
         {
@@ -437,13 +439,37 @@ namespace CassetteMotionPro.Workspace
             panel.BackColor = Color.FromArgb(247, 255, 229);
             panel.Padding = new Padding(18, 12, 18, 12);
 
+            TableLayoutPanel layout = new TableLayoutPanel();
+            layout.Dock = DockStyle.Fill;
+            layout.ColumnCount = 2;
+            layout.RowCount = 1;
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
             nextRecommendedStep.Dock = DockStyle.Fill;
             nextRecommendedStep.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             nextRecommendedStep.ForeColor = Color.FromArgb(37, 48, 43);
             nextRecommendedStep.TextAlign = ContentAlignment.MiddleLeft;
             nextRecommendedStep.Text = "Next: enter rider goals.";
 
-            panel.Controls.Add(nextRecommendedStep);
+            nextRecommendedStepAction.Dock = DockStyle.Fill;
+            nextRecommendedStepAction.FlatStyle = FlatStyle.Flat;
+            nextRecommendedStepAction.FlatAppearance.BorderSize = 0;
+            nextRecommendedStepAction.BackColor = Color.FromArgb(139, 214, 0);
+            nextRecommendedStepAction.ForeColor = Color.FromArgb(20, 30, 24);
+            nextRecommendedStepAction.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            nextRecommendedStepAction.Text = "Go";
+            nextRecommendedStepAction.Click += delegate
+            {
+                if (nextRecommendedStepActionHandler != null)
+                    nextRecommendedStepActionHandler();
+                UpdateWorkflowChecklist();
+            };
+
+            layout.Controls.Add(nextRecommendedStep, 0, 0);
+            layout.Controls.Add(nextRecommendedStepAction, 1, 0);
+            panel.Controls.Add(layout);
             return panel;
         }
 
@@ -1683,41 +1709,58 @@ namespace CassetteMotionPro.Workspace
                 return;
 
             string message;
+            string actionText;
+            Action action;
             Color color;
 
             if (!HasFitGoals())
             {
                 message = "Next: enter rider goals and session notes before making changes.";
+                actionText = "Go to Goals";
+                action = SelectOverviewGoals;
                 color = Color.FromArgb(181, 118, 35);
             }
             else if (!HasMediaFile("BeforeVideoPath") || !HasMediaFile("AfterVideoPath"))
             {
                 message = "Next: add Before and After videos to the active client session.";
+                actionText = "Go to Videos";
+                action = SaveAndSelectVideos;
                 color = Color.FromArgb(181, 118, 35);
             }
             else if (!HasAnalysisCaptureEvidence())
             {
                 message = "Next: open Kinovea tools and save screenshots, exports, or clips into Analysis Captures.";
+                actionText = "Go to Analysis";
+                action = delegate { SelectWorkspaceTab("Video Analysis"); };
                 color = Color.FromArgb(181, 118, 35);
             }
             else if (!HasCoreBikeMetrics())
             {
                 message = "Next: enter the final Bike Metrics values after measuring in Kinovea.";
+                actionText = "Go to Metrics";
+                action = delegate { SelectWorkspaceTab("Bike Metrics"); };
                 color = Color.FromArgb(181, 118, 35);
             }
             else if (!HasReportImage())
             {
                 message = "Next: choose report images or a side-by-side image for the client report.";
+                actionText = "Go to Images";
+                action = delegate { SelectWorkspaceTab("Report Images"); };
                 color = Color.FromArgb(181, 118, 35);
             }
             else
             {
                 message = "Ready: preview the report and confirm everything looks right.";
+                actionText = "Preview Report";
+                action = delegate { PreviewReport_Click(this, EventArgs.Empty); };
                 color = Color.FromArgb(60, 145, 76);
             }
 
             nextRecommendedStep.Text = message;
             nextRecommendedStep.ForeColor = color;
+            nextRecommendedStepAction.Text = actionText;
+            nextRecommendedStepAction.Enabled = action != null;
+            nextRecommendedStepActionHandler = action;
         }
 
         private bool HasClientFolder()
