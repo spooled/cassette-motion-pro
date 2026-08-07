@@ -846,21 +846,22 @@ namespace CassetteMotionPro.Workspace
             table.Dock = DockStyle.Top;
             table.AutoSize = true;
             table.Padding = new Padding(24, 22, 24, 18);
-            table.ColumnCount = 5;
-            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 95));
-            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            table.ColumnCount = 6;
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 86));
-            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 126));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 82));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 116));
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 98));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 86));
 
             Label analysisHint = new Label();
-            analysisHint.Text = "Use Browse to import a finished clip, or Record Live to open Kinovea capture pointed at this session’s Before/After video folder. Use Analyze for the main player tools after a clip is selected.";
+            analysisHint.Text = "Use Record Live to open Kinovea capture pointed at this session’s Before/After video folder. After recording, return here and click Use Latest to select the newest saved clip automatically. Browse is still there when you want to choose a different take.";
             analysisHint.Dock = DockStyle.Fill;
             analysisHint.ForeColor = Color.FromArgb(92, 104, 98);
             int analysisHintRow = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
             table.Controls.Add(analysisHint, 1, analysisHintRow);
-            table.SetColumnSpan(analysisHint, 4);
+            table.SetColumnSpan(analysisHint, 5);
 
             AddMediaRow(table, "Before", "BeforeVideoPath");
             AddMediaRow(table, "After", "AfterVideoPath");
@@ -878,7 +879,7 @@ namespace CassetteMotionPro.Workspace
             int comparisonRow = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 78));
             table.Controls.Add(comparisons, 1, comparisonRow);
-            table.SetColumnSpan(comparisons, 4);
+            table.SetColumnSpan(comparisons, 5);
 
             Label toolsTitle = new Label();
             toolsTitle.Text = "Kinovea analysis + saved evidence";
@@ -1525,6 +1526,11 @@ namespace CassetteMotionPro.Workspace
             record.Dock = DockStyle.Fill;
             record.Click += delegate { OpenLiveCaptureForVideo(key); };
 
+            Button latest = CreateButton("Use Latest", false);
+            latest.Margin = new Padding(0, 6, 8, 6);
+            latest.Dock = DockStyle.Fill;
+            latest.Click += delegate { UseLatestVideo(key); };
+
             Button open = CreateButton("Analyze", false);
             open.Margin = new Padding(0, 6, 0, 6);
             open.Dock = DockStyle.Fill;
@@ -1534,7 +1540,8 @@ namespace CassetteMotionPro.Workspace
             table.Controls.Add(path, 1, row);
             table.Controls.Add(browse, 2, row);
             table.Controls.Add(record, 3, row);
-            table.Controls.Add(open, 4, row);
+            table.Controls.Add(latest, 4, row);
+            table.Controls.Add(open, 5, row);
         }
 
         private void AddImageRow(TableLayoutPanel table, string labelText, string key)
@@ -2769,6 +2776,7 @@ namespace CassetteMotionPro.Workspace
                 Directory.CreateDirectory(GetSessionVideosFolderPath());
                 string destinationDirectory = GetSessionVideoViewFolderPath(viewName);
                 Directory.CreateDirectory(destinationDirectory);
+                WriteCaptureFolderHint(destinationDirectory, viewName);
 
                 Close();
                 openLiveCaptureFolder(destinationDirectory);
@@ -2777,6 +2785,82 @@ namespace CassetteMotionPro.Workspace
             {
                 MessageBox.Show(this, "Live capture could not be opened for this session.\n\n" + exception.Message, "Live capture", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void UseLatestVideo(string key)
+        {
+            try
+            {
+                string viewName = GetVideoViewName(key);
+                SaveCurrentSession();
+                Directory.CreateDirectory(GetSessionVideosFolderPath());
+                string destinationDirectory = GetSessionVideoViewFolderPath(viewName);
+                Directory.CreateDirectory(destinationDirectory);
+                WriteCaptureFolderHint(destinationDirectory, viewName);
+
+                string latestVideoPath = FindLatestVideoFile(destinationDirectory);
+                if (string.IsNullOrEmpty(latestVideoPath))
+                {
+                    MessageBox.Show(this, "No saved video files were found in this session’s " + viewName + " folder yet.\n\nClick Record Live, record the clip, then return to this workspace and click Use Latest.", "Use Latest Video", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                mediaBoxes[key].Text = latestVideoPath;
+                SaveCurrentSession();
+                UpdateSaveHint(viewName + " video set to the newest recording in this session folder.");
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "The newest video could not be selected for this session.\n\n" + exception.Message, "Use Latest Video", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private static string FindLatestVideoFile(string folder)
+        {
+            string[] patterns = new string[] { "*.mp4", "*.mov", "*.avi", "*.mkv", "*.m4v", "*.mpg", "*.mpeg", "*.wmv" };
+            string latestPath = null;
+            DateTime latestWriteTime = DateTime.MinValue;
+
+            foreach (string pattern in patterns)
+            {
+                string[] files = new string[0];
+                try
+                {
+                    files = Directory.GetFiles(folder, pattern, SearchOption.TopDirectoryOnly);
+                }
+                catch
+                {
+                    continue;
+                }
+
+                foreach (string file in files)
+                {
+                    DateTime writeTime = File.GetLastWriteTime(file);
+                    if (latestPath == null || writeTime > latestWriteTime)
+                    {
+                        latestPath = file;
+                        latestWriteTime = writeTime;
+                    }
+                }
+            }
+
+            return latestPath;
+        }
+
+        private static void WriteCaptureFolderHint(string folder, string viewName)
+        {
+            string hintPath = Path.Combine(folder, "README - Record Live Here.txt");
+            if (File.Exists(hintPath))
+                return;
+
+            string contents =
+                "Cassette Motion Pro live recording folder" + Environment.NewLine +
+                Environment.NewLine +
+                "This is the " + viewName + " video folder for the active fit session." + Environment.NewLine +
+                "Record live capture clips here, then return to the Bike Fit Workspace and click Use Latest to select the newest saved video automatically." + Environment.NewLine +
+                Environment.NewLine +
+                "You can still use Browse when you want to pick an older take instead.";
+            File.WriteAllText(hintPath, contents);
         }
 
         private string ImportVideo(string sourcePath, string viewName)
