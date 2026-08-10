@@ -47,6 +47,7 @@ namespace CassetteMotionPro.Workspace
         private readonly Label analysisCapturesStatus = new Label();
         private readonly Label nextRecommendedStep = new Label();
         private readonly Button nextRecommendedStepAction = new Button();
+        private readonly Button nextRecommendedFolderAction = new Button();
         private readonly CheckBox chkShowBeforeMeasurementsInReport = new CheckBox();
         private readonly CheckBox chkShowSideBySideImageInReport = new CheckBox();
         private readonly CheckBox chkShowBeforeImageInReport = new CheckBox();
@@ -61,6 +62,7 @@ namespace CassetteMotionPro.Workspace
         private TabControl editorTabs;
         private FitSessionRecord currentSession;
         private Action nextRecommendedStepActionHandler;
+        private Action nextRecommendedFolderActionHandler;
 
         public BikeFitWorkspaceForm(ClientRecord client, Action<string> openVideo, Action<string, string> openVideoPair, Action<string> prepareCaptureFolder, Action<string> openLiveCaptureFolder, Action<string> openBodyAngleGuide)
         {
@@ -393,7 +395,7 @@ namespace CassetteMotionPro.Workspace
             buttons.Controls.Add(analyze);
 
             Label path = new Label();
-            path.Text = "Client info → Capture + analyze videos → Bike Metrics → Report";
+            path.Text = "Client info → Record live → Use Latest → Kinovea tools → Bike Metrics → Report";
             path.Dock = DockStyle.Fill;
             path.ForeColor = Color.FromArgb(92, 104, 98);
             path.TextAlign = ContentAlignment.MiddleLeft;
@@ -421,6 +423,7 @@ namespace CassetteMotionPro.Workspace
             buttons.WrapContents = true;
             buttons.Padding = new Padding(0, 4, 0, 0);
 
+            AddWorkflowShortcutButton(buttons, "Client Folders", false, delegate { SelectWorkspaceTab("Client Files"); });
             AddWorkflowShortcutButton(buttons, "1. Client Info", true, SelectOverviewGoals);
             AddWorkflowShortcutButton(buttons, "2. Capture + Measure", false, SaveAndSelectVideos);
             AddWorkflowShortcutButton(buttons, "3. Fit Results", false, delegate { SelectWorkspaceTab("Bike Metrics"); });
@@ -439,9 +442,10 @@ namespace CassetteMotionPro.Workspace
 
             TableLayoutPanel layout = new TableLayoutPanel();
             layout.Dock = DockStyle.Fill;
-            layout.ColumnCount = 2;
+            layout.ColumnCount = 3;
             layout.RowCount = 1;
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
@@ -465,8 +469,25 @@ namespace CassetteMotionPro.Workspace
                 UpdateWorkflowChecklist();
             };
 
+            nextRecommendedFolderAction.Dock = DockStyle.Fill;
+            nextRecommendedFolderAction.FlatStyle = FlatStyle.Flat;
+            nextRecommendedFolderAction.FlatAppearance.BorderSize = 1;
+            nextRecommendedFolderAction.FlatAppearance.BorderColor = Color.FromArgb(139, 214, 0);
+            nextRecommendedFolderAction.BackColor = Color.White;
+            nextRecommendedFolderAction.ForeColor = Color.FromArgb(37, 48, 43);
+            nextRecommendedFolderAction.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            nextRecommendedFolderAction.Margin = new Padding(8, 0, 0, 0);
+            nextRecommendedFolderAction.Text = "Open Folder";
+            nextRecommendedFolderAction.Click += delegate
+            {
+                if (nextRecommendedFolderActionHandler != null)
+                    nextRecommendedFolderActionHandler();
+                UpdateWorkflowChecklist();
+            };
+
             layout.Controls.Add(nextRecommendedStep, 0, 0);
             layout.Controls.Add(nextRecommendedStepAction, 1, 0);
+            layout.Controls.Add(nextRecommendedFolderAction, 2, 0);
             panel.Controls.Add(layout);
             return panel;
         }
@@ -1863,6 +1884,8 @@ namespace CassetteMotionPro.Workspace
             string message;
             string actionText;
             Action action;
+            string folderActionText;
+            Action folderAction;
             Color color;
 
             if (!HasFitGoals())
@@ -1870,13 +1893,19 @@ namespace CassetteMotionPro.Workspace
                 message = "Next: enter rider goals and session notes before making changes.";
                 actionText = "Go to Goals";
                 action = SelectOverviewGoals;
+                folderActionText = "Client Files";
+                folderAction = delegate { SelectWorkspaceTab("Client Files"); };
                 color = Color.FromArgb(181, 118, 35);
             }
             else if (!HasMediaFile("BeforeVideoPath") || !HasMediaFile("AfterVideoPath"))
             {
-                message = "Next: add Before and After videos to the active client session.";
+                bool beforeMissing = !HasMediaFile("BeforeVideoPath");
+                string viewName = beforeMissing ? "Before" : "After";
+                message = "Next: record/import the " + viewName + " video, then use Use Latest if you recorded live.";
                 actionText = "Go to Video";
                 action = SaveAndSelectVideos;
+                folderActionText = viewName + " Folder";
+                folderAction = delegate { OpenClientFolder(GetSessionVideoViewFolderPath(viewName), viewName + " videos"); };
                 color = Color.FromArgb(181, 118, 35);
             }
             else if (!HasAnalysisCaptureEvidence())
@@ -1884,6 +1913,8 @@ namespace CassetteMotionPro.Workspace
                 message = "Next: open Kinovea tools and save screenshots, exports, or clips into Analysis Captures.";
                 actionText = "Go to Analysis";
                 action = PrepareAndSelectVideoAnalysis;
+                folderActionText = "Captures";
+                folderAction = OpenAnalysisCapturesFolder;
                 color = Color.FromArgb(181, 118, 35);
             }
             else if (!HasCoreBikeMetrics())
@@ -1891,6 +1922,8 @@ namespace CassetteMotionPro.Workspace
                 message = "Next: enter the final Bike Metrics values after measuring in Kinovea.";
                 actionText = "Go to Metrics";
                 action = delegate { SelectWorkspaceTab("Bike Metrics"); };
+                folderActionText = "Session File";
+                folderAction = delegate { OpenClientFolder(GetSessionRecordFolderPath(), "Session record"); };
                 color = Color.FromArgb(181, 118, 35);
             }
             else if (!HasReportImage())
@@ -1898,6 +1931,8 @@ namespace CassetteMotionPro.Workspace
                 message = "Next: choose report images or a side-by-side image for the client report.";
                 actionText = "Go to Images";
                 action = delegate { SelectWorkspaceTab("Report Images"); };
+                folderActionText = "Image Folder";
+                folderAction = delegate { OpenClientFolder(GetSessionReportImagesFolderPath(), "Report images"); };
                 color = Color.FromArgb(181, 118, 35);
             }
             else
@@ -1905,6 +1940,8 @@ namespace CassetteMotionPro.Workspace
                 message = "Ready: preview the report and confirm everything looks right.";
                 actionText = "Preview Report";
                 action = delegate { PreviewReport_Click(this, EventArgs.Empty); };
+                folderActionText = "Reports";
+                folderAction = delegate { OpenClientFolder(GetSessionReportsFolderPath(), "Reports"); };
                 color = Color.FromArgb(60, 145, 76);
             }
 
@@ -1913,6 +1950,9 @@ namespace CassetteMotionPro.Workspace
             nextRecommendedStepAction.Text = actionText;
             nextRecommendedStepAction.Enabled = action != null;
             nextRecommendedStepActionHandler = action;
+            nextRecommendedFolderAction.Text = folderActionText;
+            nextRecommendedFolderAction.Enabled = folderAction != null;
+            nextRecommendedFolderActionHandler = folderAction;
         }
 
         private bool HasClientFolder()
