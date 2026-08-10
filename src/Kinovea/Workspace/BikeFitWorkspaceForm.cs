@@ -604,6 +604,7 @@ namespace CassetteMotionPro.Workspace
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 240));
 
+            AddClientFilesSection(table, "Client folders");
             AddClientFolderRow(table, "Client folder", client.FolderPath);
             AddClientFolderRow(table, "Videos", client.VideosPath);
             AddClientFolderRow(table, "Photos", client.PhotosPath);
@@ -611,18 +612,25 @@ namespace CassetteMotionPro.Workspace
             AddClientFolderRow(table, "Reports", client.ReportsPath);
             AddClientFolderRow(table, "Measurements", client.MeasurementsPath);
             AddClientFolderRow(table, "Notes", client.NotesPath);
-            AddSessionFolderRow(table, "Active session record", "Measurements → Sessions → active session");
-            AddSessionVideosRow(table, "Active videos", "Videos → Fit Sessions → active session");
-            AddSessionPhotosRow(table, "Active photos", "Photos → Fit Sessions → active session");
-            AddSessionSideBySideRow(table, "Active side-by-side", "Side-by-Side → Fit Sessions → active session");
-            AddSessionAnalysisCapturesRow(table, "Analysis captures", "Client/session folder prepared before opening Kinovea tools");
-            AddSessionReportsRow(table, "Active reports", "Reports → Fit Sessions → active session");
+
+            AddClientFilesSection(table, "Active fit session folders");
+            AddSessionFolderRow(table, "Session record", "Measurements → Sessions → active session");
+            AddSessionVideosRow(table, "All session videos", "Videos → Fit Sessions → active session");
+            AddSessionVideoViewRow(table, "Before videos", "Videos → Fit Sessions → active session → Before", "Before");
+            AddSessionVideoViewRow(table, "After videos", "Videos → Fit Sessions → active session → After", "After");
+            AddSessionPhotosRow(table, "Report images", "Photos → Fit Sessions → active session → Report Images");
+            AddSessionSideBySideRow(table, "Side-by-side", "Side-by-Side → Fit Sessions → active session");
+            AddSessionAnalysisCapturesRow(table, "Analysis captures", "Client folder → Analysis Captures → active session");
+            AddSessionReportsRow(table, "Reports", "Reports → Fit Sessions → active session");
+            AddSessionReportPackagesRow(table, "Report packages", "Reports → Fit Sessions → active session; packages and zips save here");
+
+            AddClientFilesSection(table, "Quick actions");
             AddImportActionRow(table, "Add videos", "Copy before/after videos into this active fit session.", "Before Video", delegate { BrowseVideo("BeforeVideoPath"); }, "After Video", delegate { BrowseVideo("AfterVideoPath"); });
             AddImportActionRow(table, "Record live", "Open Kinovea live capture into this session’s Before or After video folder.", "Before Live", delegate { OpenLiveCaptureForVideo("BeforeVideoPath"); }, "After Live", delegate { OpenLiveCaptureForVideo("AfterVideoPath"); });
             AddImportActionRow(table, "Add photos", "Copy before/after report photos into this active fit session.", "Before Photo", delegate { BrowseReportImage("BeforeReportImagePath"); }, "After Photo", delegate { BrowseReportImage("AfterReportImagePath"); });
 
             Label hint = new Label();
-            hint.Text = "Use these shortcuts when you want to check where a client’s files are being saved. Record live opens Kinovea into this session’s Before/After video folder. Add videos/photos copies the selected file into this fit session and updates the matching Videos or Report Images tab.";
+            hint.Text = "Use these shortcuts during a fit when you want to confirm where this client’s files are going. Record live opens Kinovea into this session’s Before/After video folder, and Use Latest on the Video Capture + Analysis tab selects the newest saved recording without browsing.";
             hint.Dock = DockStyle.Fill;
             hint.ForeColor = Color.FromArgb(92, 104, 98);
             hint.Padding = new Padding(0, 12, 0, 0);
@@ -634,6 +642,23 @@ namespace CassetteMotionPro.Workspace
             page.AutoScroll = true;
             page.Controls.Add(table);
             return page;
+        }
+
+        private void AddClientFilesSection(TableLayoutPanel table, string title)
+        {
+            int row = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+
+            Label section = new Label();
+            section.Text = title;
+            section.Dock = DockStyle.Fill;
+            section.TextAlign = ContentAlignment.BottomLeft;
+            section.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            section.ForeColor = Color.FromArgb(24, 31, 29);
+            section.Padding = new Padding(0, 8, 0, 4);
+
+            table.Controls.Add(section, 0, row);
+            table.SetColumnSpan(section, 3);
         }
 
         private void AddClientFolderRow(TableLayoutPanel table, string labelText, string folderPath)
@@ -668,9 +693,14 @@ namespace CassetteMotionPro.Workspace
             AddDynamicFolderRow(table, labelText, description, GetSessionVideosFolderPath, "Active session videos folder opened.");
         }
 
+        private void AddSessionVideoViewRow(TableLayoutPanel table, string labelText, string description, string viewName)
+        {
+            AddDynamicFolderRow(table, labelText, description, delegate { return GetSessionVideoViewFolderPath(viewName); }, labelText + " folder opened.");
+        }
+
         private void AddSessionPhotosRow(TableLayoutPanel table, string labelText, string description)
         {
-            AddDynamicFolderRow(table, labelText, description, GetSessionPhotosFolderPath, "Active session photos folder opened.");
+            AddDynamicFolderRow(table, labelText, description, GetSessionReportImagesFolderPath, "Active session report images folder opened.");
         }
 
         private void AddSessionSideBySideRow(TableLayoutPanel table, string labelText, string description)
@@ -686,6 +716,11 @@ namespace CassetteMotionPro.Workspace
         private void AddSessionReportsRow(TableLayoutPanel table, string labelText, string description)
         {
             AddDynamicFolderRow(table, labelText, description, GetSessionReportsFolderPath, "Active session reports folder opened.");
+        }
+
+        private void AddSessionReportPackagesRow(TableLayoutPanel table, string labelText, string description)
+        {
+            AddDynamicFolderRow(table, labelText, description, GetSessionReportsFolderPath, "Active session report packages folder opened.");
         }
 
         private void AddImportActionRow(TableLayoutPanel table, string labelText, string description, string firstButtonText, Action firstAction, string secondButtonText, Action secondAction)
@@ -789,6 +824,11 @@ namespace CassetteMotionPro.Workspace
         private string GetSessionPhotosFolderPath()
         {
             return Path.Combine(client.PhotosPath, "Fit Sessions", currentSession.StorageFolderName);
+        }
+
+        private string GetSessionReportImagesFolderPath()
+        {
+            return Path.Combine(GetSessionPhotosFolderPath(), "Report Images");
         }
 
         private string GetSessionSideBySideFolderPath()
