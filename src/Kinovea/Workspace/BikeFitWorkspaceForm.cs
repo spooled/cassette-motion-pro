@@ -469,9 +469,10 @@ namespace CassetteMotionPro.Workspace
             captureButtons.WrapContents = false;
             captureButtons.Padding = new Padding(0, 2, 0, 0);
 
-            AddFitCommandButton(captureButtons, "Record Before", true, delegate { OpenLiveCaptureForVideo("BeforeVideoPath"); });
+            AddFitCommandButton(captureButtons, "Dual Live Capture", true, OpenDualLiveCapture);
+            AddFitCommandButton(captureButtons, "Record Before", false, delegate { OpenLiveCaptureForVideo("BeforeVideoPath"); });
+            AddFitCommandButton(captureButtons, "Record After", false, delegate { OpenLiveCaptureForVideo("AfterVideoPath"); });
             AddFitCommandButton(captureButtons, "Use Latest Before", false, delegate { UseLatestVideo("BeforeVideoPath"); });
-            AddFitCommandButton(captureButtons, "Record After", true, delegate { OpenLiveCaptureForVideo("AfterVideoPath"); });
             AddFitCommandButton(captureButtons, "Use Latest After", false, delegate { UseLatestVideo("AfterVideoPath"); });
             AddFitCommandButton(captureButtons, "Client Folders", false, delegate { SelectWorkspaceTab("Client Files"); });
 
@@ -481,9 +482,9 @@ namespace CassetteMotionPro.Workspace
             analysisButtons.WrapContents = false;
             analysisButtons.Padding = new Padding(0, 2, 0, 0);
 
+            AddFitCommandButton(analysisButtons, "Dual Playback Analysis", true, delegate { OpenPair("BeforeVideoPath", "AfterVideoPath"); });
             AddFitCommandButton(analysisButtons, "Analyze Before", false, delegate { OpenSingle("BeforeVideoPath"); });
-            AddFitCommandButton(analysisButtons, "Analyze After", true, delegate { OpenSingle("AfterVideoPath"); });
-            AddFitCommandButton(analysisButtons, "Analyze Side-by-Side", false, delegate { OpenPair("BeforeVideoPath", "AfterVideoPath"); });
+            AddFitCommandButton(analysisButtons, "Analyze After", false, delegate { OpenSingle("AfterVideoPath"); });
             AddFitCommandButton(analysisButtons, "Captures Folder", false, OpenAnalysisCapturesFolder);
             AddFitCommandButton(analysisButtons, "Report Images", false, delegate { SelectWorkspaceTab("Report Images"); });
 
@@ -991,7 +992,7 @@ namespace CassetteMotionPro.Workspace
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 86));
 
             Label analysisHint = new Label();
-            analysisHint.Text = "Use Record Live to open Kinovea capture pointed at this session’s Before/After video folder. After recording, return here and click Use Latest to select the newest saved clip automatically. Browse is still there when you want to choose a different take.";
+            analysisHint.Text = "Use Dual Live Capture to open Kinovea capture pointed at this session’s Before and After video folders. After recording, return here and click Use Latest to select the newest saved clips automatically. Browse is still there when you want to choose a different take.";
             analysisHint.Dock = DockStyle.Fill;
             analysisHint.ForeColor = Color.FromArgb(92, 104, 98);
             int analysisHintRow = table.RowCount++;
@@ -1005,7 +1006,13 @@ namespace CassetteMotionPro.Workspace
             FlowLayoutPanel comparisons = new FlowLayoutPanel();
             comparisons.Dock = DockStyle.Fill;
             comparisons.FlowDirection = FlowDirection.LeftToRight;
+            comparisons.WrapContents = true;
             comparisons.Padding = new Padding(0, 18, 0, 0);
+
+            Button dualLive = CreateButton("Dual Live Capture", true);
+            dualLive.Size = new Size(190, 38);
+            dualLive.Click += delegate { OpenDualLiveCapture(); };
+            comparisons.Controls.Add(dualLive);
 
             Button beforeAfter = CreateButton("Analyze Before + After", true);
             beforeAfter.Size = new Size(220, 38);
@@ -1013,7 +1020,7 @@ namespace CassetteMotionPro.Workspace
             comparisons.Controls.Add(beforeAfter);
 
             int comparisonRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 78));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 88));
             table.Controls.Add(comparisons, 1, comparisonRow);
             table.SetColumnSpan(comparisons, 5);
 
@@ -1069,7 +1076,7 @@ namespace CassetteMotionPro.Workspace
             table.SetColumnSpan(saveGuide, 4);
 
             Label hint = new Label();
-            hint.Text = "For a real fit, record as many live clips as needed into the Before/After folders, Browse/select the best clips, use Analyze for the Kinovea measurement tools, then save final numbers and report images.";
+            hint.Text = "For a real fit, record as many live clips as needed into the Before/After folders, Use Latest or Browse to select the best clips, use Dual Playback Analysis for the Kinovea measurement tools, then save final numbers and report images.";
             hint.Dock = DockStyle.Fill;
             hint.ForeColor = Color.FromArgb(92, 104, 98);
             int hintRow = table.RowCount++;
@@ -1963,7 +1970,7 @@ namespace CassetteMotionPro.Workspace
             string metrics = HasCoreBikeMetrics() ? "✓ Metrics" : "□ Metrics";
             string report = IsReportReady() ? "✓ Report ready" : "□ Report ready";
 
-            fitCommandCenterStatus.Text = before + "   " + after + "   " + evidence + "   " + metrics + "   " + report + "     Record Live opens the exact session folder; Use Latest attaches the newest saved clip.";
+            fitCommandCenterStatus.Text = before + "   " + after + "   " + evidence + "   " + metrics + "   " + report + "     Dual Live opens Before/After recording folders; Dual Playback opens both selected videos.";
             fitCommandCenterStatus.ForeColor = IsReportReady() ? Color.FromArgb(60, 145, 76) : Color.FromArgb(74, 87, 81);
         }
 
@@ -2955,6 +2962,36 @@ namespace CassetteMotionPro.Workspace
             catch (Exception exception)
             {
                 MessageBox.Show(this, "Live capture could not be opened for this session.\n\n" + exception.Message, "Live capture", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void OpenDualLiveCapture()
+        {
+            if (openLiveCaptureFolder == null)
+            {
+                MessageBox.Show(this, "Live capture is not available from this workspace yet.", "Dual Live Capture", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                SaveCurrentSession();
+                Directory.CreateDirectory(GetSessionVideosFolderPath());
+
+                string beforeDirectory = GetSessionVideoViewFolderPath("Before");
+                string afterDirectory = GetSessionVideoViewFolderPath("After");
+                Directory.CreateDirectory(beforeDirectory);
+                Directory.CreateDirectory(afterDirectory);
+                WriteCaptureFolderHint(beforeDirectory, "Before");
+                WriteCaptureFolderHint(afterDirectory, "After");
+
+                Close();
+                openLiveCaptureFolder(beforeDirectory);
+                openLiveCaptureFolder(afterDirectory);
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "Dual live capture could not be opened for this session.\n\n" + exception.Message, "Dual Live Capture", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
