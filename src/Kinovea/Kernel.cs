@@ -708,7 +708,7 @@ namespace Kinovea.Root
 
             clientRepository.MarkOpened(client);
             statusLabel.Text = string.Format("Fit session: {0} · {1}", client.DisplayName, client.BikeDescription);
-            using (BikeFitWorkspaceForm form = new BikeFitWorkspaceForm(client, OpenAnalysisFromPath, OpenBeforeAfterPair, PrepareClientAnalysisCaptureFolder, OpenClientCaptureFolder, OpenBodyAngleGuide))
+            using (BikeFitWorkspaceForm form = new BikeFitWorkspaceForm(client, OpenAnalysisFromPath, OpenBeforeAfterPair, PrepareClientAnalysisCaptureFolder, OpenClientCaptureFolder, OpenDualClientCaptureFolders, OpenBodyAngleGuide))
                 form.ShowDialog(mainWindow);
             BuildRecentClientMenus();
         }
@@ -725,6 +725,26 @@ namespace Kinovea.Root
             PreferencesUpdated(true);
             statusLabel.Text = string.Format("Live capture folder: {0}", path);
             OpenFromPath(cf.Id.ToString());
+        }
+
+        private void OpenDualClientCaptureFolders(string beforePath, string afterPath)
+        {
+            if (string.IsNullOrEmpty(beforePath) || string.IsNullOrEmpty(afterPath))
+                return;
+
+            Directory.CreateDirectory(beforePath);
+            Directory.CreateDirectory(afterPath);
+            var beforeCaptureFolder = PreferencesManager.CapturePreferences.AddCaptureFolder(beforePath);
+            var afterCaptureFolder = PreferencesManager.CapturePreferences.AddCaptureFolder(afterPath);
+
+            // Make sure the two client/session capture folders are known before loading them.
+            PreferencesUpdated(true);
+            statusLabel.Text = string.Format("Dual live capture folders: Before: {0} · After: {1}", beforePath, afterPath);
+
+            EnsurePlaybackScreenCount(2);
+            LoadReplayWatcherInTargetScreen(beforeCaptureFolder.Id.ToString(), 0);
+            LoadReplayWatcherInTargetScreen(afterCaptureFolder.Id.ToString(), 1);
+            screenManager.OrganizeScreens();
         }
 
         private void PrepareClientAnalysisCaptureFolder(string path)
@@ -1416,6 +1436,18 @@ namespace Kinovea.Root
             sdp.SpeedPercentage = PreferencesManager.PlayerPreferences.DefaultReplaySpeed;
 
             LoaderVideo.LoadVideoInScreen(screenManager, path, targetScreen, sdp);
+        }
+
+        private void LoadReplayWatcherInTargetScreen(string captureFolderId, int targetScreen)
+        {
+            ScreenDescriptorPlayback sdp = new ScreenDescriptorPlayback();
+            sdp.FullPath = captureFolderId;
+            sdp.IsReplayWatcher = true;
+            sdp.Stretch = true;
+            sdp.Autoplay = true;
+            sdp.SpeedPercentage = PreferencesManager.PlayerPreferences.DefaultReplaySpeed;
+
+            LoaderVideo.LoadVideoInScreen(screenManager, captureFolderId, targetScreen, sdp);
         }
         private void ToggleFullScreen()
         {

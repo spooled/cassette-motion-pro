@@ -25,6 +25,7 @@ namespace CassetteMotionPro.Workspace
         private readonly Action<string, string> openVideoPair;
         private readonly Action<string> prepareCaptureFolder;
         private readonly Action<string> openLiveCaptureFolder;
+        private readonly Action<string, string> openDualLiveCaptureFolders;
         private readonly Action<string> openBodyAngleGuide;
         private readonly ListView sessionList = new ListView();
         private readonly TextBox txtTitle = new TextBox();
@@ -65,7 +66,7 @@ namespace CassetteMotionPro.Workspace
         private Action nextRecommendedStepActionHandler;
         private Action nextRecommendedFolderActionHandler;
 
-        public BikeFitWorkspaceForm(ClientRecord client, Action<string> openVideo, Action<string, string> openVideoPair, Action<string> prepareCaptureFolder, Action<string> openLiveCaptureFolder, Action<string> openBodyAngleGuide)
+        public BikeFitWorkspaceForm(ClientRecord client, Action<string> openVideo, Action<string, string> openVideoPair, Action<string> prepareCaptureFolder, Action<string> openLiveCaptureFolder, Action<string, string> openDualLiveCaptureFolders, Action<string> openBodyAngleGuide)
         {
             if (client == null)
                 throw new ArgumentNullException("client");
@@ -75,6 +76,7 @@ namespace CassetteMotionPro.Workspace
             this.openVideoPair = openVideoPair;
             this.prepareCaptureFolder = prepareCaptureFolder;
             this.openLiveCaptureFolder = openLiveCaptureFolder;
+            this.openDualLiveCaptureFolders = openDualLiveCaptureFolders;
             this.openBodyAngleGuide = openBodyAngleGuide;
             repository = new FitSessionRepository(client);
 
@@ -2973,7 +2975,7 @@ namespace CassetteMotionPro.Workspace
 
         private void OpenDualLiveCapture()
         {
-            if (openLiveCaptureFolder == null)
+            if (openDualLiveCaptureFolders == null && openLiveCaptureFolder == null)
             {
                 MessageBox.Show(this, "Live capture is not available from this workspace yet.", "Dual Live Capture", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
@@ -2992,8 +2994,15 @@ namespace CassetteMotionPro.Workspace
                 WriteCaptureFolderHint(afterDirectory, "After");
 
                 Close();
-                openLiveCaptureFolder(beforeDirectory);
-                openLiveCaptureFolder(afterDirectory);
+                if (openDualLiveCaptureFolders != null)
+                {
+                    openDualLiveCaptureFolders(beforeDirectory, afterDirectory);
+                }
+                else
+                {
+                    openLiveCaptureFolder(beforeDirectory);
+                    openLiveCaptureFolder(afterDirectory);
+                }
             }
             catch (Exception exception)
             {
