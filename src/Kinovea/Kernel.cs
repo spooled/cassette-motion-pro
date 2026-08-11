@@ -734,17 +734,18 @@ namespace Kinovea.Root
 
             Directory.CreateDirectory(beforePath);
             Directory.CreateDirectory(afterPath);
-            var beforeCaptureFolder = PreferencesManager.CapturePreferences.AddCaptureFolder(beforePath);
-            var afterCaptureFolder = PreferencesManager.CapturePreferences.AddCaptureFolder(afterPath);
+            PreferencesManager.CapturePreferences.AddCaptureFolder(beforePath);
+            PreferencesManager.CapturePreferences.AddCaptureFolder(afterPath);
 
-            // Make sure the two client/session capture folders are known before loading them.
+            // Make sure capture screens see the active client/session folders.
             PreferencesUpdated(true);
             statusLabel.Text = string.Format("Dual live capture folders: Before: {0} · After: {1}", beforePath, afterPath);
 
-            EnsurePlaybackScreenCount(2);
-            LoadReplayWatcherInTargetScreen(beforeCaptureFolder.Id.ToString(), 0);
-            LoadReplayWatcherInTargetScreen(afterCaptureFolder.Id.ToString(), 1);
+            EnsureCaptureScreenCount(2);
+            screenManager.AfterSharedBufferChange();
             screenManager.OrganizeScreens();
+            screenManager.OrganizeCommonControls();
+            screenManager.OrganizeMenus();
         }
 
         private void PrepareClientAnalysisCaptureFolder(string path)
@@ -1426,6 +1427,27 @@ namespace Kinovea.Root
                 screenManager.AddPlayerScreen();
         }
 
+        private void EnsureCaptureScreenCount(int requiredScreens)
+        {
+            for (int index = screenManager.ScreenCount - 1; index >= 0; index--)
+            {
+                AbstractScreen screen = screenManager.GetScreenAt(index);
+                if (screen != null && !(screen is CaptureScreen))
+                    screenManager.RemoveScreen(screen);
+            }
+
+            while (screenManager.ScreenCount > requiredScreens)
+            {
+                AbstractScreen screen = screenManager.GetScreenAt(screenManager.ScreenCount - 1);
+                if (screen == null)
+                    break;
+                screenManager.RemoveScreen(screen);
+            }
+
+            while (screenManager.ScreenCount < requiredScreens)
+                screenManager.AddCaptureScreen();
+        }
+
         private void LoadVideoInTargetScreen(string path, int targetScreen)
         {
             ScreenDescriptorPlayback sdp = new ScreenDescriptorPlayback();
@@ -1438,17 +1460,6 @@ namespace Kinovea.Root
             LoaderVideo.LoadVideoInScreen(screenManager, path, targetScreen, sdp);
         }
 
-        private void LoadReplayWatcherInTargetScreen(string captureFolderId, int targetScreen)
-        {
-            ScreenDescriptorPlayback sdp = new ScreenDescriptorPlayback();
-            sdp.FullPath = captureFolderId;
-            sdp.IsReplayWatcher = true;
-            sdp.Stretch = true;
-            sdp.Autoplay = true;
-            sdp.SpeedPercentage = PreferencesManager.PlayerPreferences.DefaultReplaySpeed;
-
-            LoaderVideo.LoadVideoInScreen(screenManager, captureFolderId, targetScreen, sdp);
-        }
         private void ToggleFullScreen()
         {
             mainWindow.ToggleFullScreen();
