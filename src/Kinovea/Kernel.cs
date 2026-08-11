@@ -708,7 +708,7 @@ namespace Kinovea.Root
 
             clientRepository.MarkOpened(client);
             statusLabel.Text = string.Format("Fit session: {0} · {1}", client.DisplayName, client.BikeDescription);
-            using (BikeFitWorkspaceForm form = new BikeFitWorkspaceForm(client, OpenFromPath, OpenBeforeAfterPair, PrepareClientAnalysisCaptureFolder, OpenClientCaptureFolder, OpenBodyAngleGuide))
+            using (BikeFitWorkspaceForm form = new BikeFitWorkspaceForm(client, OpenAnalysisFromPath, OpenBeforeAfterPair, PrepareClientAnalysisCaptureFolder, OpenClientCaptureFolder, OpenBodyAngleGuide))
                 form.ShowDialog(mainWindow);
             BuildRecentClientMenus();
         }
@@ -1353,18 +1353,39 @@ namespace Kinovea.Root
             }
         }
 
+        private void OpenAnalysisFromPath(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+                return;
+
+            if (!File.Exists(path))
+            {
+                MessageBox.Show(ScreenManagerLang.LoadMovie_FileNotOpened, ScreenManagerLang.LoadMovie_Error, MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                return;
+            }
+
+            EnsurePlaybackScreenCount(1);
+            LoadVideoInTargetScreen(path, 0);
+            screenManager.OrganizeScreens();
+        }
+
         private void OpenBeforeAfterPair(string beforePath, string afterPath)
         {
             if (string.IsNullOrEmpty(beforePath) || string.IsNullOrEmpty(afterPath) || !File.Exists(beforePath) || !File.Exists(afterPath))
                 return;
 
-            EnsureTwoPlaybackScreens();
+            EnsurePlaybackScreenCount(2);
             LoadVideoInTargetScreen(beforePath, 0);
             LoadVideoInTargetScreen(afterPath, 1);
             screenManager.OrganizeScreens();
         }
 
         private void EnsureTwoPlaybackScreens()
+        {
+            EnsurePlaybackScreenCount(2);
+        }
+
+        private void EnsurePlaybackScreenCount(int requiredScreens)
         {
             for (int index = screenManager.ScreenCount - 1; index >= 0; index--)
             {
@@ -1373,15 +1394,16 @@ namespace Kinovea.Root
                     screenManager.RemoveScreen(screen);
             }
 
-            if (screenManager.ScreenCount == 0)
+            while (screenManager.ScreenCount > requiredScreens)
             {
-                screenManager.AddPlayerScreen();
-                screenManager.AddPlayerScreen();
+                AbstractScreen screen = screenManager.GetScreenAt(screenManager.ScreenCount - 1);
+                if (screen == null)
+                    break;
+                screenManager.RemoveScreen(screen);
             }
-            else if (screenManager.ScreenCount == 1)
-            {
+
+            while (screenManager.ScreenCount < requiredScreens)
                 screenManager.AddPlayerScreen();
-            }
         }
 
         private void LoadVideoInTargetScreen(string path, int targetScreen)

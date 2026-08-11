@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  VERSION: 0.16.1
+  VERSION: 0.16.2
 
 jobs:
   build:
@@ -314,6 +314,34 @@ jobs:
           }
 
           Write-Host "Restored DrawingTools from $source to $target"
+
+          $quietedFiles = 0
+          $editableToolFiles = @(Get-ChildItem $target -Recurse -File -Include *.xml,*.json,*.txt,*.kva,*.svg -ErrorAction SilentlyContinue)
+          foreach ($file in $editableToolFiles) {
+            $content = Get-Content $file.FullName -Raw
+            $updated = $content
+
+            # Some upstream/custom drawing tools can expose technical construction labels
+            # such as P0, P1, S0 [P0, P3] while editing a measurement. Keep the real
+            # measurement value visible, but default any debug point/segment labels off.
+            $updated = $updated -replace '(?i)(\bshow(?:point|points|segment|segments|technical|debug)(?:label|labels|name|names)?\b\s*=\s*")true(")', '${1}false${2}'
+            $updated = $updated -replace '(?i)(\bdisplay(?:point|points|segment|segments|technical|debug)(?:label|labels|name|names)?\b\s*=\s*")true(")', '${1}false${2}'
+            $updated = $updated -replace '(?i)(\bdebug(?:label|labels|name|names|mode)?\b\s*=\s*")true(")', '${1}false${2}'
+            $updated = $updated -replace '(?i)(<[^>]*(?:show|display)(?:point|points|segment|segments|technical|debug)(?:label|labels|name|names)?[^>]*>\s*)true(\s*</[^>]+>)', '${1}false${2}'
+            $updated = $updated -replace '(?i)(<[^>]*debug(?:label|labels|name|names|mode)?[^>]*>\s*)true(\s*</[^>]+>)', '${1}false${2}'
+
+            if ($updated -ne $content) {
+              Set-Content $file.FullName $updated -Encoding UTF8
+              $quietedFiles++
+            }
+          }
+
+          if ($quietedFiles -gt 0) {
+            Write-Host "Quieted technical point/segment labels in $quietedFiles DrawingTools file(s)."
+          } else {
+            Write-Host "No DrawingTools debug label defaults were found to quiet."
+          }
+
           $toolFiles | Select-Object -First 20 FullName, Length
 
       - name: Create portable settings folder
