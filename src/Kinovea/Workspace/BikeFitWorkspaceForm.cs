@@ -2949,6 +2949,12 @@ namespace CassetteMotionPro.Workspace
 
         private void OpenLiveCaptureForVideo(string key)
         {
+            if (openDualLiveCaptureFolders != null && (key == "BeforeVideoPath" || key == "AfterVideoPath"))
+            {
+                OpenDualLiveCapture();
+                return;
+            }
+
             if (openLiveCaptureFolder == null)
             {
                 MessageBox.Show(this, "Live capture is not available from this workspace yet.", "Live capture", MessageBoxButtons.OK, MessageBoxIcon.Information);
