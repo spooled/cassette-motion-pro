@@ -46,6 +46,7 @@ namespace CassetteMotionPro.Workspace
         private readonly Label activeSessionStatus = new Label();
         private readonly Label analysisCapturesStatus = new Label();
         private readonly Label nextRecommendedStep = new Label();
+        private readonly Label fitCommandCenterStatus = new Label();
         private readonly Button nextRecommendedStepAction = new Button();
         private readonly Button nextRecommendedFolderAction = new Button();
         private readonly CheckBox chkShowBeforeMeasurementsInReport = new CheckBox();
@@ -298,6 +299,12 @@ namespace CassetteMotionPro.Workspace
             table.Controls.Add(shortcuts, 0, shortcutsRow);
             table.SetColumnSpan(shortcuts, 2);
 
+            Control commandCenter = BuildFitCommandCenter();
+            int commandCenterRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 176));
+            table.Controls.Add(commandCenter, 0, commandCenterRow);
+            table.SetColumnSpan(commandCenter, 2);
+
             Control nextStep = BuildNextRecommendedStepPanel();
             int nextStepRow = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 82));
@@ -433,6 +440,60 @@ namespace CassetteMotionPro.Workspace
             return group;
         }
 
+        private Control BuildFitCommandCenter()
+        {
+            GroupBox group = new GroupBox();
+            group.Text = "Fit Command Center";
+            group.Dock = DockStyle.Fill;
+            group.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            group.ForeColor = Color.FromArgb(37, 48, 43);
+            group.Padding = new Padding(14, 8, 14, 12);
+
+            TableLayoutPanel layout = new TableLayoutPanel();
+            layout.Dock = DockStyle.Fill;
+            layout.ColumnCount = 1;
+            layout.RowCount = 3;
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+            fitCommandCenterStatus.Dock = DockStyle.Fill;
+            fitCommandCenterStatus.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+            fitCommandCenterStatus.ForeColor = Color.FromArgb(74, 87, 81);
+            fitCommandCenterStatus.TextAlign = ContentAlignment.MiddleLeft;
+            fitCommandCenterStatus.Text = "Before video: needed   After video: needed   Evidence: needed   Metrics: needed   Report: needed";
+
+            FlowLayoutPanel captureButtons = new FlowLayoutPanel();
+            captureButtons.Dock = DockStyle.Fill;
+            captureButtons.FlowDirection = FlowDirection.LeftToRight;
+            captureButtons.WrapContents = false;
+            captureButtons.Padding = new Padding(0, 2, 0, 0);
+
+            AddFitCommandButton(captureButtons, "Record Before", true, delegate { OpenLiveCaptureForVideo("BeforeVideoPath"); });
+            AddFitCommandButton(captureButtons, "Use Latest Before", false, delegate { UseLatestVideo("BeforeVideoPath"); });
+            AddFitCommandButton(captureButtons, "Record After", true, delegate { OpenLiveCaptureForVideo("AfterVideoPath"); });
+            AddFitCommandButton(captureButtons, "Use Latest After", false, delegate { UseLatestVideo("AfterVideoPath"); });
+            AddFitCommandButton(captureButtons, "Client Folders", false, delegate { SelectWorkspaceTab("Client Files"); });
+
+            FlowLayoutPanel analysisButtons = new FlowLayoutPanel();
+            analysisButtons.Dock = DockStyle.Fill;
+            analysisButtons.FlowDirection = FlowDirection.LeftToRight;
+            analysisButtons.WrapContents = false;
+            analysisButtons.Padding = new Padding(0, 2, 0, 0);
+
+            AddFitCommandButton(analysisButtons, "Analyze Before", false, delegate { OpenSingle("BeforeVideoPath"); });
+            AddFitCommandButton(analysisButtons, "Analyze After", true, delegate { OpenSingle("AfterVideoPath"); });
+            AddFitCommandButton(analysisButtons, "Analyze Side-by-Side", false, delegate { OpenPair("BeforeVideoPath", "AfterVideoPath"); });
+            AddFitCommandButton(analysisButtons, "Captures Folder", false, OpenAnalysisCapturesFolder);
+            AddFitCommandButton(analysisButtons, "Report Images", false, delegate { SelectWorkspaceTab("Report Images"); });
+
+            layout.Controls.Add(fitCommandCenterStatus, 0, 0);
+            layout.Controls.Add(captureButtons, 0, 1);
+            layout.Controls.Add(analysisButtons, 0, 2);
+            group.Controls.Add(layout);
+            return group;
+        }
+
         private Control BuildNextRecommendedStepPanel()
         {
             Panel panel = new Panel();
@@ -496,6 +557,20 @@ namespace CassetteMotionPro.Workspace
         {
             Button button = CreateButton(text, primary);
             button.Size = new Size(158, 34);
+            button.Margin = new Padding(0, 4, 8, 4);
+            button.Click += delegate
+            {
+                if (action != null)
+                    action();
+                UpdateWorkflowChecklist();
+            };
+            buttons.Controls.Add(button);
+        }
+
+        private void AddFitCommandButton(FlowLayoutPanel buttons, string text, bool primary, Action action)
+        {
+            Button button = CreateButton(text, primary);
+            button.Size = new Size(154, 34);
             button.Margin = new Padding(0, 4, 8, 4);
             button.Click += delegate
             {
@@ -1873,7 +1948,23 @@ namespace CassetteMotionPro.Workspace
                 item.StatusLabel.ForeColor = ready ? Color.FromArgb(60, 145, 76) : Color.FromArgb(181, 118, 35);
             }
 
+            UpdateFitCommandCenterStatus();
             UpdateNextRecommendedStep();
+        }
+
+        private void UpdateFitCommandCenterStatus()
+        {
+            if (fitCommandCenterStatus == null)
+                return;
+
+            string before = HasMediaFile("BeforeVideoPath") ? "✓ Before video" : "□ Before video";
+            string after = HasMediaFile("AfterVideoPath") ? "✓ After video" : "□ After video";
+            string evidence = HasAnalysisCaptureEvidence() ? "✓ Evidence" : "□ Evidence";
+            string metrics = HasCoreBikeMetrics() ? "✓ Metrics" : "□ Metrics";
+            string report = IsReportReady() ? "✓ Report ready" : "□ Report ready";
+
+            fitCommandCenterStatus.Text = before + "   " + after + "   " + evidence + "   " + metrics + "   " + report + "     Record Live opens the exact session folder; Use Latest attaches the newest saved clip.";
+            fitCommandCenterStatus.ForeColor = IsReportReady() ? Color.FromArgb(60, 145, 76) : Color.FromArgb(74, 87, 81);
         }
 
         private void UpdateNextRecommendedStep()
