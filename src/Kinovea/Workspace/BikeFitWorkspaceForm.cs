@@ -454,7 +454,7 @@ namespace CassetteMotionPro.Workspace
             layout.ColumnCount = 1;
             layout.RowCount = 3;
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 80));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
             fitCommandCenterStatus.Dock = DockStyle.Fill;
@@ -466,7 +466,7 @@ namespace CassetteMotionPro.Workspace
             FlowLayoutPanel captureButtons = new FlowLayoutPanel();
             captureButtons.Dock = DockStyle.Fill;
             captureButtons.FlowDirection = FlowDirection.LeftToRight;
-            captureButtons.WrapContents = false;
+            captureButtons.WrapContents = true;
             captureButtons.Padding = new Padding(0, 2, 0, 0);
 
             AddFitCommandButton(captureButtons, "Dual Live Capture", true, OpenDualLiveCapture);
@@ -474,6 +474,7 @@ namespace CassetteMotionPro.Workspace
             AddFitCommandButton(captureButtons, "Record After", false, delegate { OpenLiveCaptureForVideo("AfterVideoPath"); });
             AddFitCommandButton(captureButtons, "Use Latest Before", false, delegate { UseLatestVideo("BeforeVideoPath"); });
             AddFitCommandButton(captureButtons, "Use Latest After", false, delegate { UseLatestVideo("AfterVideoPath"); });
+            AddFitCommandButton(captureButtons, "Use Latest Both", true, UseLatestBothVideos);
             AddFitCommandButton(captureButtons, "Client Folders", false, delegate { SelectWorkspaceTab("Client Files"); });
 
             FlowLayoutPanel analysisButtons = new FlowLayoutPanel();
@@ -992,7 +993,7 @@ namespace CassetteMotionPro.Workspace
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 86));
 
             Label analysisHint = new Label();
-            analysisHint.Text = "Use Dual Live Capture to open Kinovea capture pointed at this session’s Before and After video folders. After recording, return here and click Use Latest to select the newest saved clips automatically. Browse is still there when you want to choose a different take.";
+            analysisHint.Text = "Use Dual Live Capture to open Kinovea capture pointed at this session’s Before and After video folders. After recording, return here and click Use Latest Both to select the newest saved clips automatically. Browse is still there when you want to choose a different take.";
             analysisHint.Dock = DockStyle.Fill;
             analysisHint.ForeColor = Color.FromArgb(92, 104, 98);
             int analysisHintRow = table.RowCount++;
@@ -1013,6 +1014,11 @@ namespace CassetteMotionPro.Workspace
             dualLive.Size = new Size(190, 38);
             dualLive.Click += delegate { OpenDualLiveCapture(); };
             comparisons.Controls.Add(dualLive);
+
+            Button latestBoth = CreateButton("Use Latest Both", true);
+            latestBoth.Size = new Size(180, 38);
+            latestBoth.Click += delegate { UseLatestBothVideos(); };
+            comparisons.Controls.Add(latestBoth);
 
             Button beforeAfter = CreateButton("Analyze Before + After", true);
             beforeAfter.Size = new Size(220, 38);
@@ -1076,7 +1082,7 @@ namespace CassetteMotionPro.Workspace
             table.SetColumnSpan(saveGuide, 4);
 
             Label hint = new Label();
-            hint.Text = "For a real fit, record as many live clips as needed into the Before/After folders, Use Latest or Browse to select the best clips, use Dual Playback Analysis for the Kinovea measurement tools, then save final numbers and report images.";
+            hint.Text = "For a real fit, record as many live clips as needed into the Before/After folders, Use Latest Both or Browse to select the best clips, use Dual Playback Analysis for the Kinovea measurement tools, then save final numbers and report images.";
             hint.Dock = DockStyle.Fill;
             hint.ForeColor = Color.FromArgb(92, 104, 98);
             int hintRow = table.RowCount++;
@@ -1970,7 +1976,7 @@ namespace CassetteMotionPro.Workspace
             string metrics = HasCoreBikeMetrics() ? "✓ Metrics" : "□ Metrics";
             string report = IsReportReady() ? "✓ Report ready" : "□ Report ready";
 
-            fitCommandCenterStatus.Text = before + "   " + after + "   " + evidence + "   " + metrics + "   " + report + "     Dual Live opens Before/After recording folders; Dual Playback opens both selected videos.";
+            fitCommandCenterStatus.Text = before + "   " + after + "   " + evidence + "   " + metrics + "   " + report + "     Dual Live records; Use Latest Both selects newest takes; Dual Playback analyzes.";
             fitCommandCenterStatus.ForeColor = IsReportReady() ? Color.FromArgb(60, 145, 76) : Color.FromArgb(74, 87, 81);
         }
 
@@ -3000,13 +3006,7 @@ namespace CassetteMotionPro.Workspace
             try
             {
                 string viewName = GetVideoViewName(key);
-                SaveCurrentSession();
-                Directory.CreateDirectory(GetSessionVideosFolderPath());
-                string destinationDirectory = GetSessionVideoViewFolderPath(viewName);
-                Directory.CreateDirectory(destinationDirectory);
-                WriteCaptureFolderHint(destinationDirectory, viewName);
-
-                string latestVideoPath = FindLatestVideoFile(destinationDirectory);
+                string latestVideoPath = PrepareVideoViewFolderAndFindLatest(viewName);
                 if (string.IsNullOrEmpty(latestVideoPath))
                 {
                     MessageBox.Show(this, "No saved video files were found in this session’s " + viewName + " folder yet.\n\nClick Record Live, record the clip, then return to this workspace and click Use Latest.", "Use Latest Video", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -3021,6 +3021,46 @@ namespace CassetteMotionPro.Workspace
             {
                 MessageBox.Show(this, "The newest video could not be selected for this session.\n\n" + exception.Message, "Use Latest Video", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void UseLatestBothVideos()
+        {
+            try
+            {
+                string beforePath = PrepareVideoViewFolderAndFindLatest("Before");
+                string afterPath = PrepareVideoViewFolderAndFindLatest("After");
+
+                List<string> missing = new List<string>();
+                if (string.IsNullOrEmpty(beforePath))
+                    missing.Add("Before");
+                if (string.IsNullOrEmpty(afterPath))
+                    missing.Add("After");
+
+                if (missing.Count > 0)
+                {
+                    MessageBox.Show(this, "No saved video files were found in the " + string.Join(" and ", missing.ToArray()) + " folder yet.\n\nUse Dual Live Capture or Record Live, record the clip(s), then return here and click Use Latest Both.", "Use Latest Both", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                mediaBoxes["BeforeVideoPath"].Text = beforePath;
+                mediaBoxes["AfterVideoPath"].Text = afterPath;
+                SaveCurrentSession();
+                UpdateSaveHint("Before and After videos set to the newest recordings in this session folder.");
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "The newest Before/After videos could not be selected for this session.\n\n" + exception.Message, "Use Latest Both", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private string PrepareVideoViewFolderAndFindLatest(string viewName)
+        {
+            SaveCurrentSession();
+            Directory.CreateDirectory(GetSessionVideosFolderPath());
+            string destinationDirectory = GetSessionVideoViewFolderPath(viewName);
+            Directory.CreateDirectory(destinationDirectory);
+            WriteCaptureFolderHint(destinationDirectory, viewName);
+            return FindLatestVideoFile(destinationDirectory);
         }
 
         private static string FindLatestVideoFile(string folder)
