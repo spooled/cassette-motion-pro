@@ -1039,8 +1039,8 @@ namespace CassetteMotionPro.Workspace
             dualLive.Click += delegate { OpenDualLiveCapture(); };
             comparisons.Controls.Add(dualLive);
 
-            Button latestBoth = CreateButton("Use Latest Both", true);
-            latestBoth.Size = new Size(180, 38);
+            Button latestBoth = CreateButton("Use Latest Before + After", true);
+            latestBoth.Size = new Size(240, 38);
             latestBoth.Click += delegate { UseLatestBothVideos(); };
             comparisons.Controls.Add(latestBoth);
 
@@ -1148,26 +1148,16 @@ namespace CassetteMotionPro.Workspace
             shortcuts.WrapContents = true;
             shortcuts.Padding = new Padding(0, 6, 0, 0);
 
-            Button before = CreateButton("Open Before Folder", false);
+            Button before = CreateButton("Before Folder", false);
             before.Size = new Size(170, 36);
             before.Click += delegate { OpenSessionVideoFolder("Before"); };
 
-            Button after = CreateButton("Open After Folder", false);
+            Button after = CreateButton("After Folder", false);
             after.Size = new Size(160, 36);
             after.Click += delegate { OpenSessionVideoFolder("After"); };
 
-            Button captures = CreateButton("Open Analysis Captures", true);
-            captures.Size = new Size(210, 36);
-            captures.Click += delegate { OpenAnalysisCapturesFolder(); };
-
-            Button clientFiles = CreateButton("Client Files", false);
-            clientFiles.Size = new Size(120, 36);
-            clientFiles.Click += delegate { SelectWorkspaceTab("Client Files"); };
-
             shortcuts.Controls.Add(before);
             shortcuts.Controls.Add(after);
-            shortcuts.Controls.Add(captures);
-            shortcuts.Controls.Add(clientFiles);
             return shortcuts;
         }
 
@@ -3160,18 +3150,18 @@ namespace CassetteMotionPro.Workspace
 
                 if (missing.Count > 0)
                 {
-                    MessageBox.Show(this, "No saved video files were found in the " + string.Join(" and ", missing.ToArray()) + " folder yet.\n\nUse Dual Live Capture or Record Live, record the clip(s), then return here and click Use Latest Both.", "Use Latest Both", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(this, "No saved video files were found in the " + string.Join(" and ", missing.ToArray()) + " folder yet.\n\nUse Dual Live Capture or Record Live, record the clip(s), then return here and click Use Latest Before + After.", "Use Latest Before + After", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
 
                 mediaBoxes["BeforeVideoPath"].Text = beforePath;
                 mediaBoxes["AfterVideoPath"].Text = afterPath;
                 SaveCurrentSession();
-                UpdateSaveHint("Before and After videos set to the newest recordings in this session folder.");
+                UpdateSaveHint("Before and After videos set to the newest recordings from their matching session folders.");
             }
             catch (Exception exception)
             {
-                MessageBox.Show(this, "The newest Before/After videos could not be selected for this session.\n\n" + exception.Message, "Use Latest Both", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, "The newest Before/After videos could not be selected for this session.\n\n" + exception.Message, "Use Latest Before + After", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
