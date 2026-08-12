@@ -996,7 +996,7 @@ namespace CassetteMotionPro.Workspace
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 86));
 
             Label analysisHint = new Label();
-            analysisHint.Text = "Fit-day path: confirm client/session details → record live into Before/After folders → click Use Latest Both → analyze in Kinovea playback → save evidence/images → enter Bike Metrics → generate the report.";
+            analysisHint.Text = "Fit-day path: confirm client/session details → record live into this active session’s Before/After folders → click Use Latest Both → analyze in Kinovea playback → save evidence/images → enter Bike Metrics → generate the report.";
             analysisHint.Dock = DockStyle.Fill;
             analysisHint.ForeColor = Color.FromArgb(92, 104, 98);
             int analysisHintRow = table.RowCount++;
@@ -1018,6 +1018,12 @@ namespace CassetteMotionPro.Workspace
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 66));
             table.Controls.Add(recordingFoldersGuide, 1, recordingFoldersRow);
             table.SetColumnSpan(recordingFoldersGuide, 5);
+
+            Control folderShortcuts = BuildSessionFolderShortcuts();
+            int folderShortcutsRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
+            table.Controls.Add(folderShortcuts, 1, folderShortcutsRow);
+            table.SetColumnSpan(folderShortcuts, 5);
 
             AddMediaRow(table, "Before", "BeforeVideoPath");
             AddMediaRow(table, "After", "AfterVideoPath");
@@ -1085,7 +1091,7 @@ namespace CassetteMotionPro.Workspace
             table.Controls.Add(analysisActions, 1, analysisActionsRow);
             table.SetColumnSpan(analysisActions, 4);
 
-            analysisCapturesStatus.Text = "Evidence status: Record Live saves raw fit clips into the Before/After video folders above. Prepare Capture Folder sets the session Analysis Captures folder for screenshots, exports, and extra evidence.";
+            analysisCapturesStatus.Text = "Evidence status: Record Live saves raw fit clips into this active session’s Before/After video folders. Prepare Capture Folder sets this session’s Analysis Captures folder for screenshots, exports, and extra evidence.";
             analysisCapturesStatus.Dock = DockStyle.Fill;
             analysisCapturesStatus.ForeColor = Color.FromArgb(92, 104, 98);
             int statusRow = table.RowCount++;
@@ -1100,7 +1106,7 @@ namespace CassetteMotionPro.Workspace
             table.SetColumnSpan(saveGuide, 4);
 
             Label hint = new Label();
-            hint.Text = "For a real fit, record as many live clips as needed. Use Latest Both pulls in the newest takes from the client folders, Dual Playback Analysis opens the Kinovea tools, and the saved evidence plus Bike Metrics become the report foundation.";
+            hint.Text = "For a real fit, record as many live clips as needed. Use Latest Both pulls in the newest takes from this active client session, Dual Playback Analysis opens the Kinovea tools, and the saved evidence plus Bike Metrics become the report foundation.";
             hint.Dock = DockStyle.Fill;
             hint.ForeColor = Color.FromArgb(92, 104, 98);
             int hintRow = table.RowCount++;
@@ -1132,6 +1138,37 @@ namespace CassetteMotionPro.Workspace
             AddFitDayPathStep(path, 4, "5. Report", "Preview + package");
 
             return path;
+        }
+
+        private Control BuildSessionFolderShortcuts()
+        {
+            FlowLayoutPanel shortcuts = new FlowLayoutPanel();
+            shortcuts.Dock = DockStyle.Fill;
+            shortcuts.FlowDirection = FlowDirection.LeftToRight;
+            shortcuts.WrapContents = true;
+            shortcuts.Padding = new Padding(0, 6, 0, 0);
+
+            Button before = CreateButton("Open Before Folder", false);
+            before.Size = new Size(170, 36);
+            before.Click += delegate { OpenSessionVideoFolder("Before"); };
+
+            Button after = CreateButton("Open After Folder", false);
+            after.Size = new Size(160, 36);
+            after.Click += delegate { OpenSessionVideoFolder("After"); };
+
+            Button captures = CreateButton("Open Analysis Captures", true);
+            captures.Size = new Size(210, 36);
+            captures.Click += delegate { OpenAnalysisCapturesFolder(); };
+
+            Button clientFiles = CreateButton("Client Files", false);
+            clientFiles.Size = new Size(120, 36);
+            clientFiles.Click += delegate { SelectWorkspaceTab("Client Files"); };
+
+            shortcuts.Controls.Add(before);
+            shortcuts.Controls.Add(after);
+            shortcuts.Controls.Add(captures);
+            shortcuts.Controls.Add(clientFiles);
+            return shortcuts;
         }
 
         private void AddFitDayPathStep(TableLayoutPanel path, int column, string title, string detail)
@@ -3409,6 +3446,25 @@ namespace CassetteMotionPro.Workspace
             catch (Exception exception)
             {
                 MessageBox.Show(this, "The Analysis Captures folder could not be opened.\n\n" + exception.Message, "Analysis Captures", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void OpenSessionVideoFolder(string viewName)
+        {
+            try
+            {
+                SaveCurrentSession();
+                Directory.CreateDirectory(GetSessionVideosFolderPath());
+                string folder = GetSessionVideoViewFolderPath(viewName);
+                Directory.CreateDirectory(folder);
+                WriteCaptureFolderHint(folder, viewName);
+                Process.Start(folder);
+                RefreshRecordingFolderGuide();
+                UpdateSaveHint(viewName + " video folder opened for this active fit session.");
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "The " + viewName + " video folder could not be opened.\n\n" + exception.Message, viewName + " Video Folder", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
