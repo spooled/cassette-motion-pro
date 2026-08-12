@@ -46,6 +46,7 @@ namespace CassetteMotionPro.Workspace
         private readonly Label saveHint = new Label();
         private readonly Label activeSessionStatus = new Label();
         private readonly Label analysisCapturesStatus = new Label();
+        private readonly Label recordingFoldersGuide = new Label();
         private readonly Label nextRecommendedStep = new Label();
         private readonly Label fitCommandCenterStatus = new Label();
         private readonly Button nextRecommendedStepAction = new Button();
@@ -1003,15 +1004,14 @@ namespace CassetteMotionPro.Workspace
             table.Controls.Add(analysisHint, 1, analysisHintRow);
             table.SetColumnSpan(analysisHint, 5);
 
-            Label recordingFolders = new Label();
-            recordingFolders.Text = GetRecordingFolderGuideText();
-            recordingFolders.Dock = DockStyle.Fill;
-            recordingFolders.ForeColor = Color.FromArgb(74, 87, 81);
-            recordingFolders.Padding = new Padding(0, 4, 0, 0);
+            recordingFoldersGuide.Text = GetRecordingFolderGuideText();
+            recordingFoldersGuide.Dock = DockStyle.Fill;
+            recordingFoldersGuide.ForeColor = Color.FromArgb(74, 87, 81);
+            recordingFoldersGuide.Padding = new Padding(0, 4, 0, 0);
             int recordingFoldersRow = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 66));
-            table.Controls.Add(recordingFolders, 1, recordingFoldersRow);
-            table.SetColumnSpan(recordingFolders, 5);
+            table.Controls.Add(recordingFoldersGuide, 1, recordingFoldersRow);
+            table.SetColumnSpan(recordingFoldersGuide, 5);
 
             AddMediaRow(table, "Before", "BeforeVideoPath");
             AddMediaRow(table, "After", "AfterVideoPath");
@@ -1994,9 +1994,21 @@ namespace CassetteMotionPro.Workspace
 
         private string GetRecordingFolderGuideText()
         {
+            if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
+            {
+                return "Recording folders for this session:" + Environment.NewLine +
+                    "Before → choose or create a fit session first" + Environment.NewLine +
+                    "After  → choose or create a fit session first";
+            }
+
             return "Recording folders for this session:" + Environment.NewLine +
                 "Before → " + GetSessionVideoViewFolderPath("Before") + Environment.NewLine +
                 "After  → " + GetSessionVideoViewFolderPath("After");
+        }
+
+        private void RefreshRecordingFolderGuide()
+        {
+            recordingFoldersGuide.Text = GetRecordingFolderGuideText();
         }
 
         private void UpdateNextRecommendedStep()
@@ -2305,6 +2317,7 @@ namespace CassetteMotionPro.Workspace
             UpdateActiveSessionStatus();
             UpdateWorkflowChecklist();
             RefreshAnalysisCapturesStatus();
+            RefreshRecordingFolderGuide();
         }
 
         private void SetMedia(string key, string value)
@@ -2704,6 +2717,7 @@ namespace CassetteMotionPro.Workspace
             repository.Save(currentSession);
             UpdateActiveSessionStatus();
             UpdateWorkflowChecklist();
+            RefreshRecordingFolderGuide();
         }
 
         private string GetReportLogoStyle()
