@@ -378,7 +378,7 @@ namespace CassetteMotionPro.Workspace
             title.TextAlign = ContentAlignment.MiddleLeft;
 
             Label description = new Label();
-            description.Text = "Start with the client and session details, then open the videos in the full Kinovea analysis workspace. The app prepares the active Analysis Captures folder before you measure, so screenshots, exports, and clips have a clear client/session destination. Do the measuring there first, return to this session, save the values, and generate the report from the client folder.";
+            description.Text = "Start with the client and session details, then record the fit-day videos into this client session. Open those videos in the full Kinovea analysis workspace, use the Kinovea tools for the actual measuring, save useful photos/video evidence back to the client folders, then return here to finish Bike Metrics and the report.";
             description.Dock = DockStyle.Fill;
             description.ForeColor = Color.FromArgb(74, 87, 81);
 
@@ -392,7 +392,7 @@ namespace CassetteMotionPro.Workspace
             clientFiles.Size = new Size(112, 34);
             clientFiles.Click += delegate { SelectWorkspaceTab("Client Files"); };
 
-            Button startVideos = CreateButton("Capture + Analyze", true);
+            Button startVideos = CreateButton("Record + Analyze", true);
             startVideos.Size = new Size(152, 34);
             startVideos.Click += delegate { SaveAndSelectVideos(); };
 
@@ -405,7 +405,7 @@ namespace CassetteMotionPro.Workspace
             buttons.Controls.Add(analyze);
 
             Label path = new Label();
-            path.Text = "Client info → Record live → Use Latest → Kinovea tools → Bike Metrics → Report";
+            path.Text = "Client info → Record live → Analyze in Kinovea → Save evidence → Bike Metrics → Report";
             path.Dock = DockStyle.Fill;
             path.ForeColor = Color.FromArgb(92, 104, 98);
             path.TextAlign = ContentAlignment.MiddleLeft;
@@ -435,7 +435,7 @@ namespace CassetteMotionPro.Workspace
 
             AddWorkflowShortcutButton(buttons, "Client Folders", false, delegate { SelectWorkspaceTab("Client Files"); });
             AddWorkflowShortcutButton(buttons, "1. Client Info", true, SelectOverviewGoals);
-            AddWorkflowShortcutButton(buttons, "2. Capture + Measure", false, SaveAndSelectVideos);
+            AddWorkflowShortcutButton(buttons, "2. Record + Analyze", false, SaveAndSelectVideos);
             AddWorkflowShortcutButton(buttons, "3. Fit Results", false, delegate { SelectWorkspaceTab("Bike Metrics"); });
             AddWorkflowShortcutButton(buttons, "4. Report", false, delegate { SelectWorkspaceTab("Report Images"); });
 
@@ -610,7 +610,7 @@ namespace CassetteMotionPro.Workspace
             title.TextAlign = ContentAlignment.MiddleLeft;
 
             Label hint = new Label();
-            hint.Text = "Four stages: Client Info → Capture + Measure → Fit Results → Report. Green means ready.";
+            hint.Text = "Fit-day path: Client Info → Record Live → Analyze in Kinovea → Save Evidence → Report. Green means ready.";
             hint.ForeColor = Color.FromArgb(92, 104, 98);
             hint.Dock = DockStyle.Fill;
             hint.TextAlign = ContentAlignment.MiddleLeft;
@@ -626,10 +626,10 @@ namespace CassetteMotionPro.Workspace
             AddWorkflowStageHeader(card, "1. Client Info", "Set up the person, bike, goals, and session before touching video.");
             AddWorkflowChecklistRow(card, "Client info", "Confirm the client folder, bike, and contact info before recording.", "Client", delegate { SelectWorkspaceTab("Client Files"); }, HasClientFolder);
             AddWorkflowChecklistRow(card, "Fit goals", "Enter the rider goals and session notes before making changes.", "Goals", SelectOverviewGoals, HasFitGoals);
-            AddWorkflowStageHeader(card, "2. Capture + Measure", "Use Kinovea tools, then save videos, screenshots, exports, or clips to this client session.");
+            AddWorkflowStageHeader(card, "2. Record + Analyze", "Record into this client session, open Kinovea playback tools, then save screenshots, exports, or clips back to the client folders.");
             AddWorkflowChecklistRow(card, "Before video", "Record/import the starting video into this client session.", "Video", delegate { SelectWorkspaceTab("Video Capture + Analysis"); }, delegate { return HasMediaFile("BeforeVideoPath"); });
             AddWorkflowChecklistRow(card, "After video", "Record/import the comparison/final video into this client session.", "Video", delegate { SelectWorkspaceTab("Video Capture + Analysis"); }, delegate { return HasMediaFile("AfterVideoPath"); });
-            AddWorkflowChecklistRow(card, "Measure in Kinovea", "Open analysis, use the Kinovea tools, and save useful evidence into Analysis Captures.", "Tools", PrepareAndSelectVideoAnalysis, delegate { return HasMediaFile("BeforeVideoPath") || HasMediaFile("AfterVideoPath"); });
+            AddWorkflowChecklistRow(card, "Analyze in Kinovea", "Open playback analysis, use the Kinovea tools, and save useful evidence into Analysis Captures.", "Tools", PrepareAndSelectVideoAnalysis, delegate { return HasMediaFile("BeforeVideoPath") || HasMediaFile("AfterVideoPath"); });
             AddWorkflowChecklistRow(card, "Evidence saved", "Save screenshots, exported images, or useful video evidence into Analysis Captures.", "Captures", PrepareAndSelectVideoAnalysis, HasAnalysisCaptureEvidence);
             AddWorkflowStageHeader(card, "3. Fit Results", "Enter the measured bike numbers and body angles you want reflected in the report.");
             AddWorkflowChecklistRow(card, "Bike Metrics", "Save the measured saddle height, setback, reach, and handlebar X/Y values.", "Metrics", delegate { SelectWorkspaceTab("Bike Metrics"); }, HasCoreBikeMetrics);
@@ -996,13 +996,19 @@ namespace CassetteMotionPro.Workspace
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 86));
 
             Label analysisHint = new Label();
-            analysisHint.Text = "Fit-day flow: enter the client/session details, click Dual Live Capture or Record Live to record into this session’s Before/After folders, then return here and click Use Latest Both before opening Dual Playback Analysis.";
+            analysisHint.Text = "Fit-day path: confirm client/session details → record live into Before/After folders → click Use Latest Both → analyze in Kinovea playback → save evidence/images → enter Bike Metrics → generate the report.";
             analysisHint.Dock = DockStyle.Fill;
             analysisHint.ForeColor = Color.FromArgb(92, 104, 98);
             int analysisHintRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 62));
             table.Controls.Add(analysisHint, 1, analysisHintRow);
             table.SetColumnSpan(analysisHint, 5);
+
+            Control fitDayPath = BuildFitDayPathGuide();
+            int fitDayPathRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 76));
+            table.Controls.Add(fitDayPath, 1, fitDayPathRow);
+            table.SetColumnSpan(fitDayPath, 5);
 
             recordingFoldersGuide.Text = GetRecordingFolderGuideText();
             recordingFoldersGuide.Dock = DockStyle.Fill;
@@ -1094,7 +1100,7 @@ namespace CassetteMotionPro.Workspace
             table.SetColumnSpan(saveGuide, 4);
 
             Label hint = new Label();
-            hint.Text = "For a real fit, record as many live clips as needed, return here, click Use Latest Both to select the newest takes, use Dual Playback Analysis for Kinovea measurement tools, then save final numbers and report images.";
+            hint.Text = "For a real fit, record as many live clips as needed. Use Latest Both pulls in the newest takes from the client folders, Dual Playback Analysis opens the Kinovea tools, and the saved evidence plus Bike Metrics become the report foundation.";
             hint.Dock = DockStyle.Fill;
             hint.ForeColor = Color.FromArgb(92, 104, 98);
             int hintRow = table.RowCount++;
@@ -1105,6 +1111,39 @@ namespace CassetteMotionPro.Workspace
             page.AutoScroll = true;
             page.Controls.Add(table);
             return page;
+        }
+
+        private Control BuildFitDayPathGuide()
+        {
+            TableLayoutPanel path = new TableLayoutPanel();
+            path.Dock = DockStyle.Fill;
+            path.ColumnCount = 5;
+            path.RowCount = 1;
+            path.BackColor = Color.FromArgb(248, 252, 238);
+            path.Padding = new Padding(8, 8, 8, 8);
+
+            for (int index = 0; index < 5; index++)
+                path.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20));
+
+            AddFitDayPathStep(path, 0, "1. Client", "Confirm info + goals");
+            AddFitDayPathStep(path, 1, "2. Record", "Before / After folders");
+            AddFitDayPathStep(path, 2, "3. Analyze", "Kinovea playback tools");
+            AddFitDayPathStep(path, 3, "4. Save", "Evidence + Bike Metrics");
+            AddFitDayPathStep(path, 4, "5. Report", "Preview + package");
+
+            return path;
+        }
+
+        private void AddFitDayPathStep(TableLayoutPanel path, int column, string title, string detail)
+        {
+            Label step = new Label();
+            step.Dock = DockStyle.Fill;
+            step.TextAlign = ContentAlignment.MiddleCenter;
+            step.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold);
+            step.ForeColor = Color.FromArgb(37, 48, 43);
+            step.Text = title + Environment.NewLine + detail;
+            step.Margin = new Padding(4, 0, 4, 0);
+            path.Controls.Add(step, column, 0);
         }
 
         private static void ConfigureSummaryBox(TextBox box)
@@ -1988,7 +2027,7 @@ namespace CassetteMotionPro.Workspace
             string metrics = HasCoreBikeMetrics() ? "✓ Metrics" : "□ Metrics";
             string report = IsReportReady() ? "✓ Report ready" : "□ Report ready";
 
-            fitCommandCenterStatus.Text = before + "   " + after + "   " + evidence + "   " + metrics + "   " + report + "     Record Live opens dual capture; Use Latest Both selects newest takes; Dual Playback analyzes.";
+            fitCommandCenterStatus.Text = before + "   " + after + "   " + evidence + "   " + metrics + "   " + report + "     Fit path: Record Live → Use Latest Both → Dual Playback Analysis → save evidence + metrics.";
             fitCommandCenterStatus.ForeColor = IsReportReady() ? Color.FromArgb(60, 145, 76) : Color.FromArgb(74, 87, 81);
         }
 

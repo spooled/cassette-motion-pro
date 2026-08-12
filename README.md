@@ -5,7 +5,7 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.16.8 Dual Live capture screen workflow
+## Current milestone: 0.16.9 Dual Live capture screen workflow
 
 - Complete Kinovea source imported under `src/`
 - Application output renamed to `CassetteMotionPro.exe`
@@ -92,6 +92,11 @@ can be incorporated with minimal changes to the playback and annotation engine.
   recording folders directly in the workspace before opening live capture
 - Recording folder guide waits until the fit session is loaded, preventing
   startup crashes when opening a client fit session
+- Video Capture + Analysis now shows a five-step Fit Day Path guide: Client,
+  Record, Analyze, Save, and Report
+- Overview workflow wording now more clearly separates recording/analyzing in
+  Kinovea from saving evidence, Bike Metrics, and report content in the
+  workspace
 - Fit Command Center on the Overview tab puts Record Before, Use Latest Before,
   Record After, Use Latest After, side-by-side analysis, capture folders, and
   report image shortcuts in one simple fit-day dashboard
