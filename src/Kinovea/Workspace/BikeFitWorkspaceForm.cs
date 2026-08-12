@@ -1004,7 +1004,11 @@ namespace CassetteMotionPro.Workspace
             table.Controls.Add(analysisHint, 1, analysisHintRow);
             table.SetColumnSpan(analysisHint, 5);
 
+<<<<<<< HEAD
             Control fitDayPath = BuildFitDayPathGuide();
+=======
+            Panel fitDayPath = BuildFitDayPathGuide();
+>>>>>>> fb980173fee6cb962f8f76b176133b6ccd9ead3a
             int fitDayPathRow = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 76));
             table.Controls.Add(fitDayPath, 1, fitDayPathRow);
