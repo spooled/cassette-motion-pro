@@ -995,13 +995,23 @@ namespace CassetteMotionPro.Workspace
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 86));
 
             Label analysisHint = new Label();
-            analysisHint.Text = "Use Dual Live Capture to open Kinovea capture pointed at this session’s Before and After video folders. After recording, return here and click Use Latest Both to select the newest saved clips automatically. Browse is still there when you want to choose a different take.";
+            analysisHint.Text = "Fit-day flow: enter the client/session details, click Dual Live Capture or Record Live to record into this session’s Before/After folders, then return here and click Use Latest Both before opening Dual Playback Analysis.";
             analysisHint.Dock = DockStyle.Fill;
             analysisHint.ForeColor = Color.FromArgb(92, 104, 98);
             int analysisHintRow = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
             table.Controls.Add(analysisHint, 1, analysisHintRow);
             table.SetColumnSpan(analysisHint, 5);
+
+            Label recordingFolders = new Label();
+            recordingFolders.Text = GetRecordingFolderGuideText();
+            recordingFolders.Dock = DockStyle.Fill;
+            recordingFolders.ForeColor = Color.FromArgb(74, 87, 81);
+            recordingFolders.Padding = new Padding(0, 4, 0, 0);
+            int recordingFoldersRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 66));
+            table.Controls.Add(recordingFolders, 1, recordingFoldersRow);
+            table.SetColumnSpan(recordingFolders, 5);
 
             AddMediaRow(table, "Before", "BeforeVideoPath");
             AddMediaRow(table, "After", "AfterVideoPath");
@@ -1069,7 +1079,7 @@ namespace CassetteMotionPro.Workspace
             table.Controls.Add(analysisActions, 1, analysisActionsRow);
             table.SetColumnSpan(analysisActions, 4);
 
-            analysisCapturesStatus.Text = "Evidence status: Record Live saves raw fit clips into Before/After video folders. Prepare Capture Folder sets the session Analysis Captures folder for screenshots, exports, and extra evidence.";
+            analysisCapturesStatus.Text = "Evidence status: Record Live saves raw fit clips into the Before/After video folders above. Prepare Capture Folder sets the session Analysis Captures folder for screenshots, exports, and extra evidence.";
             analysisCapturesStatus.Dock = DockStyle.Fill;
             analysisCapturesStatus.ForeColor = Color.FromArgb(92, 104, 98);
             int statusRow = table.RowCount++;
@@ -1084,7 +1094,7 @@ namespace CassetteMotionPro.Workspace
             table.SetColumnSpan(saveGuide, 4);
 
             Label hint = new Label();
-            hint.Text = "For a real fit, record as many live clips as needed into the Before/After folders, Use Latest Both or Browse to select the best clips, use Dual Playback Analysis for the Kinovea measurement tools, then save final numbers and report images.";
+            hint.Text = "For a real fit, record as many live clips as needed, return here, click Use Latest Both to select the newest takes, use Dual Playback Analysis for Kinovea measurement tools, then save final numbers and report images.";
             hint.Dock = DockStyle.Fill;
             hint.ForeColor = Color.FromArgb(92, 104, 98);
             int hintRow = table.RowCount++;
@@ -1978,8 +1988,15 @@ namespace CassetteMotionPro.Workspace
             string metrics = HasCoreBikeMetrics() ? "✓ Metrics" : "□ Metrics";
             string report = IsReportReady() ? "✓ Report ready" : "□ Report ready";
 
-            fitCommandCenterStatus.Text = before + "   " + after + "   " + evidence + "   " + metrics + "   " + report + "     Dual Live records; Use Latest Both selects newest takes; Dual Playback analyzes.";
+            fitCommandCenterStatus.Text = before + "   " + after + "   " + evidence + "   " + metrics + "   " + report + "     Record Live opens dual capture; Use Latest Both selects newest takes; Dual Playback analyzes.";
             fitCommandCenterStatus.ForeColor = IsReportReady() ? Color.FromArgb(60, 145, 76) : Color.FromArgb(74, 87, 81);
+        }
+
+        private string GetRecordingFolderGuideText()
+        {
+            return "Recording folders for this session:" + Environment.NewLine +
+                "Before → " + GetSessionVideoViewFolderPath("Before") + Environment.NewLine +
+                "After  → " + GetSessionVideoViewFolderPath("After");
         }
 
         private void UpdateNextRecommendedStep()
