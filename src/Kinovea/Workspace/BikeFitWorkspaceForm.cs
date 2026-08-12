@@ -3127,7 +3127,7 @@ namespace CassetteMotionPro.Workspace
 
                 mediaBoxes[key].Text = latestVideoPath;
                 SaveCurrentSession();
-                UpdateSaveHint(viewName + " video set to the newest recording in this session folder.");
+                UpdateSaveHint(viewName + " video set to latest: " + FormatLatestVideoSelection(latestVideoPath));
             }
             catch (Exception exception)
             {
@@ -3157,7 +3157,7 @@ namespace CassetteMotionPro.Workspace
                 mediaBoxes["BeforeVideoPath"].Text = beforePath;
                 mediaBoxes["AfterVideoPath"].Text = afterPath;
                 SaveCurrentSession();
-                UpdateSaveHint("Before and After videos set to the newest recordings from their matching session folders.");
+                UpdateSaveHint("Latest selected — Before: " + FormatLatestVideoSelection(beforePath) + " | After: " + FormatLatestVideoSelection(afterPath));
             }
             catch (Exception exception)
             {
@@ -3205,6 +3205,23 @@ namespace CassetteMotionPro.Workspace
             }
 
             return latestPath;
+        }
+
+        private static string FormatLatestVideoSelection(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+                return "none";
+
+            string fileName = Path.GetFileName(path);
+            try
+            {
+                DateTime writeTime = File.GetLastWriteTime(path);
+                return fileName + " (" + writeTime.ToString("MMM d, h:mm tt") + ")";
+            }
+            catch
+            {
+                return fileName;
+            }
         }
 
         private static void WriteCaptureFolderHint(string folder, string viewName)
