@@ -438,6 +438,7 @@ jobs:
               "Download CassetteMotionPro-Windows-$env:VERSION or CassetteMotionPro-Portable-$env:VERSION."
             ) | Set-Content "dist\windows\INSTALLER-BUILD-STATUS.txt"
             Write-Warning "makensis.exe was not found. Skipping installer, but keeping the Windows bundle successful."
+            $global:LASTEXITCODE = 0
           }
 
       - name: Build installer
