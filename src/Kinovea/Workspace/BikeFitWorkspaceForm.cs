@@ -67,6 +67,7 @@ namespace CassetteMotionPro.Workspace
         private FitSessionRecord currentSession;
         private Action nextRecommendedStepActionHandler;
         private Action nextRecommendedFolderActionHandler;
+        private string fitCommandCenterMode = "Plan";
 
         public BikeFitWorkspaceForm(ClientRecord client, Action<string> openVideo, Action<string, string> openVideoPair, Action<string> prepareCaptureFolder, Action<string> openLiveCaptureFolder, Action<string, string> openDualLiveCaptureFolders, Action<string> openBodyAngleGuide)
         {
@@ -305,7 +306,7 @@ namespace CassetteMotionPro.Workspace
 
             Control commandCenter = BuildFitCommandCenter();
             int commandCenterRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 198));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 212));
             table.Controls.Add(commandCenter, 0, commandCenterRow);
             table.SetColumnSpan(commandCenter, 2);
 
@@ -457,7 +458,7 @@ namespace CassetteMotionPro.Workspace
             layout.Dock = DockStyle.Fill;
             layout.ColumnCount = 1;
             layout.RowCount = 3;
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 70));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
@@ -465,7 +466,7 @@ namespace CassetteMotionPro.Workspace
             fitCommandCenterStatus.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
             fitCommandCenterStatus.ForeColor = Color.FromArgb(74, 87, 81);
             fitCommandCenterStatus.TextAlign = ContentAlignment.MiddleLeft;
-            fitCommandCenterStatus.Text = "Before video: needed   After video: needed   Evidence: needed   Metrics: needed   Report: needed";
+            fitCommandCenterStatus.Text = "Mode: Plan   Folders: create or select a fit session   Before video: needed   After video: needed";
 
             Panel captureScroll = new Panel();
             captureScroll.Dock = DockStyle.Fill;
@@ -2015,6 +2016,7 @@ namespace CassetteMotionPro.Workspace
             try
             {
                 PrepareAnalysisCaptureFolder();
+                SetFitCommandCenterMode("Record / Analyze");
                 SelectWorkspaceTab("Video Capture + Analysis");
                 UpdateSaveHint("Client and fit details saved. Next step: record/import videos, analyze in Kinovea, and save evidence.");
             }
@@ -2029,6 +2031,7 @@ namespace CassetteMotionPro.Workspace
             try
             {
                 PrepareAnalysisCaptureFolder();
+                SetFitCommandCenterMode("Analyze");
                 SelectWorkspaceTab("Video Capture + Analysis");
                 UpdateSaveHint("Analysis Captures is ready. Open a video, measure in Kinovea, then save screenshots, exports, or clips into that folder.");
             }
@@ -2086,9 +2089,16 @@ namespace CassetteMotionPro.Workspace
             string evidence = HasAnalysisCaptureEvidence() ? "✓ Evidence" : "□ Evidence";
             string metrics = HasCoreBikeMetrics() ? "✓ Metrics" : "□ Metrics";
             string report = IsReportReady() ? "✓ Report ready" : "□ Report ready";
+            string folders = currentSession != null && !string.IsNullOrWhiteSpace(currentSession.StorageFolderName) ? "Folders: Before → Before folder | After → After folder" : "Folders: create/select fit session first";
 
-            fitCommandCenterStatus.Text = before + "   " + after + "   " + evidence + "   " + metrics + "   " + report + "     Fit path: Record Live → Use Latest Both → Dual Playback Analysis → save evidence + metrics.";
+            fitCommandCenterStatus.Text = "Mode: " + fitCommandCenterMode + "   " + folders + "   " + before + "   " + after + "   " + evidence + "   " + metrics + "   " + report;
             fitCommandCenterStatus.ForeColor = IsReportReady() ? Color.FromArgb(60, 145, 76) : Color.FromArgb(74, 87, 81);
+        }
+
+        private void SetFitCommandCenterMode(string mode)
+        {
+            fitCommandCenterMode = string.IsNullOrWhiteSpace(mode) ? "Plan" : mode;
+            UpdateFitCommandCenterStatus();
         }
 
         private string GetRecordingFolderGuideText()
@@ -3100,6 +3110,7 @@ namespace CassetteMotionPro.Workspace
                 string destinationDirectory = GetSessionVideoViewFolderPath(viewName);
                 Directory.CreateDirectory(destinationDirectory);
                 WriteCaptureFolderHint(destinationDirectory, viewName);
+                SetFitCommandCenterMode("Record Live: " + viewName);
                 UpdateSaveHint(viewName + " live recording folder opened and selected in Kinovea. Record, then return here and click Use Latest Before + After.");
 
                 Close();
@@ -3130,6 +3141,7 @@ namespace CassetteMotionPro.Workspace
                 Directory.CreateDirectory(afterDirectory);
                 WriteCaptureFolderHint(beforeDirectory, "Before");
                 WriteCaptureFolderHint(afterDirectory, "After");
+                SetFitCommandCenterMode("Record Live: Before + After");
                 UpdateSaveHint("Dual live capture opened with Before/After folders selected. Record in Kinovea, then return here and click Use Latest Before + After.");
 
                 Close();
@@ -3163,6 +3175,7 @@ namespace CassetteMotionPro.Workspace
 
                 SetMedia(key, latestVideoPath);
                 SaveCurrentSession();
+                SetFitCommandCenterMode("Use Latest: " + viewName);
                 UpdateSaveHint(viewName + " video set to latest: " + FormatLatestVideoSelection(latestVideoPath));
             }
             catch (Exception exception)
@@ -3193,6 +3206,7 @@ namespace CassetteMotionPro.Workspace
                 SetMedia("BeforeVideoPath", beforePath);
                 SetMedia("AfterVideoPath", afterPath);
                 SaveCurrentSession();
+                SetFitCommandCenterMode("Use Latest: Before + After");
                 string beforeSummary = FormatLatestVideoSelection(beforePath);
                 string afterSummary = FormatLatestVideoSelection(afterPath);
                 UpdateSaveHint("Latest selected — Before: " + beforeSummary + " | After: " + afterSummary);
@@ -3492,6 +3506,7 @@ namespace CassetteMotionPro.Workspace
             if (!ValidateVideo(path))
                 return;
             PrepareAnalysisCaptureFolder();
+            SetFitCommandCenterMode("Analyze");
             Close();
             if (openVideo != null)
                 openVideo(path);
@@ -3504,6 +3519,7 @@ namespace CassetteMotionPro.Workspace
             if (!ValidateVideo(first) || !ValidateVideo(second))
                 return;
             PrepareAnalysisCaptureFolder();
+            SetFitCommandCenterMode("Analyze: Before + After");
             Close();
             if (openVideoPair != null)
             {
