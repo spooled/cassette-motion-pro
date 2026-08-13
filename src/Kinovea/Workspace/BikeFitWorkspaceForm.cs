@@ -1321,6 +1321,7 @@ namespace CassetteMotionPro.Workspace
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 86));
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 72));
 
+            AddReportImageQuickSaveRow(table);
             AddImageRow(table, "Before image", "BeforeReportImagePath");
             AddImageRow(table, "After image", "AfterReportImagePath");
             AddImageRow(table, "Side-by-side image", "SideBySideReportImagePath");
@@ -1353,6 +1354,61 @@ namespace CassetteMotionPro.Workspace
             page.AutoScroll = true;
             page.Controls.Add(table);
             return page;
+        }
+
+        private void AddReportImageQuickSaveRow(TableLayoutPanel table)
+        {
+            int row = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 88));
+
+            Label label = new Label();
+            label.Text = "Quick save";
+            label.Dock = DockStyle.Fill;
+            label.TextAlign = ContentAlignment.MiddleLeft;
+            label.ForeColor = Color.FromArgb(74, 87, 81);
+
+            FlowLayoutPanel actions = new FlowLayoutPanel();
+            actions.Dock = DockStyle.Fill;
+            actions.FlowDirection = FlowDirection.LeftToRight;
+            actions.WrapContents = true;
+            actions.Padding = new Padding(0, 4, 0, 0);
+
+            Button openFolder = CreateButton("Open Report Images Folder", false);
+            openFolder.Size = new Size(190, 32);
+            openFolder.Margin = new Padding(0, 0, 8, 6);
+            openFolder.Click += delegate { OpenReportImagesFolderForSaving(); };
+
+            Button latestBefore = CreateButton("Use Latest Before", false);
+            latestBefore.Size = new Size(136, 32);
+            latestBefore.Margin = new Padding(0, 0, 8, 6);
+            latestBefore.Click += delegate { UseLatestReportImage("BeforeReportImagePath"); };
+
+            Button latestAfter = CreateButton("Use Latest After", false);
+            latestAfter.Size = new Size(128, 32);
+            latestAfter.Margin = new Padding(0, 0, 8, 6);
+            latestAfter.Click += delegate { UseLatestReportImage("AfterReportImagePath"); };
+
+            Button latestSideBySide = CreateButton("Use Latest Side-by-side", false);
+            latestSideBySide.Size = new Size(170, 32);
+            latestSideBySide.Margin = new Padding(0, 0, 8, 6);
+            latestSideBySide.Click += delegate { UseLatestReportImage("SideBySideReportImagePath"); };
+
+            Label hint = new Label();
+            hint.AutoSize = true;
+            hint.MaximumSize = new Size(820, 0);
+            hint.ForeColor = Color.FromArgb(92, 104, 98);
+            hint.Text = "Save or copy report screenshots into this session’s Report Images folder, then use the latest image for Before, After, or Side-by-side.";
+            hint.Margin = new Padding(0, 2, 0, 0);
+
+            actions.Controls.Add(openFolder);
+            actions.Controls.Add(latestBefore);
+            actions.Controls.Add(latestAfter);
+            actions.Controls.Add(latestSideBySide);
+            actions.Controls.Add(hint);
+
+            table.Controls.Add(label, 0, row);
+            table.Controls.Add(actions, 1, row);
+            table.SetColumnSpan(actions, 3);
         }
 
         private void AddReportImageDisplayOptions(TableLayoutPanel table)
@@ -3384,6 +3440,85 @@ namespace CassetteMotionPro.Workspace
                     }
                 }
             }
+        }
+
+        private void OpenReportImagesFolderForSaving()
+        {
+            try
+            {
+                SaveCurrentSession();
+                string folderPath = GetSessionReportImagesFolderPath();
+                Directory.CreateDirectory(folderPath);
+                Process.Start(folderPath);
+                UpdateSaveHint("Report Images folder opened. Save or copy report screenshots here, then click Use Latest.");
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "The Report Images folder could not be opened.\n\n" + exception.Message, "Report Images", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void UseLatestReportImage(string key)
+        {
+            try
+            {
+                SaveCurrentSession();
+                string folderPath = GetSessionReportImagesFolderPath();
+                Directory.CreateDirectory(folderPath);
+
+                string latestImagePath = FindLatestImageFile(folderPath);
+                if (string.IsNullOrEmpty(latestImagePath))
+                {
+                    MessageBox.Show(
+                        this,
+                        "No report images were found yet.\n\nOpen the Report Images folder, save or copy an image there, then click Use Latest again.",
+                        "Report Images",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                    return;
+                }
+
+                imageBoxes[key].Text = latestImagePath;
+                if (key == "SideBySideReportImagePath" && imageBoxes.ContainsKey("MeasurementReferenceImagePath"))
+                    imageBoxes["MeasurementReferenceImagePath"].Text = latestImagePath;
+
+                SaveCurrentSession();
+
+                string viewName = GetReportImageViewName(key);
+                if (key == "SideBySideReportImagePath")
+                    UpdateSaveHint("Latest side-by-side image selected and set as the Bike Metrics measurement image: " + Path.GetFileName(latestImagePath));
+                else
+                    UpdateSaveHint("Latest " + viewName.ToLowerInvariant() + " report image selected: " + Path.GetFileName(latestImagePath));
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "The latest report image could not be selected.\n\n" + exception.Message, "Report Images", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private static string FindLatestImageFile(string folderPath)
+        {
+            if (!Directory.Exists(folderPath))
+                return string.Empty;
+
+            string[] extensions = new[] { "*.jpg", "*.jpeg", "*.png", "*.bmp", "*.gif" };
+            string latestPath = string.Empty;
+            DateTime latestWriteTime = DateTime.MinValue;
+
+            foreach (string extension in extensions)
+            {
+                foreach (string path in Directory.GetFiles(folderPath, extension, SearchOption.TopDirectoryOnly))
+                {
+                    DateTime writeTime = File.GetLastWriteTime(path);
+                    if (writeTime > latestWriteTime)
+                    {
+                        latestWriteTime = writeTime;
+                        latestPath = path;
+                    }
+                }
+            }
+
+            return latestPath;
         }
 
         private string GetReportImageViewName(string key)
