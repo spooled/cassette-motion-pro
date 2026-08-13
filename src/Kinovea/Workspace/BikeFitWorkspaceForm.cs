@@ -3084,6 +3084,7 @@ namespace CassetteMotionPro.Workspace
                 string destinationDirectory = GetSessionVideoViewFolderPath(viewName);
                 Directory.CreateDirectory(destinationDirectory);
                 WriteCaptureFolderHint(destinationDirectory, viewName);
+                UpdateSaveHint(viewName + " live recording folder opened. Record in Kinovea, then return here and click Use Latest Before + After.");
 
                 Close();
                 openLiveCaptureFolder(destinationDirectory);
@@ -3113,6 +3114,7 @@ namespace CassetteMotionPro.Workspace
                 Directory.CreateDirectory(afterDirectory);
                 WriteCaptureFolderHint(beforeDirectory, "Before");
                 WriteCaptureFolderHint(afterDirectory, "After");
+                UpdateSaveHint("Dual live capture opened. Record Before/After in Kinovea, then return here and click Use Latest Before + After.");
 
                 Close();
                 if (openDualLiveCaptureFolders != null)
@@ -3276,7 +3278,7 @@ namespace CassetteMotionPro.Workspace
                 "Cassette Motion Pro live recording folder" + Environment.NewLine +
                 Environment.NewLine +
                 "This is the " + viewName + " video folder for the active fit session." + Environment.NewLine +
-                "Record live capture clips here, then return to the Bike Fit Workspace and click Use Latest to select the newest saved video automatically." + Environment.NewLine +
+                "Record live capture clips here, then return to the Bike Fit Workspace and click Use Latest Before + After to select the newest saved videos automatically." + Environment.NewLine +
                 Environment.NewLine +
                 "You can still use Browse when you want to pick an older take instead.";
             File.WriteAllText(hintPath, contents);
