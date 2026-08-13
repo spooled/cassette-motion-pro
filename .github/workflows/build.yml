@@ -376,14 +376,40 @@ jobs:
       - name: Install NSIS
         shell: pwsh
         run: |
-          choco install nsis -y --no-progress
           $nsisPath = Join-Path ${env:ProgramFiles(x86)} "NSIS\makensis.exe"
           if (!(Test-Path $nsisPath)) {
-            $nsisPath = (Get-Command makensis.exe -ErrorAction SilentlyContinue).Source
+            $existing = Get-Command makensis.exe -ErrorAction SilentlyContinue
+            if ($existing) {
+              $nsisPath = $existing.Source
+            }
           }
+
+          if (!(Test-Path $nsisPath)) {
+            $installed = $false
+            for ($attempt = 1; $attempt -le 3; $attempt++) {
+              Write-Host "Installing NSIS with Chocolatey, attempt $attempt of 3..."
+              choco install nsis -y --no-progress
+              if ($LASTEXITCODE -eq 0) {
+                $installed = $true
+                break
+              }
+              Write-Warning "Chocolatey NSIS install failed with exit code $LASTEXITCODE."
+              Start-Sleep -Seconds (10 * $attempt)
+            }
+
+            $nsisPath = Join-Path ${env:ProgramFiles(x86)} "NSIS\makensis.exe"
+            if (!(Test-Path $nsisPath)) {
+              $existing = Get-Command makensis.exe -ErrorAction SilentlyContinue
+              if ($existing) {
+                $nsisPath = $existing.Source
+              }
+            }
+          }
+
           if (!(Test-Path $nsisPath)) {
             throw "makensis.exe was not found after installing NSIS."
           }
+
           "MAKENSIS_PATH=$nsisPath" | Out-File -FilePath $env:GITHUB_ENV -Append
           & $nsisPath /VERSION
 
