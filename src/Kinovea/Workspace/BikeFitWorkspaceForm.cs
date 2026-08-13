@@ -59,6 +59,7 @@ namespace CassetteMotionPro.Workspace
         private readonly CheckBox chkShowMeasurementCaptureTraceInReport = new CheckBox();
         private readonly ComboBox cmbReportLogoStyle = new ComboBox();
         private readonly Dictionary<string, TextBox> mediaBoxes = new Dictionary<string, TextBox>();
+        private readonly Dictionary<string, Label> mediaStatusLabels = new Dictionary<string, Label>();
         private readonly Dictionary<string, TextBox> imageBoxes = new Dictionary<string, TextBox>();
         private readonly Dictionary<string, TextBox> measurementBoxes = new Dictionary<string, TextBox>();
         private readonly List<WorkflowChecklistItem> workflowChecklistItems = new List<WorkflowChecklistItem>();
@@ -1733,15 +1734,31 @@ namespace CassetteMotionPro.Workspace
         private void AddMediaRow(TableLayoutPanel table, string labelText, string key)
         {
             int row = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 64));
 
             Label label = FieldLabel(labelText);
+            Panel pathPanel = new Panel();
+            pathPanel.Dock = DockStyle.Fill;
+            pathPanel.Margin = new Padding(0, 6, 8, 4);
+
             TextBox path = new TextBox();
-            path.Dock = DockStyle.Fill;
+            path.Dock = DockStyle.Top;
             path.ReadOnly = true;
             path.BorderStyle = BorderStyle.FixedSingle;
-            path.Margin = new Padding(0, 8, 8, 8);
+            path.Margin = new Padding(0, 0, 0, 0);
             mediaBoxes.Add(key, path);
+
+            Label status = new Label();
+            status.Dock = DockStyle.Bottom;
+            status.Height = 20;
+            status.ForeColor = Color.FromArgb(92, 104, 98);
+            status.Font = new Font("Segoe UI", 8F, FontStyle.Regular);
+            status.Text = "No " + labelText.ToLowerInvariant() + " video selected yet.";
+            status.AutoEllipsis = true;
+            mediaStatusLabels.Add(key, status);
+
+            pathPanel.Controls.Add(status);
+            pathPanel.Controls.Add(path);
 
             Button browse = CreateButton("Browse…", false);
             browse.Margin = new Padding(0, 6, 8, 6);
@@ -1764,7 +1781,7 @@ namespace CassetteMotionPro.Workspace
             open.Click += delegate { OpenSingle(key); };
 
             table.Controls.Add(label, 0, row);
-            table.Controls.Add(path, 1, row);
+            table.Controls.Add(pathPanel, 1, row);
             table.Controls.Add(browse, 2, row);
             table.Controls.Add(record, 3, row);
             table.Controls.Add(latest, 4, row);
@@ -2389,6 +2406,7 @@ namespace CassetteMotionPro.Workspace
         private void SetMedia(string key, string value)
         {
             mediaBoxes[key].Text = value ?? string.Empty;
+            RefreshMediaStatus(key);
         }
 
         private void SetImage(string key, string value)
@@ -3027,9 +3045,9 @@ namespace CassetteMotionPro.Workspace
                         try
                         {
                             SaveCurrentSession();
-                            mediaBoxes[key].Text = ImportVideo(dialog.FileName, viewName);
+                            SetMedia(key, ImportVideo(dialog.FileName, viewName));
                             SaveCurrentSession();
-                            UpdateSaveHint(viewName + " video copied into this active fit session.");
+                            UpdateSaveHint(viewName + " video copied into this active fit session: " + FormatLatestVideoSelection(mediaBoxes[key].Text));
                         }
                         finally
                         {
@@ -3125,7 +3143,7 @@ namespace CassetteMotionPro.Workspace
                     return;
                 }
 
-                mediaBoxes[key].Text = latestVideoPath;
+                SetMedia(key, latestVideoPath);
                 SaveCurrentSession();
                 UpdateSaveHint(viewName + " video set to latest: " + FormatLatestVideoSelection(latestVideoPath));
             }
@@ -3154,8 +3172,8 @@ namespace CassetteMotionPro.Workspace
                     return;
                 }
 
-                mediaBoxes["BeforeVideoPath"].Text = beforePath;
-                mediaBoxes["AfterVideoPath"].Text = afterPath;
+                SetMedia("BeforeVideoPath", beforePath);
+                SetMedia("AfterVideoPath", afterPath);
                 SaveCurrentSession();
                 UpdateSaveHint("Latest selected — Before: " + FormatLatestVideoSelection(beforePath) + " | After: " + FormatLatestVideoSelection(afterPath));
             }
@@ -3222,6 +3240,30 @@ namespace CassetteMotionPro.Workspace
             {
                 return fileName;
             }
+        }
+
+        private void RefreshMediaStatus(string key)
+        {
+            Label status;
+            if (!mediaStatusLabels.TryGetValue(key, out status))
+                return;
+
+            string path = mediaBoxes.ContainsKey(key) ? mediaBoxes[key].Text : string.Empty;
+            string viewName = GetVideoViewName(key);
+
+            if (string.IsNullOrEmpty(path))
+            {
+                status.Text = "No " + viewName.ToLowerInvariant() + " video selected yet.";
+                return;
+            }
+
+            if (!File.Exists(path))
+            {
+                status.Text = viewName + " selected, but file is missing: " + Path.GetFileName(path);
+                return;
+            }
+
+            status.Text = viewName + " selected: " + FormatLatestVideoSelection(path);
         }
 
         private static void WriteCaptureFolderHint(string folder, string viewName)
