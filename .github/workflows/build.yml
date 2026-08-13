@@ -407,6 +407,25 @@ jobs:
           }
 
           if (!(Test-Path $nsisPath)) {
+            try {
+              $fallbackRoot = Join-Path $env:RUNNER_TEMP "nsis-fallback"
+              $fallbackZip = Join-Path $env:RUNNER_TEMP "nsis-3.12.zip"
+              $fallbackUrl = "https://downloads.sourceforge.net/project/nsis/NSIS%203/3.12/nsis-3.12.zip"
+              New-Item -ItemType Directory -Force $fallbackRoot | Out-Null
+              Write-Host "Downloading NSIS fallback from $fallbackUrl..."
+              Invoke-WebRequest -Uri $fallbackUrl -OutFile $fallbackZip -UseBasicParsing
+              Expand-Archive -Path $fallbackZip -DestinationPath $fallbackRoot -Force
+              $fallbackMakensis = Get-ChildItem -Path $fallbackRoot -Filter "makensis.exe" -File -Recurse | Select-Object -First 1
+              if ($fallbackMakensis) {
+                $nsisPath = $fallbackMakensis.FullName
+              }
+            }
+            catch {
+              Write-Warning "Direct NSIS fallback download failed: $($_.Exception.Message)"
+            }
+          }
+
+          if (!(Test-Path $nsisPath)) {
             throw "makensis.exe was not found after installing NSIS."
           }
 
