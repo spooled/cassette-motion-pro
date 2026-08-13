@@ -3180,16 +3180,19 @@ namespace CassetteMotionPro.Workspace
                 string beforeSummary = FormatLatestVideoSelection(beforePath);
                 string afterSummary = FormatLatestVideoSelection(afterPath);
                 UpdateSaveHint("Latest selected — Before: " + beforeSummary + " | After: " + afterSummary);
-                MessageBox.Show(this,
+                DialogResult nextStep = MessageBox.Show(this,
                     "Latest videos selected for this fit session:" + Environment.NewLine +
                     Environment.NewLine +
                     "Before: " + beforeSummary + Environment.NewLine +
                     "After: " + afterSummary + Environment.NewLine +
                     Environment.NewLine +
-                    "These are now saved in the Video tab and ready for analysis/reporting.",
+                    "Open Before + After analysis now?",
                     "Use Latest Before + After",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+
+                if (nextStep == DialogResult.Yes)
+                    OpenPair("BeforeVideoPath", "AfterVideoPath");
             }
             catch (Exception exception)
             {
