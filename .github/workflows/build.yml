@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  VERSION: 0.18.1
+  VERSION: 0.18.2
 
 jobs:
   build:
@@ -88,6 +88,11 @@ jobs:
           }
           $global:LASTEXITCODE = 0
           Get-ChildItem src -Directory -Filter "Kinovea*" | Select-Object Name
+
+      - name: Patch Kinovea report image save
+        shell: pwsh
+        run: |
+          .\build\patch-kinovea-report-image-save.ps1
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
@@ -374,6 +379,7 @@ jobs:
         run: rmdir src\Kinovea\bin\x64\Release\AppData
 
       - name: Install NSIS
+        continue-on-error: true
         shell: pwsh
         run: |
           $nsisPath = Join-Path ${env:ProgramFiles(x86)} "NSIS\makensis.exe"

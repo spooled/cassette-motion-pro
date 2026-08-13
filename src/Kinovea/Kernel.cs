@@ -227,6 +227,12 @@ namespace Kinovea.Root
             ExtendUI();
 
             FormsHelper.SetMainForm(mainWindow);
+            CassetteReportImageSaveRouter.SaveReportImageRequested = SaveKinoveaReportImage;
+        }
+
+        private bool SaveKinoveaReportImage(IWin32Window owner, Bitmap bitmap, string suggestedFileName)
+        {
+            return ReportImageSaveTarget.TrySave(owner ?? mainWindow, bitmap, suggestedFileName);
         }
         #endregion
 

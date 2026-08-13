@@ -90,6 +90,7 @@ namespace CassetteMotionPro.Workspace
             ClientSize = new Size(1180, 760);
             MinimumSize = new Size(980, 650);
             StartPosition = FormStartPosition.CenterParent;
+            ReportImageSaveTarget.ReportImageSaved += ReportImageSaveTarget_ReportImageSaved;
             FormClosing += BikeFitWorkspaceForm_FormClosing;
 
             BuildInterface();
@@ -2495,6 +2496,7 @@ namespace CassetteMotionPro.Workspace
             UpdateWorkflowChecklist();
             RefreshAnalysisCapturesStatus();
             RefreshRecordingFolderGuide();
+            UpdateReportImageSaveTarget();
         }
 
         private void SetMedia(string key, string value)
@@ -2812,17 +2814,39 @@ namespace CassetteMotionPro.Workspace
         private void BikeFitWorkspaceForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             if (currentSession == null)
+            {
+                ReportImageSaveTarget.ReportImageSaved -= ReportImageSaveTarget_ReportImageSaved;
                 return;
+            }
 
             try
             {
                 SaveCurrentSession();
+                ReportImageSaveTarget.ReportImageSaved -= ReportImageSaveTarget_ReportImageSaved;
             }
             catch (Exception exception)
             {
                 e.Cancel = true;
                 MessageBox.Show(this, "The fit session could not be saved.\n\n" + exception.Message, "Bike Fit Workspace", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void ReportImageSaveTarget_ReportImageSaved(string slot, string path)
+        {
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action<string, string>(ReportImageSaveTarget_ReportImageSaved), slot, path);
+                return;
+            }
+
+            string key = string.Equals(slot, "After", StringComparison.OrdinalIgnoreCase) ? "AfterReportImagePath" : "BeforeReportImagePath";
+            if (!imageBoxes.ContainsKey(key))
+                return;
+
+            imageBoxes[key].Text = path;
+            SaveCurrentSession();
+            UpdateWorkflowChecklist();
+            UpdateSaveHint(slot + " report image saved from Kinovea Save image: " + Path.GetFileName(path));
         }
 
         private void SaveCurrentSession()
@@ -2931,15 +2955,36 @@ namespace CassetteMotionPro.Workspace
 
             if (currentSession == null)
             {
+                ReportImageSaveTarget.Clear();
                 activeSessionStatus.Text = "Active session\nChoose or create a fit session";
                 return;
             }
+
+            UpdateReportImageSaveTarget();
 
             string status = string.IsNullOrWhiteSpace(currentSession.Status) ? "Assessment" : currentSession.Status.Trim();
             string folder = currentSession.Id == Guid.Empty ? "pending until saved" : currentSession.StorageFolderName;
             activeSessionStatus.Text = "Active session: " + currentSession.DisplayName + " · " + status + "\n" +
                 "Client: " + client.DisplayName + "\n" +
                 "Session record: Measurements → Sessions → " + folder;
+        }
+
+        private void UpdateReportImageSaveTarget()
+        {
+            if (currentSession == null)
+            {
+                ReportImageSaveTarget.Clear();
+                return;
+            }
+
+            try
+            {
+                ReportImageSaveTarget.SetActiveFolder(GetSessionReportImagesFolderPath());
+            }
+            catch
+            {
+                ReportImageSaveTarget.Clear();
+            }
         }
 
         private void StartBodyAngleGuide(string mediaKey)
@@ -3461,6 +3506,7 @@ namespace CassetteMotionPro.Workspace
                 SaveCurrentSession();
                 string folderPath = GetSessionReportImagesFolderPath();
                 Directory.CreateDirectory(folderPath);
+                ReportImageSaveTarget.SetActiveFolder(folderPath);
                 Process.Start(folderPath);
                 UpdateSaveHint("Report Images folder opened. Save or copy report screenshots here, then click Use Latest.");
             }
@@ -3477,6 +3523,7 @@ namespace CassetteMotionPro.Workspace
                 SaveCurrentSession();
                 string folderPath = GetSessionReportImagesFolderPath();
                 Directory.CreateDirectory(folderPath);
+                ReportImageSaveTarget.SetActiveFolder(folderPath);
 
                 if (prepareCaptureFolder != null)
                     prepareCaptureFolder(folderPath);
@@ -3504,6 +3551,7 @@ namespace CassetteMotionPro.Workspace
                 SaveCurrentSession();
                 string folderPath = GetSessionReportImagesFolderPath();
                 Directory.CreateDirectory(folderPath);
+                ReportImageSaveTarget.SetActiveFolder(folderPath);
                 Clipboard.SetText(folderPath);
                 UpdateSaveHint("Report Images folder path copied. Paste it into the Windows save dialog if needed.");
             }
@@ -3520,8 +3568,9 @@ namespace CassetteMotionPro.Workspace
                 SaveCurrentSession();
                 string folderPath = GetSessionReportImagesFolderPath();
                 Directory.CreateDirectory(folderPath);
+                ReportImageSaveTarget.SetActiveFolder(folderPath);
 
-                string latestImagePath = FindLatestImageFile(folderPath);
+                string latestImagePath = FindLatestReportImageFile(folderPath, key);
                 if (string.IsNullOrEmpty(latestImagePath))
                 {
                     MessageBox.Show(
@@ -3553,6 +3602,29 @@ namespace CassetteMotionPro.Workspace
 
         private static string FindLatestImageFile(string folderPath)
         {
+            return FindLatestImageFile(folderPath, string.Empty);
+        }
+
+        private static string FindLatestReportImageFile(string folderPath, string key)
+        {
+            string prefix = string.Empty;
+            if (key == "BeforeReportImagePath")
+                prefix = "Before-ReportImage-";
+            else if (key == "AfterReportImagePath")
+                prefix = "After-ReportImage-";
+
+            if (!string.IsNullOrEmpty(prefix))
+            {
+                string matchingImage = FindLatestImageFile(folderPath, prefix);
+                if (!string.IsNullOrEmpty(matchingImage))
+                    return matchingImage;
+            }
+
+            return FindLatestImageFile(folderPath);
+        }
+
+        private static string FindLatestImageFile(string folderPath, string requiredPrefix)
+        {
             if (!Directory.Exists(folderPath))
                 return string.Empty;
 
@@ -3564,6 +3636,9 @@ namespace CassetteMotionPro.Workspace
             {
                 foreach (string path in Directory.GetFiles(folderPath, extension, SearchOption.TopDirectoryOnly))
                 {
+                    if (!string.IsNullOrEmpty(requiredPrefix) && !Path.GetFileName(path).StartsWith(requiredPrefix, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
                     DateTime writeTime = File.GetLastWriteTime(path);
                     if (writeTime > latestWriteTime)
                     {

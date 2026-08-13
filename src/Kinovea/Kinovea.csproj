@@ -47,7 +47,7 @@
     <PublisherName>Cassette Fit Studio</PublisherName>
     <OpenBrowserOnPublish>false</OpenBrowserOnPublish>
     <ApplicationRevision>0</ApplicationRevision>
-    <ApplicationVersion>0.18.1.0</ApplicationVersion>
+    <ApplicationVersion>0.18.2.0</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
@@ -181,6 +181,7 @@
     <Compile Include="Workspace\FitSessionRecord.cs" />
     <Compile Include="Workspace\FitSessionRepository.cs" />
     <Compile Include="Workspace\FitSessionReportGenerator.cs" />
+    <Compile Include="Workspace\ReportImageSaveTarget.cs" />
     <Compile Include="Workspace\BikeMetricGuidedCaptureForm.cs">
       <SubType>Form</SubType>
     </Compile>
