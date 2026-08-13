@@ -60,6 +60,12 @@ namespace Kinovea.Root
         private Stopwatch stopwatch = new Stopwatch();
         private ClientRepository clientRepository;
         private System.Windows.Forms.Timer bodyAngleActivationTimer;
+        private System.Windows.Forms.Timer clientCaptureFolderLockTimer;
+        private CaptureFolder lockedSingleCaptureFolder;
+        private CaptureFolder lockedBeforeCaptureFolder;
+        private CaptureFolder lockedAfterCaptureFolder;
+        private string lockedSingleCapturePrefix;
+        private int clientCaptureFolderLockTicks;
         
         #region Menus
 
@@ -724,7 +730,8 @@ namespace Kinovea.Root
             // Make sure capture screens here and in other windows see the active client/session video folder.
             PreferencesUpdated(true);
             EnsureCaptureScreenCount(1);
-            ConfigureCaptureScreenFolder(0, captureFolder, "Live");
+            ConfigureClientCaptureFolders(captureFolder, null, null, "Live");
+            StartClientCaptureFolderLock(captureFolder, null, null, "Live");
             statusLabel.Text = string.Format("Live capture ready: saving to {0}", path);
             screenManager.AfterSharedBufferChange();
             screenManager.OrganizeScreens();
@@ -746,8 +753,8 @@ namespace Kinovea.Root
             PreferencesUpdated(true);
 
             EnsureCaptureScreenCount(2);
-            ConfigureCaptureScreenFolder(0, beforeFolder, "Before");
-            ConfigureCaptureScreenFolder(1, afterFolder, "After");
+            ConfigureClientCaptureFolders(null, beforeFolder, afterFolder, null);
+            StartClientCaptureFolderLock(null, beforeFolder, afterFolder, null);
             statusLabel.Text = string.Format("Dual live capture ready: left saves Before, right saves After.");
             screenManager.AfterSharedBufferChange();
             screenManager.OrganizeScreens();
@@ -1471,6 +1478,55 @@ namespace Kinovea.Root
             descriptor.CaptureFolder = captureFolder.Id;
             descriptor.FileName = string.IsNullOrEmpty(fileNamePrefix) ? "%dateb%-%time%" : fileNamePrefix + "-%dateb%-%time%";
             captureScreen.ConfigureScreen(descriptor);
+        }
+
+        private void ConfigureClientCaptureFolders(CaptureFolder singleFolder, CaptureFolder beforeFolder, CaptureFolder afterFolder, string singlePrefix)
+        {
+            if (singleFolder != null)
+            {
+                ConfigureCaptureScreenFolder(0, singleFolder, singlePrefix);
+                return;
+            }
+
+            ConfigureCaptureScreenFolder(0, beforeFolder, "Before");
+            ConfigureCaptureScreenFolder(1, afterFolder, "After");
+        }
+
+        private void StartClientCaptureFolderLock(CaptureFolder singleFolder, CaptureFolder beforeFolder, CaptureFolder afterFolder, string singlePrefix)
+        {
+            lockedSingleCaptureFolder = singleFolder;
+            lockedBeforeCaptureFolder = beforeFolder;
+            lockedAfterCaptureFolder = afterFolder;
+            lockedSingleCapturePrefix = singlePrefix;
+            clientCaptureFolderLockTicks = 0;
+
+            if (clientCaptureFolderLockTimer != null)
+            {
+                clientCaptureFolderLockTimer.Stop();
+                clientCaptureFolderLockTimer.Dispose();
+            }
+
+            clientCaptureFolderLockTimer = new System.Windows.Forms.Timer();
+            clientCaptureFolderLockTimer.Interval = 1000;
+            clientCaptureFolderLockTimer.Tick += ClientCaptureFolderLockTimer_Tick;
+            clientCaptureFolderLockTimer.Start();
+        }
+
+        private void ClientCaptureFolderLockTimer_Tick(object sender, EventArgs e)
+        {
+            clientCaptureFolderLockTicks++;
+            ConfigureClientCaptureFolders(lockedSingleCaptureFolder, lockedBeforeCaptureFolder, lockedAfterCaptureFolder, lockedSingleCapturePrefix);
+
+            if (clientCaptureFolderLockTicks >= 30)
+            {
+                clientCaptureFolderLockTimer.Stop();
+                clientCaptureFolderLockTimer.Dispose();
+                clientCaptureFolderLockTimer = null;
+                lockedSingleCaptureFolder = null;
+                lockedBeforeCaptureFolder = null;
+                lockedAfterCaptureFolder = null;
+                lockedSingleCapturePrefix = null;
+            }
         }
 
         private void LoadVideoInTargetScreen(string path, int targetScreen)

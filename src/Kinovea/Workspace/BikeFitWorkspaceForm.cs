@@ -305,7 +305,7 @@ namespace CassetteMotionPro.Workspace
 
             Control commandCenter = BuildFitCommandCenter();
             int commandCenterRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 176));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 198));
             table.Controls.Add(commandCenter, 0, commandCenterRow);
             table.SetColumnSpan(commandCenter, 2);
 
@@ -458,7 +458,7 @@ namespace CassetteMotionPro.Workspace
             layout.ColumnCount = 1;
             layout.RowCount = 3;
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 80));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 70));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
             fitCommandCenterStatus.Dock = DockStyle.Fill;
@@ -467,10 +467,16 @@ namespace CassetteMotionPro.Workspace
             fitCommandCenterStatus.TextAlign = ContentAlignment.MiddleLeft;
             fitCommandCenterStatus.Text = "Before video: needed   After video: needed   Evidence: needed   Metrics: needed   Report: needed";
 
+            Panel captureScroll = new Panel();
+            captureScroll.Dock = DockStyle.Fill;
+            captureScroll.AutoScroll = true;
+            captureScroll.BackColor = Color.Transparent;
+
             FlowLayoutPanel captureButtons = new FlowLayoutPanel();
-            captureButtons.Dock = DockStyle.Fill;
+            captureButtons.AutoSize = true;
+            captureButtons.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             captureButtons.FlowDirection = FlowDirection.LeftToRight;
-            captureButtons.WrapContents = true;
+            captureButtons.WrapContents = false;
             captureButtons.Padding = new Padding(0, 2, 0, 0);
 
             AddFitCommandButton(captureButtons, "Dual Live Capture", true, OpenDualLiveCapture);
@@ -481,8 +487,16 @@ namespace CassetteMotionPro.Workspace
             AddFitCommandButton(captureButtons, "Use Latest Both", true, UseLatestBothVideos);
             AddFitCommandButton(captureButtons, "Client Folders", false, delegate { SelectWorkspaceTab("Client Files"); });
 
+            captureScroll.Controls.Add(captureButtons);
+
+            Panel analysisScroll = new Panel();
+            analysisScroll.Dock = DockStyle.Fill;
+            analysisScroll.AutoScroll = true;
+            analysisScroll.BackColor = Color.Transparent;
+
             FlowLayoutPanel analysisButtons = new FlowLayoutPanel();
-            analysisButtons.Dock = DockStyle.Fill;
+            analysisButtons.AutoSize = true;
+            analysisButtons.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             analysisButtons.FlowDirection = FlowDirection.LeftToRight;
             analysisButtons.WrapContents = false;
             analysisButtons.Padding = new Padding(0, 2, 0, 0);
@@ -493,9 +507,11 @@ namespace CassetteMotionPro.Workspace
             AddFitCommandButton(analysisButtons, "Captures Folder", false, OpenAnalysisCapturesFolder);
             AddFitCommandButton(analysisButtons, "Report Images", false, delegate { SelectWorkspaceTab("Report Images"); });
 
+            analysisScroll.Controls.Add(analysisButtons);
+
             layout.Controls.Add(fitCommandCenterStatus, 0, 0);
-            layout.Controls.Add(captureButtons, 0, 1);
-            layout.Controls.Add(analysisButtons, 0, 2);
+            layout.Controls.Add(captureScroll, 0, 1);
+            layout.Controls.Add(analysisScroll, 0, 2);
             group.Controls.Add(layout);
             return group;
         }
