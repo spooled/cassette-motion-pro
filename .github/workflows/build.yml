@@ -385,12 +385,10 @@ jobs:
           }
 
           if (!(Test-Path $nsisPath)) {
-            $installed = $false
             for ($attempt = 1; $attempt -le 3; $attempt++) {
               Write-Host "Installing NSIS with Chocolatey, attempt $attempt of 3..."
               choco install nsis -y --no-progress
               if ($LASTEXITCODE -eq 0) {
-                $installed = $true
                 break
               }
               Write-Warning "Chocolatey NSIS install failed with exit code $LASTEXITCODE."
@@ -425,22 +423,42 @@ jobs:
             }
           }
 
-          if (!(Test-Path $nsisPath)) {
-            throw "makensis.exe was not found after installing NSIS."
+          if (Test-Path $nsisPath) {
+            "MAKENSIS_PATH=$nsisPath" | Out-File -FilePath $env:GITHUB_ENV -Append
+            "INSTALLER_AVAILABLE=true" | Out-File -FilePath $env:GITHUB_ENV -Append
+            & $nsisPath /VERSION
+          } else {
+            "INSTALLER_AVAILABLE=false" | Out-File -FilePath $env:GITHUB_ENV -Append
+            @(
+              "Installer build status: SKIPPED"
+              "Version: $env:VERSION"
+              "Reason: makensis.exe was not available on the GitHub runner."
+              ""
+              "The portable zip was still created and uploaded."
+              "Download CassetteMotionPro-Windows-$env:VERSION or CassetteMotionPro-Portable-$env:VERSION."
+            ) | Set-Content "dist\windows\INSTALLER-BUILD-STATUS.txt"
+            Write-Warning "makensis.exe was not found. Skipping installer, but keeping the Windows bundle successful."
           }
-
-          "MAKENSIS_PATH=$nsisPath" | Out-File -FilePath $env:GITHUB_ENV -Append
-          & $nsisPath /VERSION
 
       - name: Build installer
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force dist\installer
           New-Item -ItemType Directory -Force dist\windows
+          if ([string]::IsNullOrWhiteSpace($env:MAKENSIS_PATH) -or !(Test-Path $env:MAKENSIS_PATH)) {
+            @(
+              "Installer build status: SKIPPED"
+              "Version: $env:VERSION"
+              "Reason: makensis.exe was not available on the GitHub runner."
+              ""
+              "The portable zip was still created and uploaded."
+              "Download CassetteMotionPro-Windows-$env:VERSION or CassetteMotionPro-Portable-$env:VERSION."
+            ) | Set-Content "dist\windows\INSTALLER-BUILD-STATUS.txt"
+            Write-Warning "Skipping installer because MAKENSIS_PATH is missing or invalid: $env:MAKENSIS_PATH"
+            return
+          }
+
           try {
-            if ([string]::IsNullOrWhiteSpace($env:MAKENSIS_PATH) -or !(Test-Path $env:MAKENSIS_PATH)) {
-              throw "MAKENSIS_PATH is missing or invalid: $env:MAKENSIS_PATH"
-            }
 
             Push-Location src\Installer
             Write-Host "Installer source files:"
@@ -497,7 +515,7 @@ jobs:
           }
 
       - name: Upload installer
-        if: success()
+        if: hashFiles('dist/installer/*.exe') != ''
         uses: actions/upload-artifact@v6
         with:
           name: CassetteMotionPro-Installer-${{ env.VERSION }}
