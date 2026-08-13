@@ -719,12 +719,17 @@ namespace Kinovea.Root
                 return;
 
             Directory.CreateDirectory(path);
-            var cf = PreferencesManager.CapturePreferences.AddCaptureFolder(path);
+            CaptureFolder captureFolder = PreferencesManager.CapturePreferences.AddCaptureFolder(path);
 
             // Make sure capture screens here and in other windows see the active client/session video folder.
             PreferencesUpdated(true);
-            statusLabel.Text = string.Format("Live capture folder: {0}", path);
-            OpenFromPath(cf.Id.ToString());
+            EnsureCaptureScreenCount(1);
+            ConfigureCaptureScreenFolder(0, captureFolder, "Live");
+            statusLabel.Text = string.Format("Live capture ready: saving to {0}", path);
+            screenManager.AfterSharedBufferChange();
+            screenManager.OrganizeScreens();
+            screenManager.OrganizeCommonControls();
+            screenManager.OrganizeMenus();
         }
 
         private void OpenDualClientCaptureFolders(string beforePath, string afterPath)
@@ -734,14 +739,16 @@ namespace Kinovea.Root
 
             Directory.CreateDirectory(beforePath);
             Directory.CreateDirectory(afterPath);
-            PreferencesManager.CapturePreferences.AddCaptureFolder(beforePath);
-            PreferencesManager.CapturePreferences.AddCaptureFolder(afterPath);
+            CaptureFolder beforeFolder = PreferencesManager.CapturePreferences.AddCaptureFolder(beforePath);
+            CaptureFolder afterFolder = PreferencesManager.CapturePreferences.AddCaptureFolder(afterPath);
 
             // Make sure capture screens see the active client/session folders.
             PreferencesUpdated(true);
-            statusLabel.Text = string.Format("Dual live capture folders: Before: {0} · After: {1}", beforePath, afterPath);
 
             EnsureCaptureScreenCount(2);
+            ConfigureCaptureScreenFolder(0, beforeFolder, "Before");
+            ConfigureCaptureScreenFolder(1, afterFolder, "After");
+            statusLabel.Text = string.Format("Dual live capture ready: left saves Before, right saves After.");
             screenManager.AfterSharedBufferChange();
             screenManager.OrganizeScreens();
             screenManager.OrganizeCommonControls();
@@ -1446,6 +1453,24 @@ namespace Kinovea.Root
 
             while (screenManager.ScreenCount < requiredScreens)
                 screenManager.AddCaptureScreen();
+        }
+
+        private void ConfigureCaptureScreenFolder(int screenIndex, CaptureFolder captureFolder, string fileNamePrefix)
+        {
+            if (captureFolder == null)
+                return;
+
+            CaptureScreen captureScreen = screenManager.GetScreenAt(screenIndex) as CaptureScreen;
+            if (captureScreen == null)
+                return;
+
+            ScreenDescriptorCapture descriptor = captureScreen.GetScreenDescriptor() as ScreenDescriptorCapture;
+            if (descriptor == null)
+                descriptor = new ScreenDescriptorCapture();
+
+            descriptor.CaptureFolder = captureFolder.Id;
+            descriptor.FileName = string.IsNullOrEmpty(fileNamePrefix) ? "%dateb%-%time%" : fileNamePrefix + "-%dateb%-%time%";
+            captureScreen.ConfigureScreen(descriptor);
         }
 
         private void LoadVideoInTargetScreen(string path, int targetScreen)

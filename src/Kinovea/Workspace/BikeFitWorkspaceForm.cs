@@ -3084,7 +3084,7 @@ namespace CassetteMotionPro.Workspace
                 string destinationDirectory = GetSessionVideoViewFolderPath(viewName);
                 Directory.CreateDirectory(destinationDirectory);
                 WriteCaptureFolderHint(destinationDirectory, viewName);
-                UpdateSaveHint(viewName + " live recording folder opened. Record in Kinovea, then return here and click Use Latest Before + After.");
+                UpdateSaveHint(viewName + " live recording folder opened and selected in Kinovea. Record, then return here and click Use Latest Before + After.");
 
                 Close();
                 openLiveCaptureFolder(destinationDirectory);
@@ -3114,7 +3114,7 @@ namespace CassetteMotionPro.Workspace
                 Directory.CreateDirectory(afterDirectory);
                 WriteCaptureFolderHint(beforeDirectory, "Before");
                 WriteCaptureFolderHint(afterDirectory, "After");
-                UpdateSaveHint("Dual live capture opened. Record Before/After in Kinovea, then return here and click Use Latest Before + After.");
+                UpdateSaveHint("Dual live capture opened with Before/After folders selected. Record in Kinovea, then return here and click Use Latest Before + After.");
 
                 Close();
                 if (openDualLiveCaptureFolders != null)
