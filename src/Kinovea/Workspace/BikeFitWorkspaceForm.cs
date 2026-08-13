@@ -1359,7 +1359,7 @@ namespace CassetteMotionPro.Workspace
         private void AddReportImageQuickSaveRow(TableLayoutPanel table)
         {
             int row = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 88));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 122));
 
             Label label = new Label();
             label.Text = "Quick save";
@@ -1373,10 +1373,20 @@ namespace CassetteMotionPro.Workspace
             actions.WrapContents = true;
             actions.Padding = new Padding(0, 4, 0, 0);
 
-            Button openFolder = CreateButton("Open Report Images Folder", false);
-            openFolder.Size = new Size(190, 32);
+            Button setSaveFolder = CreateButton("Set Save Folder", true);
+            setSaveFolder.Size = new Size(132, 32);
+            setSaveFolder.Margin = new Padding(0, 0, 8, 6);
+            setSaveFolder.Click += delegate { SetReportImagesSaveFolder(); };
+
+            Button openFolder = CreateButton("Open Folder", false);
+            openFolder.Size = new Size(104, 32);
             openFolder.Margin = new Padding(0, 0, 8, 6);
             openFolder.Click += delegate { OpenReportImagesFolderForSaving(); };
+
+            Button copyPath = CreateButton("Copy Folder Path", false);
+            copyPath.Size = new Size(136, 32);
+            copyPath.Margin = new Padding(0, 0, 8, 6);
+            copyPath.Click += delegate { CopyReportImagesFolderPath(); };
 
             Button latestBefore = CreateButton("Use Latest Before", false);
             latestBefore.Size = new Size(136, 32);
@@ -1397,10 +1407,12 @@ namespace CassetteMotionPro.Workspace
             hint.AutoSize = true;
             hint.MaximumSize = new Size(820, 0);
             hint.ForeColor = Color.FromArgb(92, 104, 98);
-            hint.Text = "Save or copy report screenshots into this session’s Report Images folder, then use the latest image for Before, After, or Side-by-side.";
+            hint.Text = "Click Set Save Folder before saving images from Kinovea. If Windows still opens somewhere else, Copy Folder Path and paste it into the save dialog.";
             hint.Margin = new Padding(0, 2, 0, 0);
 
+            actions.Controls.Add(setSaveFolder);
             actions.Controls.Add(openFolder);
+            actions.Controls.Add(copyPath);
             actions.Controls.Add(latestBefore);
             actions.Controls.Add(latestAfter);
             actions.Controls.Add(latestSideBySide);
@@ -3455,6 +3467,49 @@ namespace CassetteMotionPro.Workspace
             catch (Exception exception)
             {
                 MessageBox.Show(this, "The Report Images folder could not be opened.\n\n" + exception.Message, "Report Images", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void SetReportImagesSaveFolder()
+        {
+            try
+            {
+                SaveCurrentSession();
+                string folderPath = GetSessionReportImagesFolderPath();
+                Directory.CreateDirectory(folderPath);
+
+                if (prepareCaptureFolder != null)
+                    prepareCaptureFolder(folderPath);
+
+                Clipboard.SetText(folderPath);
+                UpdateSaveHint("Report Images save folder set and copied. Save report screenshots here: " + folderPath);
+                MessageBox.Show(
+                    this,
+                    "Report Images save folder is ready for this active fit session.\n\n" +
+                    "The folder path was also copied, so if Windows asks where to save, paste it into the folder box.",
+                    "Report Images",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "The Report Images save folder could not be set.\n\n" + exception.Message, "Report Images", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void CopyReportImagesFolderPath()
+        {
+            try
+            {
+                SaveCurrentSession();
+                string folderPath = GetSessionReportImagesFolderPath();
+                Directory.CreateDirectory(folderPath);
+                Clipboard.SetText(folderPath);
+                UpdateSaveHint("Report Images folder path copied. Paste it into the Windows save dialog if needed.");
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "The Report Images folder path could not be copied.\n\n" + exception.Message, "Report Images", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
