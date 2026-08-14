@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  VERSION: 0.18.2
+  VERSION: 0.18.3
 
 jobs:
   build:
@@ -93,6 +93,11 @@ jobs:
         shell: pwsh
         run: |
           .\build\patch-kinovea-report-image-save.ps1
+
+      - name: Patch Kinovea video save
+        shell: pwsh
+        run: |
+          .\build\patch-kinovea-video-save.ps1
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2

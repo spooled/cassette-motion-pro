@@ -228,11 +228,23 @@ namespace Kinovea.Root
 
             FormsHelper.SetMainForm(mainWindow);
             CassetteReportImageSaveRouter.SaveReportImageRequested = SaveKinoveaReportImage;
+            CassetteVideoSaveRouter.ChooseVideoSavePathRequested = ChooseKinoveaVideoSavePath;
+            CassetteVideoSaveRouter.VideoSaveCompleted = KinoveaVideoSaveCompleted;
         }
 
         private bool SaveKinoveaReportImage(IWin32Window owner, Bitmap bitmap, string suggestedFileName)
         {
             return ReportImageSaveTarget.TrySave(owner ?? mainWindow, bitmap, suggestedFileName);
+        }
+
+        private string ChooseKinoveaVideoSavePath(IWin32Window owner, string suggestedFileName, string preferredFormat)
+        {
+            return VideoSaveTarget.ChooseSavePath(owner ?? mainWindow, suggestedFileName, preferredFormat);
+        }
+
+        private void KinoveaVideoSaveCompleted(string path)
+        {
+            VideoSaveTarget.NotifyVideoSaved(path);
         }
         #endregion
 

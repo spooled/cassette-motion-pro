@@ -91,6 +91,7 @@ namespace CassetteMotionPro.Workspace
             MinimumSize = new Size(980, 650);
             StartPosition = FormStartPosition.CenterParent;
             ReportImageSaveTarget.ReportImageSaved += ReportImageSaveTarget_ReportImageSaved;
+            VideoSaveTarget.VideoSaved += VideoSaveTarget_VideoSaved;
             FormClosing += BikeFitWorkspaceForm_FormClosing;
 
             BuildInterface();
@@ -2816,6 +2817,8 @@ namespace CassetteMotionPro.Workspace
             if (currentSession == null)
             {
                 ReportImageSaveTarget.ReportImageSaved -= ReportImageSaveTarget_ReportImageSaved;
+                VideoSaveTarget.VideoSaved -= VideoSaveTarget_VideoSaved;
+                VideoSaveTarget.Clear();
                 return;
             }
 
@@ -2823,6 +2826,8 @@ namespace CassetteMotionPro.Workspace
             {
                 SaveCurrentSession();
                 ReportImageSaveTarget.ReportImageSaved -= ReportImageSaveTarget_ReportImageSaved;
+                VideoSaveTarget.VideoSaved -= VideoSaveTarget_VideoSaved;
+                VideoSaveTarget.Clear();
             }
             catch (Exception exception)
             {
@@ -2847,6 +2852,25 @@ namespace CassetteMotionPro.Workspace
             SaveCurrentSession();
             UpdateWorkflowChecklist();
             UpdateSaveHint(slot + " report image saved from Kinovea Save image: " + Path.GetFileName(path));
+        }
+
+        private void VideoSaveTarget_VideoSaved(string slot, string path)
+        {
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action<string, string>(VideoSaveTarget_VideoSaved), slot, path);
+                return;
+            }
+
+            string key = string.Equals(slot, "After", StringComparison.OrdinalIgnoreCase) ? "AfterVideoPath" : "BeforeVideoPath";
+            if (!mediaBoxes.ContainsKey(key))
+                return;
+
+            mediaBoxes[key].Text = path;
+            SaveCurrentSession();
+            RefreshMediaStatus(key);
+            UpdateWorkflowChecklist();
+            UpdateSaveHint(slot + " video saved from Kinovea export: " + Path.GetFileName(path));
         }
 
         private void SaveCurrentSession()
@@ -2956,11 +2980,13 @@ namespace CassetteMotionPro.Workspace
             if (currentSession == null)
             {
                 ReportImageSaveTarget.Clear();
+                VideoSaveTarget.Clear();
                 activeSessionStatus.Text = "Active session\nChoose or create a fit session";
                 return;
             }
 
             UpdateReportImageSaveTarget();
+            UpdateVideoSaveTarget();
 
             string status = string.IsNullOrWhiteSpace(currentSession.Status) ? "Assessment" : currentSession.Status.Trim();
             string folder = currentSession.Id == Guid.Empty ? "pending until saved" : currentSession.StorageFolderName;
@@ -2984,6 +3010,28 @@ namespace CassetteMotionPro.Workspace
             catch
             {
                 ReportImageSaveTarget.Clear();
+            }
+        }
+
+        private void UpdateVideoSaveTarget()
+        {
+            if (currentSession == null)
+            {
+                VideoSaveTarget.Clear();
+                return;
+            }
+
+            try
+            {
+                string beforeFolder = GetSessionVideoViewFolderPath("Before");
+                string afterFolder = GetSessionVideoViewFolderPath("After");
+                Directory.CreateDirectory(beforeFolder);
+                Directory.CreateDirectory(afterFolder);
+                VideoSaveTarget.SetActiveFolders(beforeFolder, afterFolder);
+            }
+            catch
+            {
+                VideoSaveTarget.Clear();
             }
         }
 
