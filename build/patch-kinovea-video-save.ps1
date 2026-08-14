@@ -73,6 +73,9 @@ if ($videoExporterContent -notmatch "CassetteVideoSaveRouter\.ChooseVideoSavePat
   $saveDialogReplacement = @'
 
             string suggestedFilename = SuggestFilename(format, player1, player2);
+            // Cassette Motion Pro: the Kinovea toolbar video button and video export menu both
+            // pass through this exporter. Ask for Before/After here so the visible video save
+            // button behaves like the report image save button.
             string cassetteSavePath = CassetteVideoSaveRouter.ChooseVideoSavePath(null, suggestedFilename, PreferencesManager.PlayerPreferences.VideoFormat.ToString());
             if (CassetteVideoSaveRouter.IsCancelToken(cassetteSavePath))
                 return;
@@ -111,4 +114,4 @@ $1
   Set-Content $videoExporterPath $patched
 }
 
-Write-Host "Patched Kinovea video export to offer Cassette Motion Pro Before/After client video saves."
+Write-Host "Patched Kinovea video button/export to offer Cassette Motion Pro Before/After client video saves."

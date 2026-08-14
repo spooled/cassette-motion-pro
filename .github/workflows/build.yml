@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  VERSION: 0.18.3
+  VERSION: 0.18.4
 
 jobs:
   build:
@@ -94,7 +94,7 @@ jobs:
         run: |
           .\build\patch-kinovea-report-image-save.ps1
 
-      - name: Patch Kinovea video save
+      - name: Patch Kinovea video button save
         shell: pwsh
         run: |
           .\build\patch-kinovea-video-save.ps1

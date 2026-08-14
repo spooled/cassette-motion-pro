@@ -39,7 +39,7 @@ namespace CassetteMotionPro.Workspace
 
             using (Form dialog = new Form())
             {
-                dialog.Text = "Save video to client";
+                dialog.Text = "Save video";
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
                 dialog.MaximizeBox = false;
@@ -47,7 +47,7 @@ namespace CassetteMotionPro.Workspace
                 dialog.ClientSize = new System.Drawing.Size(430, 190);
 
                 Label title = new Label();
-                title.Text = "Save this Kinovea export to the active fit session?";
+                title.Text = "Save this Kinovea video as:";
                 title.Left = 18;
                 title.Top = 18;
                 title.Width = 390;
@@ -55,16 +55,16 @@ namespace CassetteMotionPro.Workspace
                 title.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
 
                 Label body = new Label();
-                body.Text = "Choose Before or After to save straight into this client's video folders. Regular Save keeps Kinovea's normal file picker.";
+                body.Text = "Choose Before or After to save straight into this client's video folders. Regular Save keeps Kinovea's normal save window.";
                 body.Left = 18;
                 body.Top = 48;
                 body.Width = 390;
                 body.Height = 48;
 
-                Button before = Button("Before", 18, 115);
-                Button after = Button("After", 118, 115);
-                Button regular = Button("Regular Save", 218, 115);
-                Button cancel = Button("Cancel", 330, 115);
+                Button before = Button("Before Video", 18, 115);
+                Button after = Button("After Video", 124, 115);
+                Button regular = Button("Regular Save", 230, 115);
+                Button cancel = Button("Cancel", 340, 115);
 
                 before.Click += delegate
                 {
@@ -132,7 +132,12 @@ namespace CassetteMotionPro.Workspace
             button.Text = text;
             button.Left = left;
             button.Top = top;
-            button.Width = text == "Regular Save" ? 104 : 90;
+            if (text == "Regular Save")
+                button.Width = 104;
+            else if (text == "Cancel")
+                button.Width = 72;
+            else
+                button.Width = 100;
             button.Height = 30;
             return button;
         }
