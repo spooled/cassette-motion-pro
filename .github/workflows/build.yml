@@ -9,6 +9,7 @@ on:
 
 env:
   VERSION: 0.18.4
+  KINOVEA_UPSTREAM_REF: 7e7c9dcf55b6e6f0d6a7080e191a7ae9485ff3e9
 
 jobs:
   build:
@@ -35,7 +36,11 @@ jobs:
       - name: Restore upstream native dependencies
         shell: pwsh
         run: |
-          git clone --depth 1 https://github.com/Kinovea/Kinovea.git "$env:RUNNER_TEMP\kinovea-upstream"
+          git clone --no-checkout https://github.com/Kinovea/Kinovea.git "$env:RUNNER_TEMP\kinovea-upstream"
+          git -C "$env:RUNNER_TEMP\kinovea-upstream" fetch --depth 1 origin $env:KINOVEA_UPSTREAM_REF
+          git -C "$env:RUNNER_TEMP\kinovea-upstream" checkout --detach $env:KINOVEA_UPSTREAM_REF
+          Write-Host "Using Kinovea upstream ref:"
+          git -C "$env:RUNNER_TEMP\kinovea-upstream" rev-parse HEAD
           $refsSource = "$env:RUNNER_TEMP\kinovea-upstream\Refs"
           $refsTarget = "src\Refs"
           if (Test-Path "src\Refs" -PathType Leaf) {
