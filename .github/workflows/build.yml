@@ -122,6 +122,10 @@ jobs:
         shell: pwsh
         run: |
           $commonHeader = "src\Refs\FFmpeg\include\libavutil\common.h"
+          if (!(Test-Path $commonHeader)) {
+            Write-Warning "FFmpeg common.h was not found at $commonHeader. Skipping CI header patch because this dependency layout does not include that file."
+            return
+          }
           $content = Get-Content $commonHeader -Raw
           if ($content -match "UINT64_C\(0xFFFFFFFF\)") {
             $content = $content -replace "UINT64_C\(0xFFFFFFFF\)", "0xFFFFFFFFULL"
