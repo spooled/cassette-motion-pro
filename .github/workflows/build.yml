@@ -48,6 +48,18 @@ jobs:
             throw "robocopy failed with exit code $robocopyExitCode."
           }
           $global:LASTEXITCODE = 0
+          if (Test-Path "Refs") {
+            Write-Host "Overlaying repository Refs into src\Refs for CI-stable native dependencies."
+            robocopy "Refs" $refsTarget /E /NFL /NDL /NJH /NJS /NP
+            $robocopyExitCode = $LASTEXITCODE
+            if ($robocopyExitCode -gt 7) {
+              throw "robocopy failed while overlaying repository Refs with exit code $robocopyExitCode."
+            }
+            $global:LASTEXITCODE = 0
+          }
+          if (!(Test-Path "src\Refs\FFmpeg\include\libavcodec\avcodec.h")) {
+            throw "FFmpeg headers were not restored. Expected src\Refs\FFmpeg\include\libavcodec\avcodec.h."
+          }
           Get-ChildItem $refsTarget | Select-Object Name, Length
 
       - name: Restore upstream project dependencies
