@@ -55,7 +55,12 @@ namespace Kinovea.ScreenManager
 $screenManagerProject = Join-Path $screenManagerPath "Kinovea.ScreenManager.csproj"
 $projectContent = Get-Content $screenManagerProject -Raw
 if ($projectContent -notmatch "CassetteReportImageSaveRouter\.cs") {
-  $projectContent = $projectContent -replace '(<Compile Include="Exporters\\Images\\ExporterImage\.cs" />)', '<Compile Include="CassetteReportImageSaveRouter.cs" />' + "`r`n" + '    $1'
+  $compileMarker = '    <Compile Include="Exporters\Images\ExporterImage.cs" />'
+  $compileInsert = '    <Compile Include="CassetteReportImageSaveRouter.cs" />' + "`r`n" + $compileMarker
+  $projectContent = $projectContent.Replace($compileMarker, $compileInsert)
+  if ($projectContent -notmatch "CassetteReportImageSaveRouter\.cs") {
+    throw "Could not add CassetteReportImageSaveRouter.cs to Kinovea.ScreenManager.csproj."
+  }
   Set-Content $screenManagerProject $projectContent
 }
 
