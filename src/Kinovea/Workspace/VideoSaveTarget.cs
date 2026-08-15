@@ -6,6 +6,7 @@ GNU General Public License version 2.
 */
 
 using System;
+using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 
@@ -45,73 +46,24 @@ namespace CassetteMotionPro.Workspace
                 return CancelSaveToken;
             }
 
-            using (Form dialog = new Form())
+            using (BeforeAfterVideoSaveDialog dialog = new BeforeAfterVideoSaveDialog(beforeFolderPath, afterFolderPath))
             {
-                dialog.Text = "Save video";
                 dialog.StartPosition = owner == null ? FormStartPosition.CenterScreen : FormStartPosition.CenterParent;
-                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
-                dialog.MaximizeBox = false;
-                dialog.MinimizeBox = false;
-                dialog.ClientSize = new System.Drawing.Size(430, 190);
-
-                Label title = new Label();
-                title.Text = "Save this Kinovea video as:";
-                title.Left = 18;
-                title.Top = 18;
-                title.Width = 390;
-                title.Height = 22;
-                title.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-
-                Label body = new Label();
-                body.Text = "Choose Before or After to save straight into this client's video folders. Regular Save keeps Kinovea's normal save window.";
-                body.Left = 18;
-                body.Top = 48;
-                body.Width = 390;
-                body.Height = 48;
-
-                Button before = Button("Before Video", 18, 115);
-                Button after = Button("After Video", 124, 115);
-                Button regular = Button("Regular Save", 230, 115);
-                Button cancel = Button("Cancel", 340, 115);
-
-                before.Click += delegate
-                {
-                    dialog.Tag = BuildPath("Before", beforeFolderPath, suggestedFileName, preferredFormat);
-                    dialog.DialogResult = DialogResult.OK;
-                };
-
-                after.Click += delegate
-                {
-                    dialog.Tag = BuildPath("After", afterFolderPath, suggestedFileName, preferredFormat);
-                    dialog.DialogResult = DialogResult.OK;
-                };
-
-                regular.Click += delegate
-                {
-                    dialog.Tag = string.Empty;
-                    dialog.DialogResult = DialogResult.OK;
-                };
-
-                cancel.Click += delegate
-                {
-                    dialog.Tag = CancelSaveToken;
-                    dialog.DialogResult = DialogResult.Cancel;
-                };
-
-                dialog.Controls.Add(title);
-                dialog.Controls.Add(body);
-                dialog.Controls.Add(before);
-                dialog.Controls.Add(after);
-                dialog.Controls.Add(regular);
-                dialog.Controls.Add(cancel);
-                dialog.AcceptButton = before;
-                dialog.CancelButton = cancel;
 
                 DialogResult result = dialog.ShowDialog(owner);
-                if (result == DialogResult.Cancel)
+                if (result == DialogResult.Ignore)
+                    return string.Empty;
+
+                if (result != DialogResult.OK)
                     return CancelSaveToken;
 
-                return Convert.ToString(dialog.Tag);
+                if (string.Equals(dialog.SelectedSlot, "Before", StringComparison.OrdinalIgnoreCase))
+                    return BuildPath("Before", beforeFolderPath, suggestedFileName, preferredFormat);
+
+                if (string.Equals(dialog.SelectedSlot, "After", StringComparison.OrdinalIgnoreCase))
+                    return BuildPath("After", afterFolderPath, suggestedFileName, preferredFormat);
+
+                return CancelSaveToken;
             }
         }
 
@@ -132,22 +84,6 @@ namespace CassetteMotionPro.Workspace
             Action<string, string> handler = VideoSaved;
             if (handler != null)
                 handler(slot, path);
-        }
-
-        private static Button Button(string text, int left, int top)
-        {
-            Button button = new Button();
-            button.Text = text;
-            button.Left = left;
-            button.Top = top;
-            if (text == "Regular Save")
-                button.Width = 104;
-            else if (text == "Cancel")
-                button.Width = 72;
-            else
-                button.Width = 100;
-            button.Height = 30;
-            return button;
         }
 
         private static string BuildPath(string slot, string folderPath, string suggestedFileName, string preferredFormat)
@@ -189,6 +125,86 @@ namespace CassetteMotionPro.Workspace
             string fullFile = Path.GetFullPath(filePath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             string fullFolder = Path.GetFullPath(folderPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
             return fullFile.StartsWith(fullFolder, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private sealed class BeforeAfterVideoSaveDialog : Form
+        {
+            private readonly Button beforeButton;
+            private readonly Button afterButton;
+            private readonly Button regularButton;
+            private readonly Button cancelButton;
+
+            public string SelectedSlot { get; private set; }
+
+            public BeforeAfterVideoSaveDialog(string beforeFolder, string afterFolder)
+            {
+                Text = "Save video";
+                FormBorderStyle = FormBorderStyle.FixedDialog;
+                MaximizeBox = false;
+                MinimizeBox = false;
+                ShowInTaskbar = false;
+                ClientSize = new Size(500, 190);
+
+                Label titleLabel = new Label();
+                titleLabel.AutoSize = false;
+                titleLabel.Text = "Save this Kinovea video as:";
+                titleLabel.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                titleLabel.Location = new Point(18, 18);
+                titleLabel.Size = new Size(455, 22);
+
+                Label folderLabel = new Label();
+                folderLabel.AutoSize = false;
+                folderLabel.Text = "Active video folders:\nBefore: " + beforeFolder + "\nAfter: " + afterFolder;
+                folderLabel.ForeColor = SystemColors.GrayText;
+                folderLabel.Location = new Point(18, 54);
+                folderLabel.Size = new Size(455, 58);
+
+                beforeButton = CreateButton("Before", 18, 130, 82);
+                afterButton = CreateButton("After", 116, 130, 82);
+                regularButton = CreateButton("Regular Save", 214, 130, 104);
+                cancelButton = CreateButton("Cancel", 334, 130, 82);
+
+                beforeButton.Click += delegate
+                {
+                    SelectedSlot = "Before";
+                    DialogResult = DialogResult.OK;
+                };
+
+                afterButton.Click += delegate
+                {
+                    SelectedSlot = "After";
+                    DialogResult = DialogResult.OK;
+                };
+
+                regularButton.Click += delegate
+                {
+                    DialogResult = DialogResult.Ignore;
+                };
+
+                cancelButton.Click += delegate
+                {
+                    DialogResult = DialogResult.Cancel;
+                };
+
+                Controls.Add(titleLabel);
+                Controls.Add(folderLabel);
+                Controls.Add(beforeButton);
+                Controls.Add(afterButton);
+                Controls.Add(regularButton);
+                Controls.Add(cancelButton);
+
+                AcceptButton = beforeButton;
+                CancelButton = cancelButton;
+            }
+
+            private static Button CreateButton(string text, int left, int top, int width)
+            {
+                Button button = new Button();
+                button.Text = text;
+                button.Location = new Point(left, top);
+                button.Size = new Size(width, 32);
+                return button;
+            }
         }
     }
 }
