@@ -19,6 +19,34 @@ namespace Kinovea.ScreenManager
         public static Func<IWin32Window, string, string, string> ChooseVideoSavePathRequested;
         public static Action<string> VideoSaveCompleted;
 
+        private static bool hasPendingSavePath;
+        private static string pendingSavePath;
+
+        public static bool PromptForNextVideoSave(IWin32Window owner, string suggestedFileName, string preferredFormat)
+        {
+            string path = ChooseVideoSavePath(owner, suggestedFileName, preferredFormat);
+            if (IsCancelToken(path))
+                return false;
+
+            pendingSavePath = path;
+            hasPendingSavePath = true;
+            return true;
+        }
+
+        public static bool TryConsumePendingSavePath(out string path)
+        {
+            if (!hasPendingSavePath)
+            {
+                path = null;
+                return false;
+            }
+
+            path = pendingSavePath;
+            pendingSavePath = null;
+            hasPendingSavePath = false;
+            return true;
+        }
+
         public static string ChooseVideoSavePath(IWin32Window owner, string suggestedFileName, string preferredFormat)
         {
             if (ChooseVideoSavePathRequested == null)
@@ -73,10 +101,14 @@ if ($videoExporterContent -notmatch "CassetteVideoSaveRouter\.ChooseVideoSavePat
   $saveDialogReplacement = @'
 
             string suggestedFilename = SuggestFilename(format, player1, player2);
-            // Cassette Motion Pro: the Kinovea toolbar video button and video export menu both
-            // pass through this exporter. Ask for Before/After here so the visible video save
-            // button behaves like the report image save button.
-            string cassetteSavePath = CassetteVideoSaveRouter.ChooseVideoSavePath(null, suggestedFilename, PreferencesManager.PlayerPreferences.VideoFormat.ToString());
+            string cassetteSavePath;
+            bool hasCassetteSavePath = CassetteVideoSaveRouter.TryConsumePendingSavePath(out cassetteSavePath);
+            if (!hasCassetteSavePath)
+            {
+                // Cassette Motion Pro: fallback for export paths that do not pass through
+                // the toolbar/menu command first.
+                cassetteSavePath = CassetteVideoSaveRouter.ChooseVideoSavePath(null, suggestedFilename, PreferencesManager.PlayerPreferences.VideoFormat.ToString());
+            }
             if (CassetteVideoSaveRouter.IsCancelToken(cassetteSavePath))
                 return;
 
@@ -112,6 +144,67 @@ $1
   }
 
   Set-Content $videoExporterPath $patched
+}
+
+$playerScreenPath = Join-Path $screenManagerPath "PlayerScreen\PlayerScreen.cs"
+$playerScreenContent = Get-Content $playerScreenPath -Raw
+if ($playerScreenContent -notmatch "CassetteVideoSaveRouter\.PromptForNextVideoSave") {
+  $playerScreenReplacement = @'
+        private void ExportVideo(VideoExportFormat format)
+        {
+            if (!CassetteVideoSaveRouter.PromptForNextVideoSave(null, FileName, PreferencesManager.PlayerPreferences.VideoFormat.ToString()))
+                return;
+
+            VideoExporter exporter = new VideoExporter();
+            exporter.Export(format, this, null, null);
+        }
+'@
+
+  $playerScreenPattern = '(?s)\s+private void ExportVideo\(VideoExportFormat format\)\s+\{\s+VideoExporter exporter = new VideoExporter\(\);\s+exporter\.Export\(format, this, null, null\);\s+\}'
+  $playerScreenContent = [System.Text.RegularExpressions.Regex]::Replace($playerScreenContent, $playerScreenPattern, "`r`n" + $playerScreenReplacement, 1)
+  if ($playerScreenContent -notmatch "CassetteVideoSaveRouter\.PromptForNextVideoSave") {
+    throw "Could not patch PlayerScreen.cs video export command."
+  }
+
+  Set-Content $playerScreenPath $playerScreenContent
+}
+
+$screenManagerFilePath = Join-Path $screenManagerPath "ScreenManager.cs"
+$screenManagerContent = Get-Content $screenManagerFilePath -Raw
+if ($screenManagerContent -notmatch "CassetteVideoSaveRouter\.PromptForNextVideoSave") {
+  $sideBySideReplacement = @'
+                if (!CassetteVideoSaveRouter.PromptForNextVideoSave(null, "Side-by-side video", PreferencesManager.PlayerPreferences.VideoFormat.ToString()))
+                    return;
+
+                VideoExporter exporter = new VideoExporter();
+                exporter.Export(format, player1, player2, dualPlayer);
+'@
+
+  $singleScreenReplacement = @'
+                if (!CassetteVideoSaveRouter.PromptForNextVideoSave(null, player.FileName, PreferencesManager.PlayerPreferences.VideoFormat.ToString()))
+                    return;
+
+                VideoExporter exporter = new VideoExporter();
+                exporter.Export(format, player, null, null);
+'@
+
+  $screenManagerContent = [System.Text.RegularExpressions.Regex]::Replace(
+    $screenManagerContent,
+    '(?s)\s+VideoExporter exporter = new VideoExporter\(\);\s+exporter\.Export\(format, player1, player2, dualPlayer\);',
+    "`r`n" + $sideBySideReplacement,
+    1)
+
+  $screenManagerContent = [System.Text.RegularExpressions.Regex]::Replace(
+    $screenManagerContent,
+    '(?s)\s+VideoExporter exporter = new VideoExporter\(\);\s+exporter\.Export\(format, player, null, null\);',
+    "`r`n" + $singleScreenReplacement,
+    1)
+
+  if ($screenManagerContent -notmatch "CassetteVideoSaveRouter\.PromptForNextVideoSave") {
+    throw "Could not patch ScreenManager.cs video export command."
+  }
+
+  Set-Content $screenManagerFilePath $screenManagerContent
 }
 
 Write-Host "Patched Kinovea video button/export to offer Cassette Motion Pro Before/After client video saves."

@@ -35,12 +35,20 @@ namespace CassetteMotionPro.Workspace
         public static string ChooseSavePath(IWin32Window owner, string suggestedFileName, string preferredFormat)
         {
             if (string.IsNullOrWhiteSpace(beforeFolderPath) || string.IsNullOrWhiteSpace(afterFolderPath))
-                return null;
+            {
+                MessageBox.Show(
+                    owner,
+                    "Open a client fit session first so Cassette Motion Pro knows where the Before and After video folders are.",
+                    "Save video",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return CancelSaveToken;
+            }
 
             using (Form dialog = new Form())
             {
                 dialog.Text = "Save video";
-                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.StartPosition = owner == null ? FormStartPosition.CenterScreen : FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
                 dialog.MaximizeBox = false;
                 dialog.MinimizeBox = false;
