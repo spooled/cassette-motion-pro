@@ -22,6 +22,49 @@ namespace Kinovea.ScreenManager
             if (SaveReportImageRequested == null || player == null || player.view == null)
                 return false;
 
+            try
+            {
+                using (Bitmap bitmap = CapturePlayer(player))
+                {
+                    bool handled = SaveReportImageRequested(null, bitmap, suggestedFileName);
+                    if (handled)
+                        NotificationCenter.RaiseRefreshFileList(false);
+
+                    return handled;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public static bool TrySaveCompositeReportImage(PlayerScreen player1, PlayerScreen player2, string suggestedFileName)
+        {
+            if (SaveReportImageRequested == null || player1 == null || player2 == null || player1.view == null || player2.view == null)
+                return false;
+
+            try
+            {
+                using (Bitmap left = CapturePlayer(player1))
+                using (Bitmap right = CapturePlayer(player2))
+                using (Bitmap composite = BuildComposite(left, right))
+                {
+                    bool handled = SaveReportImageRequested(null, composite, suggestedFileName);
+                    if (handled)
+                        NotificationCenter.RaiseRefreshFileList(false);
+
+                    return handled;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static Bitmap CapturePlayer(PlayerScreen player)
+        {
             Bitmap bitmap = null;
             bool prepared = false;
 
@@ -32,21 +75,36 @@ namespace Kinovea.ScreenManager
                 Size size = player.FrameServer.VideoReader.Info.ReferenceSize;
                 bitmap = new Bitmap(size.Width, size.Height, PixelFormat.Format24bppRgb);
                 player.view.PaintFlushedImage(bitmap);
-
-                bool handled = SaveReportImageRequested(null, bitmap, suggestedFileName);
-                if (handled)
-                    NotificationCenter.RaiseRefreshFileList(false);
-
-                return handled;
+                return bitmap;
             }
-            finally
+            catch
             {
                 if (bitmap != null)
                     bitmap.Dispose();
 
+                throw;
+            }
+            finally
+            {
                 if (prepared)
                     player.view.AfterExportVideo();
             }
+        }
+
+        private static Bitmap BuildComposite(Bitmap left, Bitmap right)
+        {
+            int width = left.Width + right.Width;
+            int height = Math.Max(left.Height, right.Height);
+            Bitmap composite = new Bitmap(width, height, PixelFormat.Format24bppRgb);
+
+            using (Graphics graphics = Graphics.FromImage(composite))
+            {
+                graphics.Clear(Color.Black);
+                graphics.DrawImageUnscaled(left, 0, 0);
+                graphics.DrawImageUnscaled(right, left.Width, 0);
+            }
+
+            return composite;
         }
     }
 }
@@ -72,6 +130,12 @@ if ($imageExporterContent -notmatch "CassetteReportImageSaveRouter\.TrySaveRepor
   $replacement = @'
 
             string suggestedFilename = SuggestFilename(format, player1, player2);
+            if (player2 != null && CassetteReportImageSaveRouter.TrySaveCompositeReportImage(player1, player2, suggestedFilename))
+            {
+                player1.FrameServer.AfterSave();
+                return;
+            }
+
             if (format == ImageExportFormat.Image && CassetteReportImageSaveRouter.TrySaveReportImage(player1, suggestedFilename))
             {
                 player1.FrameServer.AfterSave();
