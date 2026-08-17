@@ -28,7 +28,7 @@ namespace CassetteMotionPro.Workspace
             if (string.IsNullOrWhiteSpace(folderPath))
                 return;
 
-            activeFolderPath = folderPath;
+            activeFolderPath = NormalizeReportImagesRoot(folderPath);
             Directory.CreateDirectory(activeFolderPath);
             beforeFolderPath = Path.Combine(activeFolderPath, "Before");
             afterFolderPath = Path.Combine(activeFolderPath, "After");
@@ -137,6 +137,23 @@ namespace CassetteMotionPro.Workspace
             }
 
             return Path.Combine(folderPath, name + "-" + Guid.NewGuid().ToString("N") + extension);
+        }
+
+        private static string NormalizeReportImagesRoot(string folderPath)
+        {
+            string normalized = folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            string folderName = Path.GetFileName(normalized);
+
+            if (string.Equals(folderName, "Before", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(folderName, "After", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(folderName, "Dual", StringComparison.OrdinalIgnoreCase))
+            {
+                string parent = Path.GetDirectoryName(normalized);
+                if (!string.IsNullOrWhiteSpace(parent))
+                    return parent;
+            }
+
+            return normalized;
         }
     }
 

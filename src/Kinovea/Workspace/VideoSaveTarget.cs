@@ -24,15 +24,16 @@ namespace CassetteMotionPro.Workspace
 
         public static void SetActiveFolders(string beforeFolder, string afterFolder)
         {
-            string parent = string.IsNullOrWhiteSpace(beforeFolder) ? null : Path.GetDirectoryName(beforeFolder);
+            string parent = string.IsNullOrWhiteSpace(beforeFolder) ? null : GetSessionVideosRoot(beforeFolder);
             SetActiveFolders(beforeFolder, afterFolder, string.IsNullOrWhiteSpace(parent) ? null : Path.Combine(parent, "Dual"));
         }
 
         public static void SetActiveFolders(string beforeFolder, string afterFolder, string dualFolder)
         {
-            beforeFolderPath = beforeFolder;
-            afterFolderPath = afterFolder;
-            dualFolderPath = dualFolder;
+            string root = GetBestSessionVideosRoot(beforeFolder, afterFolder, dualFolder);
+            beforeFolderPath = string.IsNullOrWhiteSpace(root) ? beforeFolder : Path.Combine(root, "Before");
+            afterFolderPath = string.IsNullOrWhiteSpace(root) ? afterFolder : Path.Combine(root, "After");
+            dualFolderPath = string.IsNullOrWhiteSpace(root) ? dualFolder : Path.Combine(root, "Dual");
         }
 
         public static void Clear()
@@ -156,6 +157,37 @@ namespace CassetteMotionPro.Workspace
             string fullFile = Path.GetFullPath(filePath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             string fullFolder = Path.GetFullPath(folderPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
             return fullFile.StartsWith(fullFolder, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string GetBestSessionVideosRoot(string beforeFolder, string afterFolder, string dualFolder)
+        {
+            string root = GetSessionVideosRoot(beforeFolder);
+            if (!string.IsNullOrWhiteSpace(root))
+                return root;
+
+            root = GetSessionVideosRoot(afterFolder);
+            if (!string.IsNullOrWhiteSpace(root))
+                return root;
+
+            return GetSessionVideosRoot(dualFolder);
+        }
+
+        private static string GetSessionVideosRoot(string folderPath)
+        {
+            if (string.IsNullOrWhiteSpace(folderPath))
+                return null;
+
+            string normalized = folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            string folderName = Path.GetFileName(normalized);
+
+            if (string.Equals(folderName, "Before", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(folderName, "After", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(folderName, "Dual", StringComparison.OrdinalIgnoreCase))
+            {
+                return Path.GetDirectoryName(normalized);
+            }
+
+            return normalized;
         }
 
         private sealed class BeforeAfterVideoSaveDialog : Form
