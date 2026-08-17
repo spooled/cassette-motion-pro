@@ -189,7 +189,7 @@ namespace CassetteMotionPro.Clients
             workflowHeading.Location = new Point(38, 420);
 
             Label workflow = new Label();
-            workflow.Text = "1. Create or select the client\n2. Start/open the fit session\n3. Add Before/After videos and images\n4. Capture Bike Metrics and body angles\n5. Preview, package, and save the report";
+            workflow.Text = "1. Create or select the client\n2. Start/open the fit session first\n3. Record/analyze in Kinovea so saves know this client folder\n4. Save Before / After / Dual evidence\n5. Preview, package, and save the report";
             workflow.AutoSize = true;
             workflow.MaximumSize = new Size(470, 0);
             workflow.Location = new Point(38, 446);

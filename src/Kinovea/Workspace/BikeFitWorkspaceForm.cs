@@ -480,10 +480,10 @@ namespace CassetteMotionPro.Workspace
             activeSaveTargetStatus.Font = new Font("Segoe UI", 8.75F, FontStyle.Regular);
             activeSaveTargetStatus.ForeColor = Color.FromArgb(181, 118, 35);
             activeSaveTargetStatus.TextAlign = ContentAlignment.MiddleLeft;
-            activeSaveTargetStatus.Text = "Save targets: no active fit session yet. Open/create one, then image and video saves can go to Before / After / Dual.";
+            activeSaveTargetStatus.Text = "Save targets: open a client fit session first. Then Kinovea Save Image / Save Video can send files to Before / After / Dual.";
 
-            ConfigureFitCommandSectionLabel(captureActionsLabel, "Capture: record live video into this client session");
-            ConfigureFitCommandSectionLabel(analysisActionsLabel, "Analyze + report: review video, save evidence, and build the report");
+            ConfigureFitCommandSectionLabel(captureActionsLabel, "Capture: record into this client's Before / After video folders");
+            ConfigureFitCommandSectionLabel(analysisActionsLabel, "Analyze + report: save images/videos to Before / After / Dual, then build the report");
 
             Panel captureScroll = new Panel();
             captureScroll.Dock = DockStyle.Fill;
@@ -2202,12 +2202,12 @@ namespace CassetteMotionPro.Workspace
 
             if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
             {
-                activeSaveTargetStatus.Text = "Save targets: no active fit session yet. Open/create one, then image and video saves can go to Before / After / Dual.";
+                activeSaveTargetStatus.Text = "Save targets: open a client fit session first. Then Kinovea Save Image / Save Video can send files to Before / After / Dual.";
                 activeSaveTargetStatus.ForeColor = Color.FromArgb(181, 118, 35);
                 return;
             }
 
-            activeSaveTargetStatus.Text = "Active save folders: " + client.DisplayName + " · " + currentSession.DisplayName + "   Images: Before / After / Dual   Videos: Before / After / Dual";
+            activeSaveTargetStatus.Text = "Active save target: " + client.DisplayName + " · " + currentSession.DisplayName + "   Kinovea Save Image / Save Video → Before / After / Dual";
             activeSaveTargetStatus.ForeColor = Color.FromArgb(60, 145, 76);
         }
 
@@ -2906,7 +2906,7 @@ namespace CassetteMotionPro.Workspace
             SaveCurrentSession();
             UpdateWorkflowChecklist();
             UpdateFitCommandCenterStatus();
-            UpdateSaveHint(slot + " report image saved from Kinovea Save image: " + Path.GetFileName(path));
+            UpdateSaveHint(slot + " report image saved to this client fit session: " + Path.GetFileName(path));
         }
 
         private void VideoSaveTarget_VideoSaved(string slot, string path)
@@ -2922,7 +2922,7 @@ namespace CassetteMotionPro.Workspace
                 SaveCurrentSession();
                 UpdateWorkflowChecklist();
                 UpdateFitCommandCenterStatus();
-                UpdateSaveHint("Dual video saved from Kinovea export: " + Path.GetFileName(path));
+                UpdateSaveHint("Dual video saved to this client fit session: " + Path.GetFileName(path));
                 return;
             }
 
@@ -2935,7 +2935,7 @@ namespace CassetteMotionPro.Workspace
             RefreshMediaStatus(key);
             UpdateWorkflowChecklist();
             UpdateFitCommandCenterStatus();
-            UpdateSaveHint(slot + " video saved from Kinovea export: " + Path.GetFileName(path));
+            UpdateSaveHint(slot + " video saved to this client fit session: " + Path.GetFileName(path));
         }
 
         private void SaveCurrentSession()
@@ -3345,7 +3345,7 @@ namespace CassetteMotionPro.Workspace
                 Directory.CreateDirectory(destinationDirectory);
                 WriteCaptureFolderHint(destinationDirectory, viewName);
                 SetFitCommandCenterMode("Record Live: " + viewName);
-                UpdateSaveHint(viewName + " live recording folder opened and selected in Kinovea. Record, then return here and click Use Latest Before + After.");
+                UpdateSaveHint(viewName + " live recording folder is now active for this client. Record in Kinovea, save there, then return here and click Use Latest Before + After.");
 
                 Close();
                 openLiveCaptureFolder(destinationDirectory);
@@ -3376,7 +3376,7 @@ namespace CassetteMotionPro.Workspace
                 WriteCaptureFolderHint(beforeDirectory, "Before");
                 WriteCaptureFolderHint(afterDirectory, "After");
                 SetFitCommandCenterMode("Record Live: Before + After");
-                UpdateSaveHint("Dual live capture opened with Before/After folders selected. Record in Kinovea, then return here and click Use Latest Before + After.");
+                UpdateSaveHint("Dual live capture opened. Kinovea is pointed at this client's Before/After video folders. Record, save, then return here and click Use Latest Before + After.");
 
                 Close();
                 if (openDualLiveCaptureFolders != null)
@@ -3403,7 +3403,7 @@ namespace CassetteMotionPro.Workspace
                 string latestVideoPath = PrepareVideoViewFolderAndFindLatest(viewName);
                 if (string.IsNullOrEmpty(latestVideoPath))
                 {
-                    MessageBox.Show(this, "No saved video files were found in this session’s " + viewName + " folder yet.\n\nClick Record Live, record the clip, then return to this workspace and click Use Latest.", "Use Latest Video", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(this, "No saved video files were found in this session’s " + viewName + " folder yet.\n\nClick Record Live, record and save the clip, then return to this same fit session and click Use Latest.", "Use Latest Video", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
 
@@ -3433,7 +3433,7 @@ namespace CassetteMotionPro.Workspace
 
                 if (missing.Count > 0)
                 {
-                    MessageBox.Show(this, "No saved video files were found in the " + string.Join(" and ", missing.ToArray()) + " folder yet.\n\nUse Dual Live Capture or Record Live, record the clip(s), then return here and click Use Latest Before + After.", "Use Latest Before + After", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(this, "No saved video files were found in the " + string.Join(" and ", missing.ToArray()) + " folder yet.\n\nUse Dual Live Capture or Record Live, record and save the clip(s), then return to this same fit session and click Use Latest Before + After.", "Use Latest Before + After", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
 
@@ -3558,6 +3558,7 @@ namespace CassetteMotionPro.Workspace
                 Environment.NewLine +
                 "This is the " + viewName + " video folder for the active fit session." + Environment.NewLine +
                 "Record live capture clips here, then return to the Bike Fit Workspace and click Use Latest Before + After to select the newest saved videos automatically." + Environment.NewLine +
+                "Keep this fit session open while saving so Cassette Motion Pro knows this client is the active target." + Environment.NewLine +
                 Environment.NewLine +
                 "You can still use Browse when you want to pick an older take instead.";
             File.WriteAllText(hintPath, contents);
