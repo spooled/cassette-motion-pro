@@ -50,6 +50,8 @@ namespace CassetteMotionPro.Workspace
         private readonly Label nextRecommendedStep = new Label();
         private readonly Label fitCommandCenterStatus = new Label();
         private readonly Label activeSaveTargetStatus = new Label();
+        private readonly Label captureActionsLabel = new Label();
+        private readonly Label analysisActionsLabel = new Label();
         private readonly Button nextRecommendedStepAction = new Button();
         private readonly Button nextRecommendedFolderAction = new Button();
         private readonly CheckBox chkShowBeforeMeasurementsInReport = new CheckBox();
@@ -460,10 +462,12 @@ namespace CassetteMotionPro.Workspace
             TableLayoutPanel layout = new TableLayoutPanel();
             layout.Dock = DockStyle.Fill;
             layout.ColumnCount = 1;
-            layout.RowCount = 4;
+            layout.RowCount = 6;
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 22));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 70));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 22));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
             fitCommandCenterStatus.Dock = DockStyle.Fill;
@@ -476,7 +480,10 @@ namespace CassetteMotionPro.Workspace
             activeSaveTargetStatus.Font = new Font("Segoe UI", 8.75F, FontStyle.Regular);
             activeSaveTargetStatus.ForeColor = Color.FromArgb(181, 118, 35);
             activeSaveTargetStatus.TextAlign = ContentAlignment.MiddleLeft;
-            activeSaveTargetStatus.Text = "Save targets: open or create a fit session to activate Before / After / Dual image and video folders.";
+            activeSaveTargetStatus.Text = "Save targets: no active fit session yet. Open/create one, then image and video saves can go to Before / After / Dual.";
+
+            ConfigureFitCommandSectionLabel(captureActionsLabel, "Capture: record live video into this client session");
+            ConfigureFitCommandSectionLabel(analysisActionsLabel, "Analyze + report: review video, save evidence, and build the report");
 
             Panel captureScroll = new Panel();
             captureScroll.Dock = DockStyle.Fill;
@@ -523,8 +530,10 @@ namespace CassetteMotionPro.Workspace
 
             layout.Controls.Add(fitCommandCenterStatus, 0, 0);
             layout.Controls.Add(activeSaveTargetStatus, 0, 1);
-            layout.Controls.Add(captureScroll, 0, 2);
-            layout.Controls.Add(analysisScroll, 0, 3);
+            layout.Controls.Add(captureActionsLabel, 0, 2);
+            layout.Controls.Add(captureScroll, 0, 3);
+            layout.Controls.Add(analysisActionsLabel, 0, 4);
+            layout.Controls.Add(analysisScroll, 0, 5);
             group.Controls.Add(layout);
             return group;
         }
@@ -614,6 +623,15 @@ namespace CassetteMotionPro.Workspace
                 UpdateWorkflowChecklist();
             };
             buttons.Controls.Add(button);
+        }
+
+        private void ConfigureFitCommandSectionLabel(Label label, string text)
+        {
+            label.Dock = DockStyle.Fill;
+            label.Font = new Font("Segoe UI", 8.75F, FontStyle.Bold);
+            label.ForeColor = Color.FromArgb(37, 48, 43);
+            label.TextAlign = ContentAlignment.BottomLeft;
+            label.Text = text;
         }
 
         private Control BuildWorkflowChecklist()
@@ -2184,12 +2202,12 @@ namespace CassetteMotionPro.Workspace
 
             if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
             {
-                activeSaveTargetStatus.Text = "Save targets: open or create a fit session to activate Before / After / Dual image and video folders.";
+                activeSaveTargetStatus.Text = "Save targets: no active fit session yet. Open/create one, then image and video saves can go to Before / After / Dual.";
                 activeSaveTargetStatus.ForeColor = Color.FromArgb(181, 118, 35);
                 return;
             }
 
-            activeSaveTargetStatus.Text = "Saving to: " + client.DisplayName + " · " + currentSession.DisplayName + "   Images: Before / After / Dual   Videos: Before / After / Dual";
+            activeSaveTargetStatus.Text = "Active save folders: " + client.DisplayName + " · " + currentSession.DisplayName + "   Images: Before / After / Dual   Videos: Before / After / Dual";
             activeSaveTargetStatus.ForeColor = Color.FromArgb(60, 145, 76);
         }
 
