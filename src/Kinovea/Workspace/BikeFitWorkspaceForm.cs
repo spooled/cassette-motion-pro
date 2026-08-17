@@ -2819,7 +2819,6 @@ namespace CassetteMotionPro.Workspace
             {
                 ReportImageSaveTarget.ReportImageSaved -= ReportImageSaveTarget_ReportImageSaved;
                 VideoSaveTarget.VideoSaved -= VideoSaveTarget_VideoSaved;
-                VideoSaveTarget.Clear();
                 return;
             }
 
@@ -2828,7 +2827,6 @@ namespace CassetteMotionPro.Workspace
                 SaveCurrentSession();
                 ReportImageSaveTarget.ReportImageSaved -= ReportImageSaveTarget_ReportImageSaved;
                 VideoSaveTarget.VideoSaved -= VideoSaveTarget_VideoSaved;
-                VideoSaveTarget.Clear();
             }
             catch (Exception exception)
             {
