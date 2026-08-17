@@ -39,7 +39,8 @@ namespace CassetteMotionPro.Workspace
             {
                 MessageBox.Show(
                     owner,
-                    "Open a client fit session first so Cassette Motion Pro knows where the Before and After video folders are.",
+                    "Open a client fit session first so Cassette Motion Pro knows where the Before and After video folders are.\n\n" +
+                    "Go to Clients, open the client, then open the fit session. After that, come back to Kinovea and click Save video again.",
                     "Save video",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
@@ -83,7 +84,23 @@ namespace CassetteMotionPro.Workspace
 
             Action<string, string> handler = VideoSaved;
             if (handler != null)
-                handler(slot, path);
+            {
+                try
+                {
+                    handler(slot, path);
+                }
+                catch
+                {
+                    // The video was already saved. Keep the Kinovea save action successful even
+                    // if the workspace cannot automatically attach the video for some reason.
+                }
+            }
+
+            MessageBox.Show(
+                slot + " video saved to this fit session:\n\n" + path,
+                "Save video",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
         }
 
         private static string BuildPath(string slot, string folderPath, string suggestedFileName, string preferredFormat)
@@ -143,7 +160,7 @@ namespace CassetteMotionPro.Workspace
                 MaximizeBox = false;
                 MinimizeBox = false;
                 ShowInTaskbar = false;
-                ClientSize = new Size(500, 190);
+                ClientSize = new Size(500, 214);
 
                 Label titleLabel = new Label();
                 titleLabel.AutoSize = false;
@@ -159,10 +176,17 @@ namespace CassetteMotionPro.Workspace
                 folderLabel.Location = new Point(18, 54);
                 folderLabel.Size = new Size(455, 58);
 
-                beforeButton = CreateButton("Before", 18, 130, 82);
-                afterButton = CreateButton("After", 116, 130, 82);
-                regularButton = CreateButton("Regular Save", 214, 130, 104);
-                cancelButton = CreateButton("Cancel", 334, 130, 82);
+                Label hintLabel = new Label();
+                hintLabel.AutoSize = false;
+                hintLabel.Text = "Regular Save keeps Kinovea's normal save dialog.";
+                hintLabel.ForeColor = SystemColors.GrayText;
+                hintLabel.Location = new Point(18, 114);
+                hintLabel.Size = new Size(455, 18);
+
+                beforeButton = CreateButton("Before", 18, 154, 82);
+                afterButton = CreateButton("After", 116, 154, 82);
+                regularButton = CreateButton("Regular Save", 214, 154, 104);
+                cancelButton = CreateButton("Cancel", 334, 154, 82);
 
                 beforeButton.Click += delegate
                 {
@@ -188,6 +212,7 @@ namespace CassetteMotionPro.Workspace
 
                 Controls.Add(titleLabel);
                 Controls.Add(folderLabel);
+                Controls.Add(hintLabel);
                 Controls.Add(beforeButton);
                 Controls.Add(afterButton);
                 Controls.Add(regularButton);
