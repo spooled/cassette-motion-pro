@@ -17,6 +17,9 @@ namespace CassetteMotionPro.Workspace
     internal static class ReportImageSaveTarget
     {
         private static string activeFolderPath;
+        private static string beforeFolderPath;
+        private static string afterFolderPath;
+        private static string dualFolderPath;
 
         public static event Action<string, string> ReportImageSaved;
 
@@ -27,11 +30,20 @@ namespace CassetteMotionPro.Workspace
 
             activeFolderPath = folderPath;
             Directory.CreateDirectory(activeFolderPath);
+            beforeFolderPath = Path.Combine(activeFolderPath, "Before");
+            afterFolderPath = Path.Combine(activeFolderPath, "After");
+            dualFolderPath = Path.Combine(activeFolderPath, "Dual");
+            Directory.CreateDirectory(beforeFolderPath);
+            Directory.CreateDirectory(afterFolderPath);
+            Directory.CreateDirectory(dualFolderPath);
         }
 
         public static void Clear()
         {
             activeFolderPath = null;
+            beforeFolderPath = null;
+            afterFolderPath = null;
+            dualFolderPath = null;
         }
 
         public static bool TrySave(IWin32Window owner, Bitmap bitmap, string suggestedFileName)
@@ -49,7 +61,9 @@ namespace CassetteMotionPro.Workspace
                 if (result != DialogResult.OK)
                     return true;
 
-                string path = BuildUniquePath(activeFolderPath, BuildFileName(dialog.SelectedSlot, suggestedFileName));
+                string folderPath = GetFolderForSlot(dialog.SelectedSlot);
+                Directory.CreateDirectory(folderPath);
+                string path = BuildUniquePath(folderPath, BuildFileName(dialog.SelectedSlot, suggestedFileName));
                 using (Bitmap copy = new Bitmap(bitmap))
                 {
                     copy.Save(path, ImageFormat.Png);
@@ -66,6 +80,15 @@ namespace CassetteMotionPro.Workspace
 
                 return true;
             }
+        }
+
+        private static string GetFolderForSlot(string slot)
+        {
+            if (string.Equals(slot, "After", StringComparison.OrdinalIgnoreCase))
+                return afterFolderPath;
+            if (string.Equals(slot, "Dual", StringComparison.OrdinalIgnoreCase))
+                return dualFolderPath;
+            return beforeFolderPath;
         }
 
         private static void NotifyReportImageSaved(string slot, string path)
@@ -129,21 +152,21 @@ namespace CassetteMotionPro.Workspace
             MinimizeBox = false;
             MaximizeBox = false;
             ShowInTaskbar = false;
-            ClientSize = new Size(420, 178);
+            ClientSize = new Size(540, 178);
 
             Label title = new Label();
             title.Text = "Save this Kinovea image as:";
             title.Font = new Font(Font, FontStyle.Bold);
             title.AutoSize = false;
             title.Location = new Point(18, 16);
-            title.Size = new Size(380, 24);
+            title.Size = new Size(500, 24);
             Controls.Add(title);
 
             Label folder = new Label();
-            folder.Text = "Active report folder:\n" + folderPath;
+            folder.Text = "Active report folders:\nBefore / After / Dual inside:\n" + folderPath;
             folder.AutoSize = false;
             folder.Location = new Point(18, 46);
-            folder.Size = new Size(382, 48);
+            folder.Size = new Size(500, 48);
             folder.ForeColor = SystemColors.ControlDarkDark;
             Controls.Add(folder);
 
@@ -155,11 +178,15 @@ namespace CassetteMotionPro.Workspace
             after.Click += delegate { SelectedSlot = "After"; };
             Controls.Add(after);
 
-            Button regular = CreateButton("Regular Save", 214, DialogResult.Ignore);
+            Button dual = CreateButton("Dual", 214, DialogResult.OK);
+            dual.Click += delegate { SelectedSlot = "Dual"; };
+            Controls.Add(dual);
+
+            Button regular = CreateButton("Regular Save", 312, DialogResult.Ignore);
             regular.Width = 92;
             Controls.Add(regular);
 
-            Button cancel = CreateButton("Cancel", 320, DialogResult.Cancel);
+            Button cancel = CreateButton("Cancel", 424, DialogResult.Cancel);
             Controls.Add(cancel);
 
             AcceptButton = before;

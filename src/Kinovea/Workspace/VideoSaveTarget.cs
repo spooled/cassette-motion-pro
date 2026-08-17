@@ -18,28 +18,37 @@ namespace CassetteMotionPro.Workspace
 
         private static string beforeFolderPath;
         private static string afterFolderPath;
+        private static string dualFolderPath;
 
         public static event Action<string, string> VideoSaved;
 
         public static void SetActiveFolders(string beforeFolder, string afterFolder)
         {
+            string parent = string.IsNullOrWhiteSpace(beforeFolder) ? null : Path.GetDirectoryName(beforeFolder);
+            SetActiveFolders(beforeFolder, afterFolder, string.IsNullOrWhiteSpace(parent) ? null : Path.Combine(parent, "Dual"));
+        }
+
+        public static void SetActiveFolders(string beforeFolder, string afterFolder, string dualFolder)
+        {
             beforeFolderPath = beforeFolder;
             afterFolderPath = afterFolder;
+            dualFolderPath = dualFolder;
         }
 
         public static void Clear()
         {
             beforeFolderPath = null;
             afterFolderPath = null;
+            dualFolderPath = null;
         }
 
         public static string ChooseSavePath(IWin32Window owner, string suggestedFileName, string preferredFormat)
         {
-            if (string.IsNullOrWhiteSpace(beforeFolderPath) || string.IsNullOrWhiteSpace(afterFolderPath))
+            if (string.IsNullOrWhiteSpace(beforeFolderPath) || string.IsNullOrWhiteSpace(afterFolderPath) || string.IsNullOrWhiteSpace(dualFolderPath))
             {
                 MessageBox.Show(
                     owner,
-                    "Open a client fit session first so Cassette Motion Pro knows where the Before and After video folders are.\n\n" +
+                    "Open a client fit session first so Cassette Motion Pro knows where the Before, After, and Dual video folders are.\n\n" +
                     "Go to Clients, open the client, then open the fit session. After that, come back to Kinovea and click Save video again.",
                     "Save video",
                     MessageBoxButtons.OK,
@@ -47,7 +56,7 @@ namespace CassetteMotionPro.Workspace
                 return CancelSaveToken;
             }
 
-            using (BeforeAfterVideoSaveDialog dialog = new BeforeAfterVideoSaveDialog(beforeFolderPath, afterFolderPath))
+            using (BeforeAfterVideoSaveDialog dialog = new BeforeAfterVideoSaveDialog(beforeFolderPath, afterFolderPath, dualFolderPath))
             {
                 dialog.StartPosition = owner == null ? FormStartPosition.CenterScreen : FormStartPosition.CenterParent;
 
@@ -64,6 +73,9 @@ namespace CassetteMotionPro.Workspace
                 if (string.Equals(dialog.SelectedSlot, "After", StringComparison.OrdinalIgnoreCase))
                     return BuildPath("After", afterFolderPath, suggestedFileName, preferredFormat);
 
+                if (string.Equals(dialog.SelectedSlot, "Dual", StringComparison.OrdinalIgnoreCase))
+                    return BuildPath("Dual", dualFolderPath, suggestedFileName, preferredFormat);
+
                 return CancelSaveToken;
             }
         }
@@ -78,6 +90,8 @@ namespace CassetteMotionPro.Workspace
                 slot = "Before";
             else if (IsInside(path, afterFolderPath))
                 slot = "After";
+            else if (IsInside(path, dualFolderPath))
+                slot = "Dual";
 
             if (slot == null)
                 return;
@@ -148,45 +162,47 @@ namespace CassetteMotionPro.Workspace
         {
             private readonly Button beforeButton;
             private readonly Button afterButton;
+            private readonly Button dualButton;
             private readonly Button regularButton;
             private readonly Button cancelButton;
 
             public string SelectedSlot { get; private set; }
 
-            public BeforeAfterVideoSaveDialog(string beforeFolder, string afterFolder)
+            public BeforeAfterVideoSaveDialog(string beforeFolder, string afterFolder, string dualFolder)
             {
                 Text = "Save video";
                 FormBorderStyle = FormBorderStyle.FixedDialog;
                 MaximizeBox = false;
                 MinimizeBox = false;
                 ShowInTaskbar = false;
-                ClientSize = new Size(500, 214);
+                ClientSize = new Size(620, 236);
 
                 Label titleLabel = new Label();
                 titleLabel.AutoSize = false;
                 titleLabel.Text = "Save this Kinovea video as:";
                 titleLabel.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
                 titleLabel.Location = new Point(18, 18);
-                titleLabel.Size = new Size(455, 22);
+                titleLabel.Size = new Size(580, 22);
 
                 Label folderLabel = new Label();
                 folderLabel.AutoSize = false;
-                folderLabel.Text = "Active video folders:\nBefore: " + beforeFolder + "\nAfter: " + afterFolder;
+                folderLabel.Text = "Active video folders:\nBefore: " + beforeFolder + "\nAfter: " + afterFolder + "\nDual: " + dualFolder;
                 folderLabel.ForeColor = SystemColors.GrayText;
                 folderLabel.Location = new Point(18, 54);
-                folderLabel.Size = new Size(455, 58);
+                folderLabel.Size = new Size(580, 76);
 
                 Label hintLabel = new Label();
                 hintLabel.AutoSize = false;
                 hintLabel.Text = "Regular Save keeps Kinovea's normal save dialog.";
                 hintLabel.ForeColor = SystemColors.GrayText;
-                hintLabel.Location = new Point(18, 114);
-                hintLabel.Size = new Size(455, 18);
+                hintLabel.Location = new Point(18, 134);
+                hintLabel.Size = new Size(580, 18);
 
-                beforeButton = CreateButton("Before", 18, 154, 82);
-                afterButton = CreateButton("After", 116, 154, 82);
-                regularButton = CreateButton("Regular Save", 214, 154, 104);
-                cancelButton = CreateButton("Cancel", 334, 154, 82);
+                beforeButton = CreateButton("Before", 18, 176, 82);
+                afterButton = CreateButton("After", 116, 176, 82);
+                dualButton = CreateButton("Dual", 214, 176, 82);
+                regularButton = CreateButton("Regular Save", 312, 176, 104);
+                cancelButton = CreateButton("Cancel", 432, 176, 82);
 
                 beforeButton.Click += delegate
                 {
@@ -197,6 +213,12 @@ namespace CassetteMotionPro.Workspace
                 afterButton.Click += delegate
                 {
                     SelectedSlot = "After";
+                    DialogResult = DialogResult.OK;
+                };
+
+                dualButton.Click += delegate
+                {
+                    SelectedSlot = "Dual";
                     DialogResult = DialogResult.OK;
                 };
 
@@ -215,6 +237,7 @@ namespace CassetteMotionPro.Workspace
                 Controls.Add(hintLabel);
                 Controls.Add(beforeButton);
                 Controls.Add(afterButton);
+                Controls.Add(dualButton);
                 Controls.Add(regularButton);
                 Controls.Add(cancelButton);
 

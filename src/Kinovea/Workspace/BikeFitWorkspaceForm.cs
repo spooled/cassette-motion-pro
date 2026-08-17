@@ -2843,7 +2843,14 @@ namespace CassetteMotionPro.Workspace
                 return;
             }
 
-            string key = string.Equals(slot, "After", StringComparison.OrdinalIgnoreCase) ? "AfterReportImagePath" : "BeforeReportImagePath";
+            string key;
+            if (string.Equals(slot, "After", StringComparison.OrdinalIgnoreCase))
+                key = "AfterReportImagePath";
+            else if (string.Equals(slot, "Dual", StringComparison.OrdinalIgnoreCase))
+                key = "SideBySideReportImagePath";
+            else
+                key = "BeforeReportImagePath";
+
             if (!imageBoxes.ContainsKey(key))
                 return;
 
@@ -2858,6 +2865,14 @@ namespace CassetteMotionPro.Workspace
             if (InvokeRequired)
             {
                 BeginInvoke(new Action<string, string>(VideoSaveTarget_VideoSaved), slot, path);
+                return;
+            }
+
+            if (string.Equals(slot, "Dual", StringComparison.OrdinalIgnoreCase))
+            {
+                SaveCurrentSession();
+                UpdateWorkflowChecklist();
+                UpdateSaveHint("Dual video saved from Kinovea export: " + Path.GetFileName(path));
                 return;
             }
 
@@ -3004,7 +3019,11 @@ namespace CassetteMotionPro.Workspace
 
             try
             {
-                ReportImageSaveTarget.SetActiveFolder(GetSessionReportImagesFolderPath());
+                string reportImagesFolder = GetSessionReportImagesFolderPath();
+                Directory.CreateDirectory(Path.Combine(reportImagesFolder, "Before"));
+                Directory.CreateDirectory(Path.Combine(reportImagesFolder, "After"));
+                Directory.CreateDirectory(Path.Combine(reportImagesFolder, "Dual"));
+                ReportImageSaveTarget.SetActiveFolder(reportImagesFolder);
             }
             catch
             {
@@ -3024,9 +3043,11 @@ namespace CassetteMotionPro.Workspace
             {
                 string beforeFolder = GetSessionVideoViewFolderPath("Before");
                 string afterFolder = GetSessionVideoViewFolderPath("After");
+                string dualFolder = GetSessionVideoViewFolderPath("Dual");
                 Directory.CreateDirectory(beforeFolder);
                 Directory.CreateDirectory(afterFolder);
-                VideoSaveTarget.SetActiveFolders(beforeFolder, afterFolder);
+                Directory.CreateDirectory(dualFolder);
+                VideoSaveTarget.SetActiveFolders(beforeFolder, afterFolder, dualFolder);
             }
             catch
             {
