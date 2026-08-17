@@ -49,6 +49,7 @@ namespace CassetteMotionPro.Workspace
         private readonly Label recordingFoldersGuide = new Label();
         private readonly Label nextRecommendedStep = new Label();
         private readonly Label fitCommandCenterStatus = new Label();
+        private readonly Label activeSaveTargetStatus = new Label();
         private readonly Button nextRecommendedStepAction = new Button();
         private readonly Button nextRecommendedFolderAction = new Button();
         private readonly CheckBox chkShowBeforeMeasurementsInReport = new CheckBox();
@@ -459,8 +460,9 @@ namespace CassetteMotionPro.Workspace
             TableLayoutPanel layout = new TableLayoutPanel();
             layout.Dock = DockStyle.Fill;
             layout.ColumnCount = 1;
-            layout.RowCount = 3;
+            layout.RowCount = 4;
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 70));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
@@ -469,6 +471,12 @@ namespace CassetteMotionPro.Workspace
             fitCommandCenterStatus.ForeColor = Color.FromArgb(74, 87, 81);
             fitCommandCenterStatus.TextAlign = ContentAlignment.MiddleLeft;
             fitCommandCenterStatus.Text = "Mode: Plan   Folders: create or select a fit session   Before video: needed   After video: needed";
+
+            activeSaveTargetStatus.Dock = DockStyle.Fill;
+            activeSaveTargetStatus.Font = new Font("Segoe UI", 8.75F, FontStyle.Regular);
+            activeSaveTargetStatus.ForeColor = Color.FromArgb(181, 118, 35);
+            activeSaveTargetStatus.TextAlign = ContentAlignment.MiddleLeft;
+            activeSaveTargetStatus.Text = "Save targets: open or create a fit session to activate Before / After / Dual image and video folders.";
 
             Panel captureScroll = new Panel();
             captureScroll.Dock = DockStyle.Fill;
@@ -489,6 +497,7 @@ namespace CassetteMotionPro.Workspace
             AddFitCommandButton(captureButtons, "Use Latest After", false, delegate { UseLatestVideo("AfterVideoPath"); });
             AddFitCommandButton(captureButtons, "Use Latest Both", true, UseLatestBothVideos);
             AddFitCommandButton(captureButtons, "Client Folders", false, delegate { SelectWorkspaceTab("Client Files"); });
+            AddFitCommandButton(captureButtons, "Open Client Folder", false, delegate { OpenClientFolder(client.FolderPath, "Client"); });
 
             captureScroll.Controls.Add(captureButtons);
 
@@ -513,8 +522,9 @@ namespace CassetteMotionPro.Workspace
             analysisScroll.Controls.Add(analysisButtons);
 
             layout.Controls.Add(fitCommandCenterStatus, 0, 0);
-            layout.Controls.Add(captureScroll, 0, 1);
-            layout.Controls.Add(analysisScroll, 0, 2);
+            layout.Controls.Add(activeSaveTargetStatus, 0, 1);
+            layout.Controls.Add(captureScroll, 0, 2);
+            layout.Controls.Add(analysisScroll, 0, 3);
             group.Controls.Add(layout);
             return group;
         }
@@ -2159,10 +2169,28 @@ namespace CassetteMotionPro.Workspace
             string evidence = HasAnalysisCaptureEvidence() ? "✓ Evidence" : "□ Evidence";
             string metrics = HasCoreBikeMetrics() ? "✓ Metrics" : "□ Metrics";
             string report = IsReportReady() ? "✓ Report ready" : "□ Report ready";
-            string folders = currentSession != null && !string.IsNullOrWhiteSpace(currentSession.StorageFolderName) ? "Folders: Before → Before folder | After → After folder" : "Folders: create/select fit session first";
+            string folders = currentSession != null && !string.IsNullOrWhiteSpace(currentSession.StorageFolderName) ? "Folders: Before / After / Dual connected" : "Folders: create/select fit session first";
+            string session = currentSession != null ? "Session: " + currentSession.DisplayName : "Session: none";
 
-            fitCommandCenterStatus.Text = "Mode: " + fitCommandCenterMode + "   " + folders + "   " + before + "   " + after + "   " + evidence + "   " + metrics + "   " + report;
+            fitCommandCenterStatus.Text = "Mode: " + fitCommandCenterMode + "   " + session + "   " + folders + "   " + before + "   " + after + "   " + evidence + "   " + metrics + "   " + report;
             fitCommandCenterStatus.ForeColor = IsReportReady() ? Color.FromArgb(60, 145, 76) : Color.FromArgb(74, 87, 81);
+            UpdateSaveTargetStatus();
+        }
+
+        private void UpdateSaveTargetStatus()
+        {
+            if (activeSaveTargetStatus == null)
+                return;
+
+            if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
+            {
+                activeSaveTargetStatus.Text = "Save targets: open or create a fit session to activate Before / After / Dual image and video folders.";
+                activeSaveTargetStatus.ForeColor = Color.FromArgb(181, 118, 35);
+                return;
+            }
+
+            activeSaveTargetStatus.Text = "Saving to: " + client.DisplayName + " · " + currentSession.DisplayName + "   Images: Before / After / Dual   Videos: Before / After / Dual";
+            activeSaveTargetStatus.ForeColor = Color.FromArgb(60, 145, 76);
         }
 
         private void SetFitCommandCenterMode(string mode)
@@ -2177,12 +2205,14 @@ namespace CassetteMotionPro.Workspace
             {
                 return "Recording folders for this session:" + Environment.NewLine +
                     "Before → choose or create a fit session first" + Environment.NewLine +
-                    "After  → choose or create a fit session first";
+                    "After  → choose or create a fit session first" + Environment.NewLine +
+                    "Dual   → choose or create a fit session first";
             }
 
             return "Recording folders for this session:" + Environment.NewLine +
                 "Before → " + GetSessionVideoViewFolderPath("Before") + Environment.NewLine +
-                "After  → " + GetSessionVideoViewFolderPath("After");
+                "After  → " + GetSessionVideoViewFolderPath("After") + Environment.NewLine +
+                "Dual   → " + GetSessionVideoViewFolderPath("Dual");
         }
 
         private void RefreshRecordingFolderGuide()
@@ -2857,6 +2887,7 @@ namespace CassetteMotionPro.Workspace
             imageBoxes[key].Text = path;
             SaveCurrentSession();
             UpdateWorkflowChecklist();
+            UpdateFitCommandCenterStatus();
             UpdateSaveHint(slot + " report image saved from Kinovea Save image: " + Path.GetFileName(path));
         }
 
@@ -2872,6 +2903,7 @@ namespace CassetteMotionPro.Workspace
             {
                 SaveCurrentSession();
                 UpdateWorkflowChecklist();
+                UpdateFitCommandCenterStatus();
                 UpdateSaveHint("Dual video saved from Kinovea export: " + Path.GetFileName(path));
                 return;
             }
@@ -2884,6 +2916,7 @@ namespace CassetteMotionPro.Workspace
             SaveCurrentSession();
             RefreshMediaStatus(key);
             UpdateWorkflowChecklist();
+            UpdateFitCommandCenterStatus();
             UpdateSaveHint(slot + " video saved from Kinovea export: " + Path.GetFileName(path));
         }
 
@@ -2996,6 +3029,7 @@ namespace CassetteMotionPro.Workspace
                 ReportImageSaveTarget.Clear();
                 VideoSaveTarget.Clear();
                 activeSessionStatus.Text = "Active session\nChoose or create a fit session";
+                UpdateFitCommandCenterStatus();
                 return;
             }
 
@@ -3007,6 +3041,7 @@ namespace CassetteMotionPro.Workspace
             activeSessionStatus.Text = "Active session: " + currentSession.DisplayName + " · " + status + "\n" +
                 "Client: " + client.DisplayName + "\n" +
                 "Session record: Measurements → Sessions → " + folder;
+            UpdateFitCommandCenterStatus();
         }
 
         private void UpdateReportImageSaveTarget()
