@@ -2498,6 +2498,7 @@ namespace CassetteMotionPro.Workspace
             RefreshAnalysisCapturesStatus();
             RefreshRecordingFolderGuide();
             UpdateReportImageSaveTarget();
+            UpdateVideoSaveTarget();
         }
 
         private void SetMedia(string key, string value)
