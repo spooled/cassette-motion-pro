@@ -48,8 +48,20 @@ namespace CassetteMotionPro.Workspace
 
         public static bool TrySave(IWin32Window owner, Bitmap bitmap, string suggestedFileName)
         {
-            if (bitmap == null || string.IsNullOrWhiteSpace(activeFolderPath))
+            if (bitmap == null)
                 return false;
+
+            if (!HasActiveFitSession())
+            {
+                MessageBox.Show(
+                    owner,
+                    "Open a client fit session first so Cassette Motion Pro knows where the Before, After, and Dual image folders are.\n\n" +
+                    "Go to Clients, open the client, then open the fit session. After that, come back to Kinovea and click Save image again.",
+                    "Save report image",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return true;
+            }
 
             Directory.CreateDirectory(activeFolderPath);
 
@@ -80,6 +92,14 @@ namespace CassetteMotionPro.Workspace
 
                 return true;
             }
+        }
+
+        private static bool HasActiveFitSession()
+        {
+            return !string.IsNullOrWhiteSpace(activeFolderPath) &&
+                !string.IsNullOrWhiteSpace(beforeFolderPath) &&
+                !string.IsNullOrWhiteSpace(afterFolderPath) &&
+                !string.IsNullOrWhiteSpace(dualFolderPath);
         }
 
         private static string GetFolderForSlot(string slot)
