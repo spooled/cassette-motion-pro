@@ -55,8 +55,8 @@ namespace CassetteMotionPro.Workspace
             {
                 MessageBox.Show(
                     owner,
-                    "Open a client fit session first so Cassette Motion Pro knows where the Before, After, and Dual image folders are.\n\n" +
-                    "Go to Clients, open the client, then open the fit session. After that, come back to Kinovea and click Save image again.",
+                    "Open a client fit session first so Cassette Motion Pro knows where to save this image.\n\n" +
+                    "Go to Clients, open the client, then open the fit session. After that, come back to Kinovea and click Save image again to choose Before, After, or Dual.",
                     "Save report image",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
@@ -192,7 +192,7 @@ namespace CassetteMotionPro.Workspace
             ClientSize = new Size(540, 178);
 
             Label title = new Label();
-            title.Text = "Save this Kinovea image as:";
+            title.Text = "Save this Kinovea image into this fit session:";
             title.Font = new Font(Font, FontStyle.Bold);
             title.AutoSize = false;
             title.Location = new Point(18, 16);
@@ -200,7 +200,7 @@ namespace CassetteMotionPro.Workspace
             Controls.Add(title);
 
             Label folder = new Label();
-            folder.Text = "Active report folders:\nBefore / After / Dual inside:\n" + folderPath;
+            folder.Text = "Choose where this image belongs:\nBefore / After / Dual inside:\n" + folderPath;
             folder.AutoSize = false;
             folder.Location = new Point(18, 46);
             folder.Size = new Size(500, 48);

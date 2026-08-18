@@ -480,7 +480,7 @@ namespace CassetteMotionPro.Workspace
             activeSaveTargetStatus.Font = new Font("Segoe UI", 8.75F, FontStyle.Regular);
             activeSaveTargetStatus.ForeColor = Color.FromArgb(181, 118, 35);
             activeSaveTargetStatus.TextAlign = ContentAlignment.MiddleLeft;
-            activeSaveTargetStatus.Text = "Save targets: open a client fit session first. Then Kinovea Save Image / Save Video can send files to Before / After / Dual.";
+            activeSaveTargetStatus.Text = "Save target: none yet — open a client fit session, then Kinovea Save Image / Save Video will offer Before / After / Dual.";
 
             ConfigureFitCommandSectionLabel(captureActionsLabel, "Capture: record into this client's Before / After video folders");
             ConfigureFitCommandSectionLabel(analysisActionsLabel, "Analyze + report: save images/videos to Before / After / Dual, then build the report");
@@ -2202,12 +2202,12 @@ namespace CassetteMotionPro.Workspace
 
             if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
             {
-                activeSaveTargetStatus.Text = "Save targets: open a client fit session first. Then Kinovea Save Image / Save Video can send files to Before / After / Dual.";
+                activeSaveTargetStatus.Text = "Save target: none yet — open a client fit session, then Kinovea Save Image / Save Video will offer Before / After / Dual.";
                 activeSaveTargetStatus.ForeColor = Color.FromArgb(181, 118, 35);
                 return;
             }
 
-            activeSaveTargetStatus.Text = "Active save target: " + client.DisplayName + " · " + currentSession.DisplayName + "   Kinovea Save Image / Save Video → Before / After / Dual";
+            activeSaveTargetStatus.Text = "Saving to: " + client.DisplayName + " · " + currentSession.DisplayName + " — Kinovea Save Image / Save Video → Before / After / Dual folders";
             activeSaveTargetStatus.ForeColor = Color.FromArgb(60, 145, 76);
         }
 

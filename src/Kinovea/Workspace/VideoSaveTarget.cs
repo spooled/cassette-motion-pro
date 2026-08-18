@@ -49,8 +49,8 @@ namespace CassetteMotionPro.Workspace
             {
                 MessageBox.Show(
                     owner,
-                    "Open a client fit session first so Cassette Motion Pro knows where the Before, After, and Dual video folders are.\n\n" +
-                    "Go to Clients, open the client, then open the fit session. After that, come back to Kinovea and click Save video again.",
+                    "Open a client fit session first so Cassette Motion Pro knows where to save this video.\n\n" +
+                    "Go to Clients, open the client, then open the fit session. After that, come back to Kinovea and click Save video again to choose Before, After, or Dual.",
                     "Save video",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
@@ -211,21 +211,21 @@ namespace CassetteMotionPro.Workspace
 
                 Label titleLabel = new Label();
                 titleLabel.AutoSize = false;
-                titleLabel.Text = "Save this Kinovea video as:";
+                titleLabel.Text = "Save this Kinovea video into this fit session:";
                 titleLabel.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
                 titleLabel.Location = new Point(18, 18);
                 titleLabel.Size = new Size(580, 22);
 
                 Label folderLabel = new Label();
                 folderLabel.AutoSize = false;
-                folderLabel.Text = "Active video folders:\nBefore: " + beforeFolder + "\nAfter: " + afterFolder + "\nDual: " + dualFolder;
+                folderLabel.Text = "Choose where this video belongs:\nBefore: " + beforeFolder + "\nAfter: " + afterFolder + "\nDual: " + dualFolder;
                 folderLabel.ForeColor = SystemColors.GrayText;
                 folderLabel.Location = new Point(18, 54);
                 folderLabel.Size = new Size(580, 76);
 
                 Label hintLabel = new Label();
                 hintLabel.AutoSize = false;
-                hintLabel.Text = "Regular Save keeps Kinovea's normal save dialog.";
+                hintLabel.Text = "Regular Save keeps Kinovea's normal save dialog if you do not want to attach this video to the client.";
                 hintLabel.ForeColor = SystemColors.GrayText;
                 hintLabel.Location = new Point(18, 134);
                 hintLabel.Size = new Size(580, 18);
