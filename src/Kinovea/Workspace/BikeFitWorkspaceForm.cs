@@ -374,7 +374,7 @@ namespace CassetteMotionPro.Workspace
             layout.RowCount = 2;
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 420));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
             Label title = new Label();
@@ -477,10 +477,13 @@ namespace CassetteMotionPro.Workspace
             fitCommandCenterStatus.Text = "Mode: Plan   Folders: create or select a fit session   Before video: needed   After video: needed";
 
             activeSaveTargetStatus.Dock = DockStyle.Fill;
-            activeSaveTargetStatus.Font = new Font("Segoe UI", 8.75F, FontStyle.Regular);
+            activeSaveTargetStatus.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             activeSaveTargetStatus.ForeColor = Color.FromArgb(181, 118, 35);
+            activeSaveTargetStatus.BackColor = Color.FromArgb(255, 248, 226);
+            activeSaveTargetStatus.BorderStyle = BorderStyle.FixedSingle;
+            activeSaveTargetStatus.Padding = new Padding(8, 0, 8, 0);
             activeSaveTargetStatus.TextAlign = ContentAlignment.MiddleLeft;
-            activeSaveTargetStatus.Text = "Save target: none yet — open a client fit session, then Kinovea Save Image / Save Video will offer Before / After / Dual.";
+            activeSaveTargetStatus.Text = "No active fit session — open or create a session first. Save Image / Save Video will then offer Before / After / Dual.";
 
             ConfigureFitCommandSectionLabel(captureActionsLabel, "Capture: record into this client's Before / After video folders");
             ConfigureFitCommandSectionLabel(analysisActionsLabel, "Analyze + report: save images/videos to Before / After / Dual, then build the report");
@@ -2188,7 +2191,7 @@ namespace CassetteMotionPro.Workspace
             string metrics = HasCoreBikeMetrics() ? "✓ Metrics" : "□ Metrics";
             string report = IsReportReady() ? "✓ Report ready" : "□ Report ready";
             string folders = currentSession != null && !string.IsNullOrWhiteSpace(currentSession.StorageFolderName) ? "Folders: Before / After / Dual connected" : "Folders: create/select fit session first";
-            string session = currentSession != null ? "Session: " + currentSession.DisplayName : "Session: none";
+            string session = currentSession != null ? "Client: " + client.DisplayName + "   Session: " + currentSession.DisplayName : "Client: " + client.DisplayName + "   Session: none";
 
             fitCommandCenterStatus.Text = "Mode: " + fitCommandCenterMode + "   " + session + "   " + folders + "   " + before + "   " + after + "   " + evidence + "   " + metrics + "   " + report;
             fitCommandCenterStatus.ForeColor = IsReportReady() ? Color.FromArgb(60, 145, 76) : Color.FromArgb(74, 87, 81);
@@ -2202,13 +2205,15 @@ namespace CassetteMotionPro.Workspace
 
             if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
             {
-                activeSaveTargetStatus.Text = "Save target: none yet — open a client fit session, then Kinovea Save Image / Save Video will offer Before / After / Dual.";
+                activeSaveTargetStatus.Text = "No active fit session — open or create a session first. Save Image / Save Video will then offer Before / After / Dual.";
                 activeSaveTargetStatus.ForeColor = Color.FromArgb(181, 118, 35);
+                activeSaveTargetStatus.BackColor = Color.FromArgb(255, 248, 226);
                 return;
             }
 
-            activeSaveTargetStatus.Text = "Saving to: " + client.DisplayName + " · " + currentSession.DisplayName + " — Kinovea Save Image / Save Video → Before / After / Dual folders";
+            activeSaveTargetStatus.Text = "Active save target: " + client.DisplayName + " · " + currentSession.DisplayName + " — Image + Video saves use Before / After / Dual folders";
             activeSaveTargetStatus.ForeColor = Color.FromArgb(60, 145, 76);
+            activeSaveTargetStatus.BackColor = Color.FromArgb(235, 250, 238);
         }
 
         private void SetFitCommandCenterMode(string mode)
