@@ -379,14 +379,14 @@ namespace CassetteMotionPro.Workspace
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
             Label title = new Label();
-            title.Text = "Client-first fit path";
+            title.Text = "Fit Day Dashboard";
             title.Dock = DockStyle.Fill;
             title.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
             title.ForeColor = Color.FromArgb(24, 31, 29);
             title.TextAlign = ContentAlignment.MiddleLeft;
 
             Label description = new Label();
-            description.Text = "Start with the client and session details, then record the fit-day videos into this client session. Open those videos in the full Kinovea analysis workspace, use the Kinovea tools for the actual measuring, save useful photos/video evidence back to the client folders, then return here to finish Bike Metrics and the report.";
+            description.Text = "Run the fit from one place: confirm the client/session, record live into this session, analyze in Kinovea, save the useful Before / After / Dual evidence, then finish Bike Metrics and preview the report.";
             description.Dock = DockStyle.Fill;
             description.ForeColor = Color.FromArgb(74, 87, 81);
 
@@ -400,20 +400,24 @@ namespace CassetteMotionPro.Workspace
             clientFiles.Size = new Size(112, 34);
             clientFiles.Click += delegate { SelectWorkspaceTab("Client Files"); };
 
-            Button startVideos = CreateButton("Record + Analyze", true);
-            startVideos.Size = new Size(152, 34);
-            startVideos.Click += delegate { SaveAndSelectVideos(); };
+            Button startVideos = CreateButton("Start Capture", true);
+            startVideos.Size = new Size(130, 34);
+            startVideos.Click += delegate { OpenDualLiveCapture(); };
 
-            Button analyze = CreateButton("Kinovea Tools", false);
-            analyze.Size = new Size(122, 34);
-            analyze.Click += delegate { SaveAndSelectVideos(); };
+            Button analyze = CreateButton("Review Evidence", false);
+            analyze.Size = new Size(142, 34);
+            analyze.Click += delegate
+            {
+                RefreshSavedEvidenceReview();
+                SelectWorkspaceTab("Video Capture + Analysis");
+            };
 
             buttons.Controls.Add(clientFiles);
             buttons.Controls.Add(startVideos);
             buttons.Controls.Add(analyze);
 
             Label path = new Label();
-            path.Text = "Client info → Record live → Analyze in Kinovea → Save evidence → Bike Metrics → Report";
+            path.Text = "Today: Client info → Record live → Analyze → Save evidence → Bike Metrics → Report";
             path.Dock = DockStyle.Fill;
             path.ForeColor = Color.FromArgb(92, 104, 98);
             path.TextAlign = ContentAlignment.MiddleLeft;
@@ -454,7 +458,7 @@ namespace CassetteMotionPro.Workspace
         private Control BuildFitCommandCenter()
         {
             GroupBox group = new GroupBox();
-            group.Text = "Fit Command Center";
+            group.Text = "Fit Day Cockpit";
             group.Dock = DockStyle.Fill;
             group.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             group.ForeColor = Color.FromArgb(37, 48, 43);
@@ -529,6 +533,12 @@ namespace CassetteMotionPro.Workspace
             AddFitCommandButton(analysisButtons, "Analyze After", false, delegate { OpenSingle("AfterVideoPath"); });
             AddFitCommandButton(analysisButtons, "Captures Folder", false, OpenAnalysisCapturesFolder);
             AddFitCommandButton(analysisButtons, "Report Images", false, delegate { SelectWorkspaceTab("Report Images"); });
+            AddFitCommandButton(analysisButtons, "Review Evidence", true, delegate
+            {
+                RefreshSavedEvidenceReview();
+                SelectWorkspaceTab("Video Capture + Analysis");
+            });
+            AddFitCommandButton(analysisButtons, "Preview Report", false, delegate { PreviewReport_Click(this, EventArgs.Empty); });
 
             analysisScroll.Controls.Add(analysisButtons);
 
@@ -2280,10 +2290,45 @@ namespace CassetteMotionPro.Workspace
             string folders = currentSession != null && !string.IsNullOrWhiteSpace(currentSession.StorageFolderName) ? "Folders: Before / After / Dual connected" : "Folders: create/select fit session first";
             string session = currentSession != null ? "Client: " + client.DisplayName + "   Session: " + currentSession.DisplayName : "Client: " + client.DisplayName + "   Session: none";
 
-            fitCommandCenterStatus.Text = "Mode: " + fitCommandCenterMode + "   " + session + "   " + folders + "   " + before + "   " + after + "   " + evidence + "   " + metrics + "   " + report;
+            fitCommandCenterStatus.Text = GetFitDayReadinessText() + "   Mode: " + fitCommandCenterMode + "   " + session + "   " + folders + "   " + before + "   " + after + "   " + evidence + "   " + metrics + "   " + report;
             fitCommandCenterStatus.ForeColor = IsReportReady() ? Color.FromArgb(60, 145, 76) : Color.FromArgb(74, 87, 81);
             UpdateSaveTargetStatus();
             RefreshSavedEvidenceReview();
+        }
+
+        private string GetFitDayReadinessText()
+        {
+            int ready = 0;
+            const int total = 6;
+
+            if (currentSession != null && !string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
+                ready++;
+            if (HasMediaFile("BeforeVideoPath"))
+                ready++;
+            if (HasMediaFile("AfterVideoPath"))
+                ready++;
+            if (HasAnalysisCaptureEvidence() || HasSavedSessionEvidence())
+                ready++;
+            if (HasCoreBikeMetrics())
+                ready++;
+            if (HasReportImage())
+                ready++;
+
+            return "Fit day readiness: " + ready + "/" + total + " ready";
+        }
+
+        private bool HasSavedSessionEvidence()
+        {
+            if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
+                return false;
+
+            string reportImagesFolder = GetSessionReportImagesFolderPath();
+            return CountSavedEvidenceFiles(GetSessionVideoViewFolderPath("Before"), true) > 0 ||
+                CountSavedEvidenceFiles(GetSessionVideoViewFolderPath("After"), true) > 0 ||
+                CountSavedEvidenceFiles(GetSessionVideoViewFolderPath("Dual"), true) > 0 ||
+                CountSavedEvidenceFiles(Path.Combine(reportImagesFolder, "Before"), false) > 0 ||
+                CountSavedEvidenceFiles(Path.Combine(reportImagesFolder, "After"), false) > 0 ||
+                CountSavedEvidenceFiles(Path.Combine(reportImagesFolder, "Dual"), false) > 0;
         }
 
         private void UpdateSaveTargetStatus()
@@ -2336,6 +2381,7 @@ namespace CassetteMotionPro.Workspace
 
             string text =
                 "Active session: " + client.DisplayName + " · " + currentSession.DisplayName + Environment.NewLine +
+                GetFitDayReadinessText() + Environment.NewLine +
                 Environment.NewLine +
                 "Fit-day checklist" + Environment.NewLine +
                 FormatChecklistLine("Before video saved", hasBeforeVideo) + Environment.NewLine +
