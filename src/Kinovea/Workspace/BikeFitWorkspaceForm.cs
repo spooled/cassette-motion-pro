@@ -50,6 +50,7 @@ namespace CassetteMotionPro.Workspace
         private readonly Label nextRecommendedStep = new Label();
         private readonly Label fitCommandCenterStatus = new Label();
         private readonly Label activeSaveTargetStatus = new Label();
+        private readonly Label savedEvidenceReviewStatus = new Label();
         private readonly Label captureActionsLabel = new Label();
         private readonly Label analysisActionsLabel = new Label();
         private readonly Button nextRecommendedStepAction = new Button();
@@ -1079,6 +1080,8 @@ namespace CassetteMotionPro.Workspace
             AddMediaRow(table, "Before", "BeforeVideoPath");
             AddMediaRow(table, "After", "AfterVideoPath");
 
+            AddSavedEvidenceReview(table);
+
             FlowLayoutPanel comparisons = new FlowLayoutPanel();
             comparisons.Dock = DockStyle.Fill;
             comparisons.FlowDirection = FlowDirection.LeftToRight;
@@ -1210,6 +1213,70 @@ namespace CassetteMotionPro.Workspace
             shortcuts.Controls.Add(before);
             shortcuts.Controls.Add(after);
             return shortcuts;
+        }
+
+        private void AddSavedEvidenceReview(TableLayoutPanel table)
+        {
+            GroupBox review = new GroupBox();
+            review.Text = "Saved Evidence Review";
+            review.Dock = DockStyle.Fill;
+            review.Padding = new Padding(12, 16, 12, 10);
+            review.ForeColor = Color.FromArgb(37, 48, 43);
+
+            TableLayoutPanel reviewLayout = new TableLayoutPanel();
+            reviewLayout.Dock = DockStyle.Fill;
+            reviewLayout.RowCount = 2;
+            reviewLayout.ColumnCount = 1;
+            reviewLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            reviewLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+
+            savedEvidenceReviewStatus.Dock = DockStyle.Fill;
+            savedEvidenceReviewStatus.ForeColor = Color.FromArgb(74, 87, 81);
+            savedEvidenceReviewStatus.Padding = new Padding(4, 2, 4, 0);
+            savedEvidenceReviewStatus.Text = "Open or create a client fit session first. Once a fit session is active, this review will show the latest saved Before, After, and Dual videos/images.";
+
+            FlowLayoutPanel actions = new FlowLayoutPanel();
+            actions.Dock = DockStyle.Fill;
+            actions.FlowDirection = FlowDirection.LeftToRight;
+            actions.WrapContents = true;
+            actions.Padding = new Padding(0, 4, 0, 0);
+
+            Button refresh = CreateButton("Refresh Review", true);
+            refresh.Size = new Size(150, 32);
+            refresh.Click += delegate { RefreshSavedEvidenceReview(); };
+
+            Button before = CreateButton("Open Before", false);
+            before.Size = new Size(130, 32);
+            before.Click += delegate { OpenSessionVideoFolder("Before"); };
+
+            Button after = CreateButton("Open After", false);
+            after.Size = new Size(120, 32);
+            after.Click += delegate { OpenSessionVideoFolder("After"); };
+
+            Button dual = CreateButton("Open Dual", false);
+            dual.Size = new Size(120, 32);
+            dual.Click += delegate { OpenSessionVideoFolder("Dual"); };
+
+            Button reportImages = CreateButton("Open Report Images", false);
+            reportImages.Size = new Size(170, 32);
+            reportImages.Click += delegate { OpenReportImagesFolder(); };
+
+            actions.Controls.Add(refresh);
+            actions.Controls.Add(before);
+            actions.Controls.Add(after);
+            actions.Controls.Add(dual);
+            actions.Controls.Add(reportImages);
+
+            reviewLayout.Controls.Add(savedEvidenceReviewStatus, 0, 0);
+            reviewLayout.Controls.Add(actions, 0, 1);
+            review.Controls.Add(reviewLayout);
+
+            int row = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 190));
+            table.Controls.Add(review, 1, row);
+            table.SetColumnSpan(review, 5);
+
+            RefreshSavedEvidenceReview();
         }
 
         private void AddFitDayPathStep(TableLayoutPanel path, int column, string title, string detail)
@@ -2196,6 +2263,7 @@ namespace CassetteMotionPro.Workspace
             fitCommandCenterStatus.Text = "Mode: " + fitCommandCenterMode + "   " + session + "   " + folders + "   " + before + "   " + after + "   " + evidence + "   " + metrics + "   " + report;
             fitCommandCenterStatus.ForeColor = IsReportReady() ? Color.FromArgb(60, 145, 76) : Color.FromArgb(74, 87, 81);
             UpdateSaveTargetStatus();
+            RefreshSavedEvidenceReview();
         }
 
         private void UpdateSaveTargetStatus()
@@ -2214,6 +2282,115 @@ namespace CassetteMotionPro.Workspace
             activeSaveTargetStatus.Text = "Active save target: " + client.DisplayName + " · " + currentSession.DisplayName + " — Image + Video saves use Before / After / Dual folders";
             activeSaveTargetStatus.ForeColor = Color.FromArgb(60, 145, 76);
             activeSaveTargetStatus.BackColor = Color.FromArgb(235, 250, 238);
+        }
+
+        private void RefreshSavedEvidenceReview()
+        {
+            if (savedEvidenceReviewStatus == null)
+                return;
+
+            if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
+            {
+                savedEvidenceReviewStatus.Text = "Open or create a client fit session first. Once a fit session is active, this review will show the latest saved Before, After, and Dual videos/images.";
+                savedEvidenceReviewStatus.ForeColor = Color.FromArgb(181, 118, 35);
+                return;
+            }
+
+            savedEvidenceReviewStatus.ForeColor = Color.FromArgb(74, 87, 81);
+
+            string reportImagesFolder = GetSessionReportImagesFolderPath();
+            string text =
+                "Active session: " + client.DisplayName + " · " + currentSession.DisplayName + Environment.NewLine +
+                Environment.NewLine +
+                "Videos" + Environment.NewLine +
+                "Before: " + FormatSavedEvidenceSummary(GetSessionVideoViewFolderPath("Before"), true) + Environment.NewLine +
+                "After: " + FormatSavedEvidenceSummary(GetSessionVideoViewFolderPath("After"), true) + Environment.NewLine +
+                "Dual: " + FormatSavedEvidenceSummary(GetSessionVideoViewFolderPath("Dual"), true) + Environment.NewLine +
+                Environment.NewLine +
+                "Report Images" + Environment.NewLine +
+                "Before: " + FormatSavedEvidenceSummary(Path.Combine(reportImagesFolder, "Before"), false) + Environment.NewLine +
+                "After: " + FormatSavedEvidenceSummary(Path.Combine(reportImagesFolder, "After"), false) + Environment.NewLine +
+                "Dual: " + FormatSavedEvidenceSummary(Path.Combine(reportImagesFolder, "Dual"), false);
+
+            savedEvidenceReviewStatus.Text = text;
+        }
+
+        private static string FormatSavedEvidenceSummary(string folder, bool videoFiles)
+        {
+            int count = CountSavedEvidenceFiles(folder, videoFiles);
+            if (count == 0)
+                return "No saved files yet";
+
+            string latest = FindLatestEvidenceFile(folder, videoFiles);
+            if (string.IsNullOrWhiteSpace(latest))
+                return count + " file" + (count == 1 ? "" : "s");
+
+            DateTime savedAt = File.GetLastWriteTime(latest);
+            return Path.GetFileName(latest) + " · " + count + " file" + (count == 1 ? "" : "s") + " · " + savedAt.ToString("g");
+        }
+
+        private static int CountSavedEvidenceFiles(string folder, bool videoFiles)
+        {
+            if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+                return 0;
+
+            int count = 0;
+            string[] files = Directory.GetFiles(folder, "*.*", SearchOption.TopDirectoryOnly);
+            foreach (string file in files)
+            {
+                if (IsEvidenceFile(file, videoFiles))
+                    count++;
+            }
+
+            return count;
+        }
+
+        private static string FindLatestEvidenceFile(string folder, bool videoFiles)
+        {
+            if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+                return string.Empty;
+
+            string latest = string.Empty;
+            DateTime latestTime = DateTime.MinValue;
+            string[] files = Directory.GetFiles(folder, "*.*", SearchOption.TopDirectoryOnly);
+            foreach (string file in files)
+            {
+                if (!IsEvidenceFile(file, videoFiles))
+                    continue;
+
+                DateTime savedAt = File.GetLastWriteTime(file);
+                if (string.IsNullOrEmpty(latest) || savedAt > latestTime)
+                {
+                    latest = file;
+                    latestTime = savedAt;
+                }
+            }
+
+            return latest;
+        }
+
+        private static bool IsEvidenceFile(string path, bool videoFiles)
+        {
+            string extension = Path.GetExtension(path);
+            if (videoFiles)
+            {
+                return string.Equals(extension, ".mp4", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(extension, ".mov", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(extension, ".avi", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(extension, ".mkv", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(extension, ".m4v", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(extension, ".mpg", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(extension, ".mpeg", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(extension, ".wmv", StringComparison.OrdinalIgnoreCase);
+            }
+
+            return string.Equals(extension, ".png", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(extension, ".jpg", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(extension, ".jpeg", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(extension, ".bmp", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(extension, ".gif", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(extension, ".tif", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(extension, ".tiff", StringComparison.OrdinalIgnoreCase);
         }
 
         private void SetFitCommandCenterMode(string mode)
@@ -3950,11 +4127,32 @@ namespace CassetteMotionPro.Workspace
                 WriteCaptureFolderHint(folder, viewName);
                 Process.Start(folder);
                 RefreshRecordingFolderGuide();
+                RefreshSavedEvidenceReview();
                 UpdateSaveHint(viewName + " video folder opened for this active fit session.");
             }
             catch (Exception exception)
             {
                 MessageBox.Show(this, "The " + viewName + " video folder could not be opened.\n\n" + exception.Message, viewName + " Video Folder", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void OpenReportImagesFolder()
+        {
+            try
+            {
+                SaveCurrentSession();
+                string folder = GetSessionReportImagesFolderPath();
+                Directory.CreateDirectory(folder);
+                Directory.CreateDirectory(Path.Combine(folder, "Before"));
+                Directory.CreateDirectory(Path.Combine(folder, "After"));
+                Directory.CreateDirectory(Path.Combine(folder, "Dual"));
+                Process.Start(folder);
+                RefreshSavedEvidenceReview();
+                UpdateSaveHint("Report Images folder opened for this active fit session.");
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "The Report Images folder could not be opened.\n\n" + exception.Message, "Report Images Folder", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
