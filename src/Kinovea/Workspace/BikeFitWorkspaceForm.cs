@@ -1228,7 +1228,7 @@ namespace CassetteMotionPro.Workspace
             reviewLayout.RowCount = 2;
             reviewLayout.ColumnCount = 1;
             reviewLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-            reviewLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+            reviewLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 78));
 
             savedEvidenceReviewStatus.Dock = DockStyle.Fill;
             savedEvidenceReviewStatus.ForeColor = Color.FromArgb(74, 87, 81);
@@ -1261,18 +1261,38 @@ namespace CassetteMotionPro.Workspace
             reportImages.Size = new Size(170, 32);
             reportImages.Click += delegate { OpenReportImagesFolder(); };
 
+            Button latestBefore = CreateButton("Latest Before", false);
+            latestBefore.Size = new Size(132, 32);
+            latestBefore.Click += delegate { OpenLatestSavedEvidence("Before video", GetSessionVideoViewFolderPath("Before"), true); };
+
+            Button latestAfter = CreateButton("Latest After", false);
+            latestAfter.Size = new Size(124, 32);
+            latestAfter.Click += delegate { OpenLatestSavedEvidence("After video", GetSessionVideoViewFolderPath("After"), true); };
+
+            Button latestDual = CreateButton("Latest Dual", false);
+            latestDual.Size = new Size(120, 32);
+            latestDual.Click += delegate { OpenLatestSavedEvidence("Dual video", GetSessionVideoViewFolderPath("Dual"), true); };
+
+            Button latestImage = CreateButton("Latest Image", false);
+            latestImage.Size = new Size(128, 32);
+            latestImage.Click += delegate { OpenLatestReportImage(); };
+
             actions.Controls.Add(refresh);
             actions.Controls.Add(before);
             actions.Controls.Add(after);
             actions.Controls.Add(dual);
             actions.Controls.Add(reportImages);
+            actions.Controls.Add(latestBefore);
+            actions.Controls.Add(latestAfter);
+            actions.Controls.Add(latestDual);
+            actions.Controls.Add(latestImage);
 
             reviewLayout.Controls.Add(savedEvidenceReviewStatus, 0, 0);
             reviewLayout.Controls.Add(actions, 0, 1);
             review.Controls.Add(reviewLayout);
 
             int row = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 190));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 292));
             table.Controls.Add(review, 1, row);
             table.SetColumnSpan(review, 5);
 
@@ -2299,20 +2319,47 @@ namespace CassetteMotionPro.Workspace
             savedEvidenceReviewStatus.ForeColor = Color.FromArgb(74, 87, 81);
 
             string reportImagesFolder = GetSessionReportImagesFolderPath();
+            string beforeVideoFolder = GetSessionVideoViewFolderPath("Before");
+            string afterVideoFolder = GetSessionVideoViewFolderPath("After");
+            string dualVideoFolder = GetSessionVideoViewFolderPath("Dual");
+            string beforeImageFolder = Path.Combine(reportImagesFolder, "Before");
+            string afterImageFolder = Path.Combine(reportImagesFolder, "After");
+            string dualImageFolder = Path.Combine(reportImagesFolder, "Dual");
+
+            bool hasBeforeVideo = CountSavedEvidenceFiles(beforeVideoFolder, true) > 0;
+            bool hasAfterVideo = CountSavedEvidenceFiles(afterVideoFolder, true) > 0;
+            bool hasDualEvidence = CountSavedEvidenceFiles(dualVideoFolder, true) > 0 || CountSavedEvidenceFiles(dualImageFolder, false) > 0;
+            bool hasReportImages = CountSavedEvidenceFiles(beforeImageFolder, false) > 0 ||
+                CountSavedEvidenceFiles(afterImageFolder, false) > 0 ||
+                CountSavedEvidenceFiles(dualImageFolder, false) > 0;
+            bool readyForReport = hasBeforeVideo && hasAfterVideo && hasReportImages;
+
             string text =
                 "Active session: " + client.DisplayName + " · " + currentSession.DisplayName + Environment.NewLine +
                 Environment.NewLine +
+                "Fit-day checklist" + Environment.NewLine +
+                FormatChecklistLine("Before video saved", hasBeforeVideo) + Environment.NewLine +
+                FormatChecklistLine("After video saved", hasAfterVideo) + Environment.NewLine +
+                FormatChecklistLine("Report image saved", hasReportImages) + Environment.NewLine +
+                FormatChecklistLine("Dual evidence saved", hasDualEvidence) + Environment.NewLine +
+                FormatChecklistLine("Ready to preview report", readyForReport) + Environment.NewLine +
+                Environment.NewLine +
                 "Videos" + Environment.NewLine +
-                "Before: " + FormatSavedEvidenceSummary(GetSessionVideoViewFolderPath("Before"), true) + Environment.NewLine +
-                "After: " + FormatSavedEvidenceSummary(GetSessionVideoViewFolderPath("After"), true) + Environment.NewLine +
-                "Dual: " + FormatSavedEvidenceSummary(GetSessionVideoViewFolderPath("Dual"), true) + Environment.NewLine +
+                "Before: " + FormatSavedEvidenceSummary(beforeVideoFolder, true) + Environment.NewLine +
+                "After: " + FormatSavedEvidenceSummary(afterVideoFolder, true) + Environment.NewLine +
+                "Dual: " + FormatSavedEvidenceSummary(dualVideoFolder, true) + Environment.NewLine +
                 Environment.NewLine +
                 "Report Images" + Environment.NewLine +
-                "Before: " + FormatSavedEvidenceSummary(Path.Combine(reportImagesFolder, "Before"), false) + Environment.NewLine +
-                "After: " + FormatSavedEvidenceSummary(Path.Combine(reportImagesFolder, "After"), false) + Environment.NewLine +
-                "Dual: " + FormatSavedEvidenceSummary(Path.Combine(reportImagesFolder, "Dual"), false);
+                "Before: " + FormatSavedEvidenceSummary(beforeImageFolder, false) + Environment.NewLine +
+                "After: " + FormatSavedEvidenceSummary(afterImageFolder, false) + Environment.NewLine +
+                "Dual: " + FormatSavedEvidenceSummary(dualImageFolder, false);
 
             savedEvidenceReviewStatus.Text = text;
+        }
+
+        private static string FormatChecklistLine(string label, bool complete)
+        {
+            return (complete ? "✓ " : "□ ") + label;
         }
 
         private static string FormatSavedEvidenceSummary(string folder, bool videoFiles)
@@ -2362,6 +2409,27 @@ namespace CassetteMotionPro.Workspace
                 if (string.IsNullOrEmpty(latest) || savedAt > latestTime)
                 {
                     latest = file;
+                    latestTime = savedAt;
+                }
+            }
+
+            return latest;
+        }
+
+        private static string FindLatestEvidenceFileInFolders(bool videoFiles, params string[] folders)
+        {
+            string latest = string.Empty;
+            DateTime latestTime = DateTime.MinValue;
+            foreach (string folder in folders)
+            {
+                string candidate = FindLatestEvidenceFile(folder, videoFiles);
+                if (string.IsNullOrWhiteSpace(candidate))
+                    continue;
+
+                DateTime savedAt = File.GetLastWriteTime(candidate);
+                if (string.IsNullOrEmpty(latest) || savedAt > latestTime)
+                {
+                    latest = candidate;
                     latestTime = savedAt;
                 }
             }
@@ -4133,6 +4201,64 @@ namespace CassetteMotionPro.Workspace
             catch (Exception exception)
             {
                 MessageBox.Show(this, "The " + viewName + " video folder could not be opened.\n\n" + exception.Message, viewName + " Video Folder", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void OpenLatestSavedEvidence(string label, string folder, bool videoFiles)
+        {
+            if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
+            {
+                MessageBox.Show(this, "Open a client fit session first so Cassette Motion Pro knows which folder to check.", "Open Latest Evidence", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                string latest = FindLatestEvidenceFile(folder, videoFiles);
+                if (string.IsNullOrWhiteSpace(latest))
+                {
+                    MessageBox.Show(this, "No saved " + label + " was found for this fit session yet.", "Open Latest Evidence", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                Process.Start(latest);
+                UpdateSaveHint("Opened latest " + label + ": " + Path.GetFileName(latest));
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "The latest " + label + " could not be opened.\n\n" + exception.Message, "Open Latest Evidence", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void OpenLatestReportImage()
+        {
+            if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
+            {
+                MessageBox.Show(this, "Open a client fit session first so Cassette Motion Pro knows which report image folder to check.", "Open Latest Report Image", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                string reportImagesFolder = GetSessionReportImagesFolderPath();
+                string latest = FindLatestEvidenceFileInFolders(
+                    false,
+                    Path.Combine(reportImagesFolder, "Before"),
+                    Path.Combine(reportImagesFolder, "After"),
+                    Path.Combine(reportImagesFolder, "Dual"));
+
+                if (string.IsNullOrWhiteSpace(latest))
+                {
+                    MessageBox.Show(this, "No saved report image was found for this fit session yet.", "Open Latest Report Image", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                Process.Start(latest);
+                UpdateSaveHint("Opened latest report image: " + Path.GetFileName(latest));
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "The latest report image could not be opened.\n\n" + exception.Message, "Open Latest Report Image", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
