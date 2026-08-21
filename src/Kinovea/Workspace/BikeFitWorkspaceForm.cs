@@ -379,14 +379,14 @@ namespace CassetteMotionPro.Workspace
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
             Label title = new Label();
-            title.Text = "Fit Day Map";
+            title.Text = "Fit Day Assistant";
             title.Dock = DockStyle.Fill;
             title.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
             title.ForeColor = Color.FromArgb(24, 31, 29);
             title.TextAlign = ContentAlignment.MiddleLeft;
 
             Label description = new Label();
-            description.Text = "Start with the client, use Kinovea for recording and analysis, save Before / After / Dual evidence, then finish measurements and the report.";
+            description.Text = "Use this as the fit-day assistant: confirm the client, jump into Kinovea, save evidence to the active session, then finish measurements and the report.";
             description.Dock = DockStyle.Fill;
             description.ForeColor = Color.FromArgb(74, 87, 81);
 
@@ -417,7 +417,7 @@ namespace CassetteMotionPro.Workspace
             buttons.Controls.Add(analyze);
 
             Label path = new Label();
-            path.Text = "Simple path: Client Info → Kinovea Video → Measurements → Report";
+            path.Text = "Fit day path: Client → Kinovea → Evidence → Measurements → Report";
             path.Dock = DockStyle.Fill;
             path.ForeColor = Color.FromArgb(92, 104, 98);
             path.TextAlign = ContentAlignment.MiddleLeft;
@@ -433,7 +433,7 @@ namespace CassetteMotionPro.Workspace
         private Control BuildWorkflowShortcutBar()
         {
             GroupBox group = new GroupBox();
-            group.Text = "Simple Fit Flow";
+            group.Text = "Fit Day Assistant";
             group.Dock = DockStyle.Fill;
             group.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             group.ForeColor = Color.FromArgb(37, 48, 43);
@@ -458,7 +458,7 @@ namespace CassetteMotionPro.Workspace
         private Control BuildFitCommandCenter()
         {
             GroupBox group = new GroupBox();
-            group.Text = "Kinovea Fit Controls";
+            group.Text = "Quick Actions";
             group.Dock = DockStyle.Fill;
             group.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             group.ForeColor = Color.FromArgb(37, 48, 43);
@@ -479,7 +479,7 @@ namespace CassetteMotionPro.Workspace
             fitCommandCenterStatus.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
             fitCommandCenterStatus.ForeColor = Color.FromArgb(74, 87, 81);
             fitCommandCenterStatus.TextAlign = ContentAlignment.MiddleLeft;
-            fitCommandCenterStatus.Text = "Fit day readiness: 0/6 ready" + Environment.NewLine + "Next: create or choose a client fit session.";
+            fitCommandCenterStatus.Text = "Fit day readiness: 0/6 ready" + Environment.NewLine + "Next best step: create or choose a client fit session.";
 
             activeSaveTargetStatus.Dock = DockStyle.Fill;
             activeSaveTargetStatus.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
@@ -488,10 +488,10 @@ namespace CassetteMotionPro.Workspace
             activeSaveTargetStatus.BorderStyle = BorderStyle.FixedSingle;
             activeSaveTargetStatus.Padding = new Padding(8, 0, 8, 0);
             activeSaveTargetStatus.TextAlign = ContentAlignment.MiddleLeft;
-            activeSaveTargetStatus.Text = "No active fit session — open or create a session first. Save Image / Save Video will then offer Before / After / Dual.";
+            activeSaveTargetStatus.Text = "No active fit session yet — open or create a session first so Save Image / Save Video know where Before / After / Dual should go.";
 
             ConfigureFitCommandSectionLabel(captureActionsLabel, "Record live into this client's Before / After folders");
-            ConfigureFitCommandSectionLabel(analysisActionsLabel, "Open playback, save evidence, then preview the report");
+            ConfigureFitCommandSectionLabel(analysisActionsLabel, "Review playback, save evidence, then preview the report");
 
             Panel captureScroll = new Panel();
             captureScroll.Dock = DockStyle.Fill;
@@ -574,13 +574,13 @@ namespace CassetteMotionPro.Workspace
             nextRecommendedStepTitle.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold);
             nextRecommendedStepTitle.ForeColor = Color.FromArgb(74, 87, 81);
             nextRecommendedStepTitle.TextAlign = ContentAlignment.MiddleLeft;
-            nextRecommendedStepTitle.Text = "WHAT SHOULD I DO NEXT?";
+            nextRecommendedStepTitle.Text = "NEXT BEST STEP";
 
             nextRecommendedStep.Dock = DockStyle.Fill;
             nextRecommendedStep.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             nextRecommendedStep.ForeColor = Color.FromArgb(37, 48, 43);
             nextRecommendedStep.TextAlign = ContentAlignment.MiddleLeft;
-            nextRecommendedStep.Text = "Next: enter rider goals so the fit has a clear plan.";
+            nextRecommendedStep.Text = "Next best step: enter rider goals so the fit has a clear plan.";
 
             nextRecommendedStepAction.Dock = DockStyle.Fill;
             nextRecommendedStepAction.FlatStyle = FlatStyle.Flat;
@@ -675,14 +675,14 @@ namespace CassetteMotionPro.Workspace
             card.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 128));
 
             Label title = new Label();
-            title.Text = "Fit Day Map";
+            title.Text = "Fit Day Assistant";
             title.Font = new Font("Segoe UI", 13F, FontStyle.Bold);
             title.ForeColor = Color.FromArgb(24, 31, 29);
             title.Dock = DockStyle.Fill;
             title.TextAlign = ContentAlignment.MiddleLeft;
 
             Label hint = new Label();
-            hint.Text = "Simple path: Client Info → Kinovea Video → Measurements → Report. Green means ready.";
+            hint.Text = "Fit day path: Client → Kinovea → Evidence → Measurements → Report. Green means ready.";
             hint.ForeColor = Color.FromArgb(92, 104, 98);
             hint.Dock = DockStyle.Fill;
             hint.TextAlign = ContentAlignment.MiddleLeft;
@@ -2265,7 +2265,7 @@ namespace CassetteMotionPro.Workspace
                 if (string.Equals(page.Text, tabText, StringComparison.OrdinalIgnoreCase))
                 {
                     editorTabs.SelectedTab = page;
-                    UpdateSaveHint("Opened " + tabText + " from the Fit Day Map.");
+                    UpdateSaveHint("Opened " + tabText + " from the Fit Day Assistant.");
                     return;
                 }
             }
@@ -2302,19 +2302,19 @@ namespace CassetteMotionPro.Workspace
         private string GetNextFitDayHint()
         {
             if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
-                return "Next: create or choose a client fit session so saves know where to go.";
+                return "Next best step: create or choose a client fit session so saves know where to go.";
             if (!HasFitGoals())
-                return "Next: enter rider goals before you start making fit changes.";
+                return "Next best step: enter rider goals before you start making fit changes.";
             if (!HasMediaFile("BeforeVideoPath"))
-                return "Next: record or save the Before video.";
+                return "Next best step: record or save the Before video.";
             if (!HasMediaFile("AfterVideoPath"))
-                return "Next: record or save the After video.";
+                return "Next best step: record or save the After video.";
             if (!HasAnalysisCaptureEvidence() && !HasSavedSessionEvidence())
-                return "Next: save useful Before / After / Dual evidence from Kinovea.";
+                return "Next best step: save useful Before / After / Dual evidence from Kinovea.";
             if (!HasCoreBikeMetrics())
-                return "Next: enter Measurements from your Kinovea measurements.";
+                return "Next best step: enter Measurements from your Kinovea measurements.";
             if (!HasReportImage())
-                return "Next: choose the report images for the PDF.";
+                return "Next best step: choose the report images for the report.";
             return "Ready: preview the report and make sure the client story looks right.";
         }
 
@@ -2360,13 +2360,13 @@ namespace CassetteMotionPro.Workspace
 
             if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
             {
-                activeSaveTargetStatus.Text = "No active fit session — open or create a session first. Save Image / Save Video will then offer Before / After / Dual.";
+                activeSaveTargetStatus.Text = "No active fit session yet — open or create a session first so Save Image / Save Video know where Before / After / Dual should go.";
                 activeSaveTargetStatus.ForeColor = Color.FromArgb(181, 118, 35);
                 activeSaveTargetStatus.BackColor = Color.FromArgb(255, 248, 226);
                 return;
             }
 
-            activeSaveTargetStatus.Text = "Active save target: " + client.DisplayName + " · " + currentSession.DisplayName + " — saves go to this session’s Before / After / Dual folders";
+            activeSaveTargetStatus.Text = "Active session: " + client.DisplayName + " · " + currentSession.DisplayName + " — Kinovea saves go to this session’s Before / After / Dual folders";
             activeSaveTargetStatus.ForeColor = Color.FromArgb(60, 145, 76);
             activeSaveTargetStatus.BackColor = Color.FromArgb(235, 250, 238);
         }
@@ -2570,7 +2570,7 @@ namespace CassetteMotionPro.Workspace
 
             if (!HasFitGoals())
             {
-                message = "Next: enter rider goals first. This keeps the fit focused before you start changing the bike.";
+                message = "Next best step: enter rider goals first. This keeps the fit focused before you start changing the bike.";
                 actionText = "Open Goals";
                 action = SelectOverviewGoals;
                 folderActionText = "Client Files";
@@ -2581,7 +2581,7 @@ namespace CassetteMotionPro.Workspace
             {
                 bool beforeMissing = !HasMediaFile("BeforeVideoPath");
                 string viewName = beforeMissing ? "Before" : "After";
-                message = "Next: record or save the " + viewName + " video into this client's folder.";
+                message = "Next best step: record or save the " + viewName + " video into this client's folder.";
                 actionText = "Kinovea Video";
                 action = SaveAndSelectVideos;
                 folderActionText = viewName + " Folder";
@@ -2590,7 +2590,7 @@ namespace CassetteMotionPro.Workspace
             }
             else if (!HasAnalysisCaptureEvidence())
             {
-                message = "Next: review the saved videos in Kinovea, then save the best images/videos as Before, After, or Dual evidence.";
+                message = "Next best step: review the saved videos in Kinovea, then save the best images/videos as Before, After, or Dual evidence.";
                 actionText = "Review Evidence";
                 action = PrepareAndSelectVideoAnalysis;
                 folderActionText = "Captures";
@@ -2599,7 +2599,7 @@ namespace CassetteMotionPro.Workspace
             }
             else if (!HasCoreBikeMetrics())
             {
-                message = "Next: enter Measurements from your Kinovea measurements.";
+                message = "Next best step: enter Measurements from your Kinovea measurements.";
                 actionText = "Measurements";
                 action = delegate { SelectWorkspaceTab("Bike Metrics"); };
                 folderActionText = "Session File";
@@ -2608,7 +2608,7 @@ namespace CassetteMotionPro.Workspace
             }
             else if (!HasReportImage())
             {
-                message = "Next: choose the report images — Before, After, or Dual — so the PDF has the right visuals.";
+                message = "Next best step: choose the report images — Before, After, or Dual — so the report has the right visuals.";
                 actionText = "Report Images";
                 action = delegate { SelectWorkspaceTab("Report Images"); };
                 folderActionText = "Image Folder";
@@ -4378,7 +4378,7 @@ namespace CassetteMotionPro.Workspace
                     UpdateSaveHint(count + " saved evidence file" + (count == 1 ? "" : "s") + " found in Analysis Captures.");
                     MessageBox.Show(this,
                         count + " saved evidence file" + (count == 1 ? "" : "s") + " found in this session’s Analysis Captures folder.\n\n" +
-                        "Next: enter the final measured values in Bike Metrics, choose report images, then preview the report.",
+                        "Next best step: enter the final measured values in Measurements, choose report images, then preview the report.",
                         "Saved Evidence Found", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
