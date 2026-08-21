@@ -458,7 +458,7 @@ namespace CassetteMotionPro.Workspace
         private Control BuildFitCommandCenter()
         {
             GroupBox group = new GroupBox();
-            group.Text = "Quick Actions";
+            group.Text = "Fit Day Command Center";
             group.Dock = DockStyle.Fill;
             group.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             group.ForeColor = Color.FromArgb(37, 48, 43);
@@ -468,7 +468,7 @@ namespace CassetteMotionPro.Workspace
             layout.Dock = DockStyle.Fill;
             layout.ColumnCount = 1;
             layout.RowCount = 6;
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 56));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 84));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 22));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 70));
@@ -479,7 +479,9 @@ namespace CassetteMotionPro.Workspace
             fitCommandCenterStatus.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
             fitCommandCenterStatus.ForeColor = Color.FromArgb(74, 87, 81);
             fitCommandCenterStatus.TextAlign = ContentAlignment.MiddleLeft;
-            fitCommandCenterStatus.Text = "Fit day readiness: 0/6 ready" + Environment.NewLine + "Next best step: create or choose a client fit session.";
+            fitCommandCenterStatus.Text = "Fit day readiness: 0/6 ready" + Environment.NewLine +
+                "□ Session  □ Before  □ After  □ Evidence  □ Metrics  □ Report image" + Environment.NewLine +
+                "Next best step: create or choose a client fit session.";
 
             activeSaveTargetStatus.Dock = DockStyle.Fill;
             activeSaveTargetStatus.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
@@ -537,6 +539,8 @@ namespace CassetteMotionPro.Workspace
                 RefreshSavedEvidenceReview();
                 SelectWorkspaceTab("Video Capture + Analysis");
             });
+            AddFitCommandButton(analysisButtons, "Do Next Step", true, RunNextBestFitDayStep);
+            AddFitCommandButton(analysisButtons, "Check Report Readiness", false, delegate { ReviewSession_Click(this, EventArgs.Empty); });
             AddFitCommandButton(analysisButtons, "Preview Report", false, delegate { PreviewReport_Click(this, EventArgs.Empty); });
 
             analysisScroll.Controls.Add(analysisButtons);
@@ -2286,8 +2290,11 @@ namespace CassetteMotionPro.Workspace
             if (fitCommandCenterStatus == null)
                 return;
 
-            string session = currentSession != null ? "Client: " + client.DisplayName + " · Session: " + currentSession.DisplayName : "Client: " + client.DisplayName + " · Session: none";
-            fitCommandCenterStatus.Text = GetFitDayReadinessText() + " · " + session + Environment.NewLine + GetNextFitDayHint();
+            string clientName = client != null ? client.DisplayName : "Client";
+            string session = currentSession != null ? "Client: " + clientName + " · Session: " + currentSession.DisplayName : "Client: " + clientName + " · Session: none";
+            fitCommandCenterStatus.Text = GetFitDayReadinessText() + " · " + session + Environment.NewLine +
+                GetReadinessSnapshotText() + Environment.NewLine +
+                GetNextFitDayHint();
             fitCommandCenterStatus.ForeColor = IsReportReady() ? Color.FromArgb(60, 145, 76) : Color.FromArgb(74, 87, 81);
             UpdateSaveTargetStatus();
             RefreshSavedEvidenceReview();
@@ -2331,6 +2338,21 @@ namespace CassetteMotionPro.Workspace
                 ready++;
 
             return "Fit day readiness: " + ready + "/" + total + " ready";
+        }
+
+        private string GetReadinessSnapshotText()
+        {
+            return FormatCompactReadiness("Session", currentSession != null && !string.IsNullOrWhiteSpace(currentSession.StorageFolderName)) + "  " +
+                FormatCompactReadiness("Before", HasMediaFile("BeforeVideoPath")) + "  " +
+                FormatCompactReadiness("After", HasMediaFile("AfterVideoPath")) + "  " +
+                FormatCompactReadiness("Evidence", HasAnalysisCaptureEvidence() || HasSavedSessionEvidence()) + "  " +
+                FormatCompactReadiness("Metrics", HasCoreBikeMetrics()) + "  " +
+                FormatCompactReadiness("Report image", HasReportImage());
+        }
+
+        private static string FormatCompactReadiness(string label, bool ready)
+        {
+            return (ready ? "✓ " : "□ ") + label;
         }
 
         private bool HasSavedSessionEvidence()
@@ -2627,6 +2649,16 @@ namespace CassetteMotionPro.Workspace
             nextRecommendedFolderAction.Text = folderActionText;
             nextRecommendedFolderAction.Enabled = folderAction != null;
             nextRecommendedFolderActionHandler = folderAction;
+        }
+
+        private void RunNextBestFitDayStep()
+        {
+            UpdateNextRecommendedStep();
+            if (nextRecommendedStepActionHandler != null)
+                nextRecommendedStepActionHandler();
+
+            UpdateWorkflowChecklist();
+            UpdateFitCommandCenterStatus();
         }
 
         private bool HasClientFolder()
@@ -2935,6 +2967,13 @@ namespace CassetteMotionPro.Workspace
             try
             {
                 SaveCurrentSession();
+                if (currentSession == null)
+                {
+                    UpdateSaveHint("Open or create a client fit session first, then check report readiness.");
+                    MessageBox.Show(this, "Open or create a client fit session first so Cassette Motion Pro knows what to review.", "Review Session", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
                 List<string> ready = new List<string>();
                 List<string> missing = new List<string>();
                 List<string> optional = new List<string>();
@@ -3017,6 +3056,72 @@ namespace CassetteMotionPro.Workspace
             return message;
         }
 
+        private bool ConfirmReportReadinessBeforeOutput(string actionName)
+        {
+            List<string> warnings = GetReportReadinessWarnings();
+            if (warnings.Count == 0)
+                return true;
+
+            string message = actionName + " can continue, but this fit session is missing a few items.\n\n" +
+                "Items to check:\n- " + string.Join("\n- ", warnings.ToArray()) + "\n\n" +
+                "Choose Yes to continue anyway, or No to go back and finish the session.";
+            DialogResult result = MessageBox.Show(this, message, "Report readiness check", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            if (result != DialogResult.Yes)
+            {
+                UpdateSaveHint("Report paused. Complete the readiness items, then try again.");
+                return false;
+            }
+
+            UpdateSaveHint(actionName + " continued with readiness items still needing review.");
+            return true;
+        }
+
+        private List<string> GetReportReadinessWarnings()
+        {
+            List<string> warnings = new List<string>();
+
+            if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
+            {
+                warnings.Add("Open or create a client fit session first.");
+                return warnings;
+            }
+
+            AddReportFileWarning(warnings, "Before video", currentSession.BeforeVideoPath, "save a Before video from Kinovea.");
+            AddReportFileWarning(warnings, "After video", currentSession.AfterVideoPath, "save an After video from Kinovea.");
+
+            if (!HasAnalysisCaptureEvidence() && !HasSavedSessionEvidence())
+                warnings.Add("Save at least one useful Before, After, or Dual evidence file.");
+
+            if (!HasReportImage())
+                warnings.Add("Choose or save a report image.");
+
+            AddReportMetricWarning(warnings, "Saddle height After", "SaddleHeightAfter");
+            AddReportMetricWarning(warnings, "Saddle setback After", "SaddleSetbackAfter");
+            AddReportMetricWarning(warnings, "Saddle tip to grip reach After", "SaddleTipToGripReachAfter");
+            AddReportMetricWarning(warnings, "Handlebar X After", "HandlebarXAfter");
+            AddReportMetricWarning(warnings, "Handlebar Y After", "HandlebarYAfter");
+
+            return warnings;
+        }
+
+        private static void AddReportFileWarning(List<string> warnings, string label, string path, string nextAction)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                warnings.Add(label + " is missing - " + nextAction);
+                return;
+            }
+
+            if (!File.Exists(path))
+                warnings.Add(label + " is selected, but the file was not found - re-add it from Client Files.");
+        }
+
+        private void AddReportMetricWarning(List<string> warnings, string label, string metricKey)
+        {
+            if (string.IsNullOrWhiteSpace(GetMeasurementText(metricKey)))
+                warnings.Add(label + " is missing on Bike Metrics.");
+        }
+
         private void ReviewRequiredMetric(List<string> issues, string label, string metricKey, string nextAction)
         {
             string before = GetMeasurementText(metricKey + "Before");
@@ -3082,6 +3187,9 @@ namespace CassetteMotionPro.Workspace
             try
             {
                 SaveCurrentSession();
+                if (!ConfirmReportReadinessBeforeOutput("Generate report"))
+                    return;
+
                 string reportPath = FitSessionReportGenerator.Generate(client, currentSession);
                 UpdateSaveHint("Report saved to this session’s Reports folder.");
                 MessageBox.Show(this,
@@ -3101,6 +3209,9 @@ namespace CassetteMotionPro.Workspace
             try
             {
                 SaveCurrentSession();
+                if (!ConfirmReportReadinessBeforeOutput("Preview report"))
+                    return;
+
                 string reportPath = FitSessionReportGenerator.Generate(client, currentSession);
                 Process.Start(reportPath);
                 UpdateSaveHint("Report preview opened. Use Print / Save PDF after reviewing it.");
@@ -3116,6 +3227,9 @@ namespace CassetteMotionPro.Workspace
             try
             {
                 SaveCurrentSession();
+                if (!ConfirmReportReadinessBeforeOutput("Package report"))
+                    return;
+
                 string packageFolder = FitSessionReportGenerator.GeneratePackage(client, currentSession);
                 Process.Start(packageFolder);
                 UpdateSaveHint("Report package created and opened.");
@@ -3138,6 +3252,9 @@ namespace CassetteMotionPro.Workspace
             try
             {
                 SaveCurrentSession();
+                if (!ConfirmReportReadinessBeforeOutput("Zip report package"))
+                    return;
+
                 string zipPath = FitSessionReportGenerator.GeneratePackageZip(client, currentSession);
                 Process.Start(Path.GetDirectoryName(zipPath));
                 UpdateSaveHint("Zipped report package created in this session’s Reports folder.");
