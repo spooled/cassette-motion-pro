@@ -312,7 +312,7 @@ namespace CassetteMotionPro.Workspace
 
             Control commandCenter = BuildFitCommandCenter();
             int commandCenterRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 212));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 360));
             table.Controls.Add(commandCenter, 0, commandCenterRow);
             table.SetColumnSpan(commandCenter, 2);
 
@@ -468,11 +468,11 @@ namespace CassetteMotionPro.Workspace
             layout.Dock = DockStyle.Fill;
             layout.ColumnCount = 1;
             layout.RowCount = 6;
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 84));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 22));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 70));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 22));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 76));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 20));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 92));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 20));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
             fitCommandCenterStatus.Dock = DockStyle.Fill;
@@ -504,7 +504,7 @@ namespace CassetteMotionPro.Workspace
             captureButtons.AutoSize = true;
             captureButtons.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             captureButtons.FlowDirection = FlowDirection.LeftToRight;
-            captureButtons.WrapContents = false;
+            captureButtons.WrapContents = true;
             captureButtons.Padding = new Padding(0, 2, 0, 0);
 
             AddFitCommandButton(captureButtons, "Dual Live Capture", true, OpenDualLiveCapture);
@@ -526,7 +526,7 @@ namespace CassetteMotionPro.Workspace
             analysisButtons.AutoSize = true;
             analysisButtons.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             analysisButtons.FlowDirection = FlowDirection.LeftToRight;
-            analysisButtons.WrapContents = false;
+            analysisButtons.WrapContents = true;
             analysisButtons.Padding = new Padding(0, 2, 0, 0);
 
             AddFitCommandButton(analysisButtons, "Analyze Latest Before + After", true, UseLatestBothVideos);
@@ -641,8 +641,8 @@ namespace CassetteMotionPro.Workspace
         private void AddFitCommandButton(FlowLayoutPanel buttons, string text, bool primary, Action action)
         {
             Button button = CreateButton(text, primary);
-            button.Size = new Size(154, 34);
-            button.Margin = new Padding(0, 4, 8, 4);
+            button.Size = new Size(148, 34);
+            button.Margin = new Padding(0, 3, 7, 3);
             button.Click += delegate
             {
                 if (action != null)
