@@ -48,6 +48,7 @@ namespace CassetteMotionPro.Workspace
         private readonly Label analysisCapturesStatus = new Label();
         private readonly Label recordingFoldersGuide = new Label();
         private readonly Label nextRecommendedStep = new Label();
+        private readonly Label fitDayHomeStatus = new Label();
         private readonly Label fitCommandCenterStatus = new Label();
         private readonly Label activeSaveTargetStatus = new Label();
         private readonly Label savedEvidenceReviewStatus = new Label();
@@ -299,9 +300,9 @@ namespace CassetteMotionPro.Workspace
             table.Dock = DockStyle.Top;
             table.AutoSize = true;
 
-            Control flow = BuildClientFirstFlow();
+            Control flow = BuildFitDayHomePanel();
             int flowRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 126));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 170));
             table.Controls.Add(flow, 0, flowRow);
             table.SetColumnSpan(flow, 2);
 
@@ -310,12 +311,6 @@ namespace CassetteMotionPro.Workspace
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 176));
             table.Controls.Add(guidedFlow, 0, guidedFlowRow);
             table.SetColumnSpan(guidedFlow, 2);
-
-            Control shortcuts = BuildWorkflowShortcutBar();
-            int shortcutsRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 96));
-            table.Controls.Add(shortcuts, 0, shortcutsRow);
-            table.SetColumnSpan(shortcuts, 2);
 
             Control commandCenter = BuildFitCommandCenter();
             int commandCenterRow = table.RowCount++;
@@ -369,7 +364,7 @@ namespace CassetteMotionPro.Workspace
             return page;
         }
 
-        private Control BuildClientFirstFlow()
+        private Control BuildFitDayHomePanel()
         {
             Panel panel = new Panel();
             panel.Dock = DockStyle.Fill;
@@ -379,61 +374,77 @@ namespace CassetteMotionPro.Workspace
             TableLayoutPanel layout = new TableLayoutPanel();
             layout.Dock = DockStyle.Fill;
             layout.ColumnCount = 2;
-            layout.RowCount = 2;
+            layout.RowCount = 4;
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 420));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 560));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
             Label title = new Label();
-            title.Text = "Fit Day Assistant";
+            title.Text = "Fit Day Home";
             title.Dock = DockStyle.Fill;
             title.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
             title.ForeColor = Color.FromArgb(24, 31, 29);
             title.TextAlign = ContentAlignment.MiddleLeft;
 
             Label description = new Label();
-            description.Text = "Use this as the fit-day assistant: confirm the client, jump into Kinovea, save evidence to the active session, then finish measurements and the report.";
+            description.Text = "Start with the client, then work in Kinovea. Save Before / After / Dual evidence from Kinovea, enter measurements, and finish the report.";
             description.Dock = DockStyle.Fill;
             description.ForeColor = Color.FromArgb(74, 87, 81);
 
             FlowLayoutPanel buttons = new FlowLayoutPanel();
             buttons.Dock = DockStyle.Fill;
             buttons.FlowDirection = FlowDirection.LeftToRight;
-            buttons.WrapContents = false;
+            buttons.WrapContents = true;
             buttons.Padding = new Padding(0, 2, 0, 0);
 
-            Button clientFiles = CreateButton("Open Client", false);
-            clientFiles.Size = new Size(112, 34);
-            clientFiles.Click += delegate { SelectWorkspaceTab("Client Files"); };
+            Button clientInfo = CreateButton("1. Client Info", true);
+            clientInfo.Size = new Size(126, 34);
+            clientInfo.Click += delegate { SelectOverviewGoals(); };
 
-            Button startVideos = CreateButton("Record Live", true);
-            startVideos.Size = new Size(130, 34);
-            startVideos.Click += delegate { OpenDualLiveCapture(); };
+            Button recordLive = CreateButton("2. Record Live", false);
+            recordLive.Size = new Size(132, 34);
+            recordLive.Click += delegate { OpenDualLiveCapture(); };
 
-            Button analyze = CreateButton("Saved Evidence", false);
-            analyze.Size = new Size(142, 34);
-            analyze.Click += delegate
-            {
-                RefreshSavedEvidenceReview();
-                SelectWorkspaceTab("Video Capture + Analysis");
-            };
+            Button analyze = CreateButton("3. Analyze Videos", false);
+            analyze.Size = new Size(148, 34);
+            analyze.Click += delegate { PrepareAndSelectVideoAnalysis(); };
 
-            buttons.Controls.Add(clientFiles);
-            buttons.Controls.Add(startVideos);
+            Button measurements = CreateButton("4. Measurements", false);
+            measurements.Size = new Size(142, 34);
+            measurements.Click += delegate { SelectWorkspaceTab("Bike Metrics"); };
+
+            Button report = CreateButton("5. Report", false);
+            report.Size = new Size(106, 34);
+            report.Click += delegate { SelectWorkspaceTab("Report Images"); };
+
+            buttons.Controls.Add(clientInfo);
+            buttons.Controls.Add(recordLive);
             buttons.Controls.Add(analyze);
+            buttons.Controls.Add(measurements);
+            buttons.Controls.Add(report);
 
             Label path = new Label();
-            path.Text = "Fit day path: Client → Kinovea → Evidence → Measurements → Report";
+            path.Text = "Simple path: Client Info → Kinovea Video → Saved Evidence → Measurements → Report";
             path.Dock = DockStyle.Fill;
             path.ForeColor = Color.FromArgb(92, 104, 98);
             path.TextAlign = ContentAlignment.MiddleLeft;
 
+            fitDayHomeStatus.Dock = DockStyle.Fill;
+            fitDayHomeStatus.ForeColor = Color.FromArgb(92, 104, 98);
+            fitDayHomeStatus.TextAlign = ContentAlignment.MiddleLeft;
+            fitDayHomeStatus.Padding = new Padding(0, 4, 0, 0);
+
             layout.Controls.Add(title, 0, 0);
             layout.Controls.Add(buttons, 1, 0);
+            layout.SetRowSpan(buttons, 4);
             layout.Controls.Add(description, 0, 1);
-            layout.Controls.Add(path, 1, 1);
+            layout.Controls.Add(path, 0, 2);
+            layout.Controls.Add(fitDayHomeStatus, 0, 3);
             panel.Controls.Add(layout);
+            UpdateFitDayHomeStatus();
             return panel;
         }
 
@@ -2379,8 +2390,26 @@ namespace CassetteMotionPro.Workspace
             }
 
             UpdateFitCommandCenterStatus();
+            UpdateFitDayHomeStatus();
             UpdateGuidedFitDayFlow();
             UpdateNextRecommendedStep();
+        }
+
+        private void UpdateFitDayHomeStatus()
+        {
+            if (fitDayHomeStatus == null)
+                return;
+
+            string clientName = client != null ? client.DisplayName : "Client";
+            if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
+            {
+                fitDayHomeStatus.Text = "No active fit session yet — start with Client Info so Kinovea knows the Before / After / Dual folders.";
+                fitDayHomeStatus.ForeColor = Color.FromArgb(181, 118, 35);
+                return;
+            }
+
+            fitDayHomeStatus.Text = "Active session: " + clientName + " · " + currentSession.DisplayName + " — Kinovea saves are connected to this client.";
+            fitDayHomeStatus.ForeColor = Color.FromArgb(60, 145, 76);
         }
 
         private void UpdateFitCommandCenterStatus()
