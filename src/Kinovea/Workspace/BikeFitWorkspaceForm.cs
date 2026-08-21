@@ -510,7 +510,6 @@ namespace CassetteMotionPro.Workspace
             AddFitCommandButton(captureButtons, "Record After", false, delegate { OpenLiveCaptureForVideo("AfterVideoPath"); });
             AddFitCommandButton(captureButtons, "Use Latest Before", false, delegate { UseLatestVideo("BeforeVideoPath"); });
             AddFitCommandButton(captureButtons, "Use Latest After", false, delegate { UseLatestVideo("AfterVideoPath"); });
-            AddFitCommandButton(captureButtons, "Use Latest Both", true, UseLatestBothVideos);
             AddFitCommandButton(captureButtons, "Client Folders", false, delegate { SelectWorkspaceTab("Client Files"); });
             AddFitCommandButton(captureButtons, "Open Client Folder", false, delegate { OpenClientFolder(client.FolderPath, "Client"); });
 
@@ -528,7 +527,7 @@ namespace CassetteMotionPro.Workspace
             analysisButtons.WrapContents = false;
             analysisButtons.Padding = new Padding(0, 2, 0, 0);
 
-            AddFitCommandButton(analysisButtons, "Dual Playback Analysis", true, delegate { OpenPair("BeforeVideoPath", "AfterVideoPath"); });
+            AddFitCommandButton(analysisButtons, "Analyze Latest Before + After", true, UseLatestBothVideos);
             AddFitCommandButton(analysisButtons, "Analyze Before", false, delegate { OpenSingle("BeforeVideoPath"); });
             AddFitCommandButton(analysisButtons, "Analyze After", false, delegate { OpenSingle("AfterVideoPath"); });
             AddFitCommandButton(analysisButtons, "Captures Folder", false, OpenAnalysisCapturesFolder);
@@ -1068,7 +1067,7 @@ namespace CassetteMotionPro.Workspace
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 86));
 
             Label analysisHint = new Label();
-            analysisHint.Text = "Simple path: confirm client/session details → record live into this active session’s Before/After folders → click Use Latest Both → analyze in Kinovea playback → save evidence/images → enter Measurements → generate the report.";
+            analysisHint.Text = "Simple path: confirm client/session details → record live into this active session’s Before/After folders → click Analyze Latest Before + After → save evidence/images → enter Measurements → generate the report.";
             analysisHint.Dock = DockStyle.Fill;
             analysisHint.ForeColor = Color.FromArgb(92, 104, 98);
             int analysisHintRow = table.RowCount++;
@@ -1113,15 +1112,10 @@ namespace CassetteMotionPro.Workspace
             dualLive.Click += delegate { OpenDualLiveCapture(); };
             comparisons.Controls.Add(dualLive);
 
-            Button latestBoth = CreateButton("Use Latest Before + After", true);
-            latestBoth.Size = new Size(240, 38);
+            Button latestBoth = CreateButton("Analyze Latest Before + After", true);
+            latestBoth.Size = new Size(270, 38);
             latestBoth.Click += delegate { UseLatestBothVideos(); };
             comparisons.Controls.Add(latestBoth);
-
-            Button beforeAfter = CreateButton("Analyze Before + After", true);
-            beforeAfter.Size = new Size(220, 38);
-            beforeAfter.Click += delegate { OpenPair("BeforeVideoPath", "AfterVideoPath"); };
-            comparisons.Controls.Add(beforeAfter);
 
             int comparisonRow = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 88));
@@ -1180,7 +1174,7 @@ namespace CassetteMotionPro.Workspace
             table.SetColumnSpan(saveGuide, 4);
 
             Label hint = new Label();
-            hint.Text = "For a real fit, record as many live clips as needed. Use Latest Both pulls in the newest takes from this active client session, Dual Playback Analysis opens the Kinovea tools, and the saved evidence plus Measurements become the report foundation.";
+            hint.Text = "For a real fit, record as many live clips as needed. Analyze Latest Before + After pulls in the newest takes from this active client session, opens Kinovea playback, and the saved evidence plus Measurements become the report foundation.";
             hint.Dock = DockStyle.Fill;
             hint.ForeColor = Color.FromArgb(92, 104, 98);
             int hintRow = table.RowCount++;
@@ -1738,9 +1732,9 @@ namespace CassetteMotionPro.Workspace
             after.Size = new Size(170, 38);
             after.Click += delegate { OpenSingle("AfterVideoPath"); };
 
-            Button pair = CreateButton("Analyze Before + After", false);
-            pair.Size = new Size(210, 38);
-            pair.Click += delegate { OpenPair("BeforeVideoPath", "AfterVideoPath"); };
+            Button pair = CreateButton("Analyze Latest Before + After", false);
+            pair.Size = new Size(270, 38);
+            pair.Click += delegate { UseLatestBothVideos(); };
 
             Button prepare = CreateButton("Prepare Capture Folder", true);
             prepare.Size = new Size(205, 38);
@@ -3663,7 +3657,7 @@ namespace CassetteMotionPro.Workspace
                 Directory.CreateDirectory(destinationDirectory);
                 WriteCaptureFolderHint(destinationDirectory, viewName);
                 SetFitCommandCenterMode("Record Live: " + viewName);
-                UpdateSaveHint(viewName + " live recording folder is now active for this client. Record in Kinovea, save there, then return here and click Use Latest Before + After.");
+                UpdateSaveHint(viewName + " live recording folder is now active for this client. Record in Kinovea, save there, then return here and click Analyze Latest Before + After.");
 
                 Close();
                 openLiveCaptureFolder(destinationDirectory);
@@ -3694,7 +3688,7 @@ namespace CassetteMotionPro.Workspace
                 WriteCaptureFolderHint(beforeDirectory, "Before");
                 WriteCaptureFolderHint(afterDirectory, "After");
                 SetFitCommandCenterMode("Record Live: Before + After");
-                UpdateSaveHint("Dual live capture opened. Kinovea is pointed at this client's Before/After video folders. Record, save, then return here and click Use Latest Before + After.");
+                UpdateSaveHint("Dual live capture opened. Kinovea is pointed at this client's Before/After video folders. Record, save, then return here and click Analyze Latest Before + After.");
 
                 Close();
                 if (openDualLiveCaptureFolders != null)
@@ -3751,34 +3745,22 @@ namespace CassetteMotionPro.Workspace
 
                 if (missing.Count > 0)
                 {
-                    MessageBox.Show(this, "No saved video files were found in the " + string.Join(" and ", missing.ToArray()) + " folder yet.\n\nUse Dual Live Capture or Record Live, record and save the clip(s), then return to this same fit session and click Use Latest Before + After.", "Use Latest Before + After", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(this, "No saved video files were found in the " + string.Join(" and ", missing.ToArray()) + " folder yet.\n\nUse Dual Live Capture or Record Live, record and save the clip(s), then return to this same fit session and click Analyze Latest Before + After.", "Analyze Latest Before + After", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
 
                 SetMedia("BeforeVideoPath", beforePath);
                 SetMedia("AfterVideoPath", afterPath);
                 SaveCurrentSession();
-                SetFitCommandCenterMode("Use Latest: Before + After");
+                SetFitCommandCenterMode("Analyze Latest: Before + After");
                 string beforeSummary = FormatLatestVideoSelection(beforePath);
                 string afterSummary = FormatLatestVideoSelection(afterPath);
-                UpdateSaveHint("Latest selected — Before: " + beforeSummary + " | After: " + afterSummary);
-                DialogResult nextStep = MessageBox.Show(this,
-                    "Latest videos selected for this fit session:" + Environment.NewLine +
-                    Environment.NewLine +
-                    "Before: " + beforeSummary + Environment.NewLine +
-                    "After: " + afterSummary + Environment.NewLine +
-                    Environment.NewLine +
-                    "Open Before + After analysis now?",
-                    "Use Latest Before + After",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Question);
-
-                if (nextStep == DialogResult.Yes)
-                    OpenPair("BeforeVideoPath", "AfterVideoPath");
+                UpdateSaveHint("Latest selected — Before: " + beforeSummary + " | After: " + afterSummary + ". Opening dual playback analysis.");
+                OpenPair("BeforeVideoPath", "AfterVideoPath");
             }
             catch (Exception exception)
             {
-                MessageBox.Show(this, "The newest Before/After videos could not be selected for this session.\n\n" + exception.Message, "Use Latest Before + After", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, "The newest Before/After videos could not be selected for this session.\n\n" + exception.Message, "Analyze Latest Before + After", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -3875,7 +3857,7 @@ namespace CassetteMotionPro.Workspace
                 "Cassette Motion Pro live recording folder" + Environment.NewLine +
                 Environment.NewLine +
                 "This is the " + viewName + " video folder for the active fit session." + Environment.NewLine +
-                "Record live capture clips here, then return to the Bike Fit Workspace and click Use Latest Before + After to select the newest saved videos automatically." + Environment.NewLine +
+                "Record live capture clips here, then return to the Bike Fit Workspace and click Analyze Latest Before + After to select the newest saved videos automatically." + Environment.NewLine +
                 "Keep this fit session open while saving so Cassette Motion Pro knows this client is the active target." + Environment.NewLine +
                 Environment.NewLine +
                 "You can still use Browse when you want to pick an older take instead.";

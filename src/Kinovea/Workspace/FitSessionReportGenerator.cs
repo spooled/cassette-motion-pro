@@ -26,7 +26,7 @@ namespace CassetteMotionPro.Workspace
         private const string StudioWebsite = "Add website";
         private const string PreparedByRole = "Professional Bike Fitting";
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "0.20.3";
+        private const string ReportVersion = "0.20.4";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
 
         public static string Generate(ClientRecord client, FitSessionRecord session)
