@@ -67,6 +67,7 @@ namespace CassetteMotionPro.Workspace
         private readonly Dictionary<string, TextBox> imageBoxes = new Dictionary<string, TextBox>();
         private readonly Dictionary<string, TextBox> measurementBoxes = new Dictionary<string, TextBox>();
         private readonly List<WorkflowChecklistItem> workflowChecklistItems = new List<WorkflowChecklistItem>();
+        private readonly List<FitDayFlowStep> fitDayFlowSteps = new List<FitDayFlowStep>();
         private TabControl editorTabs;
         private FitSessionRecord currentSession;
         private Action nextRecommendedStepActionHandler;
@@ -304,6 +305,12 @@ namespace CassetteMotionPro.Workspace
             table.Controls.Add(flow, 0, flowRow);
             table.SetColumnSpan(flow, 2);
 
+            Control guidedFlow = BuildGuidedFitDayFlowMap();
+            int guidedFlowRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 176));
+            table.Controls.Add(guidedFlow, 0, guidedFlowRow);
+            table.SetColumnSpan(guidedFlow, 2);
+
             Control shortcuts = BuildWorkflowShortcutBar();
             int shortcutsRow = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 96));
@@ -428,6 +435,96 @@ namespace CassetteMotionPro.Workspace
             layout.Controls.Add(path, 1, 1);
             panel.Controls.Add(layout);
             return panel;
+        }
+
+        private Control BuildGuidedFitDayFlowMap()
+        {
+            fitDayFlowSteps.Clear();
+
+            GroupBox group = new GroupBox();
+            group.Text = "Guided Fit Day Flow";
+            group.Dock = DockStyle.Fill;
+            group.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            group.ForeColor = Color.FromArgb(37, 48, 43);
+            group.Padding = new Padding(12, 8, 12, 12);
+
+            TableLayoutPanel path = new TableLayoutPanel();
+            path.Dock = DockStyle.Fill;
+            path.ColumnCount = 4;
+            path.RowCount = 1;
+            for (int i = 0; i < 4; i++)
+                path.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
+            path.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+            path.Controls.Add(CreateFitDayFlowCard("1", "Client", "Open/create the session and goals first.", "Client Info", SelectOverviewGoals, IsClientFlowStageReady, GetClientFlowDetail), 0, 0);
+            path.Controls.Add(CreateFitDayFlowCard("2", "Kinovea Video", "Record, analyze, and save Before / After / Dual evidence.", "Video Tools", SaveAndSelectVideos, IsVideoFlowStageReady, GetVideoFlowDetail), 1, 0);
+            path.Controls.Add(CreateFitDayFlowCard("3", "Measurements", "Enter bike metrics and body angle notes.", "Bike Metrics", delegate { SelectWorkspaceTab("Bike Metrics"); }, IsMeasurementFlowStageReady, GetMeasurementFlowDetail), 2, 0);
+            path.Controls.Add(CreateFitDayFlowCard("4", "Report", "Choose report images and preview the final report.", "Report Images", delegate { SelectWorkspaceTab("Report Images"); }, IsReportFlowStageReady, GetReportFlowDetail), 3, 0);
+
+            group.Controls.Add(path);
+            return group;
+        }
+
+        private Control CreateFitDayFlowCard(string number, string title, string detail, string buttonText, Action action, Func<bool> isReady, Func<string> getDetail)
+        {
+            Panel card = new Panel();
+            card.Dock = DockStyle.Fill;
+            card.BackColor = Color.White;
+            card.Padding = new Padding(10);
+            card.Margin = new Padding(4);
+
+            TableLayoutPanel layout = new TableLayoutPanel();
+            layout.Dock = DockStyle.Fill;
+            layout.ColumnCount = 2;
+            layout.RowCount = 4;
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 42));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 22));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
+
+            Label numberLabel = new Label();
+            numberLabel.Dock = DockStyle.Fill;
+            numberLabel.TextAlign = ContentAlignment.MiddleCenter;
+            numberLabel.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+            numberLabel.BackColor = Color.FromArgb(224, 232, 227);
+            numberLabel.ForeColor = Color.FromArgb(37, 48, 43);
+            numberLabel.Text = number;
+
+            Label titleLabel = new Label();
+            titleLabel.Dock = DockStyle.Fill;
+            titleLabel.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+            titleLabel.TextAlign = ContentAlignment.MiddleLeft;
+            titleLabel.ForeColor = Color.FromArgb(24, 31, 29);
+            titleLabel.Text = title;
+
+            Label detailLabel = FieldLabel(detail);
+            detailLabel.Dock = DockStyle.Fill;
+            detailLabel.AutoEllipsis = true;
+            detailLabel.ForeColor = Color.FromArgb(92, 104, 98);
+
+            Button actionButton = CreateButton(buttonText, false);
+            actionButton.Dock = DockStyle.Fill;
+            actionButton.Margin = new Padding(0, 4, 0, 0);
+            actionButton.Click += delegate
+            {
+                if (action != null)
+                    action();
+                UpdateWorkflowChecklist();
+            };
+
+            layout.Controls.Add(numberLabel, 0, 0);
+            layout.SetRowSpan(numberLabel, 2);
+            layout.Controls.Add(titleLabel, 1, 0);
+            layout.Controls.Add(detailLabel, 0, 2);
+            layout.SetColumnSpan(detailLabel, 2);
+            layout.Controls.Add(actionButton, 0, 3);
+            layout.SetColumnSpan(actionButton, 2);
+
+            card.Controls.Add(layout);
+            fitDayFlowSteps.Add(new FitDayFlowStep(card, numberLabel, titleLabel, detailLabel, actionButton, number, isReady, getDetail));
+            return card;
         }
 
         private Control BuildWorkflowShortcutBar()
@@ -2282,6 +2379,7 @@ namespace CassetteMotionPro.Workspace
             }
 
             UpdateFitCommandCenterStatus();
+            UpdateGuidedFitDayFlow();
             UpdateNextRecommendedStep();
         }
 
@@ -2292,7 +2390,7 @@ namespace CassetteMotionPro.Workspace
 
             string clientName = client != null ? client.DisplayName : "Client";
             string session = currentSession != null ? "Client: " + clientName + " · Session: " + currentSession.DisplayName : "Client: " + clientName + " · Session: none";
-            fitCommandCenterStatus.Text = GetFitDayReadinessText() + " · " + session + Environment.NewLine +
+            fitCommandCenterStatus.Text = GetGuidedFitDayStageText() + " · " + GetFitDayReadinessText() + " · " + session + Environment.NewLine +
                 GetReadinessSnapshotText() + Environment.NewLine +
                 GetNextFitDayHint();
             fitCommandCenterStatus.ForeColor = IsReportReady() ? Color.FromArgb(60, 145, 76) : Color.FromArgb(74, 87, 81);
@@ -2338,6 +2436,113 @@ namespace CassetteMotionPro.Workspace
                 ready++;
 
             return "Fit day readiness: " + ready + "/" + total + " ready";
+        }
+
+        private string GetGuidedFitDayStageText()
+        {
+            int ready = 0;
+            const int total = 4;
+
+            if (IsClientFlowStageReady())
+                ready++;
+            if (IsVideoFlowStageReady())
+                ready++;
+            if (IsMeasurementFlowStageReady())
+                ready++;
+            if (IsReportFlowStageReady())
+                ready++;
+
+            return "Guided flow: " + ready + "/" + total + " steps ready";
+        }
+
+        private bool HasActiveFitSession()
+        {
+            return currentSession != null && !string.IsNullOrWhiteSpace(currentSession.StorageFolderName);
+        }
+
+        private bool HasBeforeAfterVideos()
+        {
+            return HasMediaFile("BeforeVideoPath") && HasMediaFile("AfterVideoPath");
+        }
+
+        private bool IsClientFlowStageReady()
+        {
+            return HasActiveFitSession() && HasFitGoals();
+        }
+
+        private string GetClientFlowDetail()
+        {
+            if (!HasActiveFitSession())
+                return "Open/create a fit session first.";
+            if (!HasFitGoals())
+                return "Add session title and rider goals.";
+            return "Client session and goals are ready.";
+        }
+
+        private bool IsVideoFlowStageReady()
+        {
+            return HasBeforeAfterVideos() && (HasAnalysisCaptureEvidence() || HasSavedSessionEvidence());
+        }
+
+        private string GetVideoFlowDetail()
+        {
+            if (!HasActiveFitSession())
+                return "Needs an active session folder.";
+            if (!HasMediaFile("BeforeVideoPath"))
+                return "Save or choose the Before video.";
+            if (!HasMediaFile("AfterVideoPath"))
+                return "Save or choose the After video.";
+            if (!HasAnalysisCaptureEvidence() && !HasSavedSessionEvidence())
+                return "Save Before / After / Dual evidence.";
+            return "Video evidence is ready.";
+        }
+
+        private bool IsMeasurementFlowStageReady()
+        {
+            return HasCoreBikeMetrics();
+        }
+
+        private string GetMeasurementFlowDetail()
+        {
+            if (!HasCoreBikeMetrics())
+                return "Enter the core bike metrics from Kinovea.";
+            return "Bike metrics are ready.";
+        }
+
+        private bool IsReportFlowStageReady()
+        {
+            return HasReportImage();
+        }
+
+        private string GetReportFlowDetail()
+        {
+            if (!HasReportImage())
+                return "Choose Before, After, Dual, or reference image.";
+            return "Report images are ready.";
+        }
+
+        private void UpdateGuidedFitDayFlow()
+        {
+            if (fitDayFlowSteps.Count == 0)
+                return;
+
+            bool currentAssigned = false;
+            foreach (FitDayFlowStep step in fitDayFlowSteps)
+            {
+                bool ready = step.IsReady != null && step.IsReady();
+                bool current = !ready && !currentAssigned;
+                if (current)
+                    currentAssigned = true;
+
+                step.Card.BackColor = ready ? Color.FromArgb(236, 250, 225) : current ? Color.FromArgb(255, 248, 226) : Color.White;
+                step.NumberLabel.Text = ready ? "✓" : step.NumberText;
+                step.NumberLabel.BackColor = ready ? Color.FromArgb(60, 145, 76) : current ? Color.FromArgb(181, 118, 35) : Color.FromArgb(224, 232, 227);
+                step.NumberLabel.ForeColor = ready || current ? Color.White : Color.FromArgb(37, 48, 43);
+                step.TitleLabel.ForeColor = ready ? Color.FromArgb(60, 145, 76) : current ? Color.FromArgb(37, 48, 43) : Color.FromArgb(74, 87, 81);
+                step.DetailLabel.Text = step.GetDetail != null ? step.GetDetail() : string.Empty;
+                step.ActionButton.BackColor = current ? Color.FromArgb(184, 243, 74) : Color.White;
+                step.ActionButton.FlatAppearance.BorderColor = ready ? Color.FromArgb(60, 145, 76) : Color.FromArgb(186, 197, 191);
+            }
         }
 
         private string GetReadinessSnapshotText()
@@ -2584,7 +2789,16 @@ namespace CassetteMotionPro.Workspace
             Action folderAction;
             Color color;
 
-            if (!HasFitGoals())
+            if (!HasActiveFitSession())
+            {
+                message = "Next best step: open or create a client fit session first. This unlocks the Before / After / Dual save buttons.";
+                actionText = "Client Files";
+                action = delegate { SelectWorkspaceTab("Client Files"); };
+                folderActionText = "Client Folder";
+                folderAction = delegate { SelectWorkspaceTab("Client Files"); };
+                color = Color.FromArgb(181, 118, 35);
+            }
+            else if (!HasFitGoals())
             {
                 message = "Next best step: enter rider goals first. This keeps the fit focused before you start changing the bike.";
                 actionText = "Open Goals";
@@ -4527,6 +4741,37 @@ namespace CassetteMotionPro.Workspace
             public Label StatusLabel { get; private set; }
 
             public Func<bool> IsReady { get; private set; }
+        }
+
+        private sealed class FitDayFlowStep
+        {
+            public FitDayFlowStep(Panel card, Label numberLabel, Label titleLabel, Label detailLabel, Button actionButton, string numberText, Func<bool> isReady, Func<string> getDetail)
+            {
+                Card = card;
+                NumberLabel = numberLabel;
+                TitleLabel = titleLabel;
+                DetailLabel = detailLabel;
+                ActionButton = actionButton;
+                NumberText = numberText;
+                IsReady = isReady;
+                GetDetail = getDetail;
+            }
+
+            public Panel Card { get; private set; }
+
+            public Label NumberLabel { get; private set; }
+
+            public Label TitleLabel { get; private set; }
+
+            public Label DetailLabel { get; private set; }
+
+            public Button ActionButton { get; private set; }
+
+            public string NumberText { get; private set; }
+
+            public Func<bool> IsReady { get; private set; }
+
+            public Func<string> GetDetail { get; private set; }
         }
     }
 }
