@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  VERSION: 0.23.0
+  VERSION: 0.24.0
   KINOVEA_UPSTREAM_REF: 7e7c9dcf55b6e6f0d6a7080e191a7ae9485ff3e9
 
 jobs:
