@@ -303,7 +303,7 @@ namespace CassetteMotionPro.Workspace
 
             Control flow = BuildFitDayHomePanel();
             int flowRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 170));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 194));
             table.Controls.Add(flow, 0, flowRow);
             table.SetColumnSpan(flow, 2);
 
@@ -380,8 +380,8 @@ namespace CassetteMotionPro.Workspace
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 560));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
             Label title = new Label();
@@ -429,7 +429,7 @@ namespace CassetteMotionPro.Workspace
             buttons.Controls.Add(report);
 
             Label path = new Label();
-            path.Text = "Fit day flow: Client Info → Record/Analyze in Kinovea → Save Evidence → Measurements → Report";
+            path.Text = "Progress path: Session → Before → After → Evidence → Metrics → Report image → Preview";
             path.Dock = DockStyle.Fill;
             path.ForeColor = Color.FromArgb(92, 104, 98);
             path.TextAlign = ContentAlignment.MiddleLeft;
@@ -441,8 +441,9 @@ namespace CassetteMotionPro.Workspace
 
             fitDayHomeReadiness.Dock = DockStyle.Fill;
             fitDayHomeReadiness.ForeColor = Color.FromArgb(92, 104, 98);
-            fitDayHomeReadiness.TextAlign = ContentAlignment.MiddleLeft;
-            fitDayHomeReadiness.Padding = new Padding(0, 2, 0, 0);
+            fitDayHomeReadiness.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            fitDayHomeReadiness.TextAlign = ContentAlignment.TopLeft;
+            fitDayHomeReadiness.Padding = new Padding(0, 3, 0, 0);
 
             layout.Controls.Add(title, 0, 0);
             layout.Controls.Add(buttons, 1, 0);
@@ -2413,15 +2414,21 @@ namespace CassetteMotionPro.Workspace
             {
                 fitDayHomeStatus.Text = "No active fit session yet — start with Client Info so Kinovea knows the Before / After / Dual folders.";
                 fitDayHomeStatus.ForeColor = Color.FromArgb(181, 118, 35);
-                fitDayHomeReadiness.Text = "Save buttons are waiting: open or create a client fit session before saving images or videos.";
+                fitDayHomeReadiness.Text = GetFitDayHomeProgressText();
                 fitDayHomeReadiness.ForeColor = Color.FromArgb(181, 118, 35);
                 return;
             }
 
             fitDayHomeStatus.Text = "Active session: " + clientName + " · " + currentSession.DisplayName + " — Kinovea saves are connected to this client.";
             fitDayHomeStatus.ForeColor = Color.FromArgb(60, 145, 76);
-            fitDayHomeReadiness.Text = "Ready save targets: Before videos · After videos · Dual evidence · Report images.";
-            fitDayHomeReadiness.ForeColor = Color.FromArgb(60, 145, 76);
+            fitDayHomeReadiness.Text = GetFitDayHomeProgressText();
+            fitDayHomeReadiness.ForeColor = IsReportReady() ? Color.FromArgb(60, 145, 76) : Color.FromArgb(74, 87, 81);
+        }
+
+        private string GetFitDayHomeProgressText()
+        {
+            return GetFitDayReadinessText() + " · " + GetReadinessSnapshotText() + Environment.NewLine +
+                GetNextFitDayHint();
         }
 
         private void UpdateFitCommandCenterStatus()
