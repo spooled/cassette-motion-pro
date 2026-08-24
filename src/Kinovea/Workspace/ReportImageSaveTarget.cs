@@ -55,8 +55,8 @@ namespace CassetteMotionPro.Workspace
             {
                 MessageBox.Show(
                     owner,
-                    "Open a client fit session first so Cassette Motion Pro knows where to save this image.\n\n" +
-                    "Go to Clients, open the client, then open the fit session. After that, come back to Kinovea and click Save image again to choose Before, After, or Dual.",
+                    "Create or open a client fit session first so Cassette Motion Pro knows where to save this image.\n\n" +
+                    "Open the Bike Fit Workspace for a client, click + New Session on the left, then click Save. After that, come back to Kinovea and click Save image again to choose Before, After, or Dual.",
                     "Save report image",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);

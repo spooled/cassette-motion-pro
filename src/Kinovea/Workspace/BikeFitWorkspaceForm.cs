@@ -402,9 +402,9 @@ namespace CassetteMotionPro.Workspace
             buttons.WrapContents = true;
             buttons.Padding = new Padding(0, 2, 0, 0);
 
-            Button clientInfo = CreateButton("1. Client Info", true);
-            clientInfo.Size = new Size(126, 34);
-            clientInfo.Click += delegate { SelectOverviewGoals(); };
+            Button clientInfo = CreateButton("1. Create / Open Session", true);
+            clientInfo.Size = new Size(190, 34);
+            clientInfo.Click += delegate { SelectFitSessionStart(); };
 
             Button recordLive = CreateButton("2. Record Live", false);
             recordLive.Size = new Size(132, 34);
@@ -476,7 +476,7 @@ namespace CassetteMotionPro.Workspace
                 path.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
             path.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
-            path.Controls.Add(CreateFitDayFlowCard("1", "Client", "Open/create the session and goals first.", "Client Info", SelectOverviewGoals, IsClientFlowStageReady, GetClientFlowDetail), 0, 0);
+            path.Controls.Add(CreateFitDayFlowCard("1", "Client Session", "Create/open the session before video.", "Create / Open", SelectFitSessionStart, IsClientFlowStageReady, GetClientFlowDetail), 0, 0);
             path.Controls.Add(CreateFitDayFlowCard("2", "Kinovea Video", "Record, analyze, and save Before / After / Dual evidence.", "Video Tools", SaveAndSelectVideos, IsVideoFlowStageReady, GetVideoFlowDetail), 1, 0);
             path.Controls.Add(CreateFitDayFlowCard("3", "Measurements", "Enter bike metrics and body angle notes.", "Bike Metrics", delegate { SelectWorkspaceTab("Bike Metrics"); }, IsMeasurementFlowStageReady, GetMeasurementFlowDetail), 2, 0);
             path.Controls.Add(CreateFitDayFlowCard("4", "Report", "Choose report images and preview the final report.", "Report Images", delegate { SelectWorkspaceTab("Report Images"); }, IsReportFlowStageReady, GetReportFlowDetail), 3, 0);
@@ -563,7 +563,7 @@ namespace CassetteMotionPro.Workspace
             buttons.Padding = new Padding(0, 4, 0, 0);
 
             AddWorkflowShortcutButton(buttons, "Client Folders", false, delegate { SelectWorkspaceTab("Client Files"); });
-            AddWorkflowShortcutButton(buttons, "1. Client Info", true, SelectOverviewGoals);
+            AddWorkflowShortcutButton(buttons, "1. Create / Open Session", true, SelectFitSessionStart);
             AddWorkflowShortcutButton(buttons, "2. Kinovea Video", false, SaveAndSelectVideos);
             AddWorkflowShortcutButton(buttons, "3. Measurements", false, delegate { SelectWorkspaceTab("Bike Metrics"); });
             AddWorkflowShortcutButton(buttons, "4. Report", false, delegate { SelectWorkspaceTab("Report Images"); });
@@ -607,7 +607,7 @@ namespace CassetteMotionPro.Workspace
             activeSaveTargetStatus.BorderStyle = BorderStyle.FixedSingle;
             activeSaveTargetStatus.Padding = new Padding(8, 0, 8, 0);
             activeSaveTargetStatus.TextAlign = ContentAlignment.MiddleLeft;
-            activeSaveTargetStatus.Text = "No active fit session yet — open or create a session first so Save Image / Save Video know where Before / After / Dual should go.";
+            activeSaveTargetStatus.Text = "No active fit session yet — click + New Session on the left, enter the session details, then Save. After that Save Image / Save Video can use Before / After / Dual.";
 
             ConfigureFitCommandSectionLabel(captureActionsLabel, "Record live into this client's Before / After folders");
             ConfigureFitCommandSectionLabel(analysisActionsLabel, "Review playback, save evidence, then preview the report");
@@ -815,7 +815,7 @@ namespace CassetteMotionPro.Workspace
             card.SetColumnSpan(hint, 2);
 
             workflowChecklistItems.Clear();
-            AddWorkflowStageHeader(card, "1. Client Info", "Set up the person, bike, goals, and session before touching video.");
+            AddWorkflowStageHeader(card, "1. Create / Open Session", "Set up the person, bike, goals, and session before touching video.");
             AddWorkflowChecklistRow(card, "Client info", "Confirm the client folder, bike, and contact info before recording.", "Client", delegate { SelectWorkspaceTab("Client Files"); }, HasClientFolder);
             AddWorkflowChecklistRow(card, "Fit goals", "Enter the rider goals and session notes before making changes.", "Goals", SelectOverviewGoals, HasFitGoals);
             AddWorkflowStageHeader(card, "2. Kinovea Video", "Use Kinovea to record, review, measure, and save the useful Before / After / Dual evidence back to this client.");
@@ -2336,6 +2336,9 @@ namespace CassetteMotionPro.Workspace
 
         private void SaveAndSelectVideos()
         {
+            if (!RequireActiveFitSessionBeforeKinovea("Kinovea Video"))
+                return;
+
             try
             {
                 PrepareAnalysisCaptureFolder();
@@ -2351,6 +2354,9 @@ namespace CassetteMotionPro.Workspace
 
         private void PrepareAndSelectVideoAnalysis()
         {
+            if (!RequireActiveFitSessionBeforeKinovea("Analyze Videos"))
+                return;
+
             try
             {
                 PrepareAnalysisCaptureFolder();
@@ -2368,6 +2374,33 @@ namespace CassetteMotionPro.Workspace
         {
             SelectWorkspaceTab("Overview");
             txtGoals.Focus();
+        }
+
+        private void SelectFitSessionStart()
+        {
+            SelectWorkspaceTab("Overview");
+            UpdateSaveHint("Start here: click + New Session on the left, enter the session details, then Save before opening Kinovea.");
+            if (txtTitle != null)
+            {
+                txtTitle.Focus();
+                txtTitle.SelectAll();
+            }
+        }
+
+        private bool RequireActiveFitSessionBeforeKinovea(string actionName)
+        {
+            if (HasActiveFitSession())
+                return true;
+
+            SelectFitSessionStart();
+            MessageBox.Show(
+                this,
+                "Create or open a client fit session first.\n\n" +
+                "Click + New Session on the left, enter the session details, then click Save. After that, " + actionName + " will know where the Before / After / Dual folders are.",
+                actionName,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+            return false;
         }
 
         private void SelectWorkspaceTab(string tabText)
@@ -2461,7 +2494,7 @@ namespace CassetteMotionPro.Workspace
         private string GetNextFitDayHint()
         {
             if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
-                return "Next best step: click Client Info or + New Session, then save before opening Kinovea.";
+                return "Next best step: click + New Session on the left, enter the session details, then Save before opening Kinovea.";
             if (!HasFitGoals())
                 return "Next best step: enter rider goals before you start making fit changes.";
             if (!HasMediaFile("BeforeVideoPath"))
@@ -2533,7 +2566,7 @@ namespace CassetteMotionPro.Workspace
         private string GetClientFlowDetail()
         {
             if (!HasActiveFitSession())
-                return "Open/create a fit session first.";
+                return "Click + New Session on the left, then Save before opening Kinovea.";
             if (!HasFitGoals())
                 return "Add session title and rider goals.";
             return "Client session and goals are ready.";
@@ -2547,7 +2580,7 @@ namespace CassetteMotionPro.Workspace
         private string GetVideoFlowDetail()
         {
             if (!HasActiveFitSession())
-                return "Needs an active session folder.";
+                return "Create/open a session first so Before / After / Dual folders are known.";
             if (!HasMediaFile("BeforeVideoPath"))
                 return "Save or choose the Before video.";
             if (!HasMediaFile("AfterVideoPath"))
@@ -2641,7 +2674,7 @@ namespace CassetteMotionPro.Workspace
 
             if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
             {
-                activeSaveTargetStatus.Text = "No active fit session yet — open or create a session first so Save Image / Save Video know where Before / After / Dual should go.";
+                activeSaveTargetStatus.Text = "No active fit session yet — click + New Session on the left, enter the session details, then Save. After that Save Image / Save Video can use Before / After / Dual.";
                 activeSaveTargetStatus.ForeColor = Color.FromArgb(181, 118, 35);
                 activeSaveTargetStatus.BackColor = Color.FromArgb(255, 248, 226);
                 return;
@@ -2851,11 +2884,11 @@ namespace CassetteMotionPro.Workspace
 
             if (!HasActiveFitSession())
             {
-                message = "Next best step: open or create a client fit session first. This unlocks the Before / After / Dual save buttons.";
-                actionText = "Client Files";
-                action = delegate { SelectWorkspaceTab("Client Files"); };
-                folderActionText = "Client Folder";
-                folderAction = delegate { SelectWorkspaceTab("Client Files"); };
+                message = "Next best step: click + New Session on the left, enter session details, then Save. That unlocks Before / After / Dual saving.";
+                actionText = "Create / Open Session";
+                action = SelectFitSessionStart;
+                folderActionText = "Session Start";
+                folderAction = SelectFitSessionStart;
                 color = Color.FromArgb(181, 118, 35);
             }
             else if (!HasFitGoals())
@@ -4027,6 +4060,9 @@ namespace CassetteMotionPro.Workspace
 
         private void OpenLiveCaptureForVideo(string key)
         {
+            if (!RequireActiveFitSessionBeforeKinovea("Record Live"))
+                return;
+
             if (openDualLiveCaptureFolders != null && (key == "BeforeVideoPath" || key == "AfterVideoPath"))
             {
                 OpenDualLiveCapture();
@@ -4061,6 +4097,9 @@ namespace CassetteMotionPro.Workspace
 
         private void OpenDualLiveCapture()
         {
+            if (!RequireActiveFitSessionBeforeKinovea("Dual Live Capture"))
+                return;
+
             if (openDualLiveCaptureFolders == null && openLiveCaptureFolder == null)
             {
                 MessageBox.Show(this, "Live capture is not available from this workspace yet.", "Dual Live Capture", MessageBoxButtons.OK, MessageBoxIcon.Information);
