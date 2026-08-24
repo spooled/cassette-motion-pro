@@ -2412,9 +2412,10 @@ namespace CassetteMotionPro.Workspace
             string clientName = client != null ? client.DisplayName : "Client";
             if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
             {
-                fitDayHomeStatus.Text = "No active fit session yet — start with Client Info so Kinovea knows the Before / After / Dual folders.";
+                fitDayHomeStatus.Text = "Start here: create or open a client fit session first.";
                 fitDayHomeStatus.ForeColor = Color.FromArgb(181, 118, 35);
-                fitDayHomeReadiness.Text = GetFitDayHomeProgressText();
+                fitDayHomeReadiness.Text = "Cassette Motion Pro needs an active fit session before Kinovea can save Before / After / Dual videos and report images." + Environment.NewLine +
+                    GetNextFitDayHint();
                 fitDayHomeReadiness.ForeColor = Color.FromArgb(181, 118, 35);
                 return;
             }
@@ -2437,7 +2438,18 @@ namespace CassetteMotionPro.Workspace
                 return;
 
             string clientName = client != null ? client.DisplayName : "Client";
-            string session = currentSession != null ? "Client: " + clientName + " · Session: " + currentSession.DisplayName : "Client: " + clientName + " · Session: none";
+            if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
+            {
+                fitCommandCenterStatus.Text = "Start here: create or open a client fit session first." + Environment.NewLine +
+                    "Then Record Live / Analyze Videos will save into that client's Before / After / Dual folders." + Environment.NewLine +
+                    GetNextFitDayHint();
+                fitCommandCenterStatus.ForeColor = Color.FromArgb(181, 118, 35);
+                UpdateSaveTargetStatus();
+                RefreshSavedEvidenceReview();
+                return;
+            }
+
+            string session = "Client: " + clientName + " · Session: " + currentSession.DisplayName;
             fitCommandCenterStatus.Text = GetGuidedFitDayStageText() + " · " + GetFitDayReadinessText() + " · " + session + Environment.NewLine +
                 GetReadinessSnapshotText() + Environment.NewLine +
                 GetNextFitDayHint();
@@ -2449,7 +2461,7 @@ namespace CassetteMotionPro.Workspace
         private string GetNextFitDayHint()
         {
             if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
-                return "Next best step: create or choose a client fit session so saves know where to go.";
+                return "Next best step: click Client Info or + New Session, then save before opening Kinovea.";
             if (!HasFitGoals())
                 return "Next best step: enter rider goals before you start making fit changes.";
             if (!HasMediaFile("BeforeVideoPath"))
