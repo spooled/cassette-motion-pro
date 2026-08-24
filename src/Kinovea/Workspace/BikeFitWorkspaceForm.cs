@@ -75,6 +75,8 @@ namespace CassetteMotionPro.Workspace
         private Action nextRecommendedStepActionHandler;
         private Action nextRecommendedFolderActionHandler;
         private string fitCommandCenterMode = "Plan";
+        private const string FitDayHomeTabName = "Fit Day Home";
+        private const string KinoveaVideoTabName = "Kinovea Video";
 
         public BikeFitWorkspaceForm(ClientRecord client, Action<string> openVideo, Action<string, string> openVideoPair, Action<string> prepareCaptureFolder, Action<string> openLiveCaptureFolder, Action<string, string> openDualLiveCaptureFolders, Action<string> openBodyAngleGuide)
         {
@@ -296,7 +298,7 @@ namespace CassetteMotionPro.Workspace
 
         private TabPage BuildOverviewTab()
         {
-            TabPage page = NewTab("Overview");
+            TabPage page = NewTab(FitDayHomeTabName);
             TableLayoutPanel table = NewEditorTable();
             table.Dock = DockStyle.Top;
             table.AutoSize = true;
@@ -385,14 +387,14 @@ namespace CassetteMotionPro.Workspace
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
             Label title = new Label();
-            title.Text = "Fit Day Dashboard";
+            title.Text = "Fit Day Home";
             title.Dock = DockStyle.Fill;
             title.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
             title.ForeColor = Color.FromArgb(24, 31, 29);
             title.TextAlign = ContentAlignment.MiddleLeft;
 
             Label description = new Label();
-            description.Text = "One fit-day path: create/open the client session first, record Before/After clips in Kinovea, analyze them, save evidence, enter metrics, then preview the report.";
+            description.Text = "Start with the client session, then use Kinovea for recording and measuring. Cassette Motion Pro keeps the folders, evidence, and report organized in the background.";
             description.Dock = DockStyle.Fill;
             description.ForeColor = Color.FromArgb(74, 87, 81);
 
@@ -429,7 +431,7 @@ namespace CassetteMotionPro.Workspace
             buttons.Controls.Add(report);
 
             Label path = new Label();
-            path.Text = "Simple path: Session → Record Before/After → Analyze → Save Evidence → Metrics → Report";
+            path.Text = "Simple path: Client session → Kinovea video → Measurements → Report";
             path.Dock = DockStyle.Fill;
             path.ForeColor = Color.FromArgb(92, 104, 98);
             path.TextAlign = ContentAlignment.MiddleLeft;
@@ -462,7 +464,7 @@ namespace CassetteMotionPro.Workspace
             fitDayFlowSteps.Clear();
 
             GroupBox group = new GroupBox();
-            group.Text = "Fit Day Roadmap";
+            group.Text = "Fit Day Roadmap — client first, Kinovea second";
             group.Dock = DockStyle.Fill;
             group.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             group.ForeColor = Color.FromArgb(37, 48, 43);
@@ -477,8 +479,8 @@ namespace CassetteMotionPro.Workspace
             path.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
             path.Controls.Add(CreateFitDayFlowCard("1", "Session", "Open or create the active client fit session.", "Open Session", SelectFitSessionStart, IsClientFlowStageReady, GetClientFlowDetail), 0, 0);
-            path.Controls.Add(CreateFitDayFlowCard("2", "Record", "Capture Before / After clips into this client.", "Record Live", OpenDualLiveCapture, HasBeforeAfterVideos, GetVideoFlowDetail), 1, 0);
-            path.Controls.Add(CreateFitDayFlowCard("3", "Analyze", "Open latest clips in playback and save useful evidence.", "Analyze", PrepareAndSelectVideoAnalysis, IsVideoFlowStageReady, GetVideoFlowDetail), 2, 0);
+            path.Controls.Add(CreateFitDayFlowCard("2", "Kinovea Video", "Record Before / After clips into this client session.", "Record Live", OpenDualLiveCapture, HasBeforeAfterVideos, GetVideoFlowDetail), 1, 0);
+            path.Controls.Add(CreateFitDayFlowCard("3", "Evidence", "Analyze latest clips and save images/videos for the report.", "Analyze", PrepareAndSelectVideoAnalysis, IsVideoFlowStageReady, GetVideoFlowDetail), 2, 0);
             path.Controls.Add(CreateFitDayFlowCard("4", "Metrics", "Enter bike metrics and body angle notes.", "Bike Metrics", delegate { SelectWorkspaceTab("Bike Metrics"); }, IsMeasurementFlowStageReady, GetMeasurementFlowDetail), 3, 0);
             path.Controls.Add(CreateFitDayFlowCard("5", "Report", "Choose report images and preview the final report.", "Report Images", delegate { SelectWorkspaceTab("Report Images"); }, IsReportFlowStageReady, GetReportFlowDetail), 4, 0);
 
@@ -576,7 +578,7 @@ namespace CassetteMotionPro.Workspace
         private Control BuildFitCommandCenter()
         {
             GroupBox group = new GroupBox();
-            group.Text = "Fit Day Command Center — Session → Record → Analyze → Report";
+            group.Text = "Fit Day Command Center — Client → Kinovea → Measurements → Report";
             group.Dock = DockStyle.Fill;
             group.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             group.ForeColor = Color.FromArgb(37, 48, 43);
@@ -608,7 +610,7 @@ namespace CassetteMotionPro.Workspace
             activeSaveTargetStatus.BorderStyle = BorderStyle.FixedSingle;
             activeSaveTargetStatus.Padding = new Padding(8, 0, 8, 0);
             activeSaveTargetStatus.TextAlign = ContentAlignment.MiddleLeft;
-            activeSaveTargetStatus.Text = "No active fit session yet — create/open a session, then Save. After that, Save Image / Save Video can use Before / After / Dual automatically.";
+            activeSaveTargetStatus.Text = "No active fit session yet — create/open a session, then Save. Once active, Kinovea Save Image / Save Video can use Before / After / Dual automatically.";
 
             ConfigureFitCommandSectionLabel(captureActionsLabel, "Record live: send new clips straight to this client");
             ConfigureFitCommandSectionLabel(analysisActionsLabel, "Analyze + report: open latest videos, save evidence, then preview");
@@ -655,7 +657,7 @@ namespace CassetteMotionPro.Workspace
             AddFitCommandButton(analysisButtons, "Review Evidence", true, delegate
             {
                 RefreshSavedEvidenceReview();
-                SelectWorkspaceTab("Video Capture + Analysis");
+                SelectWorkspaceTab(KinoveaVideoTabName);
             });
             AddFitCommandButton(analysisButtons, "Do Next Step", true, RunNextBestFitDayStep);
             AddFitCommandButton(analysisButtons, "Check Report Readiness", false, delegate { ReviewSession_Click(this, EventArgs.Empty); });
@@ -819,9 +821,9 @@ namespace CassetteMotionPro.Workspace
             AddWorkflowStageHeader(card, "1. Session", "Set up the person, bike, goals, and session before touching video.");
             AddWorkflowChecklistRow(card, "Client info", "Confirm the client folder, bike, and contact info before recording.", "Client", delegate { SelectWorkspaceTab("Client Files"); }, HasClientFolder);
             AddWorkflowChecklistRow(card, "Fit goals", "Enter the rider goals and session notes before making changes.", "Goals", SelectOverviewGoals, HasFitGoals);
-            AddWorkflowStageHeader(card, "2. Record + Analyze", "Use Kinovea to record, review, measure, and save useful Before / After / Dual evidence back to this client.");
-            AddWorkflowChecklistRow(card, "Before video", "Record/import the starting video into this client session.", "Video", delegate { SelectWorkspaceTab("Video Capture + Analysis"); }, delegate { return HasMediaFile("BeforeVideoPath"); });
-            AddWorkflowChecklistRow(card, "After video", "Record/import the comparison/final video into this client session.", "Video", delegate { SelectWorkspaceTab("Video Capture + Analysis"); }, delegate { return HasMediaFile("AfterVideoPath"); });
+            AddWorkflowStageHeader(card, "2. Kinovea Video", "Use Kinovea to record, review, measure, and save useful Before / After / Dual evidence back to this client.");
+            AddWorkflowChecklistRow(card, "Before video", "Record/import the starting video into this client session.", "Video", delegate { SelectWorkspaceTab(KinoveaVideoTabName); }, delegate { return HasMediaFile("BeforeVideoPath"); });
+            AddWorkflowChecklistRow(card, "After video", "Record/import the comparison/final video into this client session.", "Video", delegate { SelectWorkspaceTab(KinoveaVideoTabName); }, delegate { return HasMediaFile("AfterVideoPath"); });
             AddWorkflowChecklistRow(card, "Analyze in Kinovea", "Open playback analysis, use the Kinovea tools, and save useful evidence into Analysis Captures.", "Tools", PrepareAndSelectVideoAnalysis, delegate { return HasMediaFile("BeforeVideoPath") || HasMediaFile("AfterVideoPath"); });
             AddWorkflowChecklistRow(card, "Saved evidence", "Save screenshots, exported images, or useful video evidence into Analysis Captures.", "Captures", PrepareAndSelectVideoAnalysis, HasAnalysisCaptureEvidence);
             AddWorkflowStageHeader(card, "3. Bike Metrics", "Enter the bike numbers and body angles you want reflected in the report.");
@@ -924,7 +926,7 @@ namespace CassetteMotionPro.Workspace
             AddImportActionRow(table, "Add photos", "Copy before/after report photos into this active fit session.", "Before Photo", delegate { BrowseReportImage("BeforeReportImagePath"); }, "After Photo", delegate { BrowseReportImage("AfterReportImagePath"); });
 
             Label hint = new Label();
-            hint.Text = "Use these shortcuts during a fit when you want to confirm where this client’s files are going. Record live opens Kinovea into this session’s Before/After video folder, and Use Latest on the Video Capture + Analysis tab selects the newest saved recording without browsing.";
+            hint.Text = "Use these shortcuts during a fit when you want to confirm where this client’s files are going. Record live opens Kinovea into this session’s Before/After video folder, and Use Latest on the Kinovea Video tab selects the newest saved recording without browsing.";
             hint.Dock = DockStyle.Fill;
             hint.ForeColor = Color.FromArgb(92, 104, 98);
             hint.Padding = new Padding(0, 12, 0, 0);
@@ -1175,7 +1177,7 @@ namespace CassetteMotionPro.Workspace
 
         private TabPage BuildMediaTab()
         {
-            TabPage page = NewTab("Video Capture + Analysis");
+            TabPage page = NewTab(KinoveaVideoTabName);
             TableLayoutPanel table = new TableLayoutPanel();
             table.Dock = DockStyle.Top;
             table.AutoSize = true;
@@ -1189,7 +1191,7 @@ namespace CassetteMotionPro.Workspace
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 86));
 
             Label analysisHint = new Label();
-            analysisHint.Text = "Simple path: confirm client/session details → record live into this active session’s Before/After folders → click Analyze Latest Before + After → save evidence/images → enter Measurements → generate the report.";
+            analysisHint.Text = "Use this tab as the Kinovea bridge: record Before/After clips into the active client session, analyze the latest videos, then save images or dual evidence for the report.";
             analysisHint.Dock = DockStyle.Fill;
             analysisHint.ForeColor = Color.FromArgb(92, 104, 98);
             int analysisHintRow = table.RowCount++;
@@ -1534,7 +1536,7 @@ namespace CassetteMotionPro.Workspace
             guideTable.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
             guideTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
-            AddBikeMetricsWorkflowGuideRow(guideTable, "1. Open video tools", "Use Video Capture + Analysis to open Before, After, or Before + After in the full Kinovea workspace.");
+            AddBikeMetricsWorkflowGuideRow(guideTable, "1. Open video tools", "Use Kinovea Video to open Before, After, or Before + After in the full Kinovea workspace.");
             AddBikeMetricsWorkflowGuideRow(guideTable, "2. Save evidence", "Save screenshots, exports, or short clips into the active session Analysis Captures folder.");
             AddBikeMetricsWorkflowGuideRow(guideTable, "3. Record numbers", "Enter the final Before/After values here, or use Assist with the measurement reference image.");
             AddBikeMetricsWorkflowGuideRow(guideTable, "4. Review report", "Use Review Metrics, then Preview/Generate so the report reflects the saved client session.");
@@ -1815,7 +1817,7 @@ namespace CassetteMotionPro.Workspace
 
         private TabPage BuildVideoAnalysisTab()
         {
-            TabPage page = NewTab("Video Capture + Analysis");
+            TabPage page = NewTab(KinoveaVideoTabName);
             TableLayoutPanel table = new TableLayoutPanel();
             table.Dock = DockStyle.Top;
             table.AutoSize = true;
@@ -2344,7 +2346,7 @@ namespace CassetteMotionPro.Workspace
             {
                 PrepareAnalysisCaptureFolder();
                 SetFitCommandCenterMode("Record / Analyze");
-                SelectWorkspaceTab("Video Capture + Analysis");
+                SelectWorkspaceTab(KinoveaVideoTabName);
                 UpdateSaveHint("Client and fit details saved. Next step: record/import videos, analyze in Kinovea, and save evidence.");
             }
             catch (Exception exception)
@@ -2362,12 +2364,12 @@ namespace CassetteMotionPro.Workspace
             {
                 PrepareAnalysisCaptureFolder();
                 SetFitCommandCenterMode("Analyze");
-                SelectWorkspaceTab("Video Capture + Analysis");
+                SelectWorkspaceTab(KinoveaVideoTabName);
                 UpdateSaveHint("Analysis Captures is ready. Open a video, measure in Kinovea, then save screenshots, exports, or clips into that folder.");
             }
             catch (Exception exception)
             {
-                MessageBox.Show(this, "The Analysis Captures folder could not be prepared.\n\n" + exception.Message, "Video Capture + Analysis", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, "The Analysis Captures folder could not be prepared.\n\n" + exception.Message, KinoveaVideoTabName, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -2409,15 +2411,27 @@ namespace CassetteMotionPro.Workspace
             if (editorTabs == null)
                 return;
 
+            string requestedTab = NormalizeWorkspaceTabName(tabText);
             foreach (TabPage page in editorTabs.TabPages)
             {
-                if (string.Equals(page.Text, tabText, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(page.Text, requestedTab, StringComparison.OrdinalIgnoreCase))
                 {
                     editorTabs.SelectedTab = page;
-                    UpdateSaveHint("Opened " + tabText + " from the Fit Day Dashboard.");
+                    UpdateSaveHint("Opened " + requestedTab + " from the Fit Day Home.");
                     return;
                 }
             }
+        }
+
+        private static string NormalizeWorkspaceTabName(string tabText)
+        {
+            if (string.Equals(tabText, "Overview", StringComparison.OrdinalIgnoreCase))
+                return FitDayHomeTabName;
+
+            if (string.Equals(tabText, "Video Capture + Analysis", StringComparison.OrdinalIgnoreCase))
+                return KinoveaVideoTabName;
+
+            return tabText;
         }
 
         private void UpdateWorkflowChecklist()
