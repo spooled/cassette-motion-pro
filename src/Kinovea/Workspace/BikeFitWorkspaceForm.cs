@@ -383,18 +383,18 @@ namespace CassetteMotionPro.Workspace
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 46));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
             Label title = new Label();
-            title.Text = "Fit Day Home";
+            title.Text = "Start Fit Day";
             title.Dock = DockStyle.Fill;
             title.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
             title.ForeColor = Color.FromArgb(24, 31, 29);
             title.TextAlign = ContentAlignment.MiddleLeft;
 
             Label description = new Label();
-            description.Text = "Start with the client session, then use Kinovea for recording and measuring. Cassette Motion Pro keeps the folders, evidence, and report organized in the background.";
+            description.Text = "Start here: create or open a client fit session first. After that, Kinovea knows where Before / After videos, Dual evidence, images, and reports should save.";
             description.Dock = DockStyle.Fill;
             description.ForeColor = Color.FromArgb(74, 87, 81);
 
@@ -404,8 +404,8 @@ namespace CassetteMotionPro.Workspace
             buttons.WrapContents = true;
             buttons.Padding = new Padding(0, 2, 0, 0);
 
-            Button clientInfo = CreateButton("1. Session", true);
-            clientInfo.Size = new Size(126, 34);
+            Button clientInfo = CreateButton("1. Start Session", true);
+            clientInfo.Size = new Size(152, 34);
             clientInfo.Click += delegate { SelectFitSessionStart(); };
 
             Button recordLive = CreateButton("2. Record", false);
@@ -431,21 +431,26 @@ namespace CassetteMotionPro.Workspace
             buttons.Controls.Add(report);
 
             Label path = new Label();
-            path.Text = "Simple path: Client session → Kinovea video → Measurements → Report";
+            path.Text = "Fit-day path: Session first → Kinovea video → Measurements → Report";
             path.Dock = DockStyle.Fill;
             path.ForeColor = Color.FromArgb(92, 104, 98);
             path.TextAlign = ContentAlignment.MiddleLeft;
 
             fitDayHomeStatus.Dock = DockStyle.Fill;
-            fitDayHomeStatus.ForeColor = Color.FromArgb(92, 104, 98);
+            fitDayHomeStatus.ForeColor = Color.FromArgb(181, 118, 35);
+            fitDayHomeStatus.BackColor = Color.FromArgb(255, 248, 226);
+            fitDayHomeStatus.BorderStyle = BorderStyle.FixedSingle;
+            fitDayHomeStatus.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
             fitDayHomeStatus.TextAlign = ContentAlignment.MiddleLeft;
-            fitDayHomeStatus.Padding = new Padding(0, 4, 0, 0);
+            fitDayHomeStatus.Padding = new Padding(10, 0, 10, 0);
 
             fitDayHomeReadiness.Dock = DockStyle.Fill;
             fitDayHomeReadiness.ForeColor = Color.FromArgb(92, 104, 98);
+            fitDayHomeReadiness.BackColor = Color.FromArgb(247, 255, 229);
+            fitDayHomeReadiness.BorderStyle = BorderStyle.FixedSingle;
             fitDayHomeReadiness.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             fitDayHomeReadiness.TextAlign = ContentAlignment.TopLeft;
-            fitDayHomeReadiness.Padding = new Padding(0, 3, 0, 0);
+            fitDayHomeReadiness.Padding = new Padding(10, 8, 10, 0);
 
             layout.Controls.Add(title, 0, 0);
             layout.Controls.Add(buttons, 1, 0);
@@ -478,7 +483,7 @@ namespace CassetteMotionPro.Workspace
                 path.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20));
             path.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
-            path.Controls.Add(CreateFitDayFlowCard("1", "Session", "Open or create the active client fit session.", "Open Session", SelectFitSessionStart, IsClientFlowStageReady, GetClientFlowDetail), 0, 0);
+            path.Controls.Add(CreateFitDayFlowCard("1", "Start Here", "Open or create the active client fit session.", "Open Session", SelectFitSessionStart, IsClientFlowStageReady, GetClientFlowDetail), 0, 0);
             path.Controls.Add(CreateFitDayFlowCard("2", "Kinovea Video", "Record Before / After clips into this client session.", "Record Live", OpenDualLiveCapture, HasBeforeAfterVideos, GetVideoFlowDetail), 1, 0);
             path.Controls.Add(CreateFitDayFlowCard("3", "Evidence", "Analyze latest clips and save images/videos for the report.", "Analyze", PrepareAndSelectVideoAnalysis, IsVideoFlowStageReady, GetVideoFlowDetail), 2, 0);
             path.Controls.Add(CreateFitDayFlowCard("4", "Metrics", "Enter bike metrics and body angle notes.", "Bike Metrics", delegate { SelectWorkspaceTab("Bike Metrics"); }, IsMeasurementFlowStageReady, GetMeasurementFlowDetail), 3, 0);
@@ -566,7 +571,7 @@ namespace CassetteMotionPro.Workspace
             buttons.Padding = new Padding(0, 4, 0, 0);
 
             AddWorkflowShortcutButton(buttons, "Client Folders", false, delegate { SelectWorkspaceTab("Client Files"); });
-            AddWorkflowShortcutButton(buttons, "1. Session", true, SelectFitSessionStart);
+            AddWorkflowShortcutButton(buttons, "1. Start Session", true, SelectFitSessionStart);
             AddWorkflowShortcutButton(buttons, "2. Record / Analyze", false, SaveAndSelectVideos);
             AddWorkflowShortcutButton(buttons, "3. Metrics", false, delegate { SelectWorkspaceTab("Bike Metrics"); });
             AddWorkflowShortcutButton(buttons, "4. Report", false, delegate { SelectWorkspaceTab("Report Images"); });
@@ -610,7 +615,7 @@ namespace CassetteMotionPro.Workspace
             activeSaveTargetStatus.BorderStyle = BorderStyle.FixedSingle;
             activeSaveTargetStatus.Padding = new Padding(8, 0, 8, 0);
             activeSaveTargetStatus.TextAlign = ContentAlignment.MiddleLeft;
-            activeSaveTargetStatus.Text = "No active fit session yet — create/open a session, then Save. Once active, Kinovea Save Image / Save Video can use Before / After / Dual automatically.";
+            activeSaveTargetStatus.Text = "START HERE: create/open a client fit session, then Save. Once active, Kinovea Save Image / Save Video can use Before / After / Dual automatically.";
 
             ConfigureFitCommandSectionLabel(captureActionsLabel, "Record live: send new clips straight to this client");
             ConfigureFitCommandSectionLabel(analysisActionsLabel, "Analyze + report: open latest videos, save evidence, then preview");
@@ -2381,8 +2386,8 @@ namespace CassetteMotionPro.Workspace
 
         private void SelectFitSessionStart()
         {
-            SelectWorkspaceTab("Overview");
-            UpdateSaveHint("Start here: click + New Session on the left, enter the session details, then Save before opening Kinovea.");
+            SelectWorkspaceTab(FitDayHomeTabName);
+            UpdateSaveHint("Start here: use + New Session on the left or choose an existing session, enter the details, then Save before opening Kinovea.");
             if (txtTitle != null)
             {
                 txtTitle.Focus();
@@ -2460,9 +2465,9 @@ namespace CassetteMotionPro.Workspace
             string clientName = client != null ? client.DisplayName : "Client";
             if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
             {
-                fitDayHomeStatus.Text = "Start here: create or open a client fit session first.";
+                fitDayHomeStatus.Text = "START HERE: create or open a client fit session first.";
                 fitDayHomeStatus.ForeColor = Color.FromArgb(181, 118, 35);
-                fitDayHomeReadiness.Text = "Cassette Motion Pro needs an active fit session before Kinovea can save Before / After / Dual videos and report images." + Environment.NewLine +
+                fitDayHomeReadiness.Text = "This connects Kinovea's Save Image / Save Video buttons to this client's Before / After / Dual folders." + Environment.NewLine +
                     GetNextFitDayHint();
                 fitDayHomeReadiness.ForeColor = Color.FromArgb(181, 118, 35);
                 return;
@@ -2488,8 +2493,8 @@ namespace CassetteMotionPro.Workspace
             string clientName = client != null ? client.DisplayName : "Client";
             if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
             {
-                fitCommandCenterStatus.Text = "Start here: create or open a client fit session first." + Environment.NewLine +
-                    "Then Record Live / Analyze Videos will save into that client's Before / After / Dual folders." + Environment.NewLine +
+                fitCommandCenterStatus.Text = "START HERE: create or open a client fit session first." + Environment.NewLine +
+                    "Then Record Live / Analyze Videos will save into that client's Before / After / Dual client folders." + Environment.NewLine +
                     GetNextFitDayHint();
                 fitCommandCenterStatus.ForeColor = Color.FromArgb(181, 118, 35);
                 UpdateSaveTargetStatus();
@@ -2509,7 +2514,7 @@ namespace CassetteMotionPro.Workspace
         private string GetNextFitDayHint()
         {
             if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
-                return "Next best step: click + New Session on the left, enter the session details, then Save before opening Kinovea.";
+                return "Next best step: click + New Session on the left or choose an existing session, then Save before opening Kinovea.";
             if (!HasFitGoals())
                 return "Next best step: enter rider goals before you start making fit changes.";
             if (!HasMediaFile("BeforeVideoPath"))
@@ -2583,7 +2588,7 @@ namespace CassetteMotionPro.Workspace
         private string GetClientFlowDetail()
         {
             if (!HasActiveFitSession())
-                return "Click + New Session on the left, then Save before opening Kinovea.";
+                return "Click + New Session on the left or choose an existing session, then Save before opening Kinovea.";
             if (!HasFitGoals())
                 return "Add session title and rider goals.";
             return "Client session and goals are ready.";
