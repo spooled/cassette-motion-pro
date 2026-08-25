@@ -50,6 +50,8 @@ namespace CassetteMotionPro.Workspace
         private readonly Label nextRecommendedStep = new Label();
         private readonly Label fitDayHomeStatus = new Label();
         private readonly Label fitDayHomeReadiness = new Label();
+        private readonly Label fitDayHomeFolders = new Label();
+        private readonly FlowLayoutPanel fitDayHomeFolderButtons = new FlowLayoutPanel();
         private readonly Label fitCommandCenterStatus = new Label();
         private readonly Label activeSaveTargetStatus = new Label();
         private readonly Label savedEvidenceReviewStatus = new Label();
@@ -377,13 +379,14 @@ namespace CassetteMotionPro.Workspace
             TableLayoutPanel layout = new TableLayoutPanel();
             layout.Dock = DockStyle.Fill;
             layout.ColumnCount = 2;
-            layout.RowCount = 5;
+            layout.RowCount = 6;
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 560));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 46));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 132));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
             Label title = new Label();
@@ -454,14 +457,105 @@ namespace CassetteMotionPro.Workspace
 
             layout.Controls.Add(title, 0, 0);
             layout.Controls.Add(buttons, 1, 0);
-            layout.SetRowSpan(buttons, 5);
+            layout.SetRowSpan(buttons, 6);
             layout.Controls.Add(description, 0, 1);
             layout.Controls.Add(path, 0, 2);
             layout.Controls.Add(fitDayHomeStatus, 0, 3);
-            layout.Controls.Add(fitDayHomeReadiness, 0, 4);
+            layout.Controls.Add(BuildFitDayHomeFolderPanel(), 0, 4);
+            layout.Controls.Add(fitDayHomeReadiness, 0, 5);
             panel.Controls.Add(layout);
             UpdateFitDayHomeStatus();
             return panel;
+        }
+
+        private Control BuildFitDayHomeFolderPanel()
+        {
+            GroupBox group = new GroupBox();
+            group.Text = "Active client save folders";
+            group.Dock = DockStyle.Fill;
+            group.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            group.ForeColor = Color.FromArgb(37, 48, 43);
+            group.Padding = new Padding(10, 8, 10, 8);
+
+            TableLayoutPanel layout = new TableLayoutPanel();
+            layout.Dock = DockStyle.Fill;
+            layout.ColumnCount = 1;
+            layout.RowCount = 2;
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+
+            fitDayHomeFolders.Dock = DockStyle.Fill;
+            fitDayHomeFolders.Font = new Font("Segoe UI", 8.75F, FontStyle.Regular);
+            fitDayHomeFolders.ForeColor = Color.FromArgb(74, 87, 81);
+            fitDayHomeFolders.TextAlign = ContentAlignment.MiddleLeft;
+
+            fitDayHomeFolderButtons.Dock = DockStyle.Fill;
+            fitDayHomeFolderButtons.FlowDirection = FlowDirection.LeftToRight;
+            fitDayHomeFolderButtons.WrapContents = true;
+            fitDayHomeFolderButtons.Padding = new Padding(0, 4, 0, 0);
+
+            AddFitDayHomeFolderButton("Before Videos", delegate { OpenFitDayHomeFolder("Before videos", delegate { return GetSessionVideoViewFolderPath("Before"); }); });
+            AddFitDayHomeFolderButton("After Videos", delegate { OpenFitDayHomeFolder("After videos", delegate { return GetSessionVideoViewFolderPath("After"); }); });
+            AddFitDayHomeFolderButton("Dual Images", delegate { OpenFitDayHomeFolder("Dual images", delegate { return GetSessionSideBySideFolderPath(); }); });
+            AddFitDayHomeFolderButton("Report Images", delegate { OpenFitDayHomeFolder("Report images", delegate { return GetSessionReportImagesFolderPath(); }); });
+            AddFitDayHomeFolderButton("Captures", delegate { OpenFitDayHomeFolder("Analysis Captures", delegate { return GetSessionAnalysisCapturesFolderPath(); }); });
+
+            layout.Controls.Add(fitDayHomeFolders, 0, 0);
+            layout.Controls.Add(fitDayHomeFolderButtons, 0, 1);
+            group.Controls.Add(layout);
+            return group;
+        }
+
+        private void AddFitDayHomeFolderButton(string text, Action action)
+        {
+            Button button = CreateButton(text, false);
+            button.Size = new Size(122, 32);
+            button.Margin = new Padding(0, 3, 7, 3);
+            button.Click += delegate
+            {
+                if (action != null)
+                    action();
+                UpdateWorkflowChecklist();
+            };
+            fitDayHomeFolderButtons.Controls.Add(button);
+        }
+
+        private void OpenFitDayHomeFolder(string folderName, Func<string> folderProvider)
+        {
+            if (!HasActiveFitSession())
+            {
+                UpdateSaveHint("Open or save a client fit session first, then these folder shortcuts will open the right Before / After / Dual folders.");
+                SelectFitSessionStart();
+                return;
+            }
+
+            try
+            {
+                string folderPath = folderProvider();
+                OpenClientFolder(folderPath, folderName);
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "The " + folderName + " folder could not be opened.\n\n" + exception.Message, folderName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void UpdateFitDayHomeFolderPanel()
+        {
+            bool hasSession = HasActiveFitSession();
+            foreach (Control control in fitDayHomeFolderButtons.Controls)
+                control.Enabled = hasSession;
+
+            if (!hasSession)
+            {
+                fitDayHomeFolders.Text = "Folder shortcuts unlock after you create/open and save a client fit session.";
+                fitDayHomeFolders.ForeColor = Color.FromArgb(181, 118, 35);
+                return;
+            }
+
+            fitDayHomeFolders.ForeColor = Color.FromArgb(74, 87, 81);
+            fitDayHomeFolders.Text = "Active save targets for " + client.DisplayName + " · " + currentSession.DisplayName + Environment.NewLine +
+                "Before / After videos, Dual images, Report Images, and Analysis Captures are linked to this session.";
         }
 
         private Control BuildGuidedFitDayFlowMap()
@@ -2461,6 +2555,8 @@ namespace CassetteMotionPro.Workspace
         {
             if (fitDayHomeStatus == null)
                 return;
+
+            UpdateFitDayHomeFolderPanel();
 
             string clientName = client != null ? client.DisplayName : "Client";
             if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
