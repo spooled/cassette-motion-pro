@@ -482,7 +482,7 @@ namespace CassetteMotionPro.Workspace
             layout.ColumnCount = 1;
             layout.RowCount = 2;
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 76));
 
             fitDayHomeFolders.Dock = DockStyle.Fill;
             fitDayHomeFolders.Font = new Font("Segoe UI", 8.75F, FontStyle.Regular);
@@ -496,6 +496,7 @@ namespace CassetteMotionPro.Workspace
 
             AddFitDayHomeFolderButton("Before Videos", delegate { OpenFitDayHomeFolder("Before videos", delegate { return GetSessionVideoViewFolderPath("Before"); }); });
             AddFitDayHomeFolderButton("After Videos", delegate { OpenFitDayHomeFolder("After videos", delegate { return GetSessionVideoViewFolderPath("After"); }); });
+            AddFitDayHomeFolderButton("Dual Videos", delegate { OpenFitDayHomeFolder("Dual videos", delegate { return GetSessionVideoViewFolderPath("Dual"); }); });
             AddFitDayHomeFolderButton("Dual Images", delegate { OpenFitDayHomeFolder("Dual images", delegate { return GetSessionSideBySideFolderPath(); }); });
             AddFitDayHomeFolderButton("Report Images", delegate { OpenFitDayHomeFolder("Report images", delegate { return GetSessionReportImagesFolderPath(); }); });
             AddFitDayHomeFolderButton("Captures", delegate { OpenFitDayHomeFolder("Analysis Captures", delegate { return GetSessionAnalysisCapturesFolderPath(); }); });
@@ -546,16 +547,15 @@ namespace CassetteMotionPro.Workspace
             foreach (Control control in fitDayHomeFolderButtons.Controls)
                 control.Enabled = hasSession;
 
-            if (!hasSession)
-            {
-                fitDayHomeFolders.Text = "Folder shortcuts unlock after you create/open and save a client fit session.";
-                fitDayHomeFolders.ForeColor = Color.FromArgb(181, 118, 35);
-                return;
-            }
+        if (!hasSession)
+        {
+            fitDayHomeFolders.Text = GetActiveSaveTargetFolderText();
+            fitDayHomeFolders.ForeColor = Color.FromArgb(181, 118, 35);
+            return;
+        }
 
-            fitDayHomeFolders.ForeColor = Color.FromArgb(74, 87, 81);
-            fitDayHomeFolders.Text = "Active save targets for " + client.DisplayName + " · " + currentSession.DisplayName + Environment.NewLine +
-                "Before / After videos, Dual images, Report Images, and Analysis Captures are linked to this session.";
+        fitDayHomeFolders.ForeColor = Color.FromArgb(74, 87, 81);
+        fitDayHomeFolders.Text = GetActiveSaveTargetFolderText();
         }
 
         private Control BuildGuidedFitDayFlowMap()
@@ -1013,6 +1013,7 @@ namespace CassetteMotionPro.Workspace
             AddSessionVideosRow(table, "All session videos", "Videos → Fit Sessions → active session");
             AddSessionVideoViewRow(table, "Before videos", "Videos → Fit Sessions → active session → Before", "Before");
             AddSessionVideoViewRow(table, "After videos", "Videos → Fit Sessions → active session → After", "After");
+            AddSessionVideoViewRow(table, "Dual videos", "Videos → Fit Sessions → active session → Dual", "Dual");
             AddSessionPhotosRow(table, "Report images", "Photos → Fit Sessions → active session → Report Images");
             AddSessionSideBySideRow(table, "Side-by-side", "Side-by-Side → Fit Sessions → active session");
             AddSessionAnalysisCapturesRow(table, "Analysis captures", "Client folder → Analysis Captures → active session");
@@ -2558,18 +2559,17 @@ namespace CassetteMotionPro.Workspace
 
             UpdateFitDayHomeFolderPanel();
 
-            string clientName = client != null ? client.DisplayName : "Client";
             if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
             {
                 fitDayHomeStatus.Text = "START HERE: create or open a client fit session first.";
                 fitDayHomeStatus.ForeColor = Color.FromArgb(181, 118, 35);
-                fitDayHomeReadiness.Text = "This connects Kinovea's Save Image / Save Video buttons to this client's Before / After / Dual folders." + Environment.NewLine +
+                fitDayHomeReadiness.Text = GetActiveSaveTargetShortText() + Environment.NewLine +
                     GetNextFitDayHint();
                 fitDayHomeReadiness.ForeColor = Color.FromArgb(181, 118, 35);
                 return;
             }
 
-            fitDayHomeStatus.Text = "Active session: " + clientName + " · " + currentSession.DisplayName + " — Kinovea saves are connected to this client.";
+            fitDayHomeStatus.Text = GetActiveSaveTargetShortText();
             fitDayHomeStatus.ForeColor = Color.FromArgb(60, 145, 76);
             fitDayHomeReadiness.Text = GetFitDayHomeProgressText();
             fitDayHomeReadiness.ForeColor = IsReportReady() ? Color.FromArgb(60, 145, 76) : Color.FromArgb(74, 87, 81);
@@ -2578,7 +2578,29 @@ namespace CassetteMotionPro.Workspace
         private string GetFitDayHomeProgressText()
         {
             return GetFitDayReadinessText() + " · " + GetReadinessSnapshotText() + Environment.NewLine +
+                GetActiveSaveTargetShortText() + Environment.NewLine +
                 GetNextFitDayHint();
+        }
+
+        private string GetActiveSaveTargetShortText()
+        {
+            if (!HasActiveFitSession())
+                return "No active fit session yet - click + New Session on the left, enter the session details, then Save before using Kinovea Save Image / Save Video.";
+
+            string clientName = client != null ? client.DisplayName : "Client";
+            return "READY: " + clientName + " - " + currentSession.DisplayName + " - Kinovea Save Image / Save Video will ask Before, After, or Dual and save into this session.";
+        }
+
+        private string GetActiveSaveTargetFolderText()
+        {
+            if (!HasActiveFitSession())
+                return "No active saved fit session yet." + Environment.NewLine +
+                    "Click + New Session, enter the client/session details, then Save before using Kinovea Save Image or Save Video.";
+
+            string clientName = client != null ? client.DisplayName : "Client";
+            return "Active save targets for " + clientName + " - " + currentSession.DisplayName + Environment.NewLine +
+                "Videos: Before / After / Dual -> " + GetSessionVideosFolderPath() + Environment.NewLine +
+                "Images: Before / After / Dual -> " + GetSessionReportImagesFolderPath();
         }
 
         private void UpdateFitCommandCenterStatus()
@@ -2587,21 +2609,22 @@ namespace CassetteMotionPro.Workspace
                 return;
 
             string clientName = client != null ? client.DisplayName : "Client";
-            if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
-            {
-                fitCommandCenterStatus.Text = "START HERE: create or open a client fit session first." + Environment.NewLine +
-                    "Then Record Live / Analyze Videos will save into that client's Before / After / Dual client folders." + Environment.NewLine +
-                    GetNextFitDayHint();
-                fitCommandCenterStatus.ForeColor = Color.FromArgb(181, 118, 35);
-                UpdateSaveTargetStatus();
+        if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
+        {
+            fitCommandCenterStatus.Text = "START HERE: create or open a client fit session first." + Environment.NewLine +
+                GetActiveSaveTargetShortText() + Environment.NewLine +
+                GetNextFitDayHint();
+            fitCommandCenterStatus.ForeColor = Color.FromArgb(181, 118, 35);
+            UpdateSaveTargetStatus();
                 RefreshSavedEvidenceReview();
                 return;
             }
 
-            string session = "Client: " + clientName + " · Session: " + currentSession.DisplayName;
-            fitCommandCenterStatus.Text = GetGuidedFitDayStageText() + " · " + GetFitDayReadinessText() + " · " + session + Environment.NewLine +
-                GetReadinessSnapshotText() + Environment.NewLine +
-                GetNextFitDayHint();
+    string session = "Client: " + clientName + " · Session: " + currentSession.DisplayName;
+    fitCommandCenterStatus.Text = GetGuidedFitDayStageText() + " · " + GetFitDayReadinessText() + " · " + session + Environment.NewLine +
+        GetReadinessSnapshotText() + Environment.NewLine +
+        GetActiveSaveTargetShortText() + Environment.NewLine +
+        GetNextFitDayHint();
             fitCommandCenterStatus.ForeColor = IsReportReady() ? Color.FromArgb(60, 145, 76) : Color.FromArgb(74, 87, 81);
             UpdateSaveTargetStatus();
             RefreshSavedEvidenceReview();
@@ -2790,15 +2813,15 @@ namespace CassetteMotionPro.Workspace
             if (activeSaveTargetStatus == null)
                 return;
 
-            if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
-            {
-                activeSaveTargetStatus.Text = "No active fit session yet — click + New Session on the left, enter the session details, then Save. After that Save Image / Save Video can use Before / After / Dual.";
-                activeSaveTargetStatus.ForeColor = Color.FromArgb(181, 118, 35);
-                activeSaveTargetStatus.BackColor = Color.FromArgb(255, 248, 226);
-                return;
-            }
+        if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
+        {
+            activeSaveTargetStatus.Text = GetActiveSaveTargetShortText();
+            activeSaveTargetStatus.ForeColor = Color.FromArgb(181, 118, 35);
+            activeSaveTargetStatus.BackColor = Color.FromArgb(255, 248, 226);
+            return;
+        }
 
-            activeSaveTargetStatus.Text = "Active session: " + client.DisplayName + " · " + currentSession.DisplayName + " — Kinovea saves go to this session’s Before / After / Dual folders";
+        activeSaveTargetStatus.Text = GetActiveSaveTargetShortText();
             activeSaveTargetStatus.ForeColor = Color.FromArgb(60, 145, 76);
             activeSaveTargetStatus.BackColor = Color.FromArgb(235, 250, 238);
         }
