@@ -19,7 +19,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0
+          fetch-depth: 1
+
+      - name: Cache Kinovea upstream source
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/kinovea-upstream
+          key: ${{ runner.os }}-kinovea-upstream-${{ env.KINOVEA_UPSTREAM_REF }}
 
       - name: Prepare Windows bundle folder
         shell: pwsh
@@ -36,12 +42,25 @@ jobs:
       - name: Restore upstream native dependencies
         shell: pwsh
         run: |
-          git clone --no-checkout https://github.com/Kinovea/Kinovea.git "$env:RUNNER_TEMP\kinovea-upstream"
-          git -C "$env:RUNNER_TEMP\kinovea-upstream" fetch --depth 1 origin $env:KINOVEA_UPSTREAM_REF
-          git -C "$env:RUNNER_TEMP\kinovea-upstream" checkout --detach $env:KINOVEA_UPSTREAM_REF
+          $upstreamRoot = "$env:RUNNER_TEMP\kinovea-upstream"
+          if (Test-Path "$upstreamRoot\.git") {
+            Write-Host "Using cached Kinovea upstream source."
+            git -C "$upstreamRoot" rev-parse --verify $env:KINOVEA_UPSTREAM_REF
+            if ($LASTEXITCODE -ne 0) {
+              git -C "$upstreamRoot" fetch --depth 1 origin $env:KINOVEA_UPSTREAM_REF
+            }
+            git -C "$upstreamRoot" checkout --detach $env:KINOVEA_UPSTREAM_REF
+          } else {
+            if (Test-Path $upstreamRoot) {
+              Remove-Item $upstreamRoot -Recurse -Force
+            }
+            git clone --no-checkout https://github.com/Kinovea/Kinovea.git "$upstreamRoot"
+            git -C "$upstreamRoot" fetch --depth 1 origin $env:KINOVEA_UPSTREAM_REF
+            git -C "$upstreamRoot" checkout --detach $env:KINOVEA_UPSTREAM_REF
+          }
           Write-Host "Using Kinovea upstream ref:"
-          git -C "$env:RUNNER_TEMP\kinovea-upstream" rev-parse HEAD
-          $refsSource = "$env:RUNNER_TEMP\kinovea-upstream\Refs"
+          git -C "$upstreamRoot" rev-parse HEAD
+          $refsSource = "$upstreamRoot\Refs"
           $refsTarget = "src\Refs"
           if (Test-Path "src\Refs" -PathType Leaf) {
             Remove-Item "src\Refs" -Force
@@ -121,6 +140,16 @@ jobs:
 
       - name: Setup NuGet
         uses: NuGet/setup-nuget@v2
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.nuget/packages
+            src/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('src/**/*.sln', 'src/**/*.csproj', 'src/**/*.vbproj', 'src/**/*.vcxproj', 'src/**/packages.config') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
 
       - name: Restore NuGet packages
         shell: pwsh
