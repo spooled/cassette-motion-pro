@@ -1471,7 +1471,7 @@ namespace CassetteMotionPro.Workspace
             savedEvidenceReviewStatus.Dock = DockStyle.Fill;
             savedEvidenceReviewStatus.ForeColor = Color.FromArgb(74, 87, 81);
             savedEvidenceReviewStatus.Padding = new Padding(4, 2, 4, 0);
-            savedEvidenceReviewStatus.Text = "Open or create a client fit session first. Once a fit session is active, this review will show the latest saved Before, After, and Dual videos/images.";
+            savedEvidenceReviewStatus.Text = "Open or create a client fit session first from Client Files. Then Kinovea Save Image and Save Video can offer Before, After, and Dual session folders.";
 
             FlowLayoutPanel actions = new FlowLayoutPanel();
             actions.Dock = DockStyle.Fill;
@@ -1513,7 +1513,7 @@ namespace CassetteMotionPro.Workspace
 
             Button latestImage = CreateButton("Latest Image", false);
             latestImage.Size = new Size(128, 32);
-            latestImage.Click += delegate { OpenLatestReportImage(); };
+            latestImage.Click += delegate { OpenLatestSavedEvidence("report image", GetSessionReportImagesFolderPath(), false); };
 
             actions.Controls.Add(refresh);
             actions.Controls.Add(before);
@@ -1530,7 +1530,7 @@ namespace CassetteMotionPro.Workspace
             review.Controls.Add(reviewLayout);
 
             int row = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 292));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 316));
             table.Controls.Add(review, 1, row);
             table.SetColumnSpan(review, 5);
 
@@ -2833,7 +2833,7 @@ namespace CassetteMotionPro.Workspace
 
             if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
             {
-                savedEvidenceReviewStatus.Text = "Open or create a client fit session first. Once a fit session is active, this review will show the latest saved Before, After, and Dual videos/images.";
+                savedEvidenceReviewStatus.Text = "Open or create a client fit session first from Client Files. Then Kinovea Save Image and Save Video can offer Before, After, and Dual session folders.";
                 savedEvidenceReviewStatus.ForeColor = Color.FromArgb(181, 118, 35);
                 return;
             }
@@ -2850,21 +2850,25 @@ namespace CassetteMotionPro.Workspace
 
             bool hasBeforeVideo = CountSavedEvidenceFiles(beforeVideoFolder, true) > 0;
             bool hasAfterVideo = CountSavedEvidenceFiles(afterVideoFolder, true) > 0;
-            bool hasDualEvidence = CountSavedEvidenceFiles(dualVideoFolder, true) > 0 || CountSavedEvidenceFiles(dualImageFolder, false) > 0;
-            bool hasReportImages = CountSavedEvidenceFiles(beforeImageFolder, false) > 0 ||
-                CountSavedEvidenceFiles(afterImageFolder, false) > 0 ||
-                CountSavedEvidenceFiles(dualImageFolder, false) > 0;
+            bool hasBeforeImage = CountSavedEvidenceFiles(beforeImageFolder, false) > 0;
+            bool hasAfterImage = CountSavedEvidenceFiles(afterImageFolder, false) > 0;
+            bool hasDualImage = CountSavedEvidenceFiles(dualImageFolder, false) > 0;
+            bool hasDualEvidence = CountSavedEvidenceFiles(dualVideoFolder, true) > 0 || hasDualImage;
+            bool hasReportImages = hasBeforeImage || hasAfterImage || hasDualImage;
             bool readyForReport = hasBeforeVideo && hasAfterVideo && hasReportImages;
+            string nextStep = GetSavedEvidenceNextStep(hasBeforeVideo, hasAfterVideo, hasBeforeImage, hasAfterImage, hasDualEvidence);
 
             string text =
                 "Active session: " + client.DisplayName + " · " + currentSession.DisplayName + Environment.NewLine +
                 GetFitDayReadinessText() + Environment.NewLine +
+                "Next best step: " + nextStep + Environment.NewLine +
                 Environment.NewLine +
                 "Fit-day checklist" + Environment.NewLine +
                 FormatChecklistLine("Before video saved", hasBeforeVideo) + Environment.NewLine +
                 FormatChecklistLine("After video saved", hasAfterVideo) + Environment.NewLine +
-                FormatChecklistLine("Report image saved", hasReportImages) + Environment.NewLine +
-                FormatChecklistLine("Dual evidence saved", hasDualEvidence) + Environment.NewLine +
+                FormatChecklistLine("Before report image saved", hasBeforeImage) + Environment.NewLine +
+                FormatChecklistLine("After report image saved", hasAfterImage) + Environment.NewLine +
+                FormatChecklistLine("Dual/composite evidence saved", hasDualEvidence) + Environment.NewLine +
                 FormatChecklistLine("Ready to preview report", readyForReport) + Environment.NewLine +
                 Environment.NewLine +
                 "Videos" + Environment.NewLine +
@@ -2878,6 +2882,26 @@ namespace CassetteMotionPro.Workspace
                 "Dual: " + FormatSavedEvidenceSummary(dualImageFolder, false);
 
             savedEvidenceReviewStatus.Text = text;
+        }
+
+        private static string GetSavedEvidenceNextStep(bool hasBeforeVideo, bool hasAfterVideo, bool hasBeforeImage, bool hasAfterImage, bool hasDualEvidence)
+        {
+            if (!hasBeforeVideo)
+                return "save the Before video into this session.";
+
+            if (!hasAfterVideo)
+                return "save the After video into this session.";
+
+            if (!hasBeforeImage && !hasAfterImage && !hasDualEvidence)
+                return "save a report image from Kinovea so the report has visual evidence.";
+
+            if (!hasBeforeImage)
+                return "save a Before report image if you want the report to show the starting fit.";
+
+            if (!hasAfterImage)
+                return "save an After report image, or preview the report if the current evidence is enough.";
+
+            return "preview the report, then generate the final client package.";
         }
 
         private static string FormatChecklistLine(string label, bool complete)
