@@ -77,7 +77,7 @@ namespace CassetteMotionPro.Workspace
         private Action nextRecommendedStepActionHandler;
         private Action nextRecommendedFolderActionHandler;
         private string fitCommandCenterMode = "Plan";
-        private const string FitDayHomeTabName = "Fit Day Home";
+        private const string FitDayHomeTabName = "Fit Day";
         private const string KinoveaVideoTabName = "Kinovea Video";
 
         public BikeFitWorkspaceForm(ClientRecord client, Action<string> openVideo, Action<string, string> openVideoPair, Action<string> prepareCaptureFolder, Action<string> openLiveCaptureFolder, Action<string, string> openDualLiveCaptureFolders, Action<string> openBodyAngleGuide)
@@ -211,17 +211,13 @@ namespace CassetteMotionPro.Workspace
             editorTabs.SelectedIndexChanged += delegate { UpdateWorkflowChecklist(); };
             editorTabs.TabPages.Add(BuildOverviewTab());
             editorTabs.TabPages.Add(BuildClientFilesTab());
-            editorTabs.TabPages.Add(BuildFitSummaryTab());
             editorTabs.TabPages.Add(BuildMediaTab());
-            editorTabs.TabPages.Add(BuildReportImagesTab());
-            editorTabs.TabPages.Add(BuildBikeMetricsTab());
-            editorTabs.TabPages.Add(BuildBodyAnglesTab());
-            editorTabs.TabPages.Add(BuildHandoffTab());
-            editorTabs.TabPages.Add(BuildNotesTab());
+            editorTabs.TabPages.Add(BuildMeasurementsWorkspaceTab());
+            editorTabs.TabPages.Add(BuildReportWorkspaceTab());
 
             Panel actions = new Panel();
             actions.Dock = DockStyle.Bottom;
-            actions.Height = 96;
+            actions.Height = 126;
             actions.Padding = new Padding(24, 10, 24, 10);
             actions.BackColor = Color.White;
 
@@ -276,21 +272,21 @@ namespace CassetteMotionPro.Workspace
 
             FlowLayoutPanel actionButtons = new FlowLayoutPanel();
             actionButtons.Dock = DockStyle.Bottom;
-            actionButtons.Height = 42;
-            actionButtons.FlowDirection = FlowDirection.RightToLeft;
-            actionButtons.WrapContents = false;
+            actionButtons.Height = 78;
+            actionButtons.FlowDirection = FlowDirection.LeftToRight;
+            actionButtons.WrapContents = true;
             actionButtons.AutoScroll = true;
             actionButtons.Padding = new Padding(0);
 
-            actionButtons.Controls.Add(close);
+            actionButtons.Controls.Add(chkShowBeforeMeasurementsInReport);
             actionButtons.Controls.Add(save);
-            actionButtons.Controls.Add(report);
+            actionButtons.Controls.Add(close);
+            actionButtons.Controls.Add(reviewSession);
             actionButtons.Controls.Add(previewReport);
+            actionButtons.Controls.Add(report);
             actionButtons.Controls.Add(reportPackage);
             actionButtons.Controls.Add(zipReportPackage);
             actionButtons.Controls.Add(openReports);
-            actionButtons.Controls.Add(reviewSession);
-            actionButtons.Controls.Add(chkShowBeforeMeasurementsInReport);
 
             actions.Controls.Add(actionButtons);
             actions.Controls.Add(saveHint);
@@ -305,12 +301,6 @@ namespace CassetteMotionPro.Workspace
             table.Dock = DockStyle.Top;
             table.AutoSize = true;
 
-            Control flow = BuildFitDayHomePanel();
-            int flowRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 194));
-            table.Controls.Add(flow, 0, flowRow);
-            table.SetColumnSpan(flow, 2);
-
             Control guidedFlow = BuildGuidedFitDayFlowMap();
             int guidedFlowRow = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 176));
@@ -319,7 +309,7 @@ namespace CassetteMotionPro.Workspace
 
             Control commandCenter = BuildFitCommandCenter();
             int commandCenterRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 360));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 330));
             table.Controls.Add(commandCenter, 0, commandCenterRow);
             table.SetColumnSpan(commandCenter, 2);
 
@@ -358,15 +348,33 @@ namespace CassetteMotionPro.Workspace
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
             table.Controls.Add(help, 1, row);
 
-            Control checklist = BuildWorkflowChecklist();
-            int checklistRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 610));
-            table.Controls.Add(checklist, 0, checklistRow);
-            table.SetColumnSpan(checklist, 2);
-
             page.AutoScroll = true;
             page.Controls.Add(table);
             return page;
+        }
+
+        private TabPage BuildMeasurementsWorkspaceTab()
+        {
+            return BuildGroupedWorkspaceTab("Measurements", BuildBikeMetricsTab(), BuildBodyAnglesTab());
+        }
+
+        private TabPage BuildReportWorkspaceTab()
+        {
+            return BuildGroupedWorkspaceTab("Report", BuildFitSummaryTab(), BuildReportImagesTab(), BuildHandoffTab(), BuildNotesTab());
+        }
+
+        private static TabPage BuildGroupedWorkspaceTab(string title, params TabPage[] pages)
+        {
+            TabPage group = NewTab(title);
+            TabControl sections = new TabControl();
+            sections.Dock = DockStyle.Fill;
+            sections.Padding = new Point(16, 7);
+
+            foreach (TabPage page in pages)
+                sections.TabPages.Add(page);
+
+            group.Controls.Add(sections);
+            return group;
         }
 
         private Control BuildFitDayHomePanel()
@@ -2512,15 +2520,32 @@ namespace CassetteMotionPro.Workspace
                 return;
 
             string requestedTab = NormalizeWorkspaceTabName(tabText);
-            foreach (TabPage page in editorTabs.TabPages)
+            if (SelectWorkspaceTab(editorTabs, requestedTab))
+                UpdateSaveHint("Opened " + requestedTab + " from the Fit Day workspace.");
+        }
+
+        private static bool SelectWorkspaceTab(TabControl tabs, string requestedTab)
+        {
+            foreach (TabPage page in tabs.TabPages)
             {
                 if (string.Equals(page.Text, requestedTab, StringComparison.OrdinalIgnoreCase))
                 {
-                    editorTabs.SelectedTab = page;
-                    UpdateSaveHint("Opened " + requestedTab + " from the Fit Day Home.");
-                    return;
+                    tabs.SelectedTab = page;
+                    return true;
+                }
+
+                foreach (Control control in page.Controls)
+                {
+                    TabControl nestedTabs = control as TabControl;
+                    if (nestedTabs != null && SelectWorkspaceTab(nestedTabs, requestedTab))
+                    {
+                        tabs.SelectedTab = page;
+                        return true;
+                    }
                 }
             }
+
+            return false;
         }
 
         private static string NormalizeWorkspaceTabName(string tabText)
