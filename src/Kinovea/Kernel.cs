@@ -66,6 +66,7 @@ namespace Kinovea.Root
         private CaptureFolder lockedAfterCaptureFolder;
         private string lockedSingleCapturePrefix;
         private int clientCaptureFolderLockTicks;
+        private bool startupFitDayPromptShown;
         
         #region Menus
 
@@ -263,9 +264,42 @@ namespace Kinovea.Root
             // If the user accepts they are stored as the new screen descriptors and will
             // get picked up later by auto-launch in screen manager view OnLoad().
             screenManager.RecoverCrash();
-            
+
+            mainWindow.Shown += MainWindow_Shown;
+
             log.Debug("Calling Application.Run().");
             Application.Run(mainWindow);
+        }
+
+        private void MainWindow_Shown(object sender, EventArgs e)
+        {
+            if (startupFitDayPromptShown)
+                return;
+
+            startupFitDayPromptShown = true;
+            mainWindow.BeginInvoke((MethodInvoker)ShowFitDayStartupPrompt);
+        }
+
+        private void ShowFitDayStartupPrompt()
+        {
+            statusLabel.Text = "Start fit day: open Clients > Client Manager, then start a fit session before saving videos or images.";
+
+            DialogResult result = MessageBox.Show(
+                mainWindow,
+                "Start with a client fit session?\n\n" +
+                "This is the normal Cassette Motion Pro path:\n\n" +
+                "1. Create or open the client\n" +
+                "2. Start the fit session\n" +
+                "3. Record/analyze in Kinovea\n" +
+                "4. Save Before / After / Dual evidence\n" +
+                "5. Build the report\n\n" +
+                "Choose Yes to open Client Manager now, or No to stay in Kinovea.",
+                "Start Fit Day",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Information);
+
+            if (result == DialogResult.Yes)
+                mnuClientManager_Click(this, EventArgs.Empty);
         }
         #endregion
         
