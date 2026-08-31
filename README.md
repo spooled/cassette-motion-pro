@@ -5,12 +5,13 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.31.0 Simplified Fit Day Workspace
+## Current milestone: 0.32.0 Guided Report Builder and Preview
 
-- The workspace now has five clear top-level areas: Fit Day, Client Files, Kinovea Video, Measurements, and Report.
-- Bike Metrics and Body Angles are grouped under Measurements; Fit Summary, Report Images, Handoff, and Notes are grouped under Report.
-- Fit Day removes repeated home/checklist panels and keeps one roadmap, one command center, and one next-step guide.
-- Bottom save and report controls wrap onto visible rows on smaller laptop screens.
+- Report now opens on a guided Report Builder dashboard before the detailed report sections.
+- A four-part readiness card shows client/session, Fit Summary, report images, and final Bike Metrics status.
+- One-click section buttons open Fit Summary, Report Images, Measurements, Handoff, and report display options.
+- Review, Preview, Generate, Package, Zip, and Reports-folder actions are together in one visible output area.
+- The active session Reports folder and the difference between Preview, Package, and Zip are shown before output.
 
 - Complete Kinovea source imported under `src/`
 - Application output renamed to `CassetteMotionPro.exe`

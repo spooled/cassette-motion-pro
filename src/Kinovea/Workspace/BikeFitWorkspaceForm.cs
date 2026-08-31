@@ -55,6 +55,8 @@ namespace CassetteMotionPro.Workspace
         private readonly Label fitCommandCenterStatus = new Label();
         private readonly Label activeSaveTargetStatus = new Label();
         private readonly Label savedEvidenceReviewStatus = new Label();
+        private readonly Label reportBuilderStatus = new Label();
+        private readonly Label reportBuilderOutput = new Label();
         private readonly Label captureActionsLabel = new Label();
         private readonly Label analysisActionsLabel = new Label();
         private readonly Button nextRecommendedStepAction = new Button();
@@ -360,7 +362,128 @@ namespace CassetteMotionPro.Workspace
 
         private TabPage BuildReportWorkspaceTab()
         {
-            return BuildGroupedWorkspaceTab("Report", BuildFitSummaryTab(), BuildReportImagesTab(), BuildHandoffTab(), BuildNotesTab());
+            return BuildGroupedWorkspaceTab("Report", BuildReportBuilderTab(), BuildFitSummaryTab(), BuildReportImagesTab(), BuildHandoffTab(), BuildNotesTab());
+        }
+
+        private TabPage BuildReportBuilderTab()
+        {
+            TabPage page = NewTab("Report Builder");
+            TableLayoutPanel layout = new TableLayoutPanel();
+            layout.Dock = DockStyle.Top;
+            layout.AutoSize = true;
+            layout.Padding = new Padding(24, 22, 24, 22);
+            layout.ColumnCount = 1;
+            layout.RowCount = 0;
+
+            Label title = new Label();
+            title.Text = "Build the client report";
+            title.Dock = DockStyle.Fill;
+            title.Font = new Font("Segoe UI", 16F, FontStyle.Bold);
+            title.ForeColor = Color.FromArgb(24, 31, 29);
+            title.TextAlign = ContentAlignment.MiddleLeft;
+            AddReportBuilderRow(layout, title, 46);
+
+            Label intro = new Label();
+            intro.Text = "Finish the report story, choose the evidence, check the final measurements, then preview before creating the client package.";
+            intro.Dock = DockStyle.Fill;
+            intro.ForeColor = Color.FromArgb(74, 87, 81);
+            intro.TextAlign = ContentAlignment.TopLeft;
+            AddReportBuilderRow(layout, intro, 42);
+
+            reportBuilderStatus.Dock = DockStyle.Fill;
+            reportBuilderStatus.BackColor = Color.White;
+            reportBuilderStatus.BorderStyle = BorderStyle.FixedSingle;
+            reportBuilderStatus.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+            reportBuilderStatus.ForeColor = Color.FromArgb(74, 87, 81);
+            reportBuilderStatus.Padding = new Padding(14, 10, 14, 8);
+            reportBuilderStatus.TextAlign = ContentAlignment.TopLeft;
+            AddReportBuilderRow(layout, reportBuilderStatus, 142);
+
+            GroupBox sections = new GroupBox();
+            sections.Text = "Report sections";
+            sections.Dock = DockStyle.Fill;
+            sections.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            sections.ForeColor = Color.FromArgb(37, 48, 43);
+            sections.Padding = new Padding(12, 8, 12, 10);
+
+            FlowLayoutPanel sectionButtons = new FlowLayoutPanel();
+            sectionButtons.Dock = DockStyle.Fill;
+            sectionButtons.FlowDirection = FlowDirection.LeftToRight;
+            sectionButtons.WrapContents = true;
+            sectionButtons.AutoScroll = true;
+            AddReportBuilderButton(sectionButtons, "1. Fit Summary", true, delegate { SelectWorkspaceTab("Fit Summary"); });
+            AddReportBuilderButton(sectionButtons, "2. Report Images", false, delegate { SelectWorkspaceTab("Report Images"); });
+            AddReportBuilderButton(sectionButtons, "3. Measurements", false, delegate { SelectWorkspaceTab("Bike Metrics"); });
+            AddReportBuilderButton(sectionButtons, "4. Handoff", false, delegate { SelectWorkspaceTab("Handoff"); });
+            AddReportBuilderButton(sectionButtons, "Report Options", false, delegate { SelectWorkspaceTab("Report Images"); });
+            sections.Controls.Add(sectionButtons);
+            AddReportBuilderRow(layout, sections, 92);
+
+            GroupBox actions = new GroupBox();
+            actions.Text = "Review and output";
+            actions.Dock = DockStyle.Fill;
+            actions.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            actions.ForeColor = Color.FromArgb(37, 48, 43);
+            actions.Padding = new Padding(12, 8, 12, 10);
+
+            FlowLayoutPanel actionButtons = new FlowLayoutPanel();
+            actionButtons.Dock = DockStyle.Fill;
+            actionButtons.FlowDirection = FlowDirection.LeftToRight;
+            actionButtons.WrapContents = true;
+            actionButtons.AutoScroll = true;
+            AddReportBuilderButton(actionButtons, "Check Readiness", false, delegate { ReviewSession_Click(this, EventArgs.Empty); });
+            AddReportBuilderButton(actionButtons, "Preview Report", true, delegate { PreviewReport_Click(this, EventArgs.Empty); });
+            AddReportBuilderButton(actionButtons, "Generate Report", false, delegate { GenerateReport_Click(this, EventArgs.Empty); });
+            AddReportBuilderButton(actionButtons, "Create Package", false, delegate { ReportPackage_Click(this, EventArgs.Empty); });
+            AddReportBuilderButton(actionButtons, "Create Zip", false, delegate { ZipReportPackage_Click(this, EventArgs.Empty); });
+            AddReportBuilderButton(actionButtons, "Open Reports", false, delegate { OpenReports_Click(this, EventArgs.Empty); });
+            actions.Controls.Add(actionButtons);
+            AddReportBuilderRow(layout, actions, 98);
+
+            reportBuilderOutput.Dock = DockStyle.Fill;
+            reportBuilderOutput.BackColor = Color.FromArgb(247, 255, 229);
+            reportBuilderOutput.BorderStyle = BorderStyle.FixedSingle;
+            reportBuilderOutput.ForeColor = Color.FromArgb(74, 87, 81);
+            reportBuilderOutput.Padding = new Padding(12, 8, 12, 8);
+            reportBuilderOutput.TextAlign = ContentAlignment.MiddleLeft;
+            AddReportBuilderRow(layout, reportBuilderOutput, 66);
+
+            txtFitSummaryMainGoal.TextChanged += delegate { UpdateReportBuilderStatus(); };
+            txtFitSummaryKeyFindings.TextChanged += delegate { UpdateReportBuilderStatus(); };
+            txtFitSummaryChangesMade.TextChanged += delegate { UpdateReportBuilderStatus(); };
+            txtFitSummaryRecommendations.TextChanged += delegate { UpdateReportBuilderStatus(); };
+            txtFitSummaryFollowUp.TextChanged += delegate { UpdateReportBuilderStatus(); };
+            txtHandoffWhatToSend.TextChanged += delegate { UpdateReportBuilderStatus(); };
+            txtHandoffClientMessage.TextChanged += delegate { UpdateReportBuilderStatus(); };
+            txtHandoffHomework.TextChanged += delegate { UpdateReportBuilderStatus(); };
+            txtHandoffNextAppointment.TextChanged += delegate { UpdateReportBuilderStatus(); };
+
+            page.AutoScroll = true;
+            page.Controls.Add(layout);
+            UpdateReportBuilderStatus();
+            return page;
+        }
+
+        private static void AddReportBuilderRow(TableLayoutPanel layout, Control control, int height)
+        {
+            int row = layout.RowCount++;
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, height));
+            control.Margin = new Padding(0, 0, 0, 8);
+            layout.Controls.Add(control, 0, row);
+        }
+
+        private void AddReportBuilderButton(FlowLayoutPanel buttons, string text, bool primary, Action action)
+        {
+            Button button = CreateButton(text, primary);
+            button.Size = new Size(148, 36);
+            button.Margin = new Padding(0, 4, 8, 4);
+            button.Click += delegate
+            {
+                if (action != null)
+                    action();
+                UpdateReportBuilderStatus();
+            };
+            buttons.Controls.Add(button);
         }
 
         private static TabPage BuildGroupedWorkspaceTab(string title, params TabPage[] pages)
@@ -589,7 +712,7 @@ namespace CassetteMotionPro.Workspace
             path.Controls.Add(CreateFitDayFlowCard("2", "Kinovea Video", "Record Before / After clips into this client session.", "Record Live", OpenDualLiveCapture, HasBeforeAfterVideos, GetVideoFlowDetail), 1, 0);
             path.Controls.Add(CreateFitDayFlowCard("3", "Evidence", "Analyze latest clips and save images/videos for the report.", "Analyze", PrepareAndSelectVideoAnalysis, IsVideoFlowStageReady, GetVideoFlowDetail), 2, 0);
             path.Controls.Add(CreateFitDayFlowCard("4", "Metrics", "Enter bike metrics and body angle notes.", "Bike Metrics", delegate { SelectWorkspaceTab("Bike Metrics"); }, IsMeasurementFlowStageReady, GetMeasurementFlowDetail), 3, 0);
-            path.Controls.Add(CreateFitDayFlowCard("5", "Report", "Choose report images and preview the final report.", "Report Images", delegate { SelectWorkspaceTab("Report Images"); }, IsReportFlowStageReady, GetReportFlowDetail), 4, 0);
+            path.Controls.Add(CreateFitDayFlowCard("5", "Report", "Review the story, images, measurements, and client package.", "Report Builder", delegate { SelectWorkspaceTab("Report Builder"); }, IsReportFlowStageReady, GetReportFlowDetail), 4, 0);
 
             group.Controls.Add(path);
             return group;
@@ -2575,6 +2698,64 @@ namespace CassetteMotionPro.Workspace
             UpdateFitDayHomeStatus();
             UpdateGuidedFitDayFlow();
             UpdateNextRecommendedStep();
+            UpdateReportBuilderStatus();
+        }
+
+        private void UpdateReportBuilderStatus()
+        {
+            if (reportBuilderStatus == null || reportBuilderOutput == null)
+                return;
+
+            bool hasSession = HasActiveFitSession();
+            bool hasSummary = HasReportSummaryContent();
+            bool hasImages = HasReportImage();
+            bool hasMetrics = HasCoreBikeMetrics();
+            int ready = 0;
+            if (hasSession) ready++;
+            if (hasSummary) ready++;
+            if (hasImages) ready++;
+            if (hasMetrics) ready++;
+
+            reportBuilderStatus.Text = "REPORT READINESS  " + ready + "/4" + Environment.NewLine +
+                FormatReportBuilderLine("Client and fit session", hasSession) + Environment.NewLine +
+                FormatReportBuilderLine("Fit Summary story", hasSummary) + Environment.NewLine +
+                FormatReportBuilderLine("Before / After / Dual report image", hasImages) + Environment.NewLine +
+                FormatReportBuilderLine("Final Bike Metrics", hasMetrics) + Environment.NewLine +
+                (HasReportHandoffContent() ? "Optional handoff notes are included." : "Optional: add Handoff notes if the client needs instructions.");
+            reportBuilderStatus.ForeColor = ready == 4 ? Color.FromArgb(60, 145, 76) : Color.FromArgb(181, 118, 35);
+
+            if (!hasSession)
+            {
+                reportBuilderOutput.Text = "Open or save a client fit session first. Report previews and packages will then stay inside that session’s Reports folder.";
+                reportBuilderOutput.ForeColor = Color.FromArgb(181, 118, 35);
+                return;
+            }
+
+            reportBuilderOutput.Text = "Output folder: " + GetSessionReportsFolderPath() + Environment.NewLine +
+                "Preview opens the current HTML report. Package collects the report, images, summary, and handoff files; Zip makes it ready to send.";
+            reportBuilderOutput.ForeColor = Color.FromArgb(74, 87, 81);
+        }
+
+        private static string FormatReportBuilderLine(string label, bool ready)
+        {
+            return (ready ? "READY  " : "NEEDS STEP  ") + label;
+        }
+
+        private bool HasReportSummaryContent()
+        {
+            return !string.IsNullOrWhiteSpace(txtFitSummaryMainGoal.Text) ||
+                !string.IsNullOrWhiteSpace(txtFitSummaryKeyFindings.Text) ||
+                !string.IsNullOrWhiteSpace(txtFitSummaryChangesMade.Text) ||
+                !string.IsNullOrWhiteSpace(txtFitSummaryRecommendations.Text) ||
+                !string.IsNullOrWhiteSpace(txtFitSummaryFollowUp.Text);
+        }
+
+        private bool HasReportHandoffContent()
+        {
+            return !string.IsNullOrWhiteSpace(txtHandoffWhatToSend.Text) ||
+                !string.IsNullOrWhiteSpace(txtHandoffClientMessage.Text) ||
+                !string.IsNullOrWhiteSpace(txtHandoffHomework.Text) ||
+                !string.IsNullOrWhiteSpace(txtHandoffNextAppointment.Text);
         }
 
         private void UpdateFitDayHomeStatus()
@@ -3770,7 +3951,8 @@ namespace CassetteMotionPro.Workspace
 
         private void OpenReports_Click(object sender, EventArgs e)
         {
-            OpenClientFolder(client.ReportsPath, "Reports");
+            string folderPath = HasActiveFitSession() ? GetSessionReportsFolderPath() : client.ReportsPath;
+            OpenClientFolder(folderPath, HasActiveFitSession() ? "Active session reports" : "Reports");
         }
 
         private void OpenClientFolder(string folderPath, string folderName)
