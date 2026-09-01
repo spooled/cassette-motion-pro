@@ -5,7 +5,14 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.46.0 Saved Fitting Templates
+## Current milestone: 0.47.0 Client History and Previous-Fit Comparison
+
+- A read-only Client History workspace lists the client’s other saved fit sessions.
+- Fitters can compare the selected previous fit’s final bike and rider measurements
+  against the active fit’s Before and final values.
+- Previous goals, changes, recommendations, follow-up, template, date, and status
+  stay visible beside the measurement comparison.
+- Previous sessions and their folders can be opened directly from the history view.
 
 - Fit Day includes reusable fitting templates for Road, Gravel, Mountain Bike,
   Triathlon, and Hybrid/Comfort workflows.

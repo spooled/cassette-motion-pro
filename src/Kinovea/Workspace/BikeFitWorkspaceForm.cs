@@ -29,6 +29,10 @@ namespace CassetteMotionPro.Workspace
         private readonly Action<string, string> openDualLiveCaptureFolders;
         private readonly Action<string> openBodyAngleGuide;
         private readonly ListView sessionList = new ListView();
+        private readonly ListView historySessionList = new ListView();
+        private readonly ListView historyComparisonList = new ListView();
+        private readonly TextBox historySummary = new TextBox();
+        private readonly Label historyStatus = new Label();
         private readonly TextBox txtTitle = new TextBox();
         private readonly DateTimePicker dtpDate = new DateTimePicker();
         private readonly ComboBox cmbStatus = new ComboBox();
@@ -232,6 +236,7 @@ namespace CassetteMotionPro.Workspace
             editorTabs.SelectedIndexChanged += delegate { UpdateWorkflowChecklist(); };
             editorTabs.TabPages.Add(BuildOverviewTab());
             editorTabs.TabPages.Add(BuildClientFilesTab());
+            editorTabs.TabPages.Add(BuildClientHistoryTab());
             editorTabs.TabPages.Add(BuildMediaTab());
             editorTabs.TabPages.Add(BuildMeasurementsWorkspaceTab());
             editorTabs.TabPages.Add(BuildReportWorkspaceTab());
@@ -1643,6 +1648,253 @@ namespace CassetteMotionPro.Workspace
             table.Controls.Add(detail, 2, row);
             table.Controls.Add(jump, 3, row);
             workflowChecklistItems.Add(new WorkflowChecklistItem(status, isReady));
+        }
+
+        private TabPage BuildClientHistoryTab()
+        {
+            TabPage page = NewTab("Client History");
+            TableLayoutPanel root = new TableLayoutPanel();
+            root.Dock = DockStyle.Fill;
+            root.Padding = new Padding(22, 18, 22, 18);
+            root.ColumnCount = 1;
+            root.RowCount = 3;
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
+            root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
+
+            Label introduction = new Label();
+            introduction.Dock = DockStyle.Fill;
+            introduction.Font = new Font("Segoe UI", 10F);
+            introduction.ForeColor = Color.FromArgb(74, 87, 81);
+            introduction.Text = "Review this client’s saved fits without changing them. Compare a previous fit’s final measurements with the active fit’s Before and After values.";
+
+            SplitContainer split = new SplitContainer();
+            split.Dock = DockStyle.Fill;
+            split.SplitterDistance = 300;
+            split.Panel1.Padding = new Padding(0, 0, 12, 0);
+            split.Panel2.Padding = new Padding(12, 0, 0, 0);
+
+            historySessionList.Dock = DockStyle.Fill;
+            historySessionList.View = View.Details;
+            historySessionList.FullRowSelect = true;
+            historySessionList.HideSelection = false;
+            historySessionList.MultiSelect = false;
+            historySessionList.Columns.Add("Previous fit", 150);
+            historySessionList.Columns.Add("Date", 82);
+            historySessionList.Columns.Add("Status", 78);
+            historySessionList.SelectedIndexChanged += delegate { UpdateClientHistoryComparison(); };
+            split.Panel1.Controls.Add(historySessionList);
+
+            TableLayoutPanel comparison = new TableLayoutPanel();
+            comparison.Dock = DockStyle.Fill;
+            comparison.ColumnCount = 1;
+            comparison.RowCount = 3;
+            comparison.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
+            comparison.RowStyles.Add(new RowStyle(SizeType.Absolute, 150));
+            comparison.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+            historyStatus.Dock = DockStyle.Fill;
+            historyStatus.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            historyStatus.ForeColor = Color.FromArgb(37, 48, 43);
+            historyStatus.TextAlign = ContentAlignment.MiddleLeft;
+
+            historySummary.Dock = DockStyle.Fill;
+            historySummary.Multiline = true;
+            historySummary.ReadOnly = true;
+            historySummary.ScrollBars = ScrollBars.Vertical;
+            historySummary.BackColor = Color.White;
+            historySummary.ForeColor = Color.FromArgb(74, 87, 81);
+
+            historyComparisonList.Dock = DockStyle.Fill;
+            historyComparisonList.View = View.Details;
+            historyComparisonList.FullRowSelect = true;
+            historyComparisonList.GridLines = true;
+            historyComparisonList.Columns.Add("Measurement", 150);
+            historyComparisonList.Columns.Add("Previous final", 100);
+            historyComparisonList.Columns.Add("Current before", 100);
+            historyComparisonList.Columns.Add("Current final", 100);
+            historyComparisonList.Columns.Add("Since previous", 110);
+
+            comparison.Controls.Add(historyStatus, 0, 0);
+            comparison.Controls.Add(historySummary, 0, 1);
+            comparison.Controls.Add(historyComparisonList, 0, 2);
+            split.Panel2.Controls.Add(comparison);
+
+            FlowLayoutPanel actions = new FlowLayoutPanel();
+            actions.Dock = DockStyle.Fill;
+            actions.FlowDirection = FlowDirection.LeftToRight;
+            Button openFit = CreateButton("Open Selected Fit", true);
+            openFit.Size = new Size(150, 34);
+            openFit.Click += delegate { OpenSelectedHistorySession(); };
+            Button openFolder = CreateButton("Open Fit Folder", false);
+            openFolder.Size = new Size(135, 34);
+            openFolder.Click += delegate { OpenSelectedHistoryFolder(); };
+            Button refresh = CreateButton("Refresh History", false);
+            refresh.Size = new Size(135, 34);
+            refresh.Click += delegate { RefreshClientHistory(); };
+            actions.Controls.Add(openFit);
+            actions.Controls.Add(openFolder);
+            actions.Controls.Add(refresh);
+
+            root.Controls.Add(introduction, 0, 0);
+            root.Controls.Add(split, 0, 1);
+            root.Controls.Add(actions, 0, 2);
+            page.Controls.Add(root);
+            return page;
+        }
+
+        private void RefreshClientHistory()
+        {
+            Guid selectedId = Guid.Empty;
+            if (historySessionList.SelectedItems.Count > 0)
+            {
+                FitSessionRecord selected = historySessionList.SelectedItems[0].Tag as FitSessionRecord;
+                if (selected != null)
+                    selectedId = selected.Id;
+            }
+
+            historySessionList.BeginUpdate();
+            historySessionList.Items.Clear();
+            foreach (FitSessionRecord session in repository.LoadAll())
+            {
+                if (currentSession != null && currentSession.Id != Guid.Empty && session.Id == currentSession.Id)
+                    continue;
+                ListViewItem item = new ListViewItem(new[]
+                {
+                    session.DisplayName,
+                    session.SessionDate == DateTime.MinValue ? "" : session.SessionDate.ToString("MMM d, yyyy"),
+                    session.Status ?? string.Empty
+                });
+                item.Tag = session;
+                historySessionList.Items.Add(item);
+            }
+            historySessionList.EndUpdate();
+
+            ListViewItem itemToSelect = null;
+            foreach (ListViewItem item in historySessionList.Items)
+            {
+                FitSessionRecord session = item.Tag as FitSessionRecord;
+                if (session != null && session.Id == selectedId)
+                    itemToSelect = item;
+            }
+            if (itemToSelect == null && historySessionList.Items.Count > 0)
+                itemToSelect = historySessionList.Items[0];
+            if (itemToSelect != null)
+                itemToSelect.Selected = true;
+            else
+                UpdateClientHistoryComparison();
+        }
+
+        private void UpdateClientHistoryComparison()
+        {
+            historyComparisonList.Items.Clear();
+            historySummary.Clear();
+            FitSessionRecord previous = GetSelectedHistorySession();
+            if (previous == null)
+            {
+                historyStatus.Text = "No previous saved fit is available for this client yet.";
+                return;
+            }
+            if (currentSession == null)
+            {
+                historyStatus.Text = "Open or create the current fit to compare it with history.";
+                return;
+            }
+
+            historyStatus.Text = previous.DisplayName + "  →  " + currentSession.DisplayName;
+            historySummary.Text =
+                "Previous fit: " + previous.SessionDate.ToString("MMM d, yyyy") + " · " + (previous.Status ?? "No status") + Environment.NewLine +
+                "Template: " + (string.IsNullOrWhiteSpace(previous.FitTemplateName) ? "Not recorded" : previous.FitTemplateName) + Environment.NewLine +
+                "Main goal: " + HistoryText(previous.FitSummaryMainGoal, previous.Goals) + Environment.NewLine +
+                "Changes made: " + HistoryText(previous.FitSummaryChangesMade, "Not recorded") + Environment.NewLine +
+                "Recommendations: " + HistoryText(previous.FitSummaryRecommendations, "Not recorded") + Environment.NewLine +
+                "Follow-up: " + HistoryText(previous.FitSummaryFollowUp, "Not recorded");
+
+            AddHistoryMetric("Saddle height", previous.SaddleHeightAfter, GetMeasurementText("SaddleHeightBefore"), GetMeasurementText("SaddleHeightAfter"), "mm");
+            AddHistoryMetric("Saddle setback", previous.SaddleSetbackAfter, GetMeasurementText("SaddleSetbackBefore"), GetMeasurementText("SaddleSetbackAfter"), "mm");
+            AddHistoryMetric("Saddle tip to grip", previous.SaddleTipToGripReachAfter, GetMeasurementText("SaddleTipToGripReachBefore"), GetMeasurementText("SaddleTipToGripReachAfter"), "mm");
+            AddHistoryMetric("Handlebar X", previous.HandlebarXAfter, GetMeasurementText("HandlebarXBefore"), GetMeasurementText("HandlebarXAfter"), "mm");
+            AddHistoryMetric("Handlebar Y", previous.HandlebarYAfter, GetMeasurementText("HandlebarYBefore"), GetMeasurementText("HandlebarYAfter"), "mm");
+            AddHistoryMetric("Knee angle", previous.KneeAngleAfter, GetMeasurementText("KneeAngleBefore"), GetMeasurementText("KneeAngleAfter"), "°");
+            AddHistoryMetric("Hip angle", previous.HipAngleAfter, GetMeasurementText("HipAngleBefore"), GetMeasurementText("HipAngleAfter"), "°");
+            AddHistoryMetric("Ankle angle", previous.AnkleAngleAfter, GetMeasurementText("AnkleAngleBefore"), GetMeasurementText("AnkleAngleAfter"), "°");
+            AddHistoryMetric("Body reach", previous.TorsoAngleAfter, GetMeasurementText("TorsoAngleBefore"), GetMeasurementText("TorsoAngleAfter"), "°");
+            AddHistoryMetric("Back angle", previous.ShoulderAngleAfter, GetMeasurementText("ShoulderAngleBefore"), GetMeasurementText("ShoulderAngleAfter"), "°");
+        }
+
+        private void AddHistoryMetric(string label, string previousFinal, string currentBefore, string currentFinal, string unit)
+        {
+            string currentReference = string.IsNullOrWhiteSpace(currentFinal) ? currentBefore : currentFinal;
+            string difference = "—";
+            double previousNumber;
+            double currentNumber;
+            if (TryParseMeasurementNumber(previousFinal, out previousNumber) && TryParseMeasurementNumber(currentReference, out currentNumber))
+            {
+                double change = currentNumber - previousNumber;
+                difference = (change > 0 ? "+" : "") + change.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " " + unit;
+            }
+            historyComparisonList.Items.Add(new ListViewItem(new[]
+            {
+                label,
+                HistoryValue(previousFinal),
+                HistoryValue(currentBefore),
+                HistoryValue(currentFinal),
+                difference
+            }));
+        }
+
+        private static string HistoryValue(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? "—" : value.Trim();
+        }
+
+        private static string HistoryText(string preferred, string fallback)
+        {
+            return string.IsNullOrWhiteSpace(preferred) ? (string.IsNullOrWhiteSpace(fallback) ? "Not recorded" : fallback.Trim()) : preferred.Trim();
+        }
+
+        private FitSessionRecord GetSelectedHistorySession()
+        {
+            return historySessionList.SelectedItems.Count == 0 ? null : historySessionList.SelectedItems[0].Tag as FitSessionRecord;
+        }
+
+        private void OpenSelectedHistorySession()
+        {
+            FitSessionRecord selected = GetSelectedHistorySession();
+            if (selected == null)
+                return;
+            if (currentSession != null && currentSession.Id == Guid.Empty)
+            {
+                DialogResult result = MessageBox.Show(this, "The current fit has not been saved yet. Open the selected previous fit and discard this unsaved draft?", "Open Previous Fit", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                if (result != DialogResult.Yes)
+                    return;
+            }
+            else if (currentSession != null)
+            {
+                SaveCurrentSession();
+            }
+
+            foreach (ListViewItem item in sessionList.Items)
+            {
+                FitSessionRecord session = item.Tag as FitSessionRecord;
+                if (session != null && session.Id == selected.Id)
+                {
+                    item.Selected = true;
+                    item.EnsureVisible();
+                    SelectWorkspaceTab("Client History");
+                    return;
+                }
+            }
+            RefreshSessions(selected.Id);
+            SelectWorkspaceTab("Client History");
+        }
+
+        private void OpenSelectedHistoryFolder()
+        {
+            FitSessionRecord selected = GetSelectedHistorySession();
+            if (selected == null)
+                return;
+            OpenClientFolder(selected.FolderPath, "Previous fit");
         }
 
         private TabPage BuildClientFilesTab()
@@ -4446,6 +4698,7 @@ namespace CassetteMotionPro.Workspace
             SetMeasurement("ShoulderAngleAfter", session.ShoulderAngleAfter);
 
             RefreshFitTemplates(session.FitTemplateName);
+            RefreshClientHistory();
             UpdateActiveSessionStatus();
             UpdateWorkflowChecklist();
             RefreshAnalysisCapturesStatus();
