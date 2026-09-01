@@ -21,6 +21,7 @@ namespace CassetteMotionPro.Workspace
     {
         private readonly ClientRecord client;
         private readonly FitSessionRepository repository;
+        private readonly FitSessionTemplateRepository templateRepository = new FitSessionTemplateRepository();
         private readonly Action<string> openVideo;
         private readonly Action<string, string> openVideoPair;
         private readonly Action<string> prepareCaptureFolder;
@@ -31,6 +32,8 @@ namespace CassetteMotionPro.Workspace
         private readonly TextBox txtTitle = new TextBox();
         private readonly DateTimePicker dtpDate = new DateTimePicker();
         private readonly ComboBox cmbStatus = new ComboBox();
+        private readonly ComboBox cmbFitTemplate = new ComboBox();
+        private readonly Label fitTemplatePreview = new Label();
         private readonly TextBox txtGoals = new TextBox();
         private readonly TextBox txtNotes = new TextBox();
         private readonly TextBox txtFitSummaryMainGoal = new TextBox();
@@ -337,6 +340,12 @@ namespace CassetteMotionPro.Workspace
             table.Controls.Add(nextStep, 0, nextStepRow);
             table.SetColumnSpan(nextStep, 2);
 
+            Control templates = BuildFitTemplatePanel();
+            int templateRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 226));
+            table.Controls.Add(templates, 0, templateRow);
+            table.SetColumnSpan(templates, 2);
+
             txtTitle.TextChanged += delegate { UpdateWorkflowChecklist(); };
             AddEditorRow(table, "Session title", txtTitle, 38);
 
@@ -369,6 +378,191 @@ namespace CassetteMotionPro.Workspace
             page.AutoScroll = true;
             page.Controls.Add(table);
             return page;
+        }
+
+        private Control BuildFitTemplatePanel()
+        {
+            GroupBox group = new GroupBox();
+            group.Text = "Saved fitting template";
+            group.Dock = DockStyle.Fill;
+            group.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            group.ForeColor = Color.FromArgb(37, 48, 43);
+            group.Padding = new Padding(12, 10, 12, 10);
+
+            TableLayoutPanel layout = new TableLayoutPanel();
+            layout.Dock = DockStyle.Fill;
+            layout.ColumnCount = 1;
+            layout.RowCount = 3;
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+
+            cmbFitTemplate.Dock = DockStyle.Fill;
+            cmbFitTemplate.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbFitTemplate.SelectedIndexChanged += delegate { UpdateFitTemplatePreview(); };
+
+            fitTemplatePreview.Dock = DockStyle.Fill;
+            fitTemplatePreview.BackColor = Color.FromArgb(248, 252, 238);
+            fitTemplatePreview.ForeColor = Color.FromArgb(74, 87, 81);
+            fitTemplatePreview.Padding = new Padding(10, 8, 10, 8);
+            fitTemplatePreview.Font = new Font("Segoe UI", 9F);
+
+            FlowLayoutPanel actions = new FlowLayoutPanel();
+            actions.Dock = DockStyle.Fill;
+            actions.FlowDirection = FlowDirection.LeftToRight;
+            actions.WrapContents = true;
+            Button apply = CreateButton("Apply Template", true);
+            apply.Size = new Size(135, 34);
+            apply.Click += delegate { ApplySelectedFitTemplate(); };
+            Button saveCustom = CreateButton("Save Current as Custom", false);
+            saveCustom.Size = new Size(190, 34);
+            saveCustom.Click += delegate { SaveCurrentFitTemplate(); };
+            Button delete = CreateButton("Delete Custom", false);
+            delete.Size = new Size(130, 34);
+            delete.Click += delegate { DeleteSelectedFitTemplate(); };
+            Button refresh = CreateButton("Refresh", false);
+            refresh.Size = new Size(90, 34);
+            refresh.Click += delegate { RefreshFitTemplates(null); };
+            actions.Controls.Add(apply);
+            actions.Controls.Add(saveCustom);
+            actions.Controls.Add(delete);
+            actions.Controls.Add(refresh);
+
+            layout.Controls.Add(cmbFitTemplate, 0, 0);
+            layout.Controls.Add(fitTemplatePreview, 0, 1);
+            layout.Controls.Add(actions, 0, 2);
+            group.Controls.Add(layout);
+            RefreshFitTemplates(null);
+            return group;
+        }
+
+        private void RefreshFitTemplates(string selectName)
+        {
+            string name = selectName;
+            FitSessionTemplate selected = cmbFitTemplate.SelectedItem as FitSessionTemplate;
+            if (string.IsNullOrWhiteSpace(name) && selected != null)
+                name = selected.Name;
+
+            cmbFitTemplate.BeginUpdate();
+            cmbFitTemplate.Items.Clear();
+            foreach (FitSessionTemplate template in templateRepository.LoadAll())
+                cmbFitTemplate.Items.Add(template);
+            cmbFitTemplate.EndUpdate();
+
+            int selectedIndex = -1;
+            for (int index = 0; index < cmbFitTemplate.Items.Count; index++)
+            {
+                FitSessionTemplate template = cmbFitTemplate.Items[index] as FitSessionTemplate;
+                if (template != null && string.Equals(template.Name, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    selectedIndex = index;
+                    break;
+                }
+            }
+            cmbFitTemplate.SelectedIndex = selectedIndex >= 0 ? selectedIndex : (cmbFitTemplate.Items.Count > 0 ? 0 : -1);
+            UpdateFitTemplatePreview();
+        }
+
+        private void UpdateFitTemplatePreview()
+        {
+            FitSessionTemplate template = cmbFitTemplate.SelectedItem as FitSessionTemplate;
+            if (template == null)
+            {
+                fitTemplatePreview.Text = "No fitting template selected.";
+                return;
+            }
+
+            string active = currentSession != null && string.Equals(currentSession.FitTemplateName, template.Name, StringComparison.OrdinalIgnoreCase) ? "ACTIVE TEMPLATE\n" : string.Empty;
+            fitTemplatePreview.Text = active + template.BikeType + " · " + (template.IsBuiltIn ? "Built-in" : "Custom") + Environment.NewLine +
+                "Fit focus: " + template.MeasurementFocus + Environment.NewLine +
+                "Client questions: " + template.GoalsPrompt;
+        }
+
+        private void ApplySelectedFitTemplate()
+        {
+            if (!HasActiveFitSession())
+            {
+                MessageBox.Show(this, "Open or create a fit session first, then apply the template.", "Fit Templates", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            FitSessionTemplate template = cmbFitTemplate.SelectedItem as FitSessionTemplate;
+            if (template == null)
+                return;
+
+            DialogResult choice = MessageBox.Show(this,
+                "Apply \"" + template.Name + "\"?\n\nYes: replace the current Fit Summary draft fields.\nNo: fill only empty Fit Summary fields.\nCancel: make no changes.\n\nVideos, images, and measurements are never changed.",
+                "Apply Fit Template", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+            if (choice == DialogResult.Cancel)
+                return;
+
+            bool replace = choice == DialogResult.Yes;
+            ApplyTemplateText(txtFitSummaryMainGoal, template.MainGoalPrompt, replace);
+            ApplyTemplateText(txtFitSummaryRecommendations, template.RecommendationPrompt, replace);
+            ApplyTemplateText(txtFitSummaryFollowUp, template.FollowUpPrompt, replace);
+            currentSession.FitTemplateName = template.Name;
+            currentSession.FitTemplateBikeType = template.BikeType;
+            if (string.Equals(Convert.ToString(cmbStatus.SelectedItem), "Assessment", StringComparison.OrdinalIgnoreCase))
+                cmbStatus.SelectedItem = "In progress";
+            SaveCurrentSession();
+            UpdateFitTemplatePreview();
+            UpdateWorkflowChecklist();
+            UpdateSaveHint(template.Name + " template applied. Review and personalize the Fit Summary draft before reporting.");
+        }
+
+        private static void ApplyTemplateText(TextBox destination, string value, bool replace)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return;
+            if (replace || string.IsNullOrWhiteSpace(destination.Text))
+                destination.Text = value;
+        }
+
+        private void SaveCurrentFitTemplate()
+        {
+            if (!HasActiveFitSession())
+            {
+                MessageBox.Show(this, "Open or create a fit session first.", "Fit Templates", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            string name = Microsoft.VisualBasic.Interaction.InputBox(
+                "Name this reusable template. Before saving, remove client names or private details from the Fit Summary fields.",
+                "Save Custom Fit Template", "My Fit Template").Trim();
+            if (string.IsNullOrWhiteSpace(name))
+                return;
+
+            FitSessionTemplate selected = cmbFitTemplate.SelectedItem as FitSessionTemplate;
+            FitSessionTemplate template = new FitSessionTemplate();
+            template.Name = name;
+            template.BikeType = selected != null ? selected.BikeType : "Custom";
+            template.MeasurementFocus = selected != null ? selected.MeasurementFocus : "Use the measurements and evidence appropriate to this fitting workflow.";
+            template.GoalsPrompt = selected != null ? selected.GoalsPrompt : "Clarify the rider’s goals, comfort, performance needs, and riding context.";
+            template.MainGoalPrompt = txtFitSummaryMainGoal.Text.Trim();
+            template.RecommendationPrompt = txtFitSummaryRecommendations.Text.Trim();
+            template.FollowUpPrompt = txtFitSummaryFollowUp.Text.Trim();
+            templateRepository.Save(template);
+            RefreshFitTemplates(name);
+            UpdateSaveHint("Custom fit template saved for use with any client: " + name + ".");
+        }
+
+        private void DeleteSelectedFitTemplate()
+        {
+            FitSessionTemplate template = cmbFitTemplate.SelectedItem as FitSessionTemplate;
+            if (template == null)
+                return;
+            if (template.IsBuiltIn)
+            {
+                MessageBox.Show(this, "Built-in templates cannot be deleted. You can save a customized copy instead.", "Fit Templates", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            DialogResult result = MessageBox.Show(this, "Delete the custom template \"" + template.Name + "\"?", "Delete Fit Template", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            if (result != DialogResult.Yes)
+                return;
+            templateRepository.Delete(template);
+            RefreshFitTemplates(null);
+            UpdateSaveHint("Custom fit template deleted.");
         }
 
         private TabPage BuildMeasurementsWorkspaceTab()
@@ -4251,6 +4445,7 @@ namespace CassetteMotionPro.Workspace
             SetMeasurement("ShoulderAngleBefore", session.ShoulderAngleBefore);
             SetMeasurement("ShoulderAngleAfter", session.ShoulderAngleAfter);
 
+            RefreshFitTemplates(session.FitTemplateName);
             UpdateActiveSessionStatus();
             UpdateWorkflowChecklist();
             RefreshAnalysisCapturesStatus();

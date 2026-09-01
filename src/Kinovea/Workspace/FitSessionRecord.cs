@@ -18,6 +18,8 @@ namespace CassetteMotionPro.Workspace
         public string Title { get; set; }
         public DateTime SessionDate { get; set; }
         public string Status { get; set; }
+        public string FitTemplateName { get; set; }
+        public string FitTemplateBikeType { get; set; }
         public string Goals { get; set; }
         public string Notes { get; set; }
         public string FitSummaryMainGoal { get; set; }
