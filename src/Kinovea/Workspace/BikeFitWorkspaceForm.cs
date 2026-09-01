@@ -367,7 +367,99 @@ namespace CassetteMotionPro.Workspace
 
         private TabPage BuildMeasurementsWorkspaceTab()
         {
-            return BuildGroupedWorkspaceTab("Measurements", BuildBikeMetricsTab(), BuildBodyAnglesTab());
+            return BuildGroupedWorkspaceTab("Measurements", BuildGuidedMeasurementsTab(), BuildBikeMetricsTab(), BuildBodyAnglesTab());
+        }
+
+        private TabPage BuildGuidedMeasurementsTab()
+        {
+            TabPage page = NewTab("Guided Measurements");
+            TableLayoutPanel layout = new TableLayoutPanel();
+            layout.Dock = DockStyle.Top;
+            layout.AutoSize = true;
+            layout.Padding = new Padding(24, 22, 24, 22);
+            layout.ColumnCount = 1;
+            layout.RowCount = 0;
+
+            Label eyebrow = new Label();
+            eyebrow.Text = "SEMI-AUTOMATIC MEASUREMENT WORKFLOW";
+            eyebrow.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            eyebrow.ForeColor = Color.FromArgb(85, 122, 18);
+            eyebrow.Dock = DockStyle.Fill;
+            eyebrow.Height = 28;
+            layout.Controls.Add(eyebrow, 0, layout.RowCount++);
+
+            Label title = new Label();
+            title.Text = "Measure the bike with a guided image";
+            title.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
+            title.ForeColor = Color.FromArgb(24, 31, 29);
+            title.Dock = DockStyle.Fill;
+            title.Height = 52;
+            layout.Controls.Add(title, 0, layout.RowCount++);
+
+            Label intro = new Label();
+            intro.Text = "Choose a clear side-view image, confirm camera setup, calibrate one known distance, then click the requested bike landmarks. Cassette Motion Pro calculates the measurements and saves them to Before or After for review.";
+            intro.Font = new Font("Segoe UI", 10.5F);
+            intro.ForeColor = Color.FromArgb(74, 87, 81);
+            intro.Dock = DockStyle.Fill;
+            intro.Height = 66;
+            layout.Controls.Add(intro, 0, layout.RowCount++);
+
+            FlowLayoutPanel imageActions = new FlowLayoutPanel();
+            imageActions.Dock = DockStyle.Fill;
+            imageActions.FlowDirection = FlowDirection.LeftToRight;
+            imageActions.WrapContents = true;
+            imageActions.Padding = new Padding(0, 8, 0, 4);
+
+            Button useBefore = CreateButton("1. Use Before Image", false);
+            useBefore.Size = new Size(170, 38);
+            useBefore.Click += delegate { UseMeasurementReferenceImage("BeforeReportImagePath", "Before image"); };
+            Button useAfter = CreateButton("Use After Image", false);
+            useAfter.Size = new Size(155, 38);
+            useAfter.Click += delegate { UseMeasurementReferenceImage("AfterReportImagePath", "After image"); };
+            Button useDual = CreateButton("Use Side-by-side", false);
+            useDual.Size = new Size(155, 38);
+            useDual.Click += delegate { UseMeasurementReferenceImage("SideBySideReportImagePath", "Side-by-side image"); };
+            Button browse = CreateButton("Browse Image…", false);
+            browse.Size = new Size(145, 38);
+            browse.Click += delegate { BrowseReportImage("MeasurementReferenceImagePath"); };
+            imageActions.Controls.Add(useBefore);
+            imageActions.Controls.Add(useAfter);
+            imageActions.Controls.Add(useDual);
+            imageActions.Controls.Add(browse);
+            layout.Controls.Add(imageActions, 0, layout.RowCount++);
+
+            FlowLayoutPanel workflowActions = new FlowLayoutPanel();
+            workflowActions.Dock = DockStyle.Fill;
+            workflowActions.FlowDirection = FlowDirection.LeftToRight;
+            workflowActions.WrapContents = true;
+            workflowActions.Padding = new Padding(0, 8, 0, 8);
+
+            Button start = CreateButton("2. Start Guided Measurements", true);
+            start.Size = new Size(235, 42);
+            start.Click += delegate { ShowGuidedBikeMetricCapture(); };
+            Button review = CreateButton("3. Review Measurements", false);
+            review.Size = new Size(205, 42);
+            review.Click += ReviewMetrics_Click;
+            Button edit = CreateButton("Open Bike Metrics", false);
+            edit.Size = new Size(175, 42);
+            edit.Click += delegate { SelectWorkspaceTab("Bike Metrics"); };
+            workflowActions.Controls.Add(start);
+            workflowActions.Controls.Add(review);
+            workflowActions.Controls.Add(edit);
+            layout.Controls.Add(workflowActions, 0, layout.RowCount++);
+
+            Label note = new Label();
+            note.Text = "The guide assists with point order and calculations; you remain in control of point placement and can drag points to fine-tune them. All original Video Studio drawing and measurement tools remain available.";
+            note.Dock = DockStyle.Fill;
+            note.Height = 64;
+            note.ForeColor = Color.FromArgb(92, 104, 98);
+            note.BackColor = Color.FromArgb(248, 252, 238);
+            note.Padding = new Padding(12, 12, 12, 8);
+            layout.Controls.Add(note, 0, layout.RowCount++);
+
+            page.AutoScroll = true;
+            page.Controls.Add(layout);
+            return page;
         }
 
         private TabPage BuildReportWorkspaceTab()

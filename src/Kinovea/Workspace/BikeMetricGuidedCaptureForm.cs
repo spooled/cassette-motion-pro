@@ -55,6 +55,8 @@ namespace CassetteMotionPro.Workspace
         private Label scaleLabel;
         private Label referenceLabel;
         private Label resultsLabel;
+        private Label progressLabel;
+        private Button primaryAction;
         private Button levelReference;
         private Button undoLast;
         private Button recalculate;
@@ -99,7 +101,7 @@ namespace CassetteMotionPro.Workspace
             this.imagePath = imagePath;
             CameraSetupStatus = "Not confirmed";
 
-            Text = "Guided Bike Metric Capture";
+            Text = "Cassette Motion Pro - Guided Measurements";
             Font = new Font("Segoe UI", 9F);
             BackColor = Color.FromArgb(240, 243, 241);
             ForeColor = Color.FromArgb(24, 31, 29);
@@ -186,6 +188,15 @@ namespace CassetteMotionPro.Workspace
             guide.Height = 160;
             guide.ForeColor = Color.FromArgb(74, 87, 81);
 
+            progressLabel = new Label();
+            progressLabel.Text = "STEP 1 OF 4 · Confirm camera setup";
+            progressLabel.Dock = DockStyle.Top;
+            progressLabel.Height = 36;
+            progressLabel.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            progressLabel.ForeColor = Color.White;
+            progressLabel.BackColor = Color.FromArgb(60, 145, 76);
+            progressLabel.Padding = new Padding(10, 8, 10, 6);
+
             status = new Label();
             status.Text = "Start with Calibrate Scale.";
             status.Dock = DockStyle.Top;
@@ -264,6 +275,7 @@ namespace CassetteMotionPro.Workspace
             Button calibrate = CreateButton("2. Calibrate Scale", false);
             levelReference = CreateButton("3. Level Reference", false);
             Button capture = CreateButton("4. Start Guided Capture", false);
+            primaryAction = CreateButton("Continue: Camera Setup", true);
             undoLast = CreateButton("Undo Last Point", false);
             Button clear = CreateButton("Clear Points", false);
             recalculate = CreateButton("Recalculate Values", false);
@@ -271,6 +283,7 @@ namespace CassetteMotionPro.Workspace
             saveBefore = CreateButton("Save to Before", false);
             saveAfter = CreateButton("Save to After", true);
             cameraSetup.Dock = DockStyle.Top;
+            primaryAction.Dock = DockStyle.Top;
             calibrate.Dock = DockStyle.Top;
             levelReference.Dock = DockStyle.Top;
             capture.Dock = DockStyle.Top;
@@ -281,6 +294,7 @@ namespace CassetteMotionPro.Workspace
             saveBefore.Dock = DockStyle.Top;
             saveAfter.Dock = DockStyle.Top;
             cameraSetup.Height = 34;
+            primaryAction.Height = 42;
             calibrate.Height = 34;
             levelReference.Height = 34;
             capture.Height = 34;
@@ -291,6 +305,7 @@ namespace CassetteMotionPro.Workspace
             saveBefore.Height = 34;
             saveAfter.Height = 34;
             cameraSetup.Margin = new Padding(0, 6, 0, 0);
+            primaryAction.Margin = new Padding(0, 8, 0, 4);
             calibrate.Margin = new Padding(0, 6, 0, 0);
             levelReference.Margin = new Padding(0, 6, 0, 0);
             capture.Margin = new Padding(0, 6, 0, 0);
@@ -301,6 +316,7 @@ namespace CassetteMotionPro.Workspace
             saveBefore.Margin = new Padding(0, 6, 0, 0);
             saveAfter.Margin = new Padding(0, 6, 0, 0);
             cameraSetup.Click += CameraSetup_Click;
+            primaryAction.Click += PrimaryAction_Click;
             calibrate.Click += Calibrate_Click;
             levelReference.Click += LevelReference_Click;
             capture.Click += Capture_Click;
@@ -332,6 +348,7 @@ namespace CassetteMotionPro.Workspace
             sideScroll.Controls.Add(levelReference);
             sideScroll.Controls.Add(calibrate);
             sideScroll.Controls.Add(cameraSetup);
+            sideScroll.Controls.Add(primaryAction);
             sideScroll.Controls.Add(advancedLandmarks);
             sideScroll.Controls.Add(zoomPanel);
             sideScroll.Controls.Add(resultsLabel);
@@ -341,6 +358,7 @@ namespace CassetteMotionPro.Workspace
             sideScroll.Controls.Add(currentLandmarkLabel);
             sideScroll.Controls.Add(status);
             sideScroll.Controls.Add(guide);
+            sideScroll.Controls.Add(progressLabel);
             sideScroll.Controls.Add(title);
             sideScroll.Controls.Add(eyebrow);
 
@@ -350,6 +368,61 @@ namespace CassetteMotionPro.Workspace
             root.Controls.Add(picture, 0, 0);
             root.Controls.Add(side, 1, 0);
             Controls.Add(root);
+            UpdateWizardProgress();
+        }
+
+        private void PrimaryAction_Click(object sender, EventArgs e)
+        {
+            if (!string.Equals(CameraSetupStatus, "Confirmed", StringComparison.OrdinalIgnoreCase))
+            {
+                CameraSetup_Click(sender, e);
+                return;
+            }
+
+            if (millimetersPerPixel <= 0)
+            {
+                Calibrate_Click(sender, e);
+                return;
+            }
+
+            if (landmarkPoints.Count < ActiveLandmarkNames.Length)
+            {
+                if (mode != ClickMode.Landmarks)
+                    Capture_Click(sender, e);
+                return;
+            }
+
+            Recalculate_Click(sender, e);
+        }
+
+        private void UpdateWizardProgress()
+        {
+            if (progressLabel == null || primaryAction == null)
+                return;
+
+            if (!string.Equals(CameraSetupStatus, "Confirmed", StringComparison.OrdinalIgnoreCase))
+            {
+                progressLabel.Text = "STEP 1 OF 4 · Confirm camera setup";
+                primaryAction.Text = "Continue: Camera Setup";
+                return;
+            }
+
+            if (millimetersPerPixel <= 0)
+            {
+                progressLabel.Text = "STEP 2 OF 4 · Calibrate one known distance";
+                primaryAction.Text = "Continue: Calibrate Scale";
+                return;
+            }
+
+            if (landmarkPoints.Count < ActiveLandmarkNames.Length)
+            {
+                progressLabel.Text = "STEP 3 OF 4 · Place landmarks (" + landmarkPoints.Count.ToString(CultureInfo.InvariantCulture) + "/" + ActiveLandmarkNames.Length.ToString(CultureInfo.InvariantCulture) + ")";
+                primaryAction.Text = mode == ClickMode.Landmarks ? "Follow the highlighted point" : "Continue: Start Landmarks";
+                return;
+            }
+
+            progressLabel.Text = "STEP 4 OF 4 · Review and save Before or After";
+            primaryAction.Text = "Recalculate Measurements";
         }
 
         private void CameraSetup_Click(object sender, EventArgs e)
@@ -384,6 +457,7 @@ namespace CassetteMotionPro.Workspace
             }
 
             picture.Invalidate();
+            UpdateWizardProgress();
         }
 
         private void Calibrate_Click(object sender, EventArgs e)
@@ -405,6 +479,7 @@ namespace CassetteMotionPro.Workspace
             currentLandmarkLabel.Text = "Current point: calibration point 1";
             nextPointHintLabel.Text = "Click point 1 of 2 on a known distance, like crank length or wheelbase.";
             picture.Invalidate();
+            UpdateWizardProgress();
         }
 
         private void LevelReference_Click(object sender, EventArgs e)
@@ -470,6 +545,7 @@ namespace CassetteMotionPro.Workspace
                 "Advanced adds pedal spindle, handlebar center, front axle, and rear axle." :
                 "Basic captures the four core contact points.";
             picture.Invalidate();
+            UpdateWizardProgress();
         }
 
         private void Clear_Click(object sender, EventArgs e)
@@ -488,6 +564,7 @@ namespace CassetteMotionPro.Workspace
             currentLandmarkLabel.Text = "Current point: --";
             nextPointHintLabel.Text = millimetersPerPixel > 0 ? "Scale is still set. Start Guided Capture when ready." : "Tip: calibrate scale first, then set level reference if the camera is tilted.";
             picture.Invalidate();
+            UpdateWizardProgress();
         }
 
         private void UndoLast_Click(object sender, EventArgs e)
@@ -532,6 +609,7 @@ namespace CassetteMotionPro.Workspace
                 nextPointHintLabel.Text = calibrationPoints.Count == 0 ? "Click point 1 of 2 on a known distance." : "Click point 2 of 2 on that same known distance.";
                 undoLast.Enabled = calibrationPoints.Count > 0;
                 picture.Invalidate();
+                UpdateWizardProgress();
             }
         }
 
@@ -631,6 +709,7 @@ namespace CassetteMotionPro.Workspace
                 undoLast.Enabled = false;
                 mode = ClickMode.None;
                 picture.Invalidate();
+                UpdateWizardProgress();
             }
         }
 
@@ -676,6 +755,7 @@ namespace CassetteMotionPro.Workspace
                 }
 
                 picture.Invalidate();
+                UpdateWizardProgress();
             }
         }
 
@@ -688,6 +768,7 @@ namespace CassetteMotionPro.Workspace
                 status.Text = "Click landmark " + (landmarkPoints.Count + 1).ToString(CultureInfo.InvariantCulture) + " of " + ActiveLandmarkNames.Length.ToString(CultureInfo.InvariantCulture) + ": " + ActiveLandmarkNames[landmarkPoints.Count] + ".";
                 UpdateCurrentLandmarkInstruction();
                 picture.Invalidate();
+                UpdateWizardProgress();
                 return;
             }
 
@@ -701,6 +782,7 @@ namespace CassetteMotionPro.Workspace
             currentLandmarkLabel.Text = "Current point: complete";
             nextPointHintLabel.Text = "Drag any orange point to fine-tune. Values update before saving.";
             picture.Invalidate();
+            UpdateWizardProgress();
         }
 
         private void CalculateMetrics()
