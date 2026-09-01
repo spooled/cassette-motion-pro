@@ -851,7 +851,7 @@ namespace CassetteMotionPro.Workspace
                 return;
 
             DialogResult preview = MessageBox.Show(this,
-                "Save these guided measurements to " + side + "?\n\n" + BuildMetricsPreview(),
+                "Save these guided measurements to " + side + "?\n\n" + BuildMetricsPreview() + "\n\n" + BuildQualitySummary() + "\n\nQuality warnings are advisory and do not block saving.",
                 "Confirm Guided Capture",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
@@ -866,6 +866,33 @@ namespace CassetteMotionPro.Workspace
             CameraSetupStatus = GetCalculatedValue("CameraSetup");
             DialogResult = DialogResult.OK;
             Close();
+        }
+
+        private string BuildQualitySummary()
+        {
+            List<string> warnings = new List<string>();
+            if (!string.Equals(CameraSetupStatus, "Confirmed", StringComparison.OrdinalIgnoreCase))
+                warnings.Add("Camera setup checklist was not confirmed");
+            if (levelReferencePoints.Count != 2)
+                warnings.Add("No level reference is set; confirm the image is truly level");
+            AddBikeMetricQualityWarning(warnings, "Saddle height", "SaddleHeight", 500, 900);
+            AddBikeMetricQualityWarning(warnings, "Saddle setback", "SaddleSetback", -120, 60);
+            AddBikeMetricQualityWarning(warnings, "Saddle tip to grip", "SaddleTipToGripReach", 350, 750);
+            AddBikeMetricQualityWarning(warnings, "Handlebar X", "HandlebarX", 300, 700);
+            AddBikeMetricQualityWarning(warnings, "Handlebar Y", "HandlebarY", -180, 180);
+            return warnings.Count == 0 ? "QUALITY CHECK: PASS" : "QUALITY CHECK: REVIEW\n• " + string.Join("\n• ", warnings.ToArray());
+        }
+
+        private void AddBikeMetricQualityWarning(List<string> warnings, string label, string key, double minimum, double maximum)
+        {
+            double value;
+            if (!TryParseMillimeters(GetCalculatedValue(key), out value))
+            {
+                warnings.Add(label + " could not be calculated");
+                return;
+            }
+            if (value < minimum || value > maximum)
+                warnings.Add(label + " is outside the broad review range");
         }
 
         private void UpdateCurrentLandmarkInstruction()

@@ -1811,8 +1811,8 @@ namespace CassetteMotionPro.Workspace
             reviewActions.FlowDirection = FlowDirection.LeftToRight;
             reviewActions.Padding = new Padding(0, 0, 0, 8);
 
-            Button reviewMetrics = CreateButton("Review Metrics", true);
-            reviewMetrics.Size = new Size(140, 34);
+            Button reviewMetrics = CreateButton("Review Measurement Quality", true);
+            reviewMetrics.Size = new Size(210, 34);
             reviewMetrics.Click += ReviewMetrics_Click;
             reviewActions.Controls.Add(reviewMetrics);
 
@@ -2355,10 +2355,14 @@ namespace CassetteMotionPro.Workspace
             Button measureAfter = CreateButton("Measure After Video", true);
             measureAfter.Size = new Size(170, 38);
             measureAfter.Click += delegate { StartBodyAngleGuide("AfterVideoPath"); };
+            Button reviewQuality = CreateButton("Review Measurement Quality", false);
+            reviewQuality.Size = new Size(210, 38);
+            reviewQuality.Click += ReviewMetrics_Click;
             actions.Controls.Add(guidedBefore);
             actions.Controls.Add(guidedAfter);
             actions.Controls.Add(measureBefore);
             actions.Controls.Add(measureAfter);
+            actions.Controls.Add(reviewQuality);
 
             int actionRow = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 96));
@@ -3756,32 +3760,107 @@ namespace CassetteMotionPro.Workspace
             ReviewRequiredMetric(issues, "Handlebar X", "HandlebarX", "Use horizontal distance from BB center to grip/hood contact point.");
             ReviewRequiredMetric(issues, "Handlebar Y", "HandlebarY", "Use vertical distance from BB center to grip/hood contact point. Recheck image level/calibration if this looks strange.");
 
-            ReviewMetricRange(warnings, "Saddle height After", "SaddleHeightAfter", 500, 900, "mm", "If low or high, recheck calibration and the BB → saddle top click points.");
-            ReviewMetricRange(warnings, "Saddle setback After", "SaddleSetbackAfter", -120, 60, "mm", "Behind BB should be negative. If the sign is backwards, use Flip Setback Sign or re-enter the value.");
-            ReviewMetricRange(warnings, "Saddle tip to grip reach After", "SaddleTipToGripReachAfter", 350, 750, "mm", "If short or long, confirm you clicked saddle tip and the actual grip/hood contact point.");
-            ReviewMetricRange(warnings, "Handlebar X After", "HandlebarXAfter", 300, 700, "mm", "Confirm this is horizontal distance from BB to the grip/hood contact point.");
-            ReviewMetricRange(warnings, "Handlebar Y After", "HandlebarYAfter", -180, 180, "mm", "Confirm the image is level and the vertical direction is correct.");
+            ReviewMetricRangeBothSides(warnings, "Saddle height", "SaddleHeight", 500, 900, "mm", "Recheck calibration and the BB → saddle top points.");
+            ReviewMetricRangeBothSides(warnings, "Saddle setback", "SaddleSetback", -120, 60, "mm", "Behind BB should be negative; check the sign and saddle-tip point.");
+            ReviewMetricRangeBothSides(warnings, "Saddle tip to grip reach", "SaddleTipToGripReach", 350, 750, "mm", "Confirm saddle tip and actual grip/hood contact point.");
+            ReviewMetricRangeBothSides(warnings, "Handlebar X", "HandlebarX", 300, 700, "mm", "Confirm horizontal distance from BB to the grip/hood point.");
+            ReviewMetricRangeBothSides(warnings, "Handlebar Y", "HandlebarY", -180, 180, "mm", "Confirm image level and vertical direction.");
+
+            ReviewMetricRangeBothSides(warnings, "Knee angle", "KneeAngle", 90, 175, "degrees", "Confirm hip, knee, and ankle landmarks and use the intended crank position.");
+            ReviewMetricRangeBothSides(warnings, "Hip angle", "HipAngle", 25, 150, "degrees", "Confirm shoulder, hip, and knee landmarks.");
+            ReviewMetricRangeBothSides(warnings, "Ankle angle", "AnkleAngle", 55, 175, "degrees", "Confirm knee, ankle, and toe landmarks.");
+            ReviewMetricRangeBothSides(warnings, "Body reach", "TorsoAngle", 20, 180, "degrees", "Confirm hip, shoulder, and hand-contact landmarks.");
+            ReviewMetricRangeBothSides(warnings, "Back angle", "ShoulderAngle", 5, 85, "degrees", "Confirm hip and shoulder landmarks and image level.");
+
+            ReviewMeasurementChange(warnings, "Saddle height", "SaddleHeight", 60, "mm");
+            ReviewMeasurementChange(warnings, "Saddle setback", "SaddleSetback", 50, "mm");
+            ReviewMeasurementChange(warnings, "Knee angle", "KneeAngle", 20, "°");
+            ReviewMeasurementChange(warnings, "Hip angle", "HipAngle", 20, "°");
+            ReviewMeasurementChange(warnings, "Back angle", "ShoulderAngle", 20, "°");
+            ReviewMeasurementImageQuality(warnings);
+            ReviewGuidedCaptureQuality(warnings);
 
             string message;
             MessageBoxIcon icon;
             if (issues.Count == 0 && warnings.Count == 0)
             {
-                message = "Ready for report.\n\nThe key Bike Metrics are filled in and the final values look within broad expected ranges.\n\nNext action: generate, preview, package, or zip the report.";
+                message = "Measurement quality check passed.\n\nThe key bike measurements and entered rider angles look consistent with the broad advisory checks.\n\nNext action: preview the report and confirm the values still match your professional judgment.";
                 icon = MessageBoxIcon.Information;
             }
             else
             {
-                message = "Bike Metrics Review\n\n";
+                message = "Measurement Quality Review\n\n";
                 if (issues.Count > 0)
                     message += "Missing key values:\n- " + string.Join("\n- ", issues.ToArray()) + "\n\n";
                 if (warnings.Count > 0)
                     message += "Values to double-check:\n- " + string.Join("\n- ", warnings.ToArray()) + "\n\n";
-                message += "Next action: recheck Guided Capture, calibration, or manual entries as needed.\n\nThese checks are advisory. They do not block saving, reporting, packaging, or zipping.";
+                message += "Next action: recheck the reference frame, calibration, landmarks, or manual entries as needed.\n\nThese checks are advisory. They do not diagnose the rider and never block saving or reporting.";
                 icon = issues.Count > 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information;
             }
 
-            UpdateSaveHint(issues.Count == 0 && warnings.Count == 0 ? "Bike Metrics review passed." : "Bike Metrics review found items to check.");
-            MessageBox.Show(this, message, "Review Metrics", MessageBoxButtons.OK, icon);
+            UpdateSaveHint(issues.Count == 0 && warnings.Count == 0 ? "Measurement quality review passed." : "Measurement quality review found items to check.");
+            MessageBox.Show(this, message, "Measurement Quality Review", MessageBoxButtons.OK, icon);
+        }
+
+        private void ReviewMetricRangeBothSides(List<string> warnings, string label, string metricKey, double minimum, double maximum, string unit, string nextAction)
+        {
+            ReviewMetricRange(warnings, label + " Before", metricKey + "Before", minimum, maximum, unit, nextAction);
+            ReviewMetricRange(warnings, label + " After", metricKey + "After", minimum, maximum, unit, nextAction);
+        }
+
+        private void ReviewMeasurementChange(List<string> warnings, string label, string metricKey, double maximumChange, string unit)
+        {
+            double before;
+            double after;
+            if (!TryParseMeasurementNumber(GetMeasurementText(metricKey + "Before"), out before) ||
+                !TryParseMeasurementNumber(GetMeasurementText(metricKey + "After"), out after))
+                return;
+
+            double change = Math.Abs(after - before);
+            if (change > maximumChange)
+                warnings.Add(label + ": Before/After changed by " + change.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " " + unit + ". Confirm both measurements used the same reference method and frame position.");
+        }
+
+        private void ReviewMeasurementImageQuality(List<string> warnings)
+        {
+            string path = imageBoxes.ContainsKey("MeasurementReferenceImagePath") ? imageBoxes["MeasurementReferenceImagePath"].Text : string.Empty;
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            {
+                warnings.Add("Measurement reference image is missing. Add a clear side-view image if guided measurements were used.");
+                return;
+            }
+
+            try
+            {
+                using (Image image = Image.FromFile(path))
+                {
+                    if (image.Width < 960 || image.Height < 540)
+                        warnings.Add("Measurement reference image is only " + image.Width.ToString() + " × " + image.Height.ToString() + ". A sharper image may improve landmark placement.");
+                }
+            }
+            catch
+            {
+                warnings.Add("Measurement reference image could not be checked. Re-open it before finalizing measurements.");
+            }
+        }
+
+        private void ReviewGuidedCaptureQuality(List<string> warnings)
+        {
+            if (currentSession == null)
+                return;
+
+            if (!string.IsNullOrWhiteSpace(currentSession.BikeMetricsCaptureMethodBefore) &&
+                !string.Equals(currentSession.BikeMetricsCameraSetupBefore, "Confirmed", StringComparison.OrdinalIgnoreCase))
+                warnings.Add("Before guided bike capture did not confirm the camera setup checklist.");
+            if (!string.IsNullOrWhiteSpace(currentSession.BikeMetricsCaptureMethodAfter) &&
+                !string.Equals(currentSession.BikeMetricsCameraSetupAfter, "Confirmed", StringComparison.OrdinalIgnoreCase))
+                warnings.Add("After guided bike capture did not confirm the camera setup checklist.");
+            if (!string.IsNullOrWhiteSpace(currentSession.BikeMetricsCaptureMethodBefore) &&
+                string.Equals(currentSession.BikeMetricsLevelReferenceBefore, "Not set", StringComparison.OrdinalIgnoreCase))
+                warnings.Add("Before guided bike capture has no level reference. This is fine for a truly level image; otherwise recheck horizontal and vertical values.");
+            if (!string.IsNullOrWhiteSpace(currentSession.BikeMetricsCaptureMethodAfter) &&
+                string.Equals(currentSession.BikeMetricsLevelReferenceAfter, "Not set", StringComparison.OrdinalIgnoreCase))
+                warnings.Add("After guided bike capture has no level reference. This is fine for a truly level image; otherwise recheck horizontal and vertical values.");
         }
 
         private void ReviewSession_Click(object sender, EventArgs e)

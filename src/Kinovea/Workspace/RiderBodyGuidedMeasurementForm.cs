@@ -33,6 +33,7 @@ namespace CassetteMotionPro.Workspace
         private readonly Label progress = new Label();
         private readonly Label currentPoint = new Label();
         private readonly Label results = new Label();
+        private readonly Label quality = new Label();
         private readonly Button undo = new Button();
         private readonly Button clear = new Button();
         private readonly Button saveBefore = new Button();
@@ -121,6 +122,11 @@ namespace CassetteMotionPro.Workspace
             results.ForeColor = Color.FromArgb(24, 31, 29);
             results.Padding = new Padding(0, 12, 0, 4);
 
+            quality.Dock = DockStyle.Top;
+            quality.Height = 150;
+            quality.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            quality.Padding = new Padding(10, 8, 10, 8);
+
             ConfigureButton(undo, "Undo Last Point", false);
             ConfigureButton(clear, "Clear All Points", false);
             ConfigureButton(saveBefore, "Save to Before", string.Equals(defaultSide, "Before", StringComparison.OrdinalIgnoreCase));
@@ -139,6 +145,7 @@ namespace CassetteMotionPro.Workspace
             side.Controls.Add(saveBefore);
             side.Controls.Add(clear);
             side.Controls.Add(undo);
+            side.Controls.Add(quality);
             side.Controls.Add(results);
             side.Controls.Add(currentPoint);
             side.Controls.Add(progress);
@@ -253,6 +260,9 @@ namespace CassetteMotionPro.Workspace
                 progress.Text = "LANDMARK " + (points.Count + 1).ToString(CultureInfo.InvariantCulture) + " OF " + landmarkNames.Length.ToString(CultureInfo.InvariantCulture);
                 currentPoint.Text = "Click: " + landmarkNames[points.Count];
                 results.Text = "Calculated results will appear after all seven landmarks are placed.";
+                quality.Text = GetImageQualityText();
+                quality.BackColor = Color.FromArgb(247, 250, 244);
+                quality.ForeColor = Color.FromArgb(74, 87, 81);
                 return;
             }
 
@@ -264,6 +274,11 @@ namespace CassetteMotionPro.Workspace
                 "Ankle angle: " + Value("AnkleAngle") + "\n" +
                 "Body reach: " + Value("TorsoAngle") + "\n" +
                 "Back angle: " + Value("ShoulderAngle");
+
+            List<string> warnings = GetQualityWarnings();
+            quality.Text = warnings.Count == 0 ? "QUALITY CHECK: PASS\nLandmarks and broad angle ranges look consistent." : "QUALITY CHECK: REVIEW\n• " + string.Join("\n• ", warnings.ToArray());
+            quality.BackColor = warnings.Count == 0 ? Color.FromArgb(232, 246, 226) : Color.FromArgb(255, 244, 214);
+            quality.ForeColor = warnings.Count == 0 ? Color.FromArgb(46, 108, 55) : Color.FromArgb(128, 82, 12);
         }
 
         private void SaveResult(string side)
@@ -271,7 +286,7 @@ namespace CassetteMotionPro.Workspace
             if (points.Count != landmarkNames.Length)
                 return;
             DialogResult confirm = MessageBox.Show(this,
-                "Save these rider measurements to " + side + "?\n\n" + results.Text,
+                "Save these rider measurements to " + side + "?\n\n" + results.Text + "\n\n" + quality.Text + "\n\nQuality warnings are advisory and do not block saving.",
                 "Confirm Rider Measurements", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (confirm != DialogResult.Yes)
                 return;
@@ -388,6 +403,45 @@ namespace CassetteMotionPro.Workspace
         private string Value(string key)
         {
             return calculatedValues.ContainsKey(key) ? calculatedValues[key] : "--";
+        }
+
+        private string GetImageQualityText()
+        {
+            if (image.Width < 960 || image.Height < 540)
+                return "IMAGE CHECK: REVIEW\nResolution is " + image.Width.ToString() + " × " + image.Height.ToString() + ". Use a sharper side-view image when possible.";
+            return "IMAGE CHECK: PASS\nResolution is " + image.Width.ToString() + " × " + image.Height.ToString() + ".";
+        }
+
+        private List<string> GetQualityWarnings()
+        {
+            List<string> warnings = new List<string>();
+            if (image.Width < 960 || image.Height < 540)
+                warnings.Add("Low-resolution reference image");
+            AddAngleWarning(warnings, "Knee", "KneeAngle", 90, 175);
+            AddAngleWarning(warnings, "Hip", "HipAngle", 25, 150);
+            AddAngleWarning(warnings, "Ankle", "AnkleAngle", 55, 175);
+            AddAngleWarning(warnings, "Body reach", "TorsoAngle", 20, 180);
+            AddAngleWarning(warnings, "Back", "ShoulderAngle", 5, 85);
+
+            double minimumSegment = Math.Max(image.Width, image.Height) * 0.025;
+            if (Distance(points[0], points[1]) < minimumSegment || Distance(points[1], points[2]) < minimumSegment)
+                warnings.Add("Hip, knee, or ankle points may be too close together");
+            if (Distance(points[4], points[5]) < minimumSegment)
+                warnings.Add("Shoulder and hand-contact points may be too close together");
+            return warnings;
+        }
+
+        private void AddAngleWarning(List<string> warnings, string label, string key, double minimum, double maximum)
+        {
+            string value = Value(key).Replace("°", string.Empty);
+            double parsed;
+            if (!double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out parsed))
+            {
+                warnings.Add(label + " angle could not be calculated");
+                return;
+            }
+            if (parsed < minimum || parsed > maximum)
+                warnings.Add(label + " angle is outside the broad review range");
         }
     }
 }
