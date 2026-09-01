@@ -5,7 +5,18 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.48.0 Faster Repeat-Fit Workflow
+## Current milestone: 0.50.0 Cassette Motion Pro Visual Redesign
+
+- A shared Cassette Motion Pro design system now controls product colors,
+  typography, surfaces, borders, tabs, lists, inputs, and button states.
+- Client Fits, New Client, and Fit Day use a consistent dark-and-lime identity
+  with cleaner spacing and polished product headers.
+- Fit Day has a redesigned top navigation with high-contrast selected tabs and a
+  visible lime progress accent.
+- Client and session lists, search, forms, and action buttons now read as one
+  cohesive application instead of separate Kinovea add-on screens.
+- Kinovea capture, playback, drawing, and measurement tools remain unchanged and
+  fully available inside Video Studio.
 
 - A Repeat Fit shortcut creates and saves a fresh session from the active fit.
 - Client History also offers Start Repeat Fit from any selected saved session.

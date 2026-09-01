@@ -6,6 +6,7 @@ GNU General Public License version 2.
 */
 
 using CassetteMotionPro.Clients;
+using CassetteMotionPro;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -110,9 +111,7 @@ namespace CassetteMotionPro.Workspace
             repository = new FitSessionRepository(client);
 
             Text = client.DisplayName + " — Cassette Motion Pro Fit Day";
-            Font = new Font("Segoe UI", 9F);
-            BackColor = Color.FromArgb(240, 243, 241);
-            ForeColor = Color.FromArgb(24, 31, 29);
+            CassetteMotionTheme.ApplyForm(this);
             ClientSize = new Size(1180, 760);
             MinimumSize = new Size(980, 650);
             StartPosition = FormStartPosition.CenterParent;
@@ -121,6 +120,7 @@ namespace CassetteMotionPro.Workspace
             FormClosing += BikeFitWorkspaceForm_FormClosing;
 
             BuildInterface();
+            ApplyVisualIdentity(this);
             RefreshSessions(Guid.Empty);
         }
 
@@ -128,13 +128,13 @@ namespace CassetteMotionPro.Workspace
         {
             Panel header = new Panel();
             header.Dock = DockStyle.Fill;
-            header.BackColor = Color.FromArgb(13, 19, 17);
+            header.BackColor = CassetteMotionTheme.Header;
 
             Label brandBadge = new Label();
             brandBadge.Text = "CM";
             brandBadge.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
-            brandBadge.ForeColor = Color.FromArgb(13, 19, 17);
-            brandBadge.BackColor = Color.FromArgb(184, 243, 74);
+            brandBadge.ForeColor = CassetteMotionTheme.Header;
+            brandBadge.BackColor = CassetteMotionTheme.Accent;
             brandBadge.TextAlign = ContentAlignment.MiddleCenter;
             brandBadge.Size = new Size(54, 54);
             brandBadge.Location = new Point(28, 25);
@@ -142,7 +142,7 @@ namespace CassetteMotionPro.Workspace
             Label eyebrow = new Label();
             eyebrow.Text = "CASSETTE MOTION PRO  /  FIT DAY";
             eyebrow.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            eyebrow.ForeColor = Color.FromArgb(184, 243, 74);
+            eyebrow.ForeColor = CassetteMotionTheme.Accent;
             eyebrow.AutoSize = true;
             eyebrow.Location = new Point(98, 17);
 
@@ -178,8 +178,8 @@ namespace CassetteMotionPro.Workspace
             SplitContainer split = new SplitContainer();
             split.Dock = DockStyle.Fill;
             split.SplitterDistance = 260;
-            split.Panel1.BackColor = Color.White;
-            split.Panel2.BackColor = Color.FromArgb(247, 249, 248);
+            split.Panel1.BackColor = CassetteMotionTheme.Surface;
+            split.Panel2.BackColor = CassetteMotionTheme.Canvas;
             BuildSessionPanel(split.Panel1);
             BuildEditor(split.Panel2);
 
@@ -187,11 +187,17 @@ namespace CassetteMotionPro.Workspace
             root.Dock = DockStyle.Fill;
             root.ColumnCount = 1;
             root.RowCount = 2;
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 106));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 118));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             root.Controls.Add(header, 0, 0);
             root.Controls.Add(split, 0, 1);
             Controls.Add(root);
+
+            Panel accentLine = new Panel();
+            accentLine.Dock = DockStyle.Bottom;
+            accentLine.Height = 4;
+            accentLine.BackColor = CassetteMotionTheme.Accent;
+            header.Controls.Add(accentLine);
         }
 
         private void BuildSessionPanel(Control parent)
@@ -230,6 +236,7 @@ namespace CassetteMotionPro.Workspace
             sessionList.Columns.Add("Fit sessions", 155);
             sessionList.Columns.Add("Status", 85);
             sessionList.SelectedIndexChanged += SessionList_SelectedIndexChanged;
+            CassetteMotionTheme.StyleListView(sessionList);
 
             Label hint = new Label();
             hint.Text = "Sessions are saved inside the client’s Measurements folder.";
@@ -248,6 +255,7 @@ namespace CassetteMotionPro.Workspace
             editorTabs = new TabControl();
             editorTabs.Dock = DockStyle.Fill;
             editorTabs.Padding = new Point(18, 8);
+            CassetteMotionTheme.StyleTabs(editorTabs);
             editorTabs.SelectedIndexChanged += delegate { UpdateWorkflowChecklist(); };
             editorTabs.TabPages.Add(BuildOverviewTab());
             editorTabs.TabPages.Add(BuildClientFilesTab());
@@ -260,7 +268,7 @@ namespace CassetteMotionPro.Workspace
             actions.Dock = DockStyle.Bottom;
             actions.Height = 126;
             actions.Padding = new Padding(24, 10, 24, 10);
-            actions.BackColor = Color.White;
+            actions.BackColor = CassetteMotionTheme.Surface;
 
             Button close = CreateButton("Save && Close", false);
             close.Width = 105;
@@ -3444,6 +3452,7 @@ namespace CassetteMotionPro.Workspace
         {
             TableLayoutPanel table = new TableLayoutPanel();
             table.Dock = DockStyle.Fill;
+            table.BackColor = CassetteMotionTheme.Canvas;
             table.Padding = new Padding(24, 22, 24, 18);
             table.ColumnCount = 2;
             table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 145));
@@ -3482,9 +3491,22 @@ namespace CassetteMotionPro.Workspace
         private static TabPage NewTab(string text)
         {
             TabPage page = new TabPage(text);
-            page.BackColor = Color.FromArgb(247, 249, 248);
+            page.BackColor = CassetteMotionTheme.Canvas;
             page.Padding = new Padding(0);
             return page;
+        }
+
+        private static void ApplyVisualIdentity(Control root)
+        {
+            foreach (Control control in root.Controls)
+            {
+                if (control is TextBox || control is ComboBox || control is DateTimePicker)
+                    CassetteMotionTheme.StyleTextInput(control);
+                ListView list = control as ListView;
+                if (list != null)
+                    CassetteMotionTheme.StyleListView(list);
+                ApplyVisualIdentity(control);
+            }
         }
 
         private void SaveAndSelectVideos()
@@ -6500,12 +6522,7 @@ namespace CassetteMotionPro.Workspace
         {
             Button button = new Button();
             button.Text = text;
-            button.FlatStyle = FlatStyle.Flat;
-            button.FlatAppearance.BorderSize = primary ? 0 : 1;
-            button.FlatAppearance.BorderColor = Color.FromArgb(186, 197, 191);
-            button.BackColor = primary ? Color.FromArgb(184, 243, 74) : Color.White;
-            button.ForeColor = Color.FromArgb(13, 19, 17);
-            button.Font = new Font("Segoe UI", 9F, primary ? FontStyle.Bold : FontStyle.Regular);
+            CassetteMotionTheme.StyleButton(button, primary);
             return button;
         }
 

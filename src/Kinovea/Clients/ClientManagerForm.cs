@@ -6,6 +6,7 @@ GNU General Public License version 2.
 */
 
 using Kinovea.Services;
+using CassetteMotionPro;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -50,15 +51,14 @@ namespace CassetteMotionPro.Clients
             this.openClient = openClient;
             this.openWorkspace = openWorkspace;
 
-            Text = "Client Manager - Cassette Motion Pro";
-            Font = new Font("Segoe UI", 9F);
-            BackColor = Color.FromArgb(240, 243, 241);
-            ForeColor = Color.FromArgb(24, 31, 29);
+            Text = "Client Fits — Cassette Motion Pro";
+            CassetteMotionTheme.ApplyForm(this);
             ClientSize = new Size(1040, 650);
             MinimumSize = new Size(900, 560);
             StartPosition = FormStartPosition.CenterParent;
 
             BuildInterface();
+            ApplyVisualIdentity(this);
             RefreshClients();
         }
 
@@ -66,14 +66,14 @@ namespace CassetteMotionPro.Clients
         {
             Panel header = new Panel();
             header.Dock = DockStyle.Top;
-            header.Height = 116;
-            header.BackColor = Color.FromArgb(13, 19, 17);
+            header.Height = 128;
+            header.BackColor = CassetteMotionTheme.Header;
 
             Label brandBadge = new Label();
             brandBadge.Text = "CM";
             brandBadge.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
-            brandBadge.ForeColor = Color.FromArgb(13, 19, 17);
-            brandBadge.BackColor = Color.FromArgb(184, 243, 74);
+            brandBadge.ForeColor = CassetteMotionTheme.Header;
+            brandBadge.BackColor = CassetteMotionTheme.Accent;
             brandBadge.TextAlign = ContentAlignment.MiddleCenter;
             brandBadge.Size = new Size(54, 54);
             brandBadge.Location = new Point(26, 28);
@@ -81,12 +81,12 @@ namespace CassetteMotionPro.Clients
             Label brand = new Label();
             brand.Text = "CASSETTE MOTION PRO";
             brand.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            brand.ForeColor = Color.FromArgb(184, 243, 74);
+            brand.ForeColor = CassetteMotionTheme.Accent;
             brand.AutoSize = true;
             brand.Location = new Point(98, 15);
 
             Label title = new Label();
-            title.Text = "CLIENT FITS";
+            title.Text = "Client Fits";
             title.Font = new Font("Segoe UI", 22F, FontStyle.Bold);
             title.ForeColor = Color.White;
             title.AutoSize = true;
@@ -115,14 +115,15 @@ namespace CassetteMotionPro.Clients
             SplitContainer split = new SplitContainer();
             split.Dock = DockStyle.Fill;
             split.SplitterDistance = 450;
-            split.BackColor = Color.FromArgb(218, 224, 221);
-            split.Panel1.BackColor = Color.White;
-            split.Panel2.BackColor = Color.FromArgb(247, 249, 248);
+            split.BackColor = CassetteMotionTheme.Border;
+            split.Panel1.BackColor = CassetteMotionTheme.Surface;
+            split.Panel2.BackColor = CassetteMotionTheme.Canvas;
 
             Panel searchPanel = new Panel();
             searchPanel.Dock = DockStyle.Top;
-            searchPanel.Height = 62;
+            searchPanel.Height = 72;
             searchPanel.Padding = new Padding(18, 16, 18, 10);
+            searchPanel.BackColor = CassetteMotionTheme.SurfaceSoft;
 
             Label searchLabel = new Label();
             searchLabel.Text = "Search";
@@ -132,6 +133,7 @@ namespace CassetteMotionPro.Clients
 
             txtSearch.Dock = DockStyle.Fill;
             txtSearch.BorderStyle = BorderStyle.FixedSingle;
+            txtSearch.Font = new Font("Segoe UI", 10F);
             txtSearch.TextChanged += delegate { PopulateList(); };
             searchPanel.Controls.Add(txtSearch);
             searchPanel.Controls.Add(searchLabel);
@@ -147,6 +149,7 @@ namespace CassetteMotionPro.Clients
             clientList.Columns.Add("Last opened", 105);
             clientList.SelectedIndexChanged += delegate { UpdateDetails(); };
             clientList.DoubleClick += delegate { OpenSelectedWorkspace(); };
+            CassetteMotionTheme.StyleListView(clientList);
 
             split.Panel1.Controls.Add(clientList);
             split.Panel1.Controls.Add(searchPanel);
@@ -156,11 +159,17 @@ namespace CassetteMotionPro.Clients
             layout.Dock = DockStyle.Fill;
             layout.ColumnCount = 1;
             layout.RowCount = 2;
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 116));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 128));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             layout.Controls.Add(header, 0, 0);
             layout.Controls.Add(split, 0, 1);
             Controls.Add(layout);
+
+            Panel accentLine = new Panel();
+            accentLine.Dock = DockStyle.Bottom;
+            accentLine.Height = 4;
+            accentLine.BackColor = CassetteMotionTheme.Accent;
+            header.Controls.Add(accentLine);
         }
 
         private void BuildDetailsPanel(Control parent)
@@ -408,12 +417,17 @@ namespace CassetteMotionPro.Clients
 
         private static void StyleButton(Button button, bool primary)
         {
-            button.FlatStyle = FlatStyle.Flat;
-            button.FlatAppearance.BorderSize = primary ? 0 : 1;
-            button.FlatAppearance.BorderColor = Color.FromArgb(186, 197, 191);
-            button.BackColor = primary ? Color.FromArgb(184, 243, 74) : Color.White;
-            button.ForeColor = Color.FromArgb(13, 19, 17);
-            button.Font = new Font("Segoe UI", 9F, primary ? FontStyle.Bold : FontStyle.Regular);
+            CassetteMotionTheme.StyleButton(button, primary);
+        }
+
+        private static void ApplyVisualIdentity(Control root)
+        {
+            foreach (Control control in root.Controls)
+            {
+                if (control is TextBox || control is ComboBox)
+                    CassetteMotionTheme.StyleTextInput(control);
+                ApplyVisualIdentity(control);
+            }
         }
     }
 }

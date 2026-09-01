@@ -8,6 +8,7 @@ GNU General Public License version 2.
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using CassetteMotionPro;
 
 namespace CassetteMotionPro.Clients
 {
@@ -28,9 +29,7 @@ namespace CassetteMotionPro.Clients
         public NewClientForm()
         {
             Text = "New Client - Cassette Motion Pro";
-            Font = new Font("Segoe UI", 9F);
-            BackColor = Color.FromArgb(245, 247, 246);
-            ForeColor = Color.FromArgb(24, 31, 29);
+            CassetteMotionTheme.ApplyForm(this);
             ClientSize = new Size(620, 590);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -38,6 +37,7 @@ namespace CassetteMotionPro.Clients
             StartPosition = FormStartPosition.CenterParent;
 
             BuildInterface();
+            ApplyVisualIdentity(this);
         }
 
         private void BuildInterface()
@@ -45,13 +45,13 @@ namespace CassetteMotionPro.Clients
             Panel header = new Panel();
             header.Dock = DockStyle.Top;
             header.Height = 104;
-            header.BackColor = Color.FromArgb(13, 19, 17);
+            header.BackColor = CassetteMotionTheme.Header;
 
             Label brandBadge = new Label();
             brandBadge.Text = "CM";
             brandBadge.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
-            brandBadge.ForeColor = Color.FromArgb(13, 19, 17);
-            brandBadge.BackColor = Color.FromArgb(184, 243, 74);
+            brandBadge.ForeColor = CassetteMotionTheme.Header;
+            brandBadge.BackColor = CassetteMotionTheme.Accent;
             brandBadge.TextAlign = ContentAlignment.MiddleCenter;
             brandBadge.Size = new Size(48, 48);
             brandBadge.Location = new Point(24, 25);
@@ -59,12 +59,12 @@ namespace CassetteMotionPro.Clients
             Label brand = new Label();
             brand.Text = "CASSETTE MOTION PRO";
             brand.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold);
-            brand.ForeColor = Color.FromArgb(184, 243, 74);
+            brand.ForeColor = CassetteMotionTheme.Accent;
             brand.AutoSize = true;
             brand.Location = new Point(88, 12);
 
             Label title = new Label();
-            title.Text = "NEW CLIENT";
+            title.Text = "New Client";
             title.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
             title.ForeColor = Color.White;
             title.AutoSize = true;
@@ -81,6 +81,12 @@ namespace CassetteMotionPro.Clients
             header.Controls.Add(brand);
             header.Controls.Add(title);
             header.Controls.Add(subtitle);
+
+            Panel accentLine = new Panel();
+            accentLine.Dock = DockStyle.Bottom;
+            accentLine.Height = 4;
+            accentLine.BackColor = CassetteMotionTheme.Accent;
+            header.Controls.Add(accentLine);
 
             TableLayoutPanel fields = new TableLayoutPanel();
             fields.Dock = DockStyle.Fill;
@@ -176,12 +182,18 @@ namespace CassetteMotionPro.Clients
         {
             Button button = new Button();
             button.Text = text;
-            button.FlatStyle = FlatStyle.Flat;
-            button.FlatAppearance.BorderSize = primary ? 0 : 1;
-            button.BackColor = primary ? Color.FromArgb(184, 243, 74) : Color.White;
-            button.ForeColor = Color.FromArgb(13, 19, 17);
-            button.Font = new Font("Segoe UI", 9F, primary ? FontStyle.Bold : FontStyle.Regular);
+            CassetteMotionTheme.StyleButton(button, primary);
             return button;
+        }
+
+        private static void ApplyVisualIdentity(Control root)
+        {
+            foreach (Control control in root.Controls)
+            {
+                if (control is TextBox || control is ComboBox)
+                    CassetteMotionTheme.StyleTextInput(control);
+                ApplyVisualIdentity(control);
+            }
         }
 
         private void Save_Click(object sender, EventArgs e)

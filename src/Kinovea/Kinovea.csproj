@@ -47,7 +47,7 @@
     <PublisherName>Cassette Fit Studio</PublisherName>
     <OpenBrowserOnPublish>false</OpenBrowserOnPublish>
     <ApplicationRevision>0</ApplicationRevision>
-    <ApplicationVersion>0.48.0.0</ApplicationVersion>
+    <ApplicationVersion>0.50.0.0</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
@@ -170,6 +170,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CassetteMotionTheme.cs" />
     <Compile Include="Clients\ClientRecord.cs" />
     <Compile Include="Clients\ClientRepository.cs" />
     <Compile Include="Clients\NewClientForm.cs">
