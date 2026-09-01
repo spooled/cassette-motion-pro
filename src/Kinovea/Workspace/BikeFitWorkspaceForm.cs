@@ -57,6 +57,8 @@ namespace CassetteMotionPro.Workspace
         private readonly Label savedEvidenceReviewStatus = new Label();
         private readonly Label reportBuilderStatus = new Label();
         private readonly Label reportBuilderOutput = new Label();
+        private readonly Label combinedMeasurementReviewStatus = new Label();
+        private readonly TextBox combinedMeasurementReview = new TextBox();
         private readonly Label captureActionsLabel = new Label();
         private readonly Label analysisActionsLabel = new Label();
         private readonly Button nextRecommendedStepAction = new Button();
@@ -367,7 +369,84 @@ namespace CassetteMotionPro.Workspace
 
         private TabPage BuildMeasurementsWorkspaceTab()
         {
-            return BuildGroupedWorkspaceTab("Measurements", BuildGuidedMeasurementsTab(), BuildBikeMetricsTab(), BuildBodyAnglesTab());
+            return BuildGroupedWorkspaceTab("Measurements", BuildGuidedMeasurementsTab(), BuildBikeMetricsTab(), BuildBodyAnglesTab(), BuildCombinedMeasurementReviewTab());
+        }
+
+        private TabPage BuildCombinedMeasurementReviewTab()
+        {
+            TabPage page = NewTab("Combined Review");
+            TableLayoutPanel layout = new TableLayoutPanel();
+            layout.Dock = DockStyle.Fill;
+            layout.Padding = new Padding(24, 22, 24, 18);
+            layout.ColumnCount = 1;
+            layout.RowCount = 5;
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 72));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 62));
+
+            Label eyebrow = new Label();
+            eyebrow.Text = "BIKE + RIDER MEASUREMENT REVIEW";
+            eyebrow.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            eyebrow.ForeColor = Color.FromArgb(85, 122, 18);
+            eyebrow.Dock = DockStyle.Fill;
+
+            Label title = new Label();
+            title.Text = "Review the complete fit in one place";
+            title.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
+            title.ForeColor = Color.FromArgb(24, 31, 29);
+            title.Dock = DockStyle.Fill;
+
+            combinedMeasurementReviewStatus.Dock = DockStyle.Fill;
+            combinedMeasurementReviewStatus.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            combinedMeasurementReviewStatus.ForeColor = Color.FromArgb(74, 87, 81);
+            combinedMeasurementReviewStatus.BackColor = Color.FromArgb(248, 252, 238);
+            combinedMeasurementReviewStatus.Padding = new Padding(12, 10, 12, 8);
+
+            combinedMeasurementReview.Dock = DockStyle.Fill;
+            combinedMeasurementReview.Multiline = true;
+            combinedMeasurementReview.ReadOnly = true;
+            combinedMeasurementReview.ScrollBars = ScrollBars.Both;
+            combinedMeasurementReview.WordWrap = false;
+            combinedMeasurementReview.BackColor = Color.White;
+            combinedMeasurementReview.ForeColor = Color.FromArgb(24, 31, 29);
+            combinedMeasurementReview.Font = new Font("Consolas", 10F);
+
+            FlowLayoutPanel actions = new FlowLayoutPanel();
+            actions.Dock = DockStyle.Fill;
+            actions.FlowDirection = FlowDirection.LeftToRight;
+            actions.WrapContents = true;
+            actions.Padding = new Padding(0, 8, 0, 4);
+
+            Button refresh = CreateButton("Refresh Combined Review", true);
+            refresh.Size = new Size(200, 38);
+            refresh.Click += delegate { RefreshCombinedMeasurementReview(); };
+            Button quality = CreateButton("Run Quality Check", false);
+            quality.Size = new Size(160, 38);
+            quality.Click += ReviewMetrics_Click;
+            Button bike = CreateButton("Edit Bike Metrics", false);
+            bike.Size = new Size(145, 38);
+            bike.Click += delegate { SelectWorkspaceTab("Bike Metrics"); };
+            Button rider = CreateButton("Edit Body Angles", false);
+            rider.Size = new Size(145, 38);
+            rider.Click += delegate { SelectWorkspaceTab("Body Angles"); };
+            Button report = CreateButton("Open Report Builder", false);
+            report.Size = new Size(165, 38);
+            report.Click += delegate { SelectWorkspaceTab("Report Builder"); };
+            actions.Controls.Add(refresh);
+            actions.Controls.Add(quality);
+            actions.Controls.Add(bike);
+            actions.Controls.Add(rider);
+            actions.Controls.Add(report);
+
+            layout.Controls.Add(eyebrow, 0, 0);
+            layout.Controls.Add(title, 0, 1);
+            layout.Controls.Add(combinedMeasurementReviewStatus, 0, 2);
+            layout.Controls.Add(combinedMeasurementReview, 0, 3);
+            layout.Controls.Add(actions, 0, 4);
+            page.Controls.Add(layout);
+            return page;
         }
 
         private TabPage BuildGuidedMeasurementsTab()
@@ -2847,6 +2926,96 @@ namespace CassetteMotionPro.Workspace
             UpdateGuidedFitDayFlow();
             UpdateNextRecommendedStep();
             UpdateReportBuilderStatus();
+            RefreshCombinedMeasurementReview();
+        }
+
+        private void RefreshCombinedMeasurementReview()
+        {
+            if (combinedMeasurementReview == null || combinedMeasurementReviewStatus == null)
+                return;
+
+            string[] bikeKeys = new string[] { "SaddleHeight", "SaddleSetback", "SaddleTipToGripReach", "HandlebarX", "HandlebarY", "HandlebarReach", "HandlebarDrop", "CrankLength", "Wheelbase", "CleatPosition" };
+            string[] bikeLabels = new string[] { "Saddle height", "Saddle setback", "Saddle tip to grip", "Handlebar X", "Handlebar Y", "Handlebar reach", "Handlebar drop", "Crank length", "Wheelbase", "Cleat position" };
+            string[] riderKeys = new string[] { "KneeAngle", "HipAngle", "AnkleAngle", "TorsoAngle", "ShoulderAngle" };
+            string[] riderLabels = new string[] { "Knee angle", "Hip angle", "Ankle angle", "Body reach", "Back angle" };
+
+            int completePairs = 0;
+            int partialPairs = 0;
+            int missingPairs = 0;
+            System.Text.StringBuilder text = new System.Text.StringBuilder();
+            text.AppendLine("MEASUREMENT                     BEFORE          AFTER           CHANGE");
+            text.AppendLine("────────────────────────────────────────────────────────────────────────");
+            text.AppendLine("BIKE MEASUREMENTS");
+            AppendCombinedMeasurementSection(text, bikeLabels, bikeKeys, ref completePairs, ref partialPairs, ref missingPairs);
+            text.AppendLine();
+            text.AppendLine("RIDER BODY MEASUREMENTS");
+            AppendCombinedMeasurementSection(text, riderLabels, riderKeys, ref completePairs, ref partialPairs, ref missingPairs);
+
+            List<string> notes = GetCombinedMeasurementReviewNotes();
+            text.AppendLine();
+            text.AppendLine("REVIEW NOTES");
+            if (notes.Count == 0)
+                text.AppendLine("✓ No broad quality warnings found. Confirm the results against your professional judgment.");
+            else
+            {
+                foreach (string note in notes)
+                    text.AppendLine("• " + note);
+            }
+
+            combinedMeasurementReview.Text = text.ToString();
+            string sessionName = currentSession == null ? "No active session" : currentSession.DisplayName;
+            bool hasMeasurements = completePairs > 0 || partialPairs > 0;
+            bool reviewReady = hasMeasurements && notes.Count == 0;
+            combinedMeasurementReviewStatus.Text = sessionName + "   ·   Complete Before/After pairs: " + completePairs.ToString() + "   ·   Partial: " + partialPairs.ToString() + "   ·   Not recorded: " + missingPairs.ToString() + Environment.NewLine +
+                (reviewReady ? "COMBINED VIEW READY — blank optional measurements are okay" : hasMeasurements ? "REVIEW THE NOTES BELOW BEFORE FINALIZING THE REPORT" : "ADD BIKE OR RIDER MEASUREMENTS TO BEGIN THE COMBINED REVIEW");
+            combinedMeasurementReviewStatus.ForeColor = reviewReady ? Color.FromArgb(60, 145, 76) : Color.FromArgb(181, 118, 35);
+        }
+
+        private void AppendCombinedMeasurementSection(System.Text.StringBuilder text, string[] labels, string[] keys, ref int completePairs, ref int partialPairs, ref int missingPairs)
+        {
+            for (int index = 0; index < keys.Length; index++)
+            {
+                string before = GetMeasurementText(keys[index] + "Before");
+                string after = GetMeasurementText(keys[index] + "After");
+                if (!string.IsNullOrWhiteSpace(before) && !string.IsNullOrWhiteSpace(after))
+                    completePairs++;
+                else if (!string.IsNullOrWhiteSpace(before) || !string.IsNullOrWhiteSpace(after))
+                    partialPairs++;
+                else
+                    missingPairs++;
+
+                string change = FormatMeasurementChange(before, after);
+                text.AppendLine(labels[index].PadRight(31) + DisplayReviewValue(before).PadRight(16) + DisplayReviewValue(after).PadRight(16) + change);
+            }
+        }
+
+        private static string DisplayReviewValue(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? "—" : value;
+        }
+
+        private static string FormatMeasurementChange(string before, string after)
+        {
+            double beforeValue;
+            double afterValue;
+            if (!TryParseMeasurementNumber(before, out beforeValue) || !TryParseMeasurementNumber(after, out afterValue))
+                return "—";
+            double change = afterValue - beforeValue;
+            return (change > 0 ? "+" : string.Empty) + change.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        private List<string> GetCombinedMeasurementReviewNotes()
+        {
+            List<string> notes = new List<string>();
+            ReviewMeasurementChange(notes, "Saddle height", "SaddleHeight", 60, "mm");
+            ReviewMeasurementChange(notes, "Saddle setback", "SaddleSetback", 50, "mm");
+            ReviewMeasurementChange(notes, "Knee angle", "KneeAngle", 20, "°");
+            ReviewMeasurementChange(notes, "Hip angle", "HipAngle", 20, "°");
+            ReviewMeasurementChange(notes, "Back angle", "ShoulderAngle", 20, "°");
+            ReviewMetricRangeBothSides(notes, "Knee angle", "KneeAngle", 90, 175, "degrees", "Recheck hip, knee, and ankle landmarks.");
+            ReviewMetricRangeBothSides(notes, "Hip angle", "HipAngle", 25, 150, "degrees", "Recheck shoulder, hip, and knee landmarks.");
+            ReviewMetricRangeBothSides(notes, "Back angle", "ShoulderAngle", 5, 85, "degrees", "Recheck hip and shoulder landmarks.");
+            return notes;
         }
 
         private void UpdateReportBuilderStatus()
