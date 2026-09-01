@@ -66,30 +66,48 @@ namespace CassetteMotionPro.Clients
         {
             Panel header = new Panel();
             header.Dock = DockStyle.Top;
-            header.Height = 104;
+            header.Height = 116;
             header.BackColor = Color.FromArgb(13, 19, 17);
 
+            Label brandBadge = new Label();
+            brandBadge.Text = "CM";
+            brandBadge.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
+            brandBadge.ForeColor = Color.FromArgb(13, 19, 17);
+            brandBadge.BackColor = Color.FromArgb(184, 243, 74);
+            brandBadge.TextAlign = ContentAlignment.MiddleCenter;
+            brandBadge.Size = new Size(54, 54);
+            brandBadge.Location = new Point(26, 28);
+
+            Label brand = new Label();
+            brand.Text = "CASSETTE MOTION PRO";
+            brand.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            brand.ForeColor = Color.FromArgb(184, 243, 74);
+            brand.AutoSize = true;
+            brand.Location = new Point(98, 15);
+
             Label title = new Label();
-            title.Text = "CLIENTS";
+            title.Text = "CLIENT FITS";
             title.Font = new Font("Segoe UI", 22F, FontStyle.Bold);
             title.ForeColor = Color.White;
             title.AutoSize = true;
-            title.Location = new Point(26, 18);
+            title.Location = new Point(95, 31);
 
             Label subtitle = new Label();
             subtitle.Text = "Choose a client, start a fit session, then save videos, measurements, and reports into that client folder.";
             subtitle.Font = new Font("Segoe UI", 9.5F);
             subtitle.ForeColor = Color.FromArgb(175, 187, 181);
             subtitle.AutoSize = true;
-            subtitle.Location = new Point(29, 62);
+            subtitle.Location = new Point(100, 75);
 
             Button newClient = CreateButton("+  New Client", true);
             newClient.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            newClient.Location = new Point(ClientSize.Width - 164, 31);
+            newClient.Location = new Point(ClientSize.Width - 164, 38);
             newClient.Size = new Size(132, 40);
             newClient.Click += NewClient_Click;
             header.Resize += delegate { newClient.Left = header.ClientSize.Width - newClient.Width - 28; };
 
+            header.Controls.Add(brandBadge);
+            header.Controls.Add(brand);
             header.Controls.Add(title);
             header.Controls.Add(subtitle);
             header.Controls.Add(newClient);
@@ -138,7 +156,7 @@ namespace CassetteMotionPro.Clients
             layout.Dock = DockStyle.Fill;
             layout.ColumnCount = 1;
             layout.RowCount = 2;
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 104));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 116));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             layout.Controls.Add(header, 0, 0);
             layout.Controls.Add(split, 0, 1);
@@ -189,7 +207,7 @@ namespace CassetteMotionPro.Clients
             workflowHeading.Location = new Point(38, 420);
 
             Label workflow = new Label();
-            workflow.Text = "1. Create or select the client\n2. Start/open the fit session first\n3. Record/analyze in Kinovea so saves know this client folder\n4. Save Before / After / Dual evidence\n5. Preview, package, and save the report";
+            workflow.Text = "1. Create or select the client\n2. Start/open the fit session first\n3. Record/analyze in Video Studio\n4. Save Before / After / Dual evidence\n5. Preview, package, and save the report";
             workflow.AutoSize = true;
             workflow.MaximumSize = new Size(470, 0);
             workflow.Location = new Point(38, 446);
@@ -210,7 +228,7 @@ namespace CassetteMotionPro.Clients
                     FilesystemHelper.LocateDirectory(client.FolderPath);
             };
 
-            btnOpenVideos.Text = "Open Videos";
+            btnOpenVideos.Text = "Video Studio";
             btnOpenVideos.Size = new Size(110, 40);
             btnOpenVideos.Location = new Point(191, 10);
             StyleButton(btnOpenVideos, false);

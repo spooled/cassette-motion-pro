@@ -290,10 +290,10 @@ namespace Kinovea.Root
                 "This is the normal Cassette Motion Pro path:\n\n" +
                 "1. Create or open the client\n" +
                 "2. Start the fit session\n" +
-                "3. Record/analyze in Kinovea\n" +
+                "3. Record/analyze in Video Studio\n" +
                 "4. Save Before / After / Dual evidence\n" +
                 "5. Build the report\n\n" +
-                "Choose Yes to open Client Manager now, or No to stay in Kinovea.",
+                "Choose Yes to open Client Manager now, or No to stay in Video Studio.",
                 "Start Fit Day",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Information);

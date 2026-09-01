@@ -44,23 +44,41 @@ namespace CassetteMotionPro.Clients
         {
             Panel header = new Panel();
             header.Dock = DockStyle.Top;
-            header.Height = 92;
+            header.Height = 104;
             header.BackColor = Color.FromArgb(13, 19, 17);
+
+            Label brandBadge = new Label();
+            brandBadge.Text = "CM";
+            brandBadge.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            brandBadge.ForeColor = Color.FromArgb(13, 19, 17);
+            brandBadge.BackColor = Color.FromArgb(184, 243, 74);
+            brandBadge.TextAlign = ContentAlignment.MiddleCenter;
+            brandBadge.Size = new Size(48, 48);
+            brandBadge.Location = new Point(24, 25);
+
+            Label brand = new Label();
+            brand.Text = "CASSETTE MOTION PRO";
+            brand.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold);
+            brand.ForeColor = Color.FromArgb(184, 243, 74);
+            brand.AutoSize = true;
+            brand.Location = new Point(88, 12);
 
             Label title = new Label();
             title.Text = "NEW CLIENT";
             title.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
             title.ForeColor = Color.White;
             title.AutoSize = true;
-            title.Location = new Point(24, 18);
+            title.Location = new Point(85, 28);
 
             Label subtitle = new Label();
             subtitle.Text = "Create the client and their first bicycle profile.";
             subtitle.Font = new Font("Segoe UI", 9.5F);
             subtitle.ForeColor = Color.FromArgb(175, 187, 181);
             subtitle.AutoSize = true;
-            subtitle.Location = new Point(27, 57);
+            subtitle.Location = new Point(89, 66);
 
+            header.Controls.Add(brandBadge);
+            header.Controls.Add(brand);
             header.Controls.Add(title);
             header.Controls.Add(subtitle);
 
@@ -120,7 +138,7 @@ namespace CassetteMotionPro.Clients
             layout.Dock = DockStyle.Fill;
             layout.ColumnCount = 1;
             layout.RowCount = 3;
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 92));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 104));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 62));
             layout.Controls.Add(header, 0, 0);

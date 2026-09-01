@@ -50,8 +50,8 @@ namespace CassetteMotionPro.Workspace
                 MessageBox.Show(
                     owner,
                     "Create or open a client fit session first so Cassette Motion Pro knows where to save this video.\n\n" +
-                    "Open the Bike Fit Workspace for a client, click + New Session on the left, then click Save. After that, come back to Kinovea and click Save video again to choose Before, After, or Dual.",
-                    "Save video",
+                    "Open Client Fits, start the client’s fit session, then click Save. After that, return to Video Studio and click Save Video again to choose Before, After, or Dual.",
+                    "Cassette Motion Pro — Save Video",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
                 return CancelSaveToken;
@@ -113,7 +113,7 @@ namespace CassetteMotionPro.Workspace
 
             MessageBox.Show(
                 slot + " video saved to this fit session:\n\n" + path,
-                "Save video",
+                "Cassette Motion Pro — Save Video",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
         }
@@ -124,7 +124,7 @@ namespace CassetteMotionPro.Workspace
 
             string name = Path.GetFileNameWithoutExtension(suggestedFileName);
             if (string.IsNullOrWhiteSpace(name))
-                name = "video";
+                name = "CassetteMotionPro-Video";
 
             string extension = GetExtension(preferredFormat);
             string stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
@@ -202,7 +202,7 @@ namespace CassetteMotionPro.Workspace
 
             public BeforeAfterVideoSaveDialog(string beforeFolder, string afterFolder, string dualFolder)
             {
-                Text = "Save video";
+                Text = "Cassette Motion Pro — Save Video";
                 FormBorderStyle = FormBorderStyle.FixedDialog;
                 MaximizeBox = false;
                 MinimizeBox = false;
@@ -211,7 +211,7 @@ namespace CassetteMotionPro.Workspace
 
                 Label titleLabel = new Label();
                 titleLabel.AutoSize = false;
-                titleLabel.Text = "Save this Kinovea video into this fit session:";
+                titleLabel.Text = "Save this Video Studio video into the client fit session:";
                 titleLabel.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
                 titleLabel.Location = new Point(18, 18);
                 titleLabel.Size = new Size(580, 22);
@@ -225,7 +225,7 @@ namespace CassetteMotionPro.Workspace
 
                 Label hintLabel = new Label();
                 hintLabel.AutoSize = false;
-                hintLabel.Text = "Regular Save keeps Kinovea's normal save dialog if you do not want to attach this video to the client.";
+                hintLabel.Text = "Regular Save opens the standard save dialog when you do not want to attach this video to the client.";
                 hintLabel.ForeColor = SystemColors.GrayText;
                 hintLabel.Location = new Point(18, 134);
                 hintLabel.Size = new Size(580, 18);

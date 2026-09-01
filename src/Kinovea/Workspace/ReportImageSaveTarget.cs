@@ -56,8 +56,8 @@ namespace CassetteMotionPro.Workspace
                 MessageBox.Show(
                     owner,
                     "Create or open a client fit session first so Cassette Motion Pro knows where to save this image.\n\n" +
-                    "Open the Bike Fit Workspace for a client, click + New Session on the left, then click Save. After that, come back to Kinovea and click Save image again to choose Before, After, or Dual.",
-                    "Save report image",
+                    "Open Client Fits, start the client’s fit session, then click Save. After that, return to Video Studio and click Save Image again to choose Before, After, or Dual.",
+                    "Cassette Motion Pro — Save Image",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
                 return true;
@@ -86,7 +86,7 @@ namespace CassetteMotionPro.Workspace
                 MessageBox.Show(
                     owner,
                     dialog.SelectedSlot + " report image saved to this fit session:\n\n" + path,
-                    "Save report image",
+                    "Cassette Motion Pro — Save Image",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
 
@@ -132,7 +132,7 @@ namespace CassetteMotionPro.Workspace
         {
             string baseName = Path.GetFileNameWithoutExtension(suggestedFileName);
             if (string.IsNullOrWhiteSpace(baseName))
-                baseName = "Kinovea";
+                baseName = "CassetteMotionPro";
 
             foreach (char invalid in Path.GetInvalidFileNameChars())
                 baseName = baseName.Replace(invalid, '-');
@@ -183,7 +183,7 @@ namespace CassetteMotionPro.Workspace
 
         public BeforeAfterReportImageDialog(string folderPath)
         {
-            Text = "Save report image";
+            Text = "Cassette Motion Pro — Save Image";
             FormBorderStyle = FormBorderStyle.FixedDialog;
             StartPosition = FormStartPosition.CenterParent;
             MinimizeBox = false;
@@ -192,7 +192,7 @@ namespace CassetteMotionPro.Workspace
             ClientSize = new Size(540, 178);
 
             Label title = new Label();
-            title.Text = "Save this Kinovea image into this fit session:";
+            title.Text = "Save this Video Studio image into the client fit session:";
             title.Font = new Font(Font, FontStyle.Bold);
             title.AutoSize = false;
             title.Location = new Point(18, 16);
