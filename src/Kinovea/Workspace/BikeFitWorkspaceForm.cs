@@ -2340,6 +2340,14 @@ namespace CassetteMotionPro.Workspace
             FlowLayoutPanel actions = new FlowLayoutPanel();
             actions.Dock = DockStyle.Fill;
             actions.FlowDirection = FlowDirection.LeftToRight;
+            actions.WrapContents = true;
+
+            Button guidedBefore = CreateButton("Guided Before Image", true);
+            guidedBefore.Size = new Size(180, 38);
+            guidedBefore.Click += delegate { ShowGuidedRiderMeasurements("BeforeReportImagePath", "Before"); };
+            Button guidedAfter = CreateButton("Guided After Image", true);
+            guidedAfter.Size = new Size(175, 38);
+            guidedAfter.Click += delegate { ShowGuidedRiderMeasurements("AfterReportImagePath", "After"); };
 
             Button measureBefore = CreateButton("Measure Before Video", false);
             measureBefore.Size = new Size(170, 38);
@@ -2347,17 +2355,48 @@ namespace CassetteMotionPro.Workspace
             Button measureAfter = CreateButton("Measure After Video", true);
             measureAfter.Size = new Size(170, 38);
             measureAfter.Click += delegate { StartBodyAngleGuide("AfterVideoPath"); };
+            actions.Controls.Add(guidedBefore);
+            actions.Controls.Add(guidedAfter);
             actions.Controls.Add(measureBefore);
             actions.Controls.Add(measureAfter);
 
             int actionRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 96));
             table.Controls.Add(actions, 0, actionRow);
             table.SetColumnSpan(actions, 3);
 
             page.AutoScroll = true;
             page.Controls.Add(table);
             return page;
+        }
+
+        private void ShowGuidedRiderMeasurements(string imageKey, string defaultSide)
+        {
+            string path = imageBoxes.ContainsKey(imageKey) ? imageBoxes[imageKey].Text : string.Empty;
+            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+            {
+                MessageBox.Show(this,
+                    "Choose a " + defaultSide + " report image first.\n\n" +
+                    "Use Report → Report Images to select or save a clear side-view rider image, then return to Body Angles.",
+                    "Guided Rider Measurements", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (RiderBodyGuidedMeasurementForm form = new RiderBodyGuidedMeasurementForm(path, defaultSide))
+            {
+                if (form.ShowDialog(this) != DialogResult.OK)
+                    return;
+
+                foreach (KeyValuePair<string, string> measurement in form.ResultValues)
+                {
+                    string key = measurement.Key + form.ResultSide;
+                    if (measurementBoxes.ContainsKey(key))
+                        measurementBoxes[key].Text = measurement.Value;
+                }
+
+                SaveCurrentSession();
+                UpdateSaveHint("Guided rider measurements saved to " + form.ResultSide.ToLowerInvariant() + ".");
+            }
         }
 
         private void AddBodyAngleGuide(TableLayoutPanel table)
