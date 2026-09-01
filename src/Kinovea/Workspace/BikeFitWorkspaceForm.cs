@@ -57,6 +57,8 @@ namespace CassetteMotionPro.Workspace
         private readonly Label savedEvidenceReviewStatus = new Label();
         private readonly Label reportBuilderStatus = new Label();
         private readonly Label reportBuilderOutput = new Label();
+        private readonly Label smartRecommendationStatus = new Label();
+        private readonly TextBox smartRecommendationDraft = new TextBox();
         private readonly Label combinedMeasurementReviewStatus = new Label();
         private readonly TextBox combinedMeasurementReview = new TextBox();
         private readonly Label captureActionsLabel = new Label();
@@ -579,6 +581,59 @@ namespace CassetteMotionPro.Workspace
             reportBuilderStatus.Padding = new Padding(14, 10, 14, 8);
             reportBuilderStatus.TextAlign = ContentAlignment.TopLeft;
             AddReportBuilderRow(layout, reportBuilderStatus, 142);
+
+            GroupBox smartRecommendations = new GroupBox();
+            smartRecommendations.Text = "Smart Before / After recommendations";
+            smartRecommendations.Dock = DockStyle.Fill;
+            smartRecommendations.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            smartRecommendations.ForeColor = Color.FromArgb(37, 48, 43);
+            smartRecommendations.Padding = new Padding(12, 10, 12, 10);
+
+            TableLayoutPanel recommendationLayout = new TableLayoutPanel();
+            recommendationLayout.Dock = DockStyle.Fill;
+            recommendationLayout.ColumnCount = 1;
+            recommendationLayout.RowCount = 3;
+            recommendationLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+            recommendationLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            recommendationLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
+
+            smartRecommendationStatus.Dock = DockStyle.Fill;
+            smartRecommendationStatus.ForeColor = Color.FromArgb(74, 87, 81);
+            smartRecommendationStatus.Text = "Generate a draft after entering Before and After measurements. You decide what becomes part of the client report.";
+
+            smartRecommendationDraft.Dock = DockStyle.Fill;
+            smartRecommendationDraft.Multiline = true;
+            smartRecommendationDraft.ScrollBars = ScrollBars.Vertical;
+            smartRecommendationDraft.BackColor = Color.White;
+            smartRecommendationDraft.ForeColor = Color.FromArgb(24, 31, 29);
+            smartRecommendationDraft.Font = new Font("Segoe UI", 9.5F);
+
+            FlowLayoutPanel recommendationActions = new FlowLayoutPanel();
+            recommendationActions.Dock = DockStyle.Fill;
+            recommendationActions.FlowDirection = FlowDirection.LeftToRight;
+            recommendationActions.WrapContents = true;
+            Button generateSuggestions = CreateButton("Generate Draft", true);
+            generateSuggestions.Size = new Size(145, 36);
+            generateSuggestions.Click += delegate { GenerateSmartRecommendationDraft(); };
+            Button addRecommendations = CreateButton("Add to Recommendations", false);
+            addRecommendations.Size = new Size(185, 36);
+            addRecommendations.Click += delegate { AddSmartDraftToSummary(txtFitSummaryRecommendations, "Recommendations"); };
+            Button addFollowUp = CreateButton("Add to Follow-up", false);
+            addFollowUp.Size = new Size(145, 36);
+            addFollowUp.Click += delegate { AddSmartDraftToSummary(txtFitSummaryFollowUp, "Follow-up plan"); };
+            Button clearDraft = CreateButton("Clear Draft", false);
+            clearDraft.Size = new Size(110, 36);
+            clearDraft.Click += delegate { smartRecommendationDraft.Clear(); RefreshSmartRecommendationStatus(); };
+            recommendationActions.Controls.Add(generateSuggestions);
+            recommendationActions.Controls.Add(addRecommendations);
+            recommendationActions.Controls.Add(addFollowUp);
+            recommendationActions.Controls.Add(clearDraft);
+
+            recommendationLayout.Controls.Add(smartRecommendationStatus, 0, 0);
+            recommendationLayout.Controls.Add(smartRecommendationDraft, 0, 1);
+            recommendationLayout.Controls.Add(recommendationActions, 0, 2);
+            smartRecommendations.Controls.Add(recommendationLayout);
+            AddReportBuilderRow(layout, smartRecommendations, 286);
 
             GroupBox sections = new GroupBox();
             sections.Text = "Report sections";
@@ -2927,6 +2982,122 @@ namespace CassetteMotionPro.Workspace
             UpdateNextRecommendedStep();
             UpdateReportBuilderStatus();
             RefreshCombinedMeasurementReview();
+            RefreshSmartRecommendationStatus();
+        }
+
+        private void RefreshSmartRecommendationStatus()
+        {
+            if (smartRecommendationStatus == null || smartRecommendationDraft == null)
+                return;
+
+            string[] keys = new string[] { "SaddleHeight", "SaddleSetback", "SaddleTipToGripReach", "HandlebarX", "HandlebarY", "KneeAngle", "HipAngle", "AnkleAngle", "TorsoAngle", "ShoulderAngle" };
+            int pairs = 0;
+            foreach (string key in keys)
+            {
+                double before;
+                double after;
+                if (TryParseMeasurementNumber(GetMeasurementText(key + "Before"), out before) && TryParseMeasurementNumber(GetMeasurementText(key + "After"), out after))
+                    pairs++;
+            }
+
+            smartRecommendationStatus.Text = pairs == 0
+                ? "Add Before and After measurements, then generate an editable report draft. Nothing is added automatically."
+                : pairs.ToString() + " Before/After measurement pairs are available. " + (string.IsNullOrWhiteSpace(smartRecommendationDraft.Text) ? "Generate a draft when ready." : "Draft is editable; add it to the report only after reviewing it.");
+            smartRecommendationStatus.ForeColor = pairs == 0 ? Color.FromArgb(181, 118, 35) : Color.FromArgb(60, 145, 76);
+        }
+
+        private void GenerateSmartRecommendationDraft()
+        {
+            if (currentSession == null)
+            {
+                MessageBox.Show(this, "Open or create a client fit session first.", "Smart Recommendations", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            List<string> observations = new List<string>();
+            AddSmartChangeObservation(observations, "SaddleHeight", 2, "mm", "Saddle height was raised", "Saddle height was lowered");
+            AddSmartChangeObservation(observations, "SaddleSetback", 2, "mm", "The saddle moved forward", "The saddle moved rearward");
+            AddSmartChangeObservation(observations, "SaddleTipToGripReach", 3, "mm", "Saddle-to-grip reach increased", "Saddle-to-grip reach decreased");
+            AddSmartChangeObservation(observations, "HandlebarX", 3, "mm", "The handlebar contact point moved forward", "The handlebar contact point moved rearward");
+            AddSmartChangeObservation(observations, "HandlebarY", 3, "mm", "The handlebar contact point moved upward", "The handlebar contact point moved downward");
+            AddSmartChangeObservation(observations, "KneeAngle", 1, "°", "Knee angle increased", "Knee angle decreased");
+            AddSmartChangeObservation(observations, "HipAngle", 1, "°", "Hip angle increased", "Hip angle decreased");
+            AddSmartChangeObservation(observations, "AnkleAngle", 1, "°", "Ankle angle increased", "Ankle angle decreased");
+            AddSmartChangeObservation(observations, "TorsoAngle", 1, "°", "Body reach angle increased", "Body reach angle decreased");
+            AddSmartChangeObservation(observations, "ShoulderAngle", 1, "°", "Back angle became more upright", "Back angle became lower");
+
+            int availablePairs = CountSmartRecommendationPairs();
+            if (availablePairs == 0)
+            {
+                MessageBox.Show(this, "Enter at least one matching Before and After measurement first.", "Smart Recommendations", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            System.Text.StringBuilder draft = new System.Text.StringBuilder();
+            draft.AppendLine("Draft Before / After observations:");
+            if (observations.Count == 0)
+                draft.AppendLine("• The recorded Before and After measurements show only small changes.");
+            else
+            {
+                foreach (string observation in observations)
+                    draft.AppendLine("• " + observation);
+            }
+
+            draft.AppendLine();
+            draft.AppendLine("Suggested follow-up:");
+            draft.AppendLine("• Confirm comfort, control, and pedaling response with the rider before treating the changes as final.");
+            draft.AppendLine("• Recheck the same camera view and crank position if any measurement does not match what was observed during the fit.");
+            draft.AppendLine("• Reassess after the rider has completed an appropriate adaptation period, especially if several contact points changed.");
+            draft.AppendLine();
+            draft.Append("Fitter note: Review and edit this draft before including it in the client report. These observations describe recorded changes and are not a diagnosis.");
+
+            smartRecommendationDraft.Text = draft.ToString();
+            RefreshSmartRecommendationStatus();
+            UpdateSaveHint("Smart Before/After draft generated. Review it before adding it to the report.");
+        }
+
+        private int CountSmartRecommendationPairs()
+        {
+            string[] keys = new string[] { "SaddleHeight", "SaddleSetback", "SaddleTipToGripReach", "HandlebarX", "HandlebarY", "KneeAngle", "HipAngle", "AnkleAngle", "TorsoAngle", "ShoulderAngle" };
+            int count = 0;
+            foreach (string key in keys)
+            {
+                double before;
+                double after;
+                if (TryParseMeasurementNumber(GetMeasurementText(key + "Before"), out before) && TryParseMeasurementNumber(GetMeasurementText(key + "After"), out after))
+                    count++;
+            }
+            return count;
+        }
+
+        private void AddSmartChangeObservation(List<string> observations, string key, double minimumChange, string unit, string positiveText, string negativeText)
+        {
+            double before;
+            double after;
+            if (!TryParseMeasurementNumber(GetMeasurementText(key + "Before"), out before) || !TryParseMeasurementNumber(GetMeasurementText(key + "After"), out after))
+                return;
+
+            double change = after - before;
+            if (Math.Abs(change) < minimumChange)
+                return;
+            string direction = change > 0 ? positiveText : negativeText;
+            observations.Add(direction + " by " + Math.Abs(change).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " " + unit + " (" + GetMeasurementText(key + "Before") + " → " + GetMeasurementText(key + "After") + ").");
+        }
+
+        private void AddSmartDraftToSummary(TextBox destination, string destinationName)
+        {
+            string draft = smartRecommendationDraft.Text.Trim();
+            if (string.IsNullOrWhiteSpace(draft))
+            {
+                MessageBox.Show(this, "Generate and review a draft first.", "Smart Recommendations", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            string existing = destination.Text.Trim();
+            destination.Text = string.IsNullOrEmpty(existing) ? draft : existing + Environment.NewLine + Environment.NewLine + draft;
+            SaveCurrentSession();
+            UpdateReportBuilderStatus();
+            UpdateSaveHint("Reviewed smart draft added to " + destinationName + ".");
         }
 
         private void RefreshCombinedMeasurementReview()
