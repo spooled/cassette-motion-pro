@@ -59,6 +59,8 @@ namespace CassetteMotionPro.Workspace
         private readonly Label reportBuilderOutput = new Label();
         private readonly Label smartRecommendationStatus = new Label();
         private readonly TextBox smartRecommendationDraft = new TextBox();
+        private readonly Label finalizationStatus = new Label();
+        private readonly TextBox finalizationChecklist = new TextBox();
         private readonly Label combinedMeasurementReviewStatus = new Label();
         private readonly TextBox combinedMeasurementReview = new TextBox();
         private readonly Label captureActionsLabel = new Label();
@@ -545,7 +547,102 @@ namespace CassetteMotionPro.Workspace
 
         private TabPage BuildReportWorkspaceTab()
         {
-            return BuildGroupedWorkspaceTab("Report", BuildReportBuilderTab(), BuildFitSummaryTab(), BuildReportImagesTab(), BuildHandoffTab(), BuildNotesTab());
+            return BuildGroupedWorkspaceTab("Report", BuildFitSessionFinalizationTab(), BuildReportBuilderTab(), BuildFitSummaryTab(), BuildReportImagesTab(), BuildHandoffTab(), BuildNotesTab());
+        }
+
+        private TabPage BuildFitSessionFinalizationTab()
+        {
+            TabPage page = NewTab("Finalize Fit");
+            TableLayoutPanel layout = new TableLayoutPanel();
+            layout.Dock = DockStyle.Fill;
+            layout.Padding = new Padding(24, 22, 24, 18);
+            layout.ColumnCount = 1;
+            layout.RowCount = 6;
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 76));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 62));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 62));
+
+            Label eyebrow = new Label();
+            eyebrow.Text = "FIT SESSION FINALIZATION ASSISTANT";
+            eyebrow.Dock = DockStyle.Fill;
+            eyebrow.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            eyebrow.ForeColor = Color.FromArgb(85, 122, 18);
+
+            Label title = new Label();
+            title.Text = "Finish, review, and package the client fit";
+            title.Dock = DockStyle.Fill;
+            title.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
+            title.ForeColor = Color.FromArgb(24, 31, 29);
+
+            finalizationStatus.Dock = DockStyle.Fill;
+            finalizationStatus.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            finalizationStatus.BackColor = Color.FromArgb(248, 252, 238);
+            finalizationStatus.ForeColor = Color.FromArgb(74, 87, 81);
+            finalizationStatus.Padding = new Padding(12, 10, 12, 8);
+
+            finalizationChecklist.Dock = DockStyle.Fill;
+            finalizationChecklist.Multiline = true;
+            finalizationChecklist.ReadOnly = true;
+            finalizationChecklist.ScrollBars = ScrollBars.Vertical;
+            finalizationChecklist.BackColor = Color.White;
+            finalizationChecklist.ForeColor = Color.FromArgb(24, 31, 29);
+            finalizationChecklist.Font = new Font("Segoe UI", 10F);
+
+            FlowLayoutPanel reviewActions = new FlowLayoutPanel();
+            reviewActions.Dock = DockStyle.Fill;
+            reviewActions.FlowDirection = FlowDirection.LeftToRight;
+            reviewActions.WrapContents = true;
+            reviewActions.Padding = new Padding(0, 8, 0, 4);
+            Button refresh = CreateButton("Refresh Final Check", true);
+            refresh.Size = new Size(170, 38);
+            refresh.Click += delegate { RefreshFitSessionFinalization(); };
+            Button measurements = CreateButton("Combined Measurements", false);
+            measurements.Size = new Size(185, 38);
+            measurements.Click += delegate { SelectWorkspaceTab("Combined Review"); };
+            Button recommendations = CreateButton("Smart Recommendations", false);
+            recommendations.Size = new Size(180, 38);
+            recommendations.Click += delegate { SelectWorkspaceTab("Report Builder"); };
+            Button preview = CreateButton("Preview Report", false);
+            preview.Size = new Size(135, 38);
+            preview.Click += delegate { PreviewReport_Click(this, EventArgs.Empty); };
+            reviewActions.Controls.Add(refresh);
+            reviewActions.Controls.Add(measurements);
+            reviewActions.Controls.Add(recommendations);
+            reviewActions.Controls.Add(preview);
+
+            FlowLayoutPanel finishActions = new FlowLayoutPanel();
+            finishActions.Dock = DockStyle.Fill;
+            finishActions.FlowDirection = FlowDirection.LeftToRight;
+            finishActions.WrapContents = true;
+            finishActions.Padding = new Padding(0, 8, 0, 4);
+            Button complete = CreateButton("Mark Session Complete", true);
+            complete.Size = new Size(190, 38);
+            complete.Click += delegate { TryMarkFitSessionComplete(); };
+            Button package = CreateButton("Complete + Package", false);
+            package.Size = new Size(170, 38);
+            package.Click += delegate { if (TryMarkFitSessionComplete()) ReportPackage_Click(this, EventArgs.Empty); };
+            Button zip = CreateButton("Complete + ZIP", false);
+            zip.Size = new Size(150, 38);
+            zip.Click += delegate { if (TryMarkFitSessionComplete()) ZipReportPackage_Click(this, EventArgs.Empty); };
+            Button open = CreateButton("Open Finished Folder", false);
+            open.Size = new Size(175, 38);
+            open.Click += delegate { OpenReports_Click(this, EventArgs.Empty); };
+            finishActions.Controls.Add(complete);
+            finishActions.Controls.Add(package);
+            finishActions.Controls.Add(zip);
+            finishActions.Controls.Add(open);
+
+            layout.Controls.Add(eyebrow, 0, 0);
+            layout.Controls.Add(title, 0, 1);
+            layout.Controls.Add(finalizationStatus, 0, 2);
+            layout.Controls.Add(finalizationChecklist, 0, 3);
+            layout.Controls.Add(reviewActions, 0, 4);
+            layout.Controls.Add(finishActions, 0, 5);
+            page.Controls.Add(layout);
+            return page;
         }
 
         private TabPage BuildReportBuilderTab()
@@ -2983,6 +3080,109 @@ namespace CassetteMotionPro.Workspace
             UpdateReportBuilderStatus();
             RefreshCombinedMeasurementReview();
             RefreshSmartRecommendationStatus();
+            RefreshFitSessionFinalization();
+        }
+
+        private void RefreshFitSessionFinalization()
+        {
+            if (finalizationStatus == null || finalizationChecklist == null)
+                return;
+
+            if (!HasActiveFitSession())
+            {
+                finalizationStatus.Text = "START HERE · Open or create a client fit session first.";
+                finalizationStatus.ForeColor = Color.FromArgb(181, 118, 35);
+                finalizationChecklist.Text = "The finalization assistant will check the active session’s client details, media, evidence, measurements, report writing, and output readiness.";
+                return;
+            }
+
+            List<string> required = GetReportReadinessWarnings();
+            List<string> qualityNotes = GetCombinedMeasurementReviewNotes();
+            bool hasGoals = HasFitGoals();
+            bool hasSummary = HasReportSummaryContent();
+            bool hasRecommendations = !string.IsNullOrWhiteSpace(txtFitSummaryRecommendations.Text) || !string.IsNullOrWhiteSpace(txtFitSummaryFollowUp.Text);
+            bool hasBodyAngles = HasAnyBodyAngleMeasurements();
+            bool isComplete = string.Equals(Convert.ToString(cmbStatus.SelectedItem), "Complete", StringComparison.OrdinalIgnoreCase);
+
+            System.Text.StringBuilder checklist = new System.Text.StringBuilder();
+            checklist.AppendLine("REQUIRED FIT-DAY ITEMS");
+            checklist.AppendLine(FinalizationLine(true, "Client and active fit session", currentSession.DisplayName));
+            checklist.AppendLine(FinalizationLine(HasMediaFile("BeforeVideoPath"), "Before video", "Record or select the Before video."));
+            checklist.AppendLine(FinalizationLine(HasMediaFile("AfterVideoPath"), "After video", "Record or select the After video."));
+            checklist.AppendLine(FinalizationLine(HasAnalysisCaptureEvidence() || HasSavedSessionEvidence(), "Saved fit evidence", "Save useful Before, After, or Dual evidence."));
+            checklist.AppendLine(FinalizationLine(HasCoreBikeMetrics(), "Core bike measurements", "Complete the final Bike Metrics."));
+            checklist.AppendLine(FinalizationLine(HasReportImage(), "Report image", "Choose a Before, After, or Dual report image."));
+            checklist.AppendLine();
+            checklist.AppendLine("REPORT POLISH");
+            checklist.AppendLine(FinalizationLine(hasGoals, "Rider goals", "Recommended for report context."));
+            checklist.AppendLine(FinalizationLine(hasBodyAngles, "Rider body measurements", "Optional; add the rider angles used during the fit."));
+            checklist.AppendLine(FinalizationLine(hasSummary, "Fit Summary", "Add findings, changes made, or recommendations."));
+            checklist.AppendLine(FinalizationLine(hasRecommendations, "Recommendations / follow-up", "Review the smart draft or write your own."));
+            checklist.AppendLine(FinalizationLine(qualityNotes.Count == 0, "Measurement quality review", qualityNotes.Count == 0 ? "No broad warnings found." : qualityNotes.Count.ToString() + " item(s) need professional review."));
+            checklist.AppendLine();
+            checklist.AppendLine("OUTPUT");
+            checklist.AppendLine(FinalizationLine(isComplete, "Session status", isComplete ? "Complete" : "Mark complete after reviewing the preview."));
+            checklist.AppendLine("Reports folder: " + GetSessionReportsFolderPath());
+
+            if (required.Count > 0)
+            {
+                checklist.AppendLine();
+                checklist.AppendLine("ITEMS TO CHECK BEFORE FINAL OUTPUT");
+                foreach (string warning in required)
+                    checklist.AppendLine("• " + warning);
+            }
+
+            finalizationChecklist.Text = checklist.ToString();
+            bool ready = required.Count == 0;
+            finalizationStatus.Text = (ready ? "READY FOR FINAL PREVIEW" : "NEEDS " + required.Count.ToString() + " REQUIRED STEP(S)") +
+                "   ·   Session status: " + Convert.ToString(cmbStatus.SelectedItem) + Environment.NewLine +
+                (ready ? "Preview the report, then mark complete and create the client package or ZIP." : "Use the checklist below to return to the unfinished parts of the fit.");
+            finalizationStatus.ForeColor = ready ? Color.FromArgb(60, 145, 76) : Color.FromArgb(181, 118, 35);
+        }
+
+        private static string FinalizationLine(bool ready, string label, string detail)
+        {
+            return (ready ? "✓ READY   " : "○ CHECK   ") + label + " — " + detail;
+        }
+
+        private bool HasAnyBodyAngleMeasurements()
+        {
+            string[] keys = new string[] { "KneeAngle", "HipAngle", "AnkleAngle", "TorsoAngle", "ShoulderAngle" };
+            foreach (string key in keys)
+            {
+                if (!string.IsNullOrWhiteSpace(GetMeasurementText(key + "Before")) || !string.IsNullOrWhiteSpace(GetMeasurementText(key + "After")))
+                    return true;
+            }
+            return false;
+        }
+
+        private bool TryMarkFitSessionComplete()
+        {
+            if (!HasActiveFitSession())
+            {
+                MessageBox.Show(this, "Open or create a client fit session first.", "Finalize Fit", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return false;
+            }
+
+            if (string.Equals(Convert.ToString(cmbStatus.SelectedItem), "Complete", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            SaveCurrentSession();
+            List<string> warnings = GetReportReadinessWarnings();
+            string message = warnings.Count == 0
+                ? "Mark this fit session Complete?\n\nYou can still reopen and edit it later."
+                : "This session still has items to review:\n\n• " + string.Join("\n• ", warnings.ToArray()) + "\n\nMark it Complete anyway?";
+            DialogResult result = MessageBox.Show(this, message, "Finalize Fit Session", MessageBoxButtons.YesNo, warnings.Count == 0 ? MessageBoxIcon.Question : MessageBoxIcon.Warning);
+            if (result != DialogResult.Yes)
+                return false;
+
+            cmbStatus.SelectedItem = "Complete";
+            SaveCurrentSession();
+            Guid sessionId = currentSession.Id;
+            RefreshSessions(sessionId);
+            RefreshFitSessionFinalization();
+            UpdateSaveHint("Fit session marked Complete. It can still be reopened and edited.");
+            return true;
         }
 
         private void RefreshSmartRecommendationStatus()
