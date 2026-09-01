@@ -201,10 +201,25 @@ namespace CassetteMotionPro.Workspace
             heading.Height = 68;
             heading.Padding = new Padding(16, 14, 16, 10);
 
+            TableLayoutPanel sessionActions = new TableLayoutPanel();
+            sessionActions.Dock = DockStyle.Fill;
+            sessionActions.ColumnCount = 2;
+            sessionActions.RowCount = 1;
+            sessionActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 52));
+            sessionActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 48));
+            sessionActions.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
             Button newSession = CreateButton("+ New Session", true);
             newSession.Dock = DockStyle.Fill;
+            newSession.Margin = new Padding(0, 0, 4, 0);
             newSession.Click += delegate { BeginNewSession(); };
-            heading.Controls.Add(newSession);
+            Button repeatFit = CreateButton("Repeat Fit", false);
+            repeatFit.Dock = DockStyle.Fill;
+            repeatFit.Margin = new Padding(4, 0, 0, 0);
+            repeatFit.Click += delegate { OpenRepeatFitWorkflow(); };
+            sessionActions.Controls.Add(newSession, 0, 0);
+            sessionActions.Controls.Add(repeatFit, 1, 0);
+            heading.Controls.Add(sessionActions);
 
             sessionList.Dock = DockStyle.Fill;
             sessionList.View = View.Details;
@@ -1726,12 +1741,16 @@ namespace CassetteMotionPro.Workspace
             Button openFit = CreateButton("Open Selected Fit", true);
             openFit.Size = new Size(150, 34);
             openFit.Click += delegate { OpenSelectedHistorySession(); };
+            Button startRepeat = CreateButton("Start Repeat Fit", true);
+            startRepeat.Size = new Size(150, 34);
+            startRepeat.Click += delegate { StartRepeatFitFromSelectedHistory(); };
             Button openFolder = CreateButton("Open Fit Folder", false);
             openFolder.Size = new Size(135, 34);
             openFolder.Click += delegate { OpenSelectedHistoryFolder(); };
             Button refresh = CreateButton("Refresh History", false);
             refresh.Size = new Size(135, 34);
             refresh.Click += delegate { RefreshClientHistory(); };
+            actions.Controls.Add(startRepeat);
             actions.Controls.Add(openFit);
             actions.Controls.Add(openFolder);
             actions.Controls.Add(refresh);
@@ -1801,7 +1820,8 @@ namespace CassetteMotionPro.Workspace
                 return;
             }
 
-            historyStatus.Text = previous.DisplayName + "  →  " + currentSession.DisplayName;
+            string repeatSource = currentSession.RepeatFitSourceSessionId == previous.Id ? " · REPEAT-FIT SOURCE" : string.Empty;
+            historyStatus.Text = previous.DisplayName + "  →  " + currentSession.DisplayName + repeatSource;
             historySummary.Text =
                 "Previous fit: " + previous.SessionDate.ToString("MMM d, yyyy") + " · " + (previous.Status ?? "No status") + Environment.NewLine +
                 "Template: " + (string.IsNullOrWhiteSpace(previous.FitTemplateName) ? "Not recorded" : previous.FitTemplateName) + Environment.NewLine +
@@ -1856,6 +1876,83 @@ namespace CassetteMotionPro.Workspace
         private FitSessionRecord GetSelectedHistorySession()
         {
             return historySessionList.SelectedItems.Count == 0 ? null : historySessionList.SelectedItems[0].Tag as FitSessionRecord;
+        }
+
+        private void OpenRepeatFitWorkflow()
+        {
+            if (currentSession != null && currentSession.Id != Guid.Empty)
+            {
+                StartRepeatFitFromSession(currentSession);
+                return;
+            }
+
+            RefreshClientHistory();
+            SelectWorkspaceTab("Client History");
+            UpdateSaveHint(historySessionList.Items.Count == 0
+                ? "No saved fit is available yet. Complete the first fit before starting a repeat fit."
+                : "Choose the fit you want to use as context, then click Start Repeat Fit.");
+        }
+
+        private void StartRepeatFitFromSelectedHistory()
+        {
+            FitSessionRecord source = GetSelectedHistorySession();
+            if (source == null)
+            {
+                MessageBox.Show(this, "Select a saved fit first.", "Start Repeat Fit", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            StartRepeatFitFromSession(source);
+        }
+
+        private void StartRepeatFitFromSession(FitSessionRecord source)
+        {
+            if (source == null || source.Id == Guid.Empty)
+                return;
+
+            if (currentSession != null && currentSession.Id == Guid.Empty)
+            {
+                DialogResult result = MessageBox.Show(this, "Start a repeat fit and discard the current unsaved draft?", "Start Repeat Fit", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                if (result != DialogResult.Yes)
+                    return;
+            }
+            else if (currentSession != null)
+            {
+                SaveCurrentSession();
+            }
+
+            FitSessionRecord repeat = new FitSessionRecord();
+            repeat.SessionDate = DateTime.Today;
+            repeat.Title = "Repeat Fit - " + DateTime.Today.ToString("MMM d, yyyy");
+            repeat.Status = "Assessment";
+            repeat.RepeatFitSourceSessionId = source.Id;
+            repeat.RepeatFitSourceTitle = source.DisplayName;
+            repeat.RepeatFitSourceDate = source.SessionDate;
+            repeat.FitTemplateName = source.FitTemplateName;
+            repeat.FitTemplateBikeType = source.FitTemplateBikeType;
+            repeat.Goals = source.Goals;
+            repeat.Notes = BuildRepeatFitContext(source);
+
+            sessionList.SelectedItems.Clear();
+            LoadSession(repeat);
+            SaveCurrentSession();
+            Guid repeatId = currentSession.Id;
+            RefreshSessions(repeatId);
+            SelectWorkspaceTab(FitDayHomeTabName);
+            UpdateSaveHint("Repeat fit created from " + source.DisplayName + ". Confirm today’s goals, then record fresh videos and measurements.");
+        }
+
+        private static string BuildRepeatFitContext(FitSessionRecord source)
+        {
+            System.Text.StringBuilder context = new System.Text.StringBuilder();
+            context.AppendLine("REPEAT FIT CONTEXT");
+            context.AppendLine("Previous fit: " + source.DisplayName + " (" + (source.SessionDate == DateTime.MinValue ? "date not recorded" : source.SessionDate.ToString("MMM d, yyyy")) + ")");
+            if (!string.IsNullOrWhiteSpace(source.FitSummaryRecommendations))
+                context.AppendLine("Previous recommendations: " + source.FitSummaryRecommendations.Trim());
+            if (!string.IsNullOrWhiteSpace(source.FitSummaryFollowUp))
+                context.AppendLine("Previous follow-up: " + source.FitSummaryFollowUp.Trim());
+            context.AppendLine();
+            context.Append("Fresh videos, images, and measurements are required. Previous measurement values were not copied into this session.");
+            return context.ToString();
         }
 
         private void OpenSelectedHistorySession()
