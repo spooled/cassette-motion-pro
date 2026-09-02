@@ -40,6 +40,11 @@ namespace CassetteMotionPro.Workspace
         private readonly DateTimePicker dtpDate = new DateTimePicker();
         private readonly ComboBox cmbStatus = new ComboBox();
         private readonly ComboBox cmbFitTemplate = new ComboBox();
+        private readonly ComboBox cmbFitProtocol = new ComboBox();
+        private readonly FlowLayoutPanel fitProtocolSteps = new FlowLayoutPanel();
+        private readonly Label fitProtocolSummary = new Label();
+        private readonly Label fitProtocolProgress = new Label();
+        private bool loadingFitProtocol;
         private readonly ComboBox cmbCameraProfile = new ComboBox();
         private readonly TextBox txtCameraLeftRole = new TextBox();
         private readonly TextBox txtCameraRightRole = new TextBox();
@@ -367,6 +372,12 @@ namespace CassetteMotionPro.Workspace
             table.Controls.Add(templates, 0, templateRow);
             table.SetColumnSpan(templates, 2);
 
+            Control protocol = BuildFitProtocolPanel();
+            int protocolRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 380));
+            table.Controls.Add(protocol, 0, protocolRow);
+            table.SetColumnSpan(protocol, 2);
+
             txtTitle.TextChanged += delegate { UpdateWorkflowChecklist(); };
             AddEditorRow(table, "Session title", txtTitle, 38);
 
@@ -399,6 +410,182 @@ namespace CassetteMotionPro.Workspace
             page.AutoScroll = true;
             page.Controls.Add(table);
             return page;
+        }
+
+        private Control BuildFitProtocolPanel()
+        {
+            GroupBox group = new GroupBox();
+            group.Text = "Guided fit protocol";
+            group.Dock = DockStyle.Fill;
+            group.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            group.ForeColor = CassetteMotionTheme.Ink;
+            group.Padding = new Padding(12, 10, 12, 10);
+
+            TableLayoutPanel layout = new TableLayoutPanel();
+            layout.Dock = DockStyle.Fill;
+            layout.ColumnCount = 2;
+            layout.RowCount = 3;
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 210));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+            cmbFitProtocol.Dock = DockStyle.Fill;
+            cmbFitProtocol.DropDownStyle = ComboBoxStyle.DropDownList;
+            foreach (FitProtocol protocol in FitProtocolCatalog.LoadAll())
+                cmbFitProtocol.Items.Add(protocol);
+            cmbFitProtocol.SelectedIndexChanged += delegate { ChangeFitProtocol(); };
+
+            fitProtocolProgress.Dock = DockStyle.Fill;
+            fitProtocolProgress.TextAlign = ContentAlignment.MiddleRight;
+            fitProtocolProgress.ForeColor = Color.FromArgb(91, 139, 0);
+            fitProtocolProgress.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+
+            fitProtocolSummary.Dock = DockStyle.Fill;
+            fitProtocolSummary.BackColor = Color.FromArgb(248, 252, 238);
+            fitProtocolSummary.ForeColor = CassetteMotionTheme.Muted;
+            fitProtocolSummary.Padding = new Padding(10, 8, 10, 8);
+            fitProtocolSummary.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+
+            fitProtocolSteps.Dock = DockStyle.Fill;
+            fitProtocolSteps.FlowDirection = FlowDirection.TopDown;
+            fitProtocolSteps.WrapContents = false;
+            fitProtocolSteps.AutoScroll = true;
+            fitProtocolSteps.Padding = new Padding(0, 4, 0, 4);
+
+            layout.Controls.Add(cmbFitProtocol, 0, 0);
+            layout.Controls.Add(fitProtocolProgress, 1, 0);
+            layout.Controls.Add(fitProtocolSummary, 0, 1);
+            layout.SetColumnSpan(fitProtocolSummary, 2);
+            layout.Controls.Add(fitProtocolSteps, 0, 2);
+            layout.SetColumnSpan(fitProtocolSteps, 2);
+            group.Controls.Add(layout);
+            if (cmbFitProtocol.Items.Count > 0)
+                cmbFitProtocol.SelectedIndex = 0;
+            return group;
+        }
+
+        private void ChangeFitProtocol()
+        {
+            FitProtocol protocol = cmbFitProtocol.SelectedItem as FitProtocol;
+            if (protocol == null)
+                return;
+
+            if (!loadingFitProtocol && currentSession != null && !string.Equals(currentSession.FitProtocolBikeType, protocol.BikeType, StringComparison.OrdinalIgnoreCase))
+            {
+                currentSession.FitProtocolBikeType = protocol.BikeType;
+                currentSession.FitProtocolCompletedSteps = string.Empty;
+                SaveCurrentSession();
+            }
+            BuildFitProtocolSteps(protocol);
+        }
+
+        private void BuildFitProtocolSteps(FitProtocol protocol)
+        {
+            loadingFitProtocol = true;
+            fitProtocolSteps.SuspendLayout();
+            fitProtocolSteps.Controls.Clear();
+            HashSet<string> completed = GetCompletedFitProtocolSteps();
+            foreach (FitProtocolStep step in protocol.Steps)
+            {
+                CheckBox check = new CheckBox();
+                check.Name = step.Id;
+                check.Text = step.Stage + "  ·  " + step.Title + " — " + step.Guidance;
+                check.Checked = completed.Contains(step.Id);
+                check.AutoSize = false;
+                check.Width = Math.Max(760, fitProtocolSteps.ClientSize.Width - 28);
+                check.Height = 30;
+                check.Font = new Font("Segoe UI", 9F, step.Stage == "FIT" ? FontStyle.Bold : FontStyle.Regular);
+                check.ForeColor = check.Checked ? CassetteMotionTheme.Success : CassetteMotionTheme.Ink;
+                check.CheckedChanged += FitProtocolStep_CheckedChanged;
+                fitProtocolSteps.Controls.Add(check);
+            }
+            fitProtocolSummary.Text = protocol.BikeType + " protocol · " + protocol.Summary + " Check each step as it is completed; progress is saved with this fit session.";
+            fitProtocolSteps.ResumeLayout();
+            loadingFitProtocol = false;
+            UpdateFitProtocolProgress();
+        }
+
+        private void FitProtocolStep_CheckedChanged(object sender, EventArgs e)
+        {
+            if (loadingFitProtocol)
+                return;
+            CheckBox changed = sender as CheckBox;
+            if (changed == null)
+                return;
+            if (!HasActiveFitSession())
+            {
+                loadingFitProtocol = true;
+                changed.Checked = false;
+                loadingFitProtocol = false;
+                MessageBox.Show(this, "Open or create a fit session first. Protocol progress is saved with that session.", "Fit Protocol", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            HashSet<string> completed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (Control control in fitProtocolSteps.Controls)
+            {
+                CheckBox check = control as CheckBox;
+                if (check != null && check.Checked)
+                    completed.Add(check.Name);
+                if (check != null)
+                    check.ForeColor = check.Checked ? CassetteMotionTheme.Success : CassetteMotionTheme.Ink;
+            }
+            currentSession.FitProtocolCompletedSteps = string.Join(";", new List<string>(completed).ToArray());
+            SaveCurrentSession();
+            UpdateFitProtocolProgress();
+        }
+
+        private HashSet<string> GetCompletedFitProtocolSteps()
+        {
+            HashSet<string> completed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.FitProtocolCompletedSteps))
+                return completed;
+            foreach (string id in currentSession.FitProtocolCompletedSteps.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
+                completed.Add(id.Trim());
+            return completed;
+        }
+
+        private void UpdateFitProtocolProgress()
+        {
+            int total = 0;
+            int complete = 0;
+            foreach (Control control in fitProtocolSteps.Controls)
+            {
+                CheckBox check = control as CheckBox;
+                if (check == null)
+                    continue;
+                total++;
+                if (check.Checked)
+                    complete++;
+            }
+            fitProtocolProgress.Text = total == 0 ? "No protocol" : complete.ToString() + " / " + total.ToString() + " complete";
+            fitProtocolProgress.ForeColor = total > 0 && complete == total ? CassetteMotionTheme.Success : Color.FromArgb(91, 139, 0);
+        }
+
+        private void SelectFitProtocol(string bikeType)
+        {
+            if (string.IsNullOrWhiteSpace(bikeType))
+                bikeType = "Road";
+            loadingFitProtocol = true;
+            int selected = 0;
+            for (int index = 0; index < cmbFitProtocol.Items.Count; index++)
+            {
+                FitProtocol protocol = cmbFitProtocol.Items[index] as FitProtocol;
+                if (protocol != null && string.Equals(protocol.BikeType, bikeType, StringComparison.OrdinalIgnoreCase))
+                    selected = index;
+            }
+            if (cmbFitProtocol.Items.Count > 0)
+                cmbFitProtocol.SelectedIndex = selected;
+            if (currentSession != null && string.IsNullOrWhiteSpace(currentSession.FitProtocolBikeType))
+            {
+                FitProtocol selectedProtocol = cmbFitProtocol.SelectedItem as FitProtocol;
+                if (selectedProtocol != null)
+                    currentSession.FitProtocolBikeType = selectedProtocol.BikeType;
+            }
+            loadingFitProtocol = false;
+            ChangeFitProtocol();
         }
 
         private Control BuildFitTemplatePanel()
@@ -523,6 +710,11 @@ namespace CassetteMotionPro.Workspace
             ApplyTemplateText(txtFitSummaryFollowUp, template.FollowUpPrompt, replace);
             currentSession.FitTemplateName = template.Name;
             currentSession.FitTemplateBikeType = template.BikeType;
+            if (string.IsNullOrWhiteSpace(currentSession.FitProtocolBikeType))
+            {
+                currentSession.FitProtocolBikeType = template.BikeType;
+                SelectFitProtocol(template.BikeType);
+            }
             if (string.Equals(Convert.ToString(cmbStatus.SelectedItem), "Assessment", StringComparison.OrdinalIgnoreCase))
                 cmbStatus.SelectedItem = "In progress";
             SaveCurrentSession();
@@ -1953,6 +2145,7 @@ namespace CassetteMotionPro.Workspace
             repeat.RepeatFitSourceDate = source.SessionDate;
             repeat.FitTemplateName = source.FitTemplateName;
             repeat.FitTemplateBikeType = source.FitTemplateBikeType;
+            repeat.FitProtocolBikeType = string.IsNullOrWhiteSpace(source.FitProtocolBikeType) ? source.FitTemplateBikeType : source.FitProtocolBikeType;
             repeat.Goals = source.Goals;
             repeat.Notes = BuildRepeatFitContext(source);
 
@@ -5040,6 +5233,7 @@ namespace CassetteMotionPro.Workspace
             SetMeasurement("ShoulderAngleAfter", session.ShoulderAngleAfter);
 
             RefreshFitTemplates(session.FitTemplateName);
+            SelectFitProtocol(string.IsNullOrWhiteSpace(session.FitProtocolBikeType) ? session.FitTemplateBikeType : session.FitProtocolBikeType);
             RefreshCameraProfiles(session.CameraSetupProfileName);
             RefreshClientHistory();
             UpdateActiveSessionStatus();
