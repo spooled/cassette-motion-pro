@@ -47,7 +47,7 @@
     <PublisherName>Cassette Fit Studio</PublisherName>
     <OpenBrowserOnPublish>false</OpenBrowserOnPublish>
     <ApplicationRevision>0</ApplicationRevision>
-    <ApplicationVersion>0.60.0.0</ApplicationVersion>
+    <ApplicationVersion>0.61.0.0</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
@@ -202,6 +202,9 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Workspace\RiderBodyGuidedMeasurementForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Workspace\RiderTrackingComparisonForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Workspace\ImageMeasurementAssistantForm.cs">

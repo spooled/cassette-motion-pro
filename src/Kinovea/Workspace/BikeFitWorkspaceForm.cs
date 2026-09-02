@@ -3635,6 +3635,9 @@ namespace CassetteMotionPro.Workspace
             Button guidedAfter = CreateButton("Track After Rider", true);
             guidedAfter.Size = new Size(175, 38);
             guidedAfter.Click += delegate { ShowGuidedRiderMeasurements("AfterReportImagePath", "After"); };
+            Button compareTracking = CreateButton("Compare Before + After", true);
+            compareTracking.Size = new Size(205, 38);
+            compareTracking.Click += ShowRiderTrackingComparison;
 
             Button measureBefore = CreateButton("Measure Before Video", false);
             measureBefore.Size = new Size(170, 38);
@@ -3647,6 +3650,7 @@ namespace CassetteMotionPro.Workspace
             reviewQuality.Click += ReviewMetrics_Click;
             actions.Controls.Add(guidedBefore);
             actions.Controls.Add(guidedAfter);
+            actions.Controls.Add(compareTracking);
             actions.Controls.Add(measureBefore);
             actions.Controls.Add(measureAfter);
             actions.Controls.Add(reviewQuality);
@@ -3693,6 +3697,49 @@ namespace CassetteMotionPro.Workspace
 
                 SaveCurrentSession();
                 UpdateSaveHint("Tracked rider measurements and annotated report image saved to " + form.ResultSide.ToLowerInvariant() + ".");
+            }
+        }
+
+        private void ShowRiderTrackingComparison(object sender, EventArgs e)
+        {
+            string beforePath = imageBoxes.ContainsKey("BeforeReportImagePath") ? imageBoxes["BeforeReportImagePath"].Text : string.Empty;
+            string afterPath = imageBoxes.ContainsKey("AfterReportImagePath") ? imageBoxes["AfterReportImagePath"].Text : string.Empty;
+            if (!File.Exists(beforePath) || !File.Exists(afterPath))
+            {
+                MessageBox.Show(this,
+                    "Choose both a Before and an After report image first.\n\nUse Report → Report Images to select matching paused side-view frames, then return to Body Angles.",
+                    "Before / After Rider Tracking", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (RiderTrackingComparisonForm form = new RiderTrackingComparisonForm(beforePath, afterPath, GetSessionReportImagesFolderPath()))
+            {
+                if (form.ShowDialog(this) != DialogResult.OK)
+                    return;
+
+                ApplyTrackedValues(form.BeforeValues, "Before");
+                ApplyTrackedValues(form.AfterValues, "After");
+                if (!string.IsNullOrWhiteSpace(form.ComparisonImagePath))
+                {
+                    imageBoxes["SideBySideReportImagePath"].Text = form.ComparisonImagePath;
+                    imageBoxes["MeasurementReferenceImagePath"].Text = form.ComparisonImagePath;
+                    chkShowSideBySideImageInReport.Checked = true;
+                    chkShowMeasurementReferenceImageInReport.Checked = true;
+                }
+                SaveCurrentSession();
+                UpdateSaveHint("Approved Before / After rider measurements and comparison image saved to this fit session.");
+            }
+        }
+
+        private void ApplyTrackedValues(Dictionary<string, string> values, string side)
+        {
+            if (values == null)
+                return;
+            foreach (KeyValuePair<string, string> measurement in values)
+            {
+                string key = measurement.Key + side;
+                if (measurementBoxes.ContainsKey(key))
+                    measurementBoxes[key].Text = measurement.Value;
             }
         }
 
