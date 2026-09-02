@@ -3613,7 +3613,7 @@ namespace CassetteMotionPro.Workspace
             AddMeasurementRow(table, "Back angle", "ShoulderAngle");
 
             Label guidance = new Label();
-            guidance.Text = "Recommended process: pause the video at the same crank position, use the Video Studio angle tools, then enter the Before and After values you want in the report.";
+            guidance.Text = "Recommended process: save matching paused side-view frames, use automatic rider tracking to suggest editable joint points, confirm each point, then keep Video Studio tools available for any precision check.";
             guidance.Dock = DockStyle.Fill;
             guidance.ForeColor = Color.FromArgb(92, 104, 98);
             guidance.Padding = new Padding(0, 12, 0, 4);
@@ -3629,10 +3629,10 @@ namespace CassetteMotionPro.Workspace
             actions.FlowDirection = FlowDirection.LeftToRight;
             actions.WrapContents = true;
 
-            Button guidedBefore = CreateButton("Guided Before Image", true);
+            Button guidedBefore = CreateButton("Track Before Rider", true);
             guidedBefore.Size = new Size(180, 38);
             guidedBefore.Click += delegate { ShowGuidedRiderMeasurements("BeforeReportImagePath", "Before"); };
-            Button guidedAfter = CreateButton("Guided After Image", true);
+            Button guidedAfter = CreateButton("Track After Rider", true);
             guidedAfter.Size = new Size(175, 38);
             guidedAfter.Click += delegate { ShowGuidedRiderMeasurements("AfterReportImagePath", "After"); };
 
@@ -3685,8 +3685,14 @@ namespace CassetteMotionPro.Workspace
                         measurementBoxes[key].Text = measurement.Value;
                 }
 
+                if (!string.IsNullOrWhiteSpace(form.AnnotatedImagePath) && imageBoxes.ContainsKey("MeasurementReferenceImagePath"))
+                {
+                    imageBoxes["MeasurementReferenceImagePath"].Text = form.AnnotatedImagePath;
+                    chkShowMeasurementReferenceImageInReport.Checked = true;
+                }
+
                 SaveCurrentSession();
-                UpdateSaveHint("Guided rider measurements saved to " + form.ResultSide.ToLowerInvariant() + ".");
+                UpdateSaveHint("Tracked rider measurements and annotated report image saved to " + form.ResultSide.ToLowerInvariant() + ".");
             }
         }
 

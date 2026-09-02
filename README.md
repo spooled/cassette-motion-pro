@@ -5,7 +5,22 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.58.0 Backup, Restore, and Client-data Portability
+## Current milestone: 0.60.0 Automatic Rider Tracking and Measurement Assistance
+
+- Body Angles can now place an automatic eight-point rider overlay on a saved paused
+  side-view image for faster measurement setup.
+- Suggested hip, knee, ankle, forefoot, shoulder, elbow, wrist, and ear points remain
+  fully draggable so the fitter approves the anatomy rather than accepting it blindly.
+- Flip Rider Direction rebuilds the suggested pose for riders facing the opposite side.
+- Knee, hip, ankle, body-reach, and back angles recalculate immediately as points move.
+- Tracking confidence, image-resolution checks, broad angle checks, and joint-spacing
+  warnings identify frames or suggested placements that need closer review.
+- Saving approved measurements also creates an annotated PNG in the active client
+  session and selects it as the report measurement-reference image.
+- Video Studio capture, playback, drawing, and measurement tools remain available for
+  precision checks and manual work.
+
+## Previous milestone: 0.58.0 Backup, Restore, and Client-data Portability
 
 - Options now includes Backup & Data Transfer for full-studio backups and single-client
   transfer packages.
