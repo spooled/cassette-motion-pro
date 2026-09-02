@@ -766,7 +766,7 @@ namespace Kinovea.Root
 
             clientRepository.MarkOpened(client);
             statusLabel.Text = string.Format("Fit session: {0} · {1}", client.DisplayName, client.BikeDescription);
-            using (BikeFitWorkspaceForm form = new BikeFitWorkspaceForm(client, OpenAnalysisFromPath, OpenBeforeAfterPair, PrepareClientAnalysisCaptureFolder, OpenClientCaptureFolder, OpenDualClientCaptureFolders, OpenBodyAngleGuide))
+            using (BikeFitWorkspaceForm form = new BikeFitWorkspaceForm(client, OpenAnalysisFromPath, OpenBeforeAfterPair, PrepareClientAnalysisCaptureFolder, OpenClientCaptureFolder, OpenDualClientCaptureFolders, OpenProfileDualClientCaptureFolders, OpenBodyAngleGuide))
                 form.ShowDialog(mainWindow);
             BuildRecentClientMenus();
         }
@@ -812,6 +812,36 @@ namespace Kinovea.Root
             screenManager.OrganizeScreens();
             screenManager.OrganizeCommonControls();
             screenManager.OrganizeMenus();
+        }
+
+        private void OpenProfileDualClientCaptureFolders(string leftPath, string rightPath, string leftPrefix, string rightPrefix)
+        {
+            if (string.IsNullOrEmpty(leftPath) || string.IsNullOrEmpty(rightPath))
+                return;
+
+            Directory.CreateDirectory(leftPath);
+            Directory.CreateDirectory(rightPath);
+            CaptureFolder leftFolder = PreferencesManager.CapturePreferences.AddCaptureFolder(leftPath);
+            CaptureFolder rightFolder = PreferencesManager.CapturePreferences.AddCaptureFolder(rightPath);
+            PreferencesUpdated(true);
+            EnsureCaptureScreenCount(2);
+            ConfigureCaptureScreenFolder(0, leftFolder, MakeCapturePrefix(leftPrefix, "Camera-1"));
+            ConfigureCaptureScreenFolder(1, rightFolder, MakeCapturePrefix(rightPrefix, "Camera-2"));
+            StartClientDualCameraFolderLock(leftFolder, rightFolder, leftPrefix, rightPrefix);
+            statusLabel.Text = "Camera profile ready: both capture screens save to the active fit phase.";
+            screenManager.AfterSharedBufferChange();
+            screenManager.OrganizeScreens();
+            screenManager.OrganizeCommonControls();
+            screenManager.OrganizeMenus();
+        }
+
+        private static string MakeCapturePrefix(string value, string fallback)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return fallback;
+            foreach (char invalid in Path.GetInvalidFileNameChars())
+                value = value.Replace(invalid, '-');
+            return value.Replace(' ', '-');
         }
 
         private void PrepareClientAnalysisCaptureFolder(string path)
@@ -1561,6 +1591,37 @@ namespace Kinovea.Root
             clientCaptureFolderLockTimer = new System.Windows.Forms.Timer();
             clientCaptureFolderLockTimer.Interval = 1000;
             clientCaptureFolderLockTimer.Tick += ClientCaptureFolderLockTimer_Tick;
+            clientCaptureFolderLockTimer.Start();
+        }
+
+        private void StartClientDualCameraFolderLock(CaptureFolder leftFolder, CaptureFolder rightFolder, string leftPrefix, string rightPrefix)
+        {
+            lockedSingleCaptureFolder = null;
+            lockedBeforeCaptureFolder = leftFolder;
+            lockedAfterCaptureFolder = rightFolder;
+            lockedSingleCapturePrefix = null;
+            clientCaptureFolderLockTicks = 0;
+
+            if (clientCaptureFolderLockTimer != null)
+            {
+                clientCaptureFolderLockTimer.Stop();
+                clientCaptureFolderLockTimer.Dispose();
+            }
+
+            clientCaptureFolderLockTimer = new System.Windows.Forms.Timer();
+            clientCaptureFolderLockTimer.Interval = 1000;
+            clientCaptureFolderLockTimer.Tick += delegate
+            {
+                clientCaptureFolderLockTicks++;
+                ConfigureCaptureScreenFolder(0, leftFolder, MakeCapturePrefix(leftPrefix, "Camera-1"));
+                ConfigureCaptureScreenFolder(1, rightFolder, MakeCapturePrefix(rightPrefix, "Camera-2"));
+                if (clientCaptureFolderLockTicks >= 8)
+                {
+                    clientCaptureFolderLockTimer.Stop();
+                    clientCaptureFolderLockTimer.Dispose();
+                    clientCaptureFolderLockTimer = null;
+                }
+            };
             clientCaptureFolderLockTimer.Start();
         }
 

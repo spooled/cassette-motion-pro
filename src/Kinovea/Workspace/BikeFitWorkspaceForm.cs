@@ -23,11 +23,13 @@ namespace CassetteMotionPro.Workspace
         private readonly ClientRecord client;
         private readonly FitSessionRepository repository;
         private readonly FitSessionTemplateRepository templateRepository = new FitSessionTemplateRepository();
+        private readonly CameraSetupProfileRepository cameraProfileRepository = new CameraSetupProfileRepository();
         private readonly Action<string> openVideo;
         private readonly Action<string, string> openVideoPair;
         private readonly Action<string> prepareCaptureFolder;
         private readonly Action<string> openLiveCaptureFolder;
         private readonly Action<string, string> openDualLiveCaptureFolders;
+        private readonly Action<string, string, string, string> openProfileDualLiveCaptureFolders;
         private readonly Action<string> openBodyAngleGuide;
         private readonly ListView sessionList = new ListView();
         private readonly ListView historySessionList = new ListView();
@@ -38,6 +40,15 @@ namespace CassetteMotionPro.Workspace
         private readonly DateTimePicker dtpDate = new DateTimePicker();
         private readonly ComboBox cmbStatus = new ComboBox();
         private readonly ComboBox cmbFitTemplate = new ComboBox();
+        private readonly ComboBox cmbCameraProfile = new ComboBox();
+        private readonly TextBox txtCameraLeftRole = new TextBox();
+        private readonly TextBox txtCameraRightRole = new TextBox();
+        private readonly TextBox txtCameraLeftDevice = new TextBox();
+        private readonly TextBox txtCameraRightDevice = new TextBox();
+        private readonly TextBox txtCameraResolution = new TextBox();
+        private readonly TextBox txtCameraFrameRate = new TextBox();
+        private readonly TextBox txtCameraNotes = new TextBox();
+        private readonly Label cameraProfileStatus = new Label();
         private readonly Label fitTemplatePreview = new Label();
         private readonly TextBox txtGoals = new TextBox();
         private readonly TextBox txtNotes = new TextBox();
@@ -99,7 +110,7 @@ namespace CassetteMotionPro.Workspace
         private const string SessionSetupTabName = "Session Setup";
         private const string KinoveaVideoTabName = "Video Studio";
 
-        public BikeFitWorkspaceForm(ClientRecord client, Action<string> openVideo, Action<string, string> openVideoPair, Action<string> prepareCaptureFolder, Action<string> openLiveCaptureFolder, Action<string, string> openDualLiveCaptureFolders, Action<string> openBodyAngleGuide)
+        public BikeFitWorkspaceForm(ClientRecord client, Action<string> openVideo, Action<string, string> openVideoPair, Action<string> prepareCaptureFolder, Action<string> openLiveCaptureFolder, Action<string, string> openDualLiveCaptureFolders, Action<string, string, string, string> openProfileDualLiveCaptureFolders, Action<string> openBodyAngleGuide)
         {
             if (client == null)
                 throw new ArgumentNullException("client");
@@ -110,6 +121,7 @@ namespace CassetteMotionPro.Workspace
             this.prepareCaptureFolder = prepareCaptureFolder;
             this.openLiveCaptureFolder = openLiveCaptureFolder;
             this.openDualLiveCaptureFolders = openDualLiveCaptureFolders;
+            this.openProfileDualLiveCaptureFolders = openProfileDualLiveCaptureFolders;
             this.openBodyAngleGuide = openBodyAngleGuide;
             repository = new FitSessionRepository(client);
 
@@ -2318,6 +2330,12 @@ namespace CassetteMotionPro.Workspace
             table.Controls.Add(analysisHint, 1, analysisHintRow);
             table.SetColumnSpan(analysisHint, 5);
 
+            Control cameraProfiles = BuildCameraProfilePanel();
+            int cameraProfilesRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 278));
+            table.Controls.Add(cameraProfiles, 1, cameraProfilesRow);
+            table.SetColumnSpan(cameraProfiles, 5);
+
             Control fitDayPath = BuildFitDayPathGuide();
             int fitDayPathRow = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 76));
@@ -2428,6 +2446,205 @@ namespace CassetteMotionPro.Workspace
             page.AutoScroll = true;
             page.Controls.Add(table);
             return page;
+        }
+
+        private Control BuildCameraProfilePanel()
+        {
+            GroupBox group = new GroupBox();
+            group.Text = "Reusable dual-camera setup";
+            group.Dock = DockStyle.Fill;
+            group.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            group.ForeColor = Color.FromArgb(37, 48, 43);
+            group.Padding = new Padding(12, 10, 12, 10);
+
+            TableLayoutPanel layout = new TableLayoutPanel();
+            layout.Dock = DockStyle.Fill;
+            layout.ColumnCount = 4;
+            layout.RowCount = 6;
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 118));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 118));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            for (int index = 0; index < 5; index++)
+                layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
+
+            cmbCameraProfile.Dock = DockStyle.Fill;
+            cmbCameraProfile.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbCameraProfile.SelectedIndexChanged += delegate { LoadSelectedCameraProfile(); };
+            layout.Controls.Add(CreateFieldLabel("Profile"), 0, 0);
+            layout.Controls.Add(cmbCameraProfile, 1, 0);
+            layout.SetColumnSpan(cmbCameraProfile, 3);
+
+            AddCameraProfileField(layout, "Left screen", txtCameraLeftRole, 0, 1);
+            AddCameraProfileField(layout, "Right screen", txtCameraRightRole, 2, 1);
+            AddCameraProfileField(layout, "Left camera", txtCameraLeftDevice, 0, 2);
+            AddCameraProfileField(layout, "Right camera", txtCameraRightDevice, 2, 2);
+            AddCameraProfileField(layout, "Resolution", txtCameraResolution, 0, 3);
+            AddCameraProfileField(layout, "Frame rate", txtCameraFrameRate, 2, 3);
+            AddCameraProfileField(layout, "Setup notes", txtCameraNotes, 0, 4);
+            layout.SetColumnSpan(txtCameraNotes, 3);
+
+            FlowLayoutPanel actions = new FlowLayoutPanel();
+            actions.Dock = DockStyle.Fill;
+            actions.WrapContents = false;
+            Button openBefore = CreateButton("Record Before", true);
+            openBefore.Size = new Size(130, 36);
+            openBefore.Click += delegate { ApplyCameraProfileAndOpenCapture("Before"); };
+            Button openAfter = CreateButton("Record After", true);
+            openAfter.Size = new Size(125, 36);
+            openAfter.Click += delegate { ApplyCameraProfileAndOpenCapture("After"); };
+            Button save = CreateButton("Save as Custom", false);
+            save.Size = new Size(145, 36);
+            save.Click += delegate { SaveCameraProfile(); };
+            Button delete = CreateButton("Delete Custom", false);
+            delete.Size = new Size(135, 36);
+            delete.Click += delegate { DeleteCameraProfile(); };
+            cameraProfileStatus.AutoSize = false;
+            cameraProfileStatus.Size = new Size(430, 38);
+            cameraProfileStatus.Padding = new Padding(8, 8, 0, 0);
+            cameraProfileStatus.ForeColor = Color.FromArgb(74, 87, 81);
+            actions.Controls.Add(openBefore);
+            actions.Controls.Add(openAfter);
+            actions.Controls.Add(save);
+            actions.Controls.Add(delete);
+            actions.Controls.Add(cameraProfileStatus);
+            layout.Controls.Add(actions, 0, 5);
+            layout.SetColumnSpan(actions, 4);
+            group.Controls.Add(layout);
+            RefreshCameraProfiles(null);
+            return group;
+        }
+
+        private static Label CreateFieldLabel(string text)
+        {
+            Label label = new Label();
+            label.Text = text;
+            label.Dock = DockStyle.Fill;
+            label.TextAlign = ContentAlignment.MiddleLeft;
+            label.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+            return label;
+        }
+
+        private static void AddCameraProfileField(TableLayoutPanel layout, string label, TextBox box, int column, int row)
+        {
+            box.Dock = DockStyle.Fill;
+            layout.Controls.Add(CreateFieldLabel(label), column, row);
+            layout.Controls.Add(box, column + 1, row);
+        }
+
+        private void RefreshCameraProfiles(string selectName)
+        {
+            string name = selectName;
+            if (string.IsNullOrWhiteSpace(name) && currentSession != null)
+                name = currentSession.CameraSetupProfileName;
+            cmbCameraProfile.BeginUpdate();
+            cmbCameraProfile.Items.Clear();
+            foreach (CameraSetupProfile profile in cameraProfileRepository.LoadAll())
+                cmbCameraProfile.Items.Add(profile);
+            cmbCameraProfile.EndUpdate();
+            int selectedIndex = 0;
+            for (int index = 0; index < cmbCameraProfile.Items.Count; index++)
+            {
+                CameraSetupProfile profile = cmbCameraProfile.Items[index] as CameraSetupProfile;
+                if (profile != null && string.Equals(profile.Name, name, StringComparison.OrdinalIgnoreCase))
+                    selectedIndex = index;
+            }
+            cmbCameraProfile.SelectedIndex = cmbCameraProfile.Items.Count == 0 ? -1 : selectedIndex;
+        }
+
+        private void LoadSelectedCameraProfile()
+        {
+            CameraSetupProfile profile = cmbCameraProfile.SelectedItem as CameraSetupProfile;
+            if (profile == null)
+                return;
+            txtCameraLeftRole.Text = profile.LeftRole ?? string.Empty;
+            txtCameraRightRole.Text = profile.RightRole ?? string.Empty;
+            txtCameraLeftDevice.Text = profile.LeftCamera ?? string.Empty;
+            txtCameraRightDevice.Text = profile.RightCamera ?? string.Empty;
+            txtCameraResolution.Text = profile.Resolution ?? string.Empty;
+            txtCameraFrameRate.Text = profile.FrameRate ?? string.Empty;
+            txtCameraNotes.Text = profile.Notes ?? string.Empty;
+            cameraProfileStatus.Text = (profile.IsBuiltIn ? "Built-in" : "Custom") + " · Camera choices remain under Kinovea’s capture controls.";
+        }
+
+        private void ApplyCameraProfileAndOpenCapture(string phase)
+        {
+            if (!HasActiveFitSession())
+            {
+                MessageBox.Show(this, "Open or create a fit session first, then apply a camera profile.", "Camera Setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            CameraSetupProfile profile = cmbCameraProfile.SelectedItem as CameraSetupProfile;
+            if (profile == null)
+                return;
+            currentSession.CameraSetupProfileName = profile.Name;
+            currentSession.CameraSetupLeftRole = txtCameraLeftRole.Text.Trim();
+            currentSession.CameraSetupRightRole = txtCameraRightRole.Text.Trim();
+            SaveCurrentSession();
+            OpenProfileDualLiveCapture(phase);
+        }
+
+        private void OpenProfileDualLiveCapture(string phase)
+        {
+            if (openProfileDualLiveCaptureFolders == null)
+            {
+                OpenDualLiveCapture();
+                return;
+            }
+            try
+            {
+                string destination = GetSessionVideoViewFolderPath(phase);
+                Directory.CreateDirectory(destination);
+                WriteCaptureFolderHint(destination, phase);
+                WriteCameraProfileHint(destination);
+                string leftRole = string.IsNullOrWhiteSpace(currentSession.CameraSetupLeftRole) ? "Camera 1" : currentSession.CameraSetupLeftRole;
+                string rightRole = string.IsNullOrWhiteSpace(currentSession.CameraSetupRightRole) ? "Camera 2" : currentSession.CameraSetupRightRole;
+                SetFitCommandCenterMode("Record Live: " + phase + " · " + currentSession.CameraSetupProfileName);
+                UpdateSaveHint("Dual-camera " + phase + " capture opened. Both screens save into this client's " + phase + " folder with separate camera-role filenames.");
+                Close();
+                openProfileDualLiveCaptureFolders(destination, destination, phase + "-" + leftRole, phase + "-" + rightRole);
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "The camera profile could not be opened.\n\n" + exception.Message, "Camera Setup", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void SaveCameraProfile()
+        {
+            string name = Microsoft.VisualBasic.Interaction.InputBox("Name this reusable dual-camera setup.", "Save Camera Profile", "My Camera Setup").Trim();
+            if (string.IsNullOrWhiteSpace(name))
+                return;
+            CameraSetupProfile profile = new CameraSetupProfile();
+            profile.Name = name;
+            profile.LeftRole = txtCameraLeftRole.Text.Trim();
+            profile.RightRole = txtCameraRightRole.Text.Trim();
+            profile.LeftCamera = txtCameraLeftDevice.Text.Trim();
+            profile.RightCamera = txtCameraRightDevice.Text.Trim();
+            profile.Resolution = txtCameraResolution.Text.Trim();
+            profile.FrameRate = txtCameraFrameRate.Text.Trim();
+            profile.Notes = txtCameraNotes.Text.Trim();
+            cameraProfileRepository.Save(profile);
+            RefreshCameraProfiles(name);
+            UpdateSaveHint("Camera setup saved for use with any client: " + name + ".");
+        }
+
+        private void DeleteCameraProfile()
+        {
+            CameraSetupProfile profile = cmbCameraProfile.SelectedItem as CameraSetupProfile;
+            if (profile == null)
+                return;
+            if (profile.IsBuiltIn)
+            {
+                MessageBox.Show(this, "Built-in camera profiles cannot be deleted. Save a customized copy instead.", "Camera Setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            if (MessageBox.Show(this, "Delete the custom camera profile \"" + profile.Name + "\"?", "Camera Setup", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                return;
+            cameraProfileRepository.Delete(profile);
+            RefreshCameraProfiles(null);
+            UpdateSaveHint("Custom camera profile deleted.");
         }
 
         private Control BuildFitDayPathGuide()
@@ -4823,6 +5040,7 @@ namespace CassetteMotionPro.Workspace
             SetMeasurement("ShoulderAngleAfter", session.ShoulderAngleAfter);
 
             RefreshFitTemplates(session.FitTemplateName);
+            RefreshCameraProfiles(session.CameraSetupProfileName);
             RefreshClientHistory();
             UpdateActiveSessionStatus();
             UpdateWorkflowChecklist();
@@ -5825,6 +6043,8 @@ namespace CassetteMotionPro.Workspace
                 Directory.CreateDirectory(afterDirectory);
                 WriteCaptureFolderHint(beforeDirectory, "Before");
                 WriteCaptureFolderHint(afterDirectory, "After");
+                WriteCameraProfileHint(beforeDirectory);
+                WriteCameraProfileHint(afterDirectory);
                 SetFitCommandCenterMode("Record Live: Before + After");
                 UpdateSaveHint("Dual live capture opened. Video Studio is pointed at this client's Before/After video folders. Record, save, then return here and click Analyze Latest Before + After.");
 
@@ -5843,6 +6063,17 @@ namespace CassetteMotionPro.Workspace
             {
                 MessageBox.Show(this, "Dual live capture could not be opened for this session.\n\n" + exception.Message, "Dual Live Capture", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void WriteCameraProfileHint(string directory)
+        {
+            if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.CameraSetupProfileName))
+                return;
+            string content = "Cassette Motion Pro camera profile: " + currentSession.CameraSetupProfileName + Environment.NewLine +
+                "Left screen: " + (currentSession.CameraSetupLeftRole ?? string.Empty) + Environment.NewLine +
+                "Right screen: " + (currentSession.CameraSetupRightRole ?? string.Empty) + Environment.NewLine +
+                "The client Before/After destination is controlled automatically by the fit session.";
+            File.WriteAllText(Path.Combine(directory, "Camera Setup.txt"), content);
         }
 
         private void UseLatestVideo(string key)

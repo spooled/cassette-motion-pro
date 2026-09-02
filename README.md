@@ -5,7 +5,19 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.51.0 Fit Day Dashboard and Navigation Cleanup
+## Current milestone: 0.52.0 Camera Setup Profiles
+
+- Video Studio now includes reusable dual-camera profiles for common Side + Front,
+  Drive + Non-drive, and Side + Rear fitting setups.
+- Each profile records the left/right camera roles, device labels, resolution, frame
+  rate, and setup notes while leaving Kinovea's native camera controls intact.
+- Fitters can save and delete custom studio profiles and reuse them with any client.
+- Record Before and Record After each open two capture screens, save both camera
+  angles into the selected phase folder, and create clear camera-role filenames.
+- The active profile and screen roles are saved with the fit session, and a camera
+  setup note is placed alongside the captured media for repeatable setup.
+
+## Previous milestone: 0.51.0 Fit Day Dashboard and Navigation Cleanup
 
 - Fit Day now opens on a simple dashboard with four stages: Client + Session,
   Video Studio, Measurements, and Report.

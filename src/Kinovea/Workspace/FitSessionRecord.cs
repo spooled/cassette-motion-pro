@@ -20,6 +20,9 @@ namespace CassetteMotionPro.Workspace
         public string Status { get; set; }
         public string FitTemplateName { get; set; }
         public string FitTemplateBikeType { get; set; }
+        public string CameraSetupProfileName { get; set; }
+        public string CameraSetupLeftRole { get; set; }
+        public string CameraSetupRightRole { get; set; }
         public Guid RepeatFitSourceSessionId { get; set; }
         public string RepeatFitSourceTitle { get; set; }
         public DateTime RepeatFitSourceDate { get; set; }
