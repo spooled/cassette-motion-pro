@@ -6,6 +6,7 @@ GNU General Public License version 2.
 */
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Xml.Serialization;
 
@@ -40,6 +41,7 @@ namespace CassetteMotionPro.Workspace
         public string HandoffHomework { get; set; }
         public string HandoffNextAppointment { get; set; }
         public string HandoffInternalNotes { get; set; }
+        public List<FitFollowUpEntry> FollowUps { get; set; }
 
         public string LeftVideoPath { get; set; }
         public string RightVideoPath { get; set; }

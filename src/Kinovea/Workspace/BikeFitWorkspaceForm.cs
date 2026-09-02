@@ -1901,7 +1901,7 @@ namespace CassetteMotionPro.Workspace
 
             SplitContainer split = new SplitContainer();
             split.Dock = DockStyle.Fill;
-            split.SplitterDistance = 300;
+            split.SplitterDistance = 390;
             split.Panel1.Padding = new Padding(0, 0, 12, 0);
             split.Panel2.Padding = new Padding(12, 0, 0, 0);
 
@@ -1913,6 +1913,7 @@ namespace CassetteMotionPro.Workspace
             historySessionList.Columns.Add("Previous fit", 150);
             historySessionList.Columns.Add("Date", 82);
             historySessionList.Columns.Add("Status", 78);
+            historySessionList.Columns.Add("Adaptation", 110);
             historySessionList.SelectedIndexChanged += delegate { UpdateClientHistoryComparison(); };
             split.Panel1.Controls.Add(historySessionList);
 
@@ -1966,6 +1967,10 @@ namespace CassetteMotionPro.Workspace
             Button refresh = CreateButton("Refresh History", false);
             refresh.Size = new Size(135, 34);
             refresh.Click += delegate { RefreshClientHistory(); };
+            Button followUp = CreateButton("Add Follow-up", true);
+            followUp.Size = new Size(135, 34);
+            followUp.Click += delegate { AddClientFollowUp(); };
+            actions.Controls.Add(followUp);
             actions.Controls.Add(startRepeat);
             actions.Controls.Add(openFit);
             actions.Controls.Add(openFolder);
@@ -1998,7 +2003,8 @@ namespace CassetteMotionPro.Workspace
                 {
                     session.DisplayName,
                     session.SessionDate == DateTime.MinValue ? "" : session.SessionDate.ToString("MMM d, yyyy"),
-                    session.Status ?? string.Empty
+                    session.Status ?? string.Empty,
+                    GetLatestFollowUpStatus(session)
                 });
                 item.Tag = session;
                 historySessionList.Items.Add(item);
@@ -2044,7 +2050,8 @@ namespace CassetteMotionPro.Workspace
                 "Main goal: " + HistoryText(previous.FitSummaryMainGoal, previous.Goals) + Environment.NewLine +
                 "Changes made: " + HistoryText(previous.FitSummaryChangesMade, "Not recorded") + Environment.NewLine +
                 "Recommendations: " + HistoryText(previous.FitSummaryRecommendations, "Not recorded") + Environment.NewLine +
-                "Follow-up: " + HistoryText(previous.FitSummaryFollowUp, "Not recorded");
+                "Follow-up plan: " + HistoryText(previous.FitSummaryFollowUp, "Not recorded") +
+                BuildFollowUpHistory(previous);
 
             AddHistoryMetric("Saddle height", previous.SaddleHeightAfter, GetMeasurementText("SaddleHeightBefore"), GetMeasurementText("SaddleHeightAfter"), "mm");
             AddHistoryMetric("Saddle setback", previous.SaddleSetbackAfter, GetMeasurementText("SaddleSetbackBefore"), GetMeasurementText("SaddleSetbackAfter"), "mm");
@@ -2087,6 +2094,90 @@ namespace CassetteMotionPro.Workspace
         private static string HistoryText(string preferred, string fallback)
         {
             return string.IsNullOrWhiteSpace(preferred) ? (string.IsNullOrWhiteSpace(fallback) ? "Not recorded" : fallback.Trim()) : preferred.Trim();
+        }
+
+        private static string GetLatestFollowUpStatus(FitSessionRecord session)
+        {
+            FitFollowUpEntry latest = GetLatestFollowUp(session);
+            return latest == null ? "Not checked" : latest.AdaptationStatus;
+        }
+
+        private static FitFollowUpEntry GetLatestFollowUp(FitSessionRecord session)
+        {
+            if (session == null || session.FollowUps == null || session.FollowUps.Count == 0)
+                return null;
+            FitFollowUpEntry latest = null;
+            foreach (FitFollowUpEntry entry in session.FollowUps)
+            {
+                if (entry != null && (latest == null || entry.CheckInDate > latest.CheckInDate ||
+                    (entry.CheckInDate == latest.CheckInDate && entry.CreatedUtc > latest.CreatedUtc)))
+                    latest = entry;
+            }
+            return latest;
+        }
+
+        private static string BuildFollowUpHistory(FitSessionRecord session)
+        {
+            if (session == null || session.FollowUps == null || session.FollowUps.Count == 0)
+                return Environment.NewLine + Environment.NewLine + "ADAPTATION FOLLOW-UPS\r\nNo check-ins recorded yet.";
+
+            List<FitFollowUpEntry> entries = new List<FitFollowUpEntry>(session.FollowUps);
+            entries.Sort(delegate(FitFollowUpEntry left, FitFollowUpEntry right)
+            {
+                return right.CheckInDate.CompareTo(left.CheckInDate);
+            });
+            System.Text.StringBuilder text = new System.Text.StringBuilder();
+            text.AppendLine();
+            text.AppendLine();
+            text.AppendLine("ADAPTATION FOLLOW-UPS");
+            foreach (FitFollowUpEntry entry in entries)
+            {
+                if (entry == null)
+                    continue;
+                text.Append(entry.CheckInDate.ToString("MMM d, yyyy"));
+                text.Append(" · " + HistoryText(entry.AdaptationStatus, "No status"));
+                text.Append(" · Comfort " + entry.ComfortScore.ToString() + "/10");
+                text.Append(" · " + entry.RidesCompleted.ToString() + " ride(s)");
+                if (!string.IsNullOrWhiteSpace(entry.RiderFeedback))
+                    text.AppendLine().Append("Feedback: " + entry.RiderFeedback.Trim());
+                if (!string.IsNullOrWhiteSpace(entry.Symptoms))
+                    text.AppendLine().Append("Symptoms: " + entry.Symptoms.Trim());
+                if (!string.IsNullOrWhiteSpace(entry.FitterActions))
+                    text.AppendLine().Append("Actions: " + entry.FitterActions.Trim());
+                if (entry.HasNextCheckIn && entry.NextCheckInDate != DateTime.MinValue)
+                    text.AppendLine().Append("Next check-in: " + entry.NextCheckInDate.ToString("MMM d, yyyy"));
+                text.AppendLine().AppendLine();
+            }
+            return text.ToString().TrimEnd();
+        }
+
+        private void AddClientFollowUp()
+        {
+            FitSessionRecord target = GetSelectedHistorySession();
+            if (target == null && currentSession != null && currentSession.Id != Guid.Empty)
+                target = currentSession;
+            if (target == null)
+            {
+                MessageBox.Show(this, "Save a fit session or select a previous fit first.", "Client Follow-up", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (FitFollowUpForm form = new FitFollowUpForm(target.DisplayName))
+            {
+                if (form.ShowDialog(this) != DialogResult.OK || form.Entry == null)
+                    return;
+                if (target.FollowUps == null)
+                    target.FollowUps = new List<FitFollowUpEntry>();
+                target.FollowUps.Add(form.Entry);
+                repository.Save(target);
+            }
+
+            if (currentSession != null && target.Id == currentSession.Id)
+                currentSession = target;
+            RefreshSessions(currentSession == null ? Guid.Empty : currentSession.Id);
+            RefreshClientHistory();
+            UpdateClientHistoryComparison();
+            UpdateSaveHint("Client follow-up saved to " + target.DisplayName + ".");
         }
 
         private FitSessionRecord GetSelectedHistorySession()

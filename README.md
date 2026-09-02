@@ -5,7 +5,19 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.53.0 Guided Fit Protocols
+## Current milestone: 0.54.0 Client Follow-up and Adaptation Tracking
+
+- Client History can now add dated follow-up entries to any saved fit.
+- Each check-in records adaptation status, comfort score, rides completed, rider
+  feedback, symptoms or concerns, fitter actions, and an optional next check-in.
+- Multiple check-ins remain attached to the original fit instead of replacing the
+  previous notes.
+- The latest adaptation status appears in the history list, while the full follow-up
+  timeline appears in the selected fit summary.
+- Follow-up records stay inside the client's saved fit data and do not alter videos,
+  measurements, evidence, or the original report.
+
+## Previous milestone: 0.53.0 Guided Fit Protocols
 
 - Session Setup includes guided fit protocols for Road, Gravel, Mountain,
   Triathlon / TT, and Hybrid / Comfort bikes.

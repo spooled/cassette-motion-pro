@@ -47,7 +47,7 @@
     <PublisherName>Cassette Fit Studio</PublisherName>
     <OpenBrowserOnPublish>false</OpenBrowserOnPublish>
     <ApplicationRevision>0</ApplicationRevision>
-    <ApplicationVersion>0.53.0.0</ApplicationVersion>
+    <ApplicationVersion>0.54.0.0</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
@@ -183,6 +183,8 @@
     <Compile Include="Workspace\FitSessionRepository.cs" />
     <Compile Include="Workspace\FitSessionTemplateRepository.cs" />
     <Compile Include="Workspace\FitProtocolCatalog.cs" />
+    <Compile Include="Workspace\FitFollowUpEntry.cs" />
+    <Compile Include="Workspace\FitFollowUpForm.cs" />
     <Compile Include="Workspace\CameraSetupProfileRepository.cs" />
     <Compile Include="Workspace\FitSessionReportGenerator.cs" />
     <Compile Include="Workspace\ReportImageSaveTarget.cs" />
