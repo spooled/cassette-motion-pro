@@ -26,7 +26,7 @@ namespace CassetteMotionPro.Workspace
         private const string StudioWebsite = "Add website";
         private const string PreparedByRole = "Professional Bike Fitting";
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "0.54.0";
+        private const string ReportVersion = "0.55.0";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
 
         public static string Generate(ClientRecord client, FitSessionRecord session)
@@ -507,13 +507,17 @@ namespace CassetteMotionPro.Workspace
             string brandLogoDataUri = useCmBadge || hideBrandLogo
                 ? null
                 : GetBrandLogoDataUri();
+            bool hasVisualReview = (!session.HideSideBySideImageInReport && HasReportImage(session.SideBySideReportImagePath)) ||
+                (!session.HideBeforeImageInReport && HasReportImage(session.BeforeReportImagePath)) ||
+                (!session.HideAfterImageInReport && HasReportImage(session.AfterReportImagePath));
+            bool hasMeasurementReference = !session.HideMeasurementReferenceImageInReport && HasReportImage(session.MeasurementReferenceImagePath);
             html.AppendLine("<!doctype html>");
             html.AppendLine("<html>");
             html.AppendLine("<head>");
             html.AppendLine("<meta charset=\"utf-8\">");
             html.AppendLine("<title>" + Encode(client.DisplayName) + " Bike Fit Report</title>");
             html.AppendLine("<style>");
-            html.AppendLine(":root{--ink:#18201d;--muted:#718078;--line:#dfe7e2;--soft:#f7f9f8;--brand:#b8f34a;--deep:#0d1311;}");
+            html.AppendLine(":root{--ink:#18201d;--muted:#68766f;--line:#dfe7e2;--soft:#f7f9f8;--brand:#b8f34a;--brand-dark:#5e8700;--deep:#0d1311;}");
             html.AppendLine("*{box-sizing:border-box;}");
             html.AppendLine("body{font-family:Segoe UI,Arial,sans-serif;margin:0;background:linear-gradient(180deg,#edf2ed 0%,#dde6df 100%);color:var(--ink);}");
             html.AppendLine(".page{max-width:1080px;margin:30px auto;background:white;border-radius:26px;box-shadow:0 24px 72px rgba(12,19,16,.16);overflow:hidden;}");
@@ -548,6 +552,7 @@ namespace CassetteMotionPro.Workspace
             html.AppendLine(".review-list li{background:rgba(255,255,255,.7);border:1px solid rgba(36,48,43,.1);border-radius:999px;padding:8px 12px;font-weight:650;}");
             html.AppendLine(".content{padding:38px 50px 50px;}");
             html.AppendLine(".summary{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:16px;}");
+            html.AppendLine(".summary .panel:only-child{grid-column:1 / -1;}");
             html.AppendLine(".fit-summary{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:14px;}");
             html.AppendLine(".fit-summary .panel{min-height:118px;border-left:5px solid var(--brand);}");
             html.AppendLine(".fit-summary .wide{grid-column:1 / -1;}");
@@ -570,7 +575,12 @@ namespace CassetteMotionPro.Workspace
             html.AppendLine(".media-card.full img{height:410px;}");
             html.AppendLine(".media-label{position:absolute;left:13px;top:13px;background:rgba(13,19,17,.88);color:white;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:800;}");
             html.AppendLine(".change{font-weight:900;color:#0d1311;}");
-            html.AppendLine(".positive{color:#2b7c46;}.negative{color:#9b3b32;}");
+            html.AppendLine(".positive,.negative{color:#355c4a;}");
+            html.AppendLine(".final-snapshot{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:14px;}");
+            html.AppendLine(".snapshot-card{border:1px solid var(--line);border-top:4px solid var(--brand);border-radius:15px;background:#fbfcfb;padding:14px 13px;min-height:82px;}");
+            html.AppendLine(".snapshot-label{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#627069;}");
+            html.AppendLine(".snapshot-value{font-size:17px;font-weight:900;color:var(--deep);margin-top:7px;}");
+            html.AppendLine(".report-meta{margin-top:10px;font-size:11px;color:#89968f;letter-spacing:.03em;}");
             html.AppendLine(".section-kicker{color:#6d7c75;font-size:13px;margin-top:-4px;margin-bottom:13px;max-width:760px;}");
             html.AppendLine(".section-card{background:white;border:1px solid #e6ece8;border-radius:22px;padding:22px;margin-top:16px;box-shadow:0 10px 26px rgba(31,45,38,.045);}");
             html.AppendLine(".prepared-footer{margin-top:38px;border-top:1px solid #e5ebe7;padding-top:20px;display:grid;grid-template-columns:1.2fr 1.2fr;gap:22px;color:#4f5f58;}");
@@ -578,8 +588,9 @@ namespace CassetteMotionPro.Workspace
             html.AppendLine(".prepared-footer .value{font-weight:800;color:#1f2b25;}");
             html.AppendLine(".confidential{margin-top:12px;background:#f6f8f6;border:1px solid #e5ebe7;border-radius:14px;padding:12px 14px;font-size:12px;color:#607169;}");
             html.AppendLine(".footer{margin-top:18px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between;gap:20px;}");
-            html.AppendLine("@media print{body{background:white}.page{box-shadow:none;margin:0;max-width:none;border-radius:0}.hero{padding:30px 34px 24px}.content{padding:24px 34px}.print-button,.review-strip{display:none}.media-card{min-height:110px}.hero-grid,.summary,.fit-summary,.section-card,.prepared-footer{break-inside:avoid}h2{break-after:avoid}.table-wrap{box-shadow:none}}");
-            html.AppendLine("@media(max-width:760px){.hero-grid,.summary,.fit-summary,.media-grid,.review-list,.prepared-footer{grid-template-columns:1fr}.fit-summary .wide{grid-column:auto}.prepared-card{display:block}.prepared-card .contact{text-align:left;margin-top:10px}}");
+            html.AppendLine("@page{size:Letter portrait;margin:11mm;}");
+            html.AppendLine("@media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{background:white;font-size:10.5pt}.page{box-shadow:none;margin:0;max-width:none;border-radius:0;overflow:visible}.hero{padding:25px 28px 22px;border-radius:0}.hero:after{left:28px;right:28px}.content{padding:20px 28px 18px}.print-button,.review-strip{display:none}.hero-grid{margin-top:20px}.hero-card{padding:11px 12px}.prepared-card{padding:11px 13px;margin-top:13px}.media-card{min-height:100px}.media-card img{height:235px}.media-card.full img{height:330px}.hero-grid,.summary,.fit-summary,.final-snapshot,.media-grid,.section-card,.prepared-footer,.table-wrap,.panel,.media-card{break-inside:avoid;page-break-inside:avoid}h2,h3{break-after:avoid;page-break-after:avoid}h2{margin-top:28px}.section-card{padding:17px;margin-top:11px;box-shadow:none}.table-wrap{box-shadow:none}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}.footer{padding-bottom:2mm}}");
+            html.AppendLine("@media(max-width:760px){.hero-grid,.summary,.fit-summary,.media-grid,.review-list,.prepared-footer,.final-snapshot{grid-template-columns:1fr}.fit-summary .wide{grid-column:auto}.prepared-card{display:block}.prepared-card .contact{text-align:left;margin-top:10px}}");
             html.AppendLine("</style>");
             html.AppendLine("</head>");
             html.AppendLine("<body>");
@@ -597,6 +608,7 @@ namespace CassetteMotionPro.Workspace
             html.AppendLine("<div class=\"eyebrow\">Cassette Motion Pro</div>");
             html.AppendLine("<h1>Bike Fit Report</h1>");
             html.AppendLine("<div class=\"muted report-subtitle\">" + Encode(client.DisplayName) + " · " + Encode(client.BikeDescription) + "</div>");
+            html.AppendLine("<div class=\"report-meta\">Prepared " + DateTime.Now.ToString("MMM d, yyyy", CultureInfo.InvariantCulture) + " · Report " + Encode(session.Id == Guid.Empty ? "Draft" : session.Id.ToString("N").Substring(0, 8).ToUpperInvariant()) + "</div>");
             html.AppendLine("</div>");
             html.AppendLine("</div>");
             html.AppendLine("<button class=\"print-button\" onclick=\"window.print()\">Print / Save PDF</button>");
@@ -615,10 +627,10 @@ namespace CassetteMotionPro.Workspace
             html.AppendLine("</div>");
             html.AppendLine("</div>");
             html.AppendLine("</div>");
-            AddReviewStrip(html, session);
             html.AppendLine("<div class=\"content\">");
             html.AppendLine("<div class=\"summary\">");
-            html.AppendLine("<div class=\"panel\"><div class=\"panel-title\">Rider Goals</div><div class=\"note\">" + EncodeOrPlaceholder(session.Goals) + "</div></div>");
+            if (!string.IsNullOrWhiteSpace(session.Goals))
+                html.AppendLine("<div class=\"panel\"><div class=\"panel-title\">Rider Goals</div><div class=\"note\">" + Encode(session.Goals) + "</div></div>");
             html.AppendLine("<div class=\"panel\"><div class=\"panel-title\">Session Details</div>");
             html.AppendLine("<table>");
             AddDetailRow(html, "Client", client.DisplayName);
@@ -633,25 +645,30 @@ namespace CassetteMotionPro.Workspace
             if (HasFitSummaryContent(session))
                 AddFitSummarySection(html, session);
 
-            html.AppendLine("<h2>Visual Fit Review</h2>");
-            html.AppendLine("<div class=\"section-kicker\">Selected images from the session. Use the Report Images tab to choose exactly what appears here.</div>");
-            html.AppendLine("<div class=\"section-card\">");
-            if (!session.HideSideBySideImageInReport && HasReportImage(session.SideBySideReportImagePath))
-                AddReportImage(html, "Side-by-side", session.SideBySideReportImagePath, true, imageSourceResolver);
-            if (!session.HideBeforeImageInReport || !session.HideAfterImageInReport)
+            if (HasAnyFinalPositionMetric(session))
+                AddFinalPositionSnapshot(html, session);
+
+            if (hasVisualReview)
             {
-                html.AppendLine("<div class=\"media-grid\">");
-                if (!session.HideBeforeImageInReport)
+                html.AppendLine("<h2>Visual Fit Review</h2>");
+                html.AppendLine("<div class=\"section-kicker\">Selected Before and After evidence from the completed fit session.</div>");
+                html.AppendLine("<div class=\"section-card\">");
+                if (!session.HideSideBySideImageInReport && HasReportImage(session.SideBySideReportImagePath))
+                    AddReportImage(html, "Side-by-side comparison", session.SideBySideReportImagePath, true, imageSourceResolver);
+                if ((!session.HideBeforeImageInReport && HasReportImage(session.BeforeReportImagePath)) ||
+                    (!session.HideAfterImageInReport && HasReportImage(session.AfterReportImagePath)))
+                {
+                    html.AppendLine("<div class=\"media-grid\">");
+                if (!session.HideBeforeImageInReport && HasReportImage(session.BeforeReportImagePath))
                     AddReportImage(html, "Before", session.BeforeReportImagePath, false, imageSourceResolver);
-                if (!session.HideAfterImageInReport)
+                if (!session.HideAfterImageInReport && HasReportImage(session.AfterReportImagePath))
                     AddReportImage(html, "After", session.AfterReportImagePath, false, imageSourceResolver);
+                    html.AppendLine("</div>");
+                }
                 html.AppendLine("</div>");
             }
-            if (session.HideSideBySideImageInReport && session.HideBeforeImageInReport && session.HideAfterImageInReport)
-                html.AppendLine("<div class=\"note\"><span class=\"muted\">Report images hidden for this session.</span></div>");
-            html.AppendLine("</div>");
 
-            if (!session.HideMeasurementReferenceImageInReport)
+            if (hasMeasurementReference)
             {
                 html.AppendLine("<h2>Measurement Reference Image</h2>");
                 html.AppendLine("<div class=\"section-kicker\">Image used for manual bike metric reference and scale-assisted measurements.</div>");
@@ -701,21 +718,27 @@ namespace CassetteMotionPro.Workspace
             }, !session.HideBeforeMeasurementsInReport);
             html.AppendLine("</div>");
 
-            html.AppendLine("<h2>Body Angles</h2>");
-            html.AppendLine("<div class=\"section-kicker\">Rider posture angles captured at matched fit positions for setup comparison.</div>");
-            html.AppendLine("<div class=\"section-card\">");
-            AddMeasurementTable(html, new[]
+            if (HasAnyBodyAngle(session))
             {
-                Row("Knee angle", session.KneeAngleBefore, session.KneeAngleAfter),
-                Row("Hip angle", session.HipAngleBefore, session.HipAngleAfter),
-                Row("Ankle angle", session.AnkleAngleBefore, session.AnkleAngleAfter),
-                Row("Body reach", session.TorsoAngleBefore, session.TorsoAngleAfter),
-                Row("Back angle", session.ShoulderAngleBefore, session.ShoulderAngleAfter)
-            }, !session.HideBeforeMeasurementsInReport);
-            html.AppendLine("</div>");
+                html.AppendLine("<h2>Body Angles</h2>");
+                html.AppendLine("<div class=\"section-kicker\">Rider posture angles captured at matched fit positions for setup comparison.</div>");
+                html.AppendLine("<div class=\"section-card\">");
+                AddMeasurementTable(html, new[]
+                {
+                    Row("Knee angle", session.KneeAngleBefore, session.KneeAngleAfter),
+                    Row("Hip angle", session.HipAngleBefore, session.HipAngleAfter),
+                    Row("Ankle angle", session.AnkleAngleBefore, session.AnkleAngleAfter),
+                    Row("Body reach", session.TorsoAngleBefore, session.TorsoAngleAfter),
+                    Row("Back angle", session.ShoulderAngleBefore, session.ShoulderAngleAfter)
+                }, !session.HideBeforeMeasurementsInReport);
+                html.AppendLine("</div>");
+            }
 
-            html.AppendLine("<h2>Recommendations and Notes</h2>");
-            html.AppendLine("<div class=\"note\">" + EncodeOrPlaceholder(session.Notes) + "</div>");
+            if (!string.IsNullOrWhiteSpace(session.Notes))
+            {
+                html.AppendLine("<h2>Additional Fit Notes</h2>");
+                html.AppendLine("<div class=\"note\">" + Encode(session.Notes) + "</div>");
+            }
             html.AppendLine("<div class=\"prepared-footer\">");
             html.AppendLine("<div><div class=\"label\">Report prepared by</div><div class=\"value\">" + Encode(StudioName) + "</div><div>" + Encode(PreparedByRole) + "</div><div>Fitter: " + Encode(FitterName) + "</div></div>");
             html.AppendLine("<div><div class=\"label\">Studio contact</div>");
@@ -835,6 +858,43 @@ namespace CassetteMotionPro.Workspace
             AddFitSummaryPanelIfRecorded(html, "Follow-up plan", session.FitSummaryFollowUp, false);
             AddFitSummaryPanelIfRecorded(html, "Recommendations", session.FitSummaryRecommendations, true);
             html.AppendLine("</div>");
+        }
+
+        private static bool HasAnyFinalPositionMetric(FitSessionRecord session)
+        {
+            return !string.IsNullOrWhiteSpace(session.SaddleHeightAfter) ||
+                !string.IsNullOrWhiteSpace(session.SaddleSetbackAfter) ||
+                !string.IsNullOrWhiteSpace(session.SaddleTipToGripReachAfter) ||
+                !string.IsNullOrWhiteSpace(session.HandlebarXAfter) ||
+                !string.IsNullOrWhiteSpace(session.HandlebarYAfter);
+        }
+
+        private static void AddFinalPositionSnapshot(StringBuilder html, FitSessionRecord session)
+        {
+            html.AppendLine("<h2>Final Position Snapshot</h2>");
+            html.AppendLine("<div class=\"section-kicker\">Key final contact-point measurements for quick client reference.</div>");
+            html.AppendLine("<div class=\"final-snapshot\">");
+            AddSnapshotCard(html, "Saddle height", session.SaddleHeightAfter);
+            AddSnapshotCard(html, "Saddle setback", session.SaddleSetbackAfter);
+            AddSnapshotCard(html, "Saddle to grip", session.SaddleTipToGripReachAfter);
+            AddSnapshotCard(html, "Handlebar X", session.HandlebarXAfter);
+            AddSnapshotCard(html, "Handlebar Y", session.HandlebarYAfter);
+            html.AppendLine("</div>");
+        }
+
+        private static void AddSnapshotCard(StringBuilder html, string label, string value)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+                html.AppendLine("<div class=\"snapshot-card\"><div class=\"snapshot-label\">" + Encode(label) + "</div><div class=\"snapshot-value\">" + Encode(value) + "</div></div>");
+        }
+
+        private static bool HasAnyBodyAngle(FitSessionRecord session)
+        {
+            return !string.IsNullOrWhiteSpace(session.KneeAngleBefore) || !string.IsNullOrWhiteSpace(session.KneeAngleAfter) ||
+                !string.IsNullOrWhiteSpace(session.HipAngleBefore) || !string.IsNullOrWhiteSpace(session.HipAngleAfter) ||
+                !string.IsNullOrWhiteSpace(session.AnkleAngleBefore) || !string.IsNullOrWhiteSpace(session.AnkleAngleAfter) ||
+                !string.IsNullOrWhiteSpace(session.TorsoAngleBefore) || !string.IsNullOrWhiteSpace(session.TorsoAngleAfter) ||
+                !string.IsNullOrWhiteSpace(session.ShoulderAngleBefore) || !string.IsNullOrWhiteSpace(session.ShoulderAngleAfter);
         }
 
         private static void AddFitSummaryPanelIfRecorded(StringBuilder html, string label, string value, bool wide)
