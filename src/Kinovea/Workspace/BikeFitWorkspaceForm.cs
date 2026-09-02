@@ -60,6 +60,8 @@ namespace CassetteMotionPro.Workspace
         private readonly Label fitDayHomeReadiness = new Label();
         private readonly Label fitDayHomeFolders = new Label();
         private readonly FlowLayoutPanel fitDayHomeFolderButtons = new FlowLayoutPanel();
+        private readonly Button fitDayPrimaryAction = new Button();
+        private readonly Panel fitDayAdvancedPanel = new Panel();
         private readonly Label fitCommandCenterStatus = new Label();
         private readonly Label activeSaveTargetStatus = new Label();
         private readonly Label savedEvidenceReviewStatus = new Label();
@@ -94,6 +96,7 @@ namespace CassetteMotionPro.Workspace
         private Action nextRecommendedFolderActionHandler;
         private string fitCommandCenterMode = "Plan";
         private const string FitDayHomeTabName = "Fit Day";
+        private const string SessionSetupTabName = "Session Setup";
         private const string KinoveaVideoTabName = "Video Studio";
 
         public BikeFitWorkspaceForm(ClientRecord client, Action<string> openVideo, Action<string, string> openVideoPair, Action<string> prepareCaptureFolder, Action<string> openLiveCaptureFolder, Action<string, string> openDualLiveCaptureFolders, Action<string> openBodyAngleGuide)
@@ -218,7 +221,11 @@ namespace CassetteMotionPro.Workspace
             Button newSession = CreateButton("+ New Session", true);
             newSession.Dock = DockStyle.Fill;
             newSession.Margin = new Padding(0, 0, 4, 0);
-            newSession.Click += delegate { BeginNewSession(); };
+            newSession.Click += delegate
+            {
+                BeginNewSession();
+                SelectWorkspaceTab(SessionSetupTabName);
+            };
             Button repeatFit = CreateButton("Repeat Fit", false);
             repeatFit.Dock = DockStyle.Fill;
             repeatFit.Margin = new Padding(4, 0, 0, 0);
@@ -257,6 +264,7 @@ namespace CassetteMotionPro.Workspace
             editorTabs.Padding = new Point(18, 8);
             CassetteMotionTheme.StyleTabs(editorTabs);
             editorTabs.SelectedIndexChanged += delegate { UpdateWorkflowChecklist(); };
+            editorTabs.TabPages.Add(BuildFitDayDashboardTab());
             editorTabs.TabPages.Add(BuildOverviewTab());
             editorTabs.TabPages.Add(BuildClientFilesTab());
             editorTabs.TabPages.Add(BuildClientHistoryTab());
@@ -266,7 +274,7 @@ namespace CassetteMotionPro.Workspace
 
             Panel actions = new Panel();
             actions.Dock = DockStyle.Bottom;
-            actions.Height = 126;
+            actions.Height = 98;
             actions.Padding = new Padding(24, 10, 24, 10);
             actions.BackColor = CassetteMotionTheme.Surface;
 
@@ -278,25 +286,9 @@ namespace CassetteMotionPro.Workspace
             save.Width = 82;
             save.Click += Save_Click;
 
-            Button report = CreateButton("Generate", false);
-            report.Width = 96;
-            report.Click += GenerateReport_Click;
-
             Button previewReport = CreateButton("Preview", false);
             previewReport.Width = 88;
             previewReport.Click += PreviewReport_Click;
-
-            Button reportPackage = CreateButton("Package", false);
-            reportPackage.Width = 92;
-            reportPackage.Click += ReportPackage_Click;
-
-            Button zipReportPackage = CreateButton("Zip", false);
-            zipReportPackage.Width = 70;
-            zipReportPackage.Click += ZipReportPackage_Click;
-
-            Button openReports = CreateButton("Reports", false);
-            openReports.Width = 86;
-            openReports.Click += OpenReports_Click;
 
             Button reviewSession = CreateButton("Review", true);
             reviewSession.Width = 86;
@@ -321,7 +313,7 @@ namespace CassetteMotionPro.Workspace
 
             FlowLayoutPanel actionButtons = new FlowLayoutPanel();
             actionButtons.Dock = DockStyle.Bottom;
-            actionButtons.Height = 78;
+            actionButtons.Height = 52;
             actionButtons.FlowDirection = FlowDirection.LeftToRight;
             actionButtons.WrapContents = true;
             actionButtons.AutoScroll = true;
@@ -332,10 +324,6 @@ namespace CassetteMotionPro.Workspace
             actionButtons.Controls.Add(close);
             actionButtons.Controls.Add(reviewSession);
             actionButtons.Controls.Add(previewReport);
-            actionButtons.Controls.Add(report);
-            actionButtons.Controls.Add(reportPackage);
-            actionButtons.Controls.Add(zipReportPackage);
-            actionButtons.Controls.Add(openReports);
 
             actions.Controls.Add(actionButtons);
             actions.Controls.Add(saveHint);
@@ -345,28 +333,21 @@ namespace CassetteMotionPro.Workspace
 
         private TabPage BuildOverviewTab()
         {
-            TabPage page = NewTab(FitDayHomeTabName);
+            TabPage page = NewTab(SessionSetupTabName);
             TableLayoutPanel table = NewEditorTable();
             table.Dock = DockStyle.Top;
             table.AutoSize = true;
 
-            Control guidedFlow = BuildGuidedFitDayFlowMap();
-            int guidedFlowRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 176));
-            table.Controls.Add(guidedFlow, 0, guidedFlowRow);
-            table.SetColumnSpan(guidedFlow, 2);
-
-            Control commandCenter = BuildFitCommandCenter();
-            int commandCenterRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 330));
-            table.Controls.Add(commandCenter, 0, commandCenterRow);
-            table.SetColumnSpan(commandCenter, 2);
-
-            Control nextStep = BuildNextRecommendedStepPanel();
-            int nextStepRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 82));
-            table.Controls.Add(nextStep, 0, nextStepRow);
-            table.SetColumnSpan(nextStep, 2);
+            Label setupHeading = new Label();
+            setupHeading.Text = "Session setup";
+            setupHeading.Dock = DockStyle.Fill;
+            setupHeading.Font = new Font("Segoe UI", 15F, FontStyle.Bold);
+            setupHeading.ForeColor = CassetteMotionTheme.Ink;
+            setupHeading.TextAlign = ContentAlignment.MiddleLeft;
+            int headingRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
+            table.Controls.Add(setupHeading, 0, headingRow);
+            table.SetColumnSpan(setupHeading, 2);
 
             Control templates = BuildFitTemplatePanel();
             int templateRow = table.RowCount++;
@@ -1055,78 +1036,78 @@ namespace CassetteMotionPro.Workspace
             return group;
         }
 
+        private TabPage BuildFitDayDashboardTab()
+        {
+            TabPage page = NewTab(FitDayHomeTabName);
+            page.AutoScroll = true;
+            page.Controls.Add(BuildFitDayHomePanel());
+            return page;
+        }
+
         private Control BuildFitDayHomePanel()
         {
             Panel panel = new Panel();
-            panel.Dock = DockStyle.Fill;
-            panel.BackColor = Color.White;
-            panel.Padding = new Padding(18, 14, 18, 12);
+            panel.Dock = DockStyle.Top;
+            panel.Height = 610;
+            panel.BackColor = CassetteMotionTheme.Canvas;
+            panel.Padding = new Padding(28, 22, 28, 18);
 
             TableLayoutPanel layout = new TableLayoutPanel();
             layout.Dock = DockStyle.Fill;
-            layout.ColumnCount = 2;
-            layout.RowCount = 6;
+            layout.ColumnCount = 1;
+            layout.RowCount = 8;
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 560));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 70));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 66));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 112));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 46));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 132));
-            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            RowStyle advancedRow = new RowStyle(SizeType.Absolute, 0);
+            layout.RowStyles.Add(advancedRow);
 
             Label title = new Label();
-            title.Text = "Start Fit Day";
+            title.Text = "Fit Day Dashboard";
             title.Dock = DockStyle.Fill;
-            title.Font = new Font("Segoe UI", 14F, FontStyle.Bold);
-            title.ForeColor = Color.FromArgb(24, 31, 29);
+            title.Font = new Font("Segoe UI", 18F, FontStyle.Bold);
+            title.ForeColor = CassetteMotionTheme.Ink;
             title.TextAlign = ContentAlignment.MiddleLeft;
 
             Label description = new Label();
-            description.Text = "Start here: create or open a client fit session first. After that, Video Studio knows where Before / After videos, Dual evidence, images, and reports should save.";
+            description.Text = "One clear path for today’s fitting. Complete each stage from left to right; Cassette Motion Pro keeps every save tied to the active client session.";
             description.Dock = DockStyle.Fill;
-            description.ForeColor = Color.FromArgb(74, 87, 81);
+            description.ForeColor = CassetteMotionTheme.Muted;
 
             FlowLayoutPanel buttons = new FlowLayoutPanel();
             buttons.Dock = DockStyle.Fill;
             buttons.FlowDirection = FlowDirection.LeftToRight;
             buttons.WrapContents = true;
-            buttons.Padding = new Padding(0, 2, 0, 0);
+            buttons.Padding = new Padding(0, 8, 0, 6);
 
-            Button clientInfo = CreateButton("1. Start Session", true);
-            clientInfo.Size = new Size(152, 34);
+            Button clientInfo = CreateButton("1  CLIENT + SESSION", true);
+            clientInfo.Size = new Size(160, 46);
             clientInfo.Click += delegate { SelectFitSessionStart(); };
 
-            Button recordLive = CreateButton("2. Record", false);
-            recordLive.Size = new Size(116, 34);
-            recordLive.Click += delegate { OpenDualLiveCapture(); };
+            Button video = CreateButton("2  VIDEO STUDIO", false);
+            video.Size = new Size(150, 46);
+            video.Click += delegate { PrepareAndSelectVideoAnalysis(); };
 
-            Button analyze = CreateButton("3. Analyze", false);
-            analyze.Size = new Size(122, 34);
-            analyze.Click += delegate { PrepareAndSelectVideoAnalysis(); };
+            Button measurements = CreateButton("3  MEASUREMENTS", false);
+            measurements.Size = new Size(165, 46);
+            measurements.Click += delegate { SelectWorkspaceTab("Guided Measurements"); };
 
-            Button measurements = CreateButton("4. Metrics", false);
-            measurements.Size = new Size(116, 34);
-            measurements.Click += delegate { SelectWorkspaceTab("Bike Metrics"); };
-
-            Button report = CreateButton("5. Report", false);
-            report.Size = new Size(106, 34);
-            report.Click += delegate { SelectWorkspaceTab("Report Images"); };
+            Button report = CreateButton("4  REPORT", false);
+            report.Size = new Size(130, 46);
+            report.Click += delegate { SelectWorkspaceTab("Report Builder"); };
 
             buttons.Controls.Add(clientInfo);
-            buttons.Controls.Add(recordLive);
-            buttons.Controls.Add(analyze);
+            buttons.Controls.Add(video);
             buttons.Controls.Add(measurements);
             buttons.Controls.Add(report);
 
-            Label path = new Label();
-            path.Text = "Fit-day path: Session first → Video Studio → Measurements → Report";
-            path.Dock = DockStyle.Fill;
-            path.ForeColor = Color.FromArgb(92, 104, 98);
-            path.TextAlign = ContentAlignment.MiddleLeft;
-
             fitDayHomeStatus.Dock = DockStyle.Fill;
-            fitDayHomeStatus.ForeColor = Color.FromArgb(181, 118, 35);
+            fitDayHomeStatus.ForeColor = CassetteMotionTheme.Warning;
             fitDayHomeStatus.BackColor = Color.FromArgb(255, 248, 226);
             fitDayHomeStatus.BorderStyle = BorderStyle.FixedSingle;
             fitDayHomeStatus.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
@@ -1134,21 +1115,44 @@ namespace CassetteMotionPro.Workspace
             fitDayHomeStatus.Padding = new Padding(10, 0, 10, 0);
 
             fitDayHomeReadiness.Dock = DockStyle.Fill;
-            fitDayHomeReadiness.ForeColor = Color.FromArgb(92, 104, 98);
-            fitDayHomeReadiness.BackColor = Color.FromArgb(247, 255, 229);
+            fitDayHomeReadiness.ForeColor = CassetteMotionTheme.Muted;
+            fitDayHomeReadiness.BackColor = CassetteMotionTheme.Surface;
             fitDayHomeReadiness.BorderStyle = BorderStyle.FixedSingle;
             fitDayHomeReadiness.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             fitDayHomeReadiness.TextAlign = ContentAlignment.TopLeft;
             fitDayHomeReadiness.Padding = new Padding(10, 8, 10, 0);
 
+            CassetteMotionTheme.StyleButton(fitDayPrimaryAction, true);
+            fitDayPrimaryAction.Text = "DO NEXT STEP";
+            fitDayPrimaryAction.Dock = DockStyle.Left;
+            fitDayPrimaryAction.Width = 210;
+            fitDayPrimaryAction.Margin = new Padding(0, 9, 0, 9);
+            fitDayPrimaryAction.Click += delegate { RunNextBestFitDayStep(); };
+
+            Button moreOptions = CreateButton("More Options + Folders", false);
+            moreOptions.Dock = DockStyle.Left;
+            moreOptions.Width = 190;
+            moreOptions.Margin = new Padding(0, 5, 0, 5);
+            moreOptions.Click += delegate
+            {
+                fitDayAdvancedPanel.Visible = !fitDayAdvancedPanel.Visible;
+                advancedRow.Height = fitDayAdvancedPanel.Visible ? 180 : 0;
+                panel.Height = fitDayAdvancedPanel.Visible ? 790 : 610;
+                moreOptions.Text = fitDayAdvancedPanel.Visible ? "Hide Options" : "More Options + Folders";
+            };
+
+            fitDayAdvancedPanel.Dock = DockStyle.Fill;
+            fitDayAdvancedPanel.Visible = false;
+            fitDayAdvancedPanel.Controls.Add(BuildFitDayHomeFolderPanel());
+
             layout.Controls.Add(title, 0, 0);
-            layout.Controls.Add(buttons, 1, 0);
-            layout.SetRowSpan(buttons, 6);
             layout.Controls.Add(description, 0, 1);
-            layout.Controls.Add(path, 0, 2);
+            layout.Controls.Add(buttons, 0, 2);
             layout.Controls.Add(fitDayHomeStatus, 0, 3);
-            layout.Controls.Add(BuildFitDayHomeFolderPanel(), 0, 4);
+            layout.Controls.Add(fitDayPrimaryAction, 0, 4);
             layout.Controls.Add(fitDayHomeReadiness, 0, 5);
+            layout.Controls.Add(moreOptions, 0, 6);
+            layout.Controls.Add(fitDayAdvancedPanel, 0, 7);
             panel.Controls.Add(layout);
             UpdateFitDayHomeStatus();
             return panel;
@@ -3553,7 +3557,7 @@ namespace CassetteMotionPro.Workspace
 
         private void SelectFitSessionStart()
         {
-            SelectWorkspaceTab(FitDayHomeTabName);
+            SelectWorkspaceTab(SessionSetupTabName);
             UpdateSaveHint("Start here: use + New Session on the left or choose an existing session, enter the details, then Save before opening Video Studio.");
             if (txtTitle != null)
             {
@@ -3615,7 +3619,7 @@ namespace CassetteMotionPro.Workspace
         private static string NormalizeWorkspaceTabName(string tabText)
         {
             if (string.Equals(tabText, "Overview", StringComparison.OrdinalIgnoreCase))
-                return FitDayHomeTabName;
+                return SessionSetupTabName;
 
             if (string.Equals(tabText, "Video Capture + Analysis", StringComparison.OrdinalIgnoreCase))
                 return KinoveaVideoTabName;
@@ -4018,7 +4022,7 @@ namespace CassetteMotionPro.Workspace
 
             UpdateFitDayHomeFolderPanel();
 
-            if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
+            if (!HasActiveFitSession())
             {
                 fitDayHomeStatus.Text = "START HERE: create or open a client fit session first.";
                 fitDayHomeStatus.ForeColor = Color.FromArgb(181, 118, 35);
@@ -4577,6 +4581,8 @@ namespace CassetteMotionPro.Workspace
             nextRecommendedStepAction.Text = actionText;
             nextRecommendedStepAction.Enabled = action != null;
             nextRecommendedStepActionHandler = action;
+            fitDayPrimaryAction.Text = actionText.ToUpperInvariant();
+            fitDayPrimaryAction.Enabled = action != null;
             nextRecommendedFolderAction.Text = folderActionText;
             nextRecommendedFolderAction.Enabled = folderAction != null;
             nextRecommendedFolderActionHandler = folderAction;
