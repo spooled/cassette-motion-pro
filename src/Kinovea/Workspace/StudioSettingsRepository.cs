@@ -41,6 +41,12 @@ namespace CassetteMotionPro.Workspace
             }
         }
 
+        public static void Reload()
+        {
+            lock (SyncRoot)
+                current = LoadFromDisk();
+        }
+
         private static StudioSettings LoadFromDisk()
         {
             try

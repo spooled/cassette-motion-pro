@@ -20,7 +20,7 @@ namespace CassetteMotionPro.Workspace
     public static class FitSessionReportGenerator
     {
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "0.57.0";
+        private const string ReportVersion = "0.58.0";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
 
         private static StudioSettings ReportSettings { get { return StudioSettingsRepository.Current; } }

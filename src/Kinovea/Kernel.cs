@@ -117,6 +117,7 @@ namespace Kinovea.Root
         private ToolStripMenuItem mnuTranslate1 = new ToolStripMenuItem();
         private ToolStripMenuItem mnuPreferences = new ToolStripMenuItem();
         private ToolStripMenuItem mnuStudioSettings = new ToolStripMenuItem();
+        private ToolStripMenuItem mnuBackupData = new ToolStripMenuItem();
         private ToolStripMenuItem mnuTimecode = new ToolStripMenuItem();
         private ToolStripMenuItem mnuTimecodeClassic = new ToolStripMenuItem();
         private ToolStripMenuItem mnuTimecodeFrames = new ToolStripMenuItem();
@@ -546,6 +547,8 @@ namespace Kinovea.Root
             mnuPreferences.Click += new EventHandler(mnuPreferencesOnClick);
             mnuStudioSettings.Image = Properties.Resources.application_edit;
             mnuStudioSettings.Click += mnuStudioSettingsOnClick;
+            mnuBackupData.Image = Properties.Resources.folder;
+            mnuBackupData.Click += mnuBackupDataOnClick;
             
             mnuTimecode.Image = Properties.Resources.time_edit;
             mnuTimecodeClassic.Click +=         (s, e) => SwitchTimecode(TimecodeFormat.ClassicTime);
@@ -575,6 +578,7 @@ namespace Kinovea.Root
                 mnuPointer,
                 new ToolStripSeparator(),
                 mnuStudioSettings,
+                mnuBackupData,
                 new ToolStripSeparator(),
                 mnuPreferences});
             #endregion
@@ -684,6 +688,7 @@ namespace Kinovea.Root
             BuildLanguageMenus();
             mnuPreferences.Text = RootLang.mnuPreferences;
             mnuStudioSettings.Text = "Studio Settings...";
+            mnuBackupData.Text = "Backup & Data Transfer...";
             mnuTimecode.Text = RootLang.mnuTimeFormat;
 
             mnuTimecodeClassic.Text = "[h:][mm:]ss.xx[x]";
@@ -1482,6 +1487,13 @@ namespace Kinovea.Root
                 if (form.ShowDialog(mainWindow) == DialogResult.OK)
                     statusLabel.Text = "Studio settings saved. New reports will use the updated contact details and branding.";
             }
+        }
+
+        private void mnuBackupDataOnClick(object sender, EventArgs e)
+        {
+            using (BackupDataTransferForm form = new BackupDataTransferForm())
+                form.ShowDialog(mainWindow);
+            BuildRecentClientMenus();
         }
 
         private void OpenAnalysisFromPath(string path)

@@ -5,7 +5,22 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.57.0 Studio Settings and Report Branding
+## Current milestone: 0.58.0 Backup, Restore, and Client-data Portability
+
+- Options now includes Backup & Data Transfer for full-studio backups and single-client
+  transfer packages.
+- Full backups include client folders, sessions, videos, images, measurements, reports,
+  follow-ups, studio settings, custom branding, fit templates, and camera profiles.
+- Restore accepts only validated Cassette Motion Pro full-backup ZIPs and automatically
+  creates a dated safety backup before replacing current data.
+- A selected client can be exported with their complete folder and imported on another
+  Cassette Motion Pro computer.
+- Duplicate imports offer Replace, Keep Both, or Cancel without silently overwriting a
+  client.
+- ZIP extraction checks file paths before writing so malformed packages cannot write
+  outside the temporary restore area.
+
+## Previous milestone: 0.57.0 Studio Settings and Report Branding
 
 - Options now includes a simple Studio Settings screen for the studio name, fitter
   name, phone, email, website, and report subtitle.
