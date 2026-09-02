@@ -116,6 +116,7 @@ namespace Kinovea.Root
         private Dictionary<string, ToolStripMenuItem> languageMenus = new Dictionary<string, ToolStripMenuItem>();
         private ToolStripMenuItem mnuTranslate1 = new ToolStripMenuItem();
         private ToolStripMenuItem mnuPreferences = new ToolStripMenuItem();
+        private ToolStripMenuItem mnuStudioSettings = new ToolStripMenuItem();
         private ToolStripMenuItem mnuTimecode = new ToolStripMenuItem();
         private ToolStripMenuItem mnuTimecodeClassic = new ToolStripMenuItem();
         private ToolStripMenuItem mnuTimecodeFrames = new ToolStripMenuItem();
@@ -543,6 +544,8 @@ namespace Kinovea.Root
 
             mnuPreferences.Image = Properties.Resources.wrench;
             mnuPreferences.Click += new EventHandler(mnuPreferencesOnClick);
+            mnuStudioSettings.Image = Properties.Resources.application_edit;
+            mnuStudioSettings.Click += mnuStudioSettingsOnClick;
             
             mnuTimecode.Image = Properties.Resources.time_edit;
             mnuTimecodeClassic.Click +=         (s, e) => SwitchTimecode(TimecodeFormat.ClassicTime);
@@ -571,7 +574,8 @@ namespace Kinovea.Root
                 mnuTimecode, 
                 mnuPointer,
                 new ToolStripSeparator(),
-                new ToolStripSeparator(), 
+                mnuStudioSettings,
+                new ToolStripSeparator(),
                 mnuPreferences});
             #endregion
 
@@ -679,6 +683,7 @@ namespace Kinovea.Root
             mnuTranslate1.Text = RootLang.mnuTranslate;
             BuildLanguageMenus();
             mnuPreferences.Text = RootLang.mnuPreferences;
+            mnuStudioSettings.Text = "Studio Settings...";
             mnuTimecode.Text = RootLang.mnuTimeFormat;
 
             mnuTimecodeClassic.Text = "[h:][mm:]ss.xx[x]";
@@ -1467,6 +1472,15 @@ namespace Kinovea.Root
                 {
                     MessageBox.Show(ScreenManagerLang.LoadMovie_FileNotOpened, ScreenManagerLang.LoadMovie_Error, MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 }
+            }
+        }
+
+        private void mnuStudioSettingsOnClick(object sender, EventArgs e)
+        {
+            using (StudioSettingsForm form = new StudioSettingsForm())
+            {
+                if (form.ShowDialog(mainWindow) == DialogResult.OK)
+                    statusLabel.Text = "Studio settings saved. New reports will use the updated contact details and branding.";
             }
         }
 

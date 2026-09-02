@@ -19,15 +19,17 @@ namespace CassetteMotionPro.Workspace
 {
     public static class FitSessionReportGenerator
     {
-        private const string StudioName = "Cassette Fit Studio";
-        private const string FitterName = "Cesar Correa";
-        private const string StudioPhone = "Add phone";
-        private const string StudioEmail = "Add email";
-        private const string StudioWebsite = "Add website";
-        private const string PreparedByRole = "Professional Bike Fitting";
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "0.56.0";
+        private const string ReportVersion = "0.57.0";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
+
+        private static StudioSettings ReportSettings { get { return StudioSettingsRepository.Current; } }
+        private static string StudioName { get { return SettingOrDefault(ReportSettings.StudioName, "Cassette Fit Studio"); } }
+        private static string FitterName { get { return ReportSettings.FitterName ?? string.Empty; } }
+        private static string StudioPhone { get { return ReportSettings.Phone ?? string.Empty; } }
+        private static string StudioEmail { get { return ReportSettings.Email ?? string.Empty; } }
+        private static string StudioWebsite { get { return ReportSettings.Website ?? string.Empty; } }
+        private static string PreparedByRole { get { return SettingOrDefault(ReportSettings.ReportRole, "Professional Bike Fitting"); } }
 
         public static string Generate(ClientRecord client, FitSessionRecord session)
         {
@@ -357,10 +359,16 @@ namespace CassetteMotionPro.Workspace
         {
             text.AppendLine("Prepared by: " + StudioName);
             text.AppendLine("Role: " + PreparedByRole);
-            text.AppendLine("Fitter: " + FitterName);
-            text.AppendLine("Phone: " + StudioPhone);
-            text.AppendLine("Email: " + StudioEmail);
-            text.AppendLine("Website: " + StudioWebsite);
+            AddStudioContactTextRow(text, "Fitter", FitterName);
+            AddStudioContactTextRow(text, "Phone", StudioPhone);
+            AddStudioContactTextRow(text, "Email", StudioEmail);
+            AddStudioContactTextRow(text, "Website", StudioWebsite);
+        }
+
+        private static void AddStudioContactTextRow(StringBuilder text, string label, string value)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+                text.AppendLine(label + ": " + value.Trim());
         }
 
         private static void AddStudioContactGrid(StringBuilder html)
@@ -375,7 +383,8 @@ namespace CassetteMotionPro.Workspace
 
         private static void AddStudioContactGridRow(StringBuilder html, string label, string value)
         {
-            html.AppendLine("<div class=\"contact-label\">" + Encode(label) + "</div><div>" + Encode(value) + "</div>");
+            if (!string.IsNullOrWhiteSpace(value))
+                html.AppendLine("<div class=\"contact-label\">" + Encode(label) + "</div><div>" + Encode(value.Trim()) + "</div>");
         }
 
         private static void AddSummaryMetric(StringBuilder text, string label, string before, string after, bool includeBefore)
@@ -758,6 +767,14 @@ namespace CassetteMotionPro.Workspace
         {
             try
             {
+                string customLogoPath = ReportSettings.CustomLogoPath;
+                if (!string.IsNullOrWhiteSpace(customLogoPath) && File.Exists(customLogoPath))
+                {
+                    string extension = Path.GetExtension(customLogoPath);
+                    string mime = string.Equals(extension, ".png", StringComparison.OrdinalIgnoreCase) ? "image/png" : "image/jpeg";
+                    return "data:" + mime + ";base64," + Convert.ToBase64String(File.ReadAllBytes(customLogoPath));
+                }
+
                 using (Stream stream = typeof(FitSessionReportGenerator).Assembly.GetManifestResourceStream(BrandLogoResourceName))
                 {
                     if (stream == null)
@@ -774,6 +791,11 @@ namespace CassetteMotionPro.Workspace
             {
                 return string.Empty;
             }
+        }
+
+        private static string SettingOrDefault(string value, string fallback)
+        {
+            return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
         }
 
         private static bool HasBikeMetricsTrace(FitSessionRecord session)
