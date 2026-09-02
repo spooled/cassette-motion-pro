@@ -104,6 +104,14 @@ namespace CassetteMotionPro.Clients
             Save(client);
         }
 
+        public void SetArchived(ClientRecord client, bool archived)
+        {
+            if (client == null || string.IsNullOrEmpty(client.FolderPath))
+                return;
+            client.IsArchived = archived;
+            Save(client);
+        }
+
         public void EnsureFolders(ClientRecord client)
         {
             if (client == null || string.IsNullOrEmpty(client.FolderPath))

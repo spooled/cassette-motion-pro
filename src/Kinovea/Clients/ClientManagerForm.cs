@@ -7,6 +7,7 @@ GNU General Public License version 2.
 
 using Kinovea.Services;
 using CassetteMotionPro;
+using CassetteMotionPro.Workspace;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -21,16 +22,24 @@ namespace CassetteMotionPro.Clients
         private readonly Action<ClientRecord> openClient;
         private readonly Action<ClientRecord> openWorkspace;
         private readonly TextBox txtSearch = new TextBox();
+        private readonly ComboBox cmbFilter = new ComboBox();
+        private readonly ComboBox cmbSort = new ComboBox();
+        private readonly CheckBox chkShowArchived = new CheckBox();
+        private readonly Label lblResults = new Label();
         private readonly ListView clientList = new ListView();
         private readonly Label lblName = new Label();
         private readonly Label lblBike = new Label();
         private readonly Label lblContact = new Label();
         private readonly Label lblLastOpened = new Label();
         private readonly Label lblNotes = new Label();
+        private readonly Label lblFitStatus = new Label();
         private readonly Button btnOpenVideos = new Button();
         private readonly Button btnWorkspace = new Button();
         private readonly Button btnOpenFolder = new Button();
+        private readonly Button btnFollowUp = new Button();
+        private readonly Button btnArchive = new Button();
         private IList<ClientRecord> clients = new List<ClientRecord>();
+        private readonly Dictionary<Guid, ClientFitSummary> fitSummaries = new Dictionary<Guid, ClientFitSummary>();
 
         private ClientRecord SelectedClient
         {
@@ -53,7 +62,7 @@ namespace CassetteMotionPro.Clients
 
             Text = "Client Fits — Cassette Motion Pro";
             CassetteMotionTheme.ApplyForm(this);
-            ClientSize = new Size(1040, 650);
+            ClientSize = new Size(1180, 700);
             MinimumSize = new Size(900, 560);
             StartPosition = FormStartPosition.CenterParent;
 
@@ -114,29 +123,58 @@ namespace CassetteMotionPro.Clients
 
             SplitContainer split = new SplitContainer();
             split.Dock = DockStyle.Fill;
-            split.SplitterDistance = 450;
+            split.SplitterDistance = 520;
             split.BackColor = CassetteMotionTheme.Border;
             split.Panel1.BackColor = CassetteMotionTheme.Surface;
             split.Panel2.BackColor = CassetteMotionTheme.Canvas;
 
             Panel searchPanel = new Panel();
             searchPanel.Dock = DockStyle.Top;
-            searchPanel.Height = 72;
-            searchPanel.Padding = new Padding(18, 16, 18, 10);
+            searchPanel.Height = 126;
+            searchPanel.Padding = new Padding(18, 10, 18, 10);
             searchPanel.BackColor = CassetteMotionTheme.SurfaceSoft;
 
             Label searchLabel = new Label();
             searchLabel.Text = "Search";
             searchLabel.AutoSize = true;
-            searchLabel.Location = new Point(18, 5);
+            searchLabel.Location = new Point(18, 6);
             searchLabel.ForeColor = Color.FromArgb(92, 104, 98);
 
-            txtSearch.Dock = DockStyle.Fill;
+            txtSearch.Location = new Point(18, 25);
+            txtSearch.Size = new Size(484, 28);
+            txtSearch.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             txtSearch.BorderStyle = BorderStyle.FixedSingle;
             txtSearch.Font = new Font("Segoe UI", 10F);
             txtSearch.TextChanged += delegate { PopulateList(); };
+
+            cmbFilter.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbFilter.Items.AddRange(new object[] { "All active clients", "Follow-ups due", "Needs attention", "Fits in progress", "Completed fits" });
+            cmbFilter.SelectedIndex = 0;
+            cmbFilter.Location = new Point(18, 65);
+            cmbFilter.Size = new Size(170, 28);
+            cmbFilter.SelectedIndexChanged += delegate { PopulateList(); };
+
+            cmbSort.DropDownStyle = ComboBoxStyle.DropDownList;
+            cmbSort.Items.AddRange(new object[] { "Recently opened", "Newest fit", "Next follow-up", "Client name" });
+            cmbSort.SelectedIndex = 0;
+            cmbSort.Location = new Point(198, 65);
+            cmbSort.Size = new Size(145, 28);
+            cmbSort.SelectedIndexChanged += delegate { PopulateList(); };
+
+            chkShowArchived.Text = "Show archived";
+            chkShowArchived.Location = new Point(353, 66);
+            chkShowArchived.Size = new Size(125, 26);
+            chkShowArchived.CheckedChanged += delegate { PopulateList(); };
+
+            lblResults.Location = new Point(18, 98);
+            lblResults.Size = new Size(470, 22);
+            lblResults.ForeColor = CassetteMotionTheme.Muted;
             searchPanel.Controls.Add(txtSearch);
             searchPanel.Controls.Add(searchLabel);
+            searchPanel.Controls.Add(cmbFilter);
+            searchPanel.Controls.Add(cmbSort);
+            searchPanel.Controls.Add(chkShowArchived);
+            searchPanel.Controls.Add(lblResults);
 
             clientList.Dock = DockStyle.Fill;
             clientList.BorderStyle = BorderStyle.None;
@@ -144,9 +182,10 @@ namespace CassetteMotionPro.Clients
             clientList.HideSelection = false;
             clientList.MultiSelect = false;
             clientList.View = View.Details;
-            clientList.Columns.Add("Client", 175);
-            clientList.Columns.Add("Bike", 155);
-            clientList.Columns.Add("Last opened", 105);
+            clientList.Columns.Add("Client", 145);
+            clientList.Columns.Add("Bike", 125);
+            clientList.Columns.Add("Latest fit", 85);
+            clientList.Columns.Add("Follow-up", 120);
             clientList.SelectedIndexChanged += delegate { UpdateDetails(); };
             clientList.DoubleClick += delegate { OpenSelectedWorkspace(); };
             CassetteMotionTheme.StyleListView(clientList);
@@ -196,16 +235,21 @@ namespace CassetteMotionPro.Clients
             lblLastOpened.ForeColor = Color.FromArgb(88, 102, 95);
             lblLastOpened.Location = new Point(38, 174);
 
+            lblFitStatus.AutoSize = true;
+            lblFitStatus.ForeColor = CassetteMotionTheme.Warning;
+            lblFitStatus.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+            lblFitStatus.Location = new Point(38, 200);
+
             Label notesHeading = new Label();
             notesHeading.Text = "NOTES";
             notesHeading.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             notesHeading.ForeColor = Color.FromArgb(113, 127, 120);
             notesHeading.AutoSize = true;
-            notesHeading.Location = new Point(38, 226);
+            notesHeading.Location = new Point(38, 242);
 
             lblNotes.AutoSize = true;
-            lblNotes.MaximumSize = new Size(470, 160);
-            lblNotes.Location = new Point(38, 252);
+            lblNotes.MaximumSize = new Size(470, 96);
+            lblNotes.Location = new Point(38, 268);
             lblNotes.ForeColor = Color.FromArgb(42, 51, 47);
 
             Label workflowHeading = new Label();
@@ -213,22 +257,24 @@ namespace CassetteMotionPro.Clients
             workflowHeading.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             workflowHeading.ForeColor = Color.FromArgb(113, 127, 120);
             workflowHeading.AutoSize = true;
-            workflowHeading.Location = new Point(38, 420);
+            workflowHeading.Location = new Point(38, 370);
 
             Label workflow = new Label();
-            workflow.Text = "1. Create or select the client\n2. Start/open the fit session first\n3. Record/analyze in Video Studio\n4. Save Before / After / Dual evidence\n5. Preview, package, and save the report";
+            workflow.Text = "1. Open the client fit session\n2. Record, analyze, and save evidence\n3. Finish measurements and the report";
             workflow.AutoSize = true;
             workflow.MaximumSize = new Size(470, 0);
-            workflow.Location = new Point(38, 446);
+            workflow.Location = new Point(38, 396);
             workflow.ForeColor = Color.FromArgb(42, 51, 47);
 
-            Panel actions = new Panel();
+            FlowLayoutPanel actions = new FlowLayoutPanel();
             actions.Dock = DockStyle.Bottom;
-            actions.Height = 64;
+            actions.Height = 96;
+            actions.Padding = new Padding(30, 8, 20, 6);
+            actions.WrapContents = true;
 
             btnOpenFolder.Text = "Open Client Folder";
             btnOpenFolder.Size = new Size(145, 40);
-            btnOpenFolder.Location = new Point(36, 10);
+            btnOpenFolder.Margin = new Padding(6, 4, 6, 4);
             StyleButton(btnOpenFolder, false);
             btnOpenFolder.Click += delegate
             {
@@ -239,23 +285,38 @@ namespace CassetteMotionPro.Clients
 
             btnOpenVideos.Text = "Video Studio";
             btnOpenVideos.Size = new Size(110, 40);
-            btnOpenVideos.Location = new Point(191, 10);
+            btnOpenVideos.Margin = new Padding(6, 4, 6, 4);
             StyleButton(btnOpenVideos, false);
             btnOpenVideos.Click += delegate { OpenSelectedClient(); };
 
             btnWorkspace.Text = "Start Fit Session";
             btnWorkspace.Size = new Size(130, 40);
-            btnWorkspace.Location = new Point(311, 10);
+            btnWorkspace.Margin = new Padding(6, 4, 6, 4);
             StyleButton(btnWorkspace, true);
             btnWorkspace.Click += delegate { OpenSelectedWorkspace(); };
+
+            btnFollowUp.Text = "Add Follow-up";
+            btnFollowUp.Size = new Size(130, 40);
+            btnFollowUp.Margin = new Padding(6, 4, 6, 4);
+            StyleButton(btnFollowUp, false);
+            btnFollowUp.Click += delegate { AddFollowUpToLatestFit(); };
+
+            btnArchive.Text = "Archive Client";
+            btnArchive.Size = new Size(130, 40);
+            btnArchive.Margin = new Padding(6, 4, 6, 4);
+            StyleButton(btnArchive, false);
+            btnArchive.Click += delegate { ToggleSelectedClientArchive(); };
 
             actions.Controls.Add(btnOpenFolder);
             actions.Controls.Add(btnOpenVideos);
             actions.Controls.Add(btnWorkspace);
+            actions.Controls.Add(btnFollowUp);
+            actions.Controls.Add(btnArchive);
             content.Controls.Add(lblName);
             content.Controls.Add(lblBike);
             content.Controls.Add(lblContact);
             content.Controls.Add(lblLastOpened);
+            content.Controls.Add(lblFitStatus);
             content.Controls.Add(notesHeading);
             content.Controls.Add(lblNotes);
             content.Controls.Add(workflowHeading);
@@ -267,6 +328,9 @@ namespace CassetteMotionPro.Clients
         private void RefreshClients()
         {
             clients = repository.LoadAll();
+            fitSummaries.Clear();
+            foreach (ClientRecord client in clients)
+                fitSummaries[client.Id] = BuildFitSummary(client);
             PopulateList();
         }
 
@@ -277,24 +341,54 @@ namespace CassetteMotionPro.Clients
             clientList.Items.Clear();
 
             IEnumerable<ClientRecord> filtered = clients;
+            if (!chkShowArchived.Checked)
+                filtered = filtered.Where(c => !c.IsArchived);
             if (!string.IsNullOrEmpty(query))
             {
                 filtered = filtered.Where(c =>
                     Contains(c.DisplayName, query) ||
                     Contains(c.BikeDescription, query) ||
                     Contains(c.Email, query) ||
-                    Contains(c.Phone, query));
+                    Contains(c.Phone, query) ||
+                    SummaryContains(c, query));
             }
 
-            foreach (ClientRecord client in filtered)
+            string filter = Convert.ToString(cmbFilter.SelectedItem);
+            if (filter == "Follow-ups due")
+                filtered = filtered.Where(c => GetSummary(c).FollowUpDue);
+            else if (filter == "Needs attention")
+                filtered = filtered.Where(c => GetSummary(c).NeedsAttention);
+            else if (filter == "Fits in progress")
+                filtered = filtered.Where(c => GetSummary(c).HasInProgressFit);
+            else if (filter == "Completed fits")
+                filtered = filtered.Where(c => GetSummary(c).HasCompletedFit);
+
+            string sort = Convert.ToString(cmbSort.SelectedItem);
+            if (sort == "Newest fit")
+                filtered = filtered.OrderByDescending(c => GetSummary(c).LatestFitDate).ThenBy(c => c.DisplayName);
+            else if (sort == "Next follow-up")
+                filtered = filtered.OrderBy(c => GetSummary(c).NextFollowUpDate == DateTime.MinValue ? DateTime.MaxValue : GetSummary(c).NextFollowUpDate).ThenBy(c => c.DisplayName);
+            else if (sort == "Client name")
+                filtered = filtered.OrderBy(c => c.DisplayName);
+            else
+                filtered = filtered.OrderByDescending(c => c.LastOpenedUtc);
+
+            List<ClientRecord> visible = filtered.ToList();
+
+            foreach (ClientRecord client in visible)
             {
-                string lastOpened = client.LastOpenedUtc == DateTime.MinValue
-                    ? "Never"
-                    : client.LastOpenedUtc.ToLocalTime().ToString("MMM d, yyyy");
-                ListViewItem item = new ListViewItem(new[] { client.DisplayName, client.BikeDescription, lastOpened });
+                ClientFitSummary summary = GetSummary(client);
+                string latestFit = summary.LatestFitDate == DateTime.MinValue ? "No fits" : summary.LatestFitDate.ToString("MMM d, yy");
+                string followUp = summary.FollowUpLabel;
+                ListViewItem item = new ListViewItem(new[] { client.DisplayName + (client.IsArchived ? " [Archived]" : ""), client.BikeDescription, latestFit, followUp });
                 item.Tag = client;
+                if (summary.FollowUpDue || summary.NeedsAttention)
+                    item.ForeColor = CassetteMotionTheme.Warning;
                 clientList.Items.Add(item);
             }
+
+            int dueCount = clients.Count(c => !c.IsArchived && GetSummary(c).FollowUpDue);
+            lblResults.Text = visible.Count.ToString() + " client(s) shown · " + dueCount.ToString() + " follow-up(s) due";
 
             clientList.EndUpdate();
             if (clientList.Items.Count > 0)
@@ -315,6 +409,8 @@ namespace CassetteMotionPro.Clients
             btnOpenFolder.Enabled = hasClient;
             btnOpenVideos.Enabled = hasClient;
             btnWorkspace.Enabled = hasClient;
+            btnFollowUp.Enabled = hasClient && GetSummary(client).LatestSession != null;
+            btnArchive.Enabled = hasClient;
 
             if (!hasClient)
             {
@@ -323,6 +419,7 @@ namespace CassetteMotionPro.Clients
                 lblContact.Text = string.Empty;
                 lblLastOpened.Text = string.Empty;
                 lblNotes.Text = string.Empty;
+                lblFitStatus.Text = string.Empty;
                 return;
             }
 
@@ -335,6 +432,9 @@ namespace CassetteMotionPro.Clients
                 ? "Not opened yet"
                 : "Last opened " + client.LastOpenedUtc.ToLocalTime().ToString("MMMM d, yyyy 'at' h:mm tt");
             lblNotes.Text = string.IsNullOrWhiteSpace(client.Notes) ? "No notes yet." : client.Notes;
+            ClientFitSummary summary = GetSummary(client);
+            lblFitStatus.Text = summary.StatusLine;
+            btnArchive.Text = client.IsArchived ? "Restore Client" : "Archive Client";
         }
 
         private static string BuildContact(ClientRecord client)
@@ -345,6 +445,138 @@ namespace CassetteMotionPro.Clients
             if (!string.IsNullOrWhiteSpace(client.Phone))
                 parts.Add(client.Phone);
             return parts.Count == 0 ? "No contact information" : string.Join("  ·  ", parts.ToArray());
+        }
+
+        private ClientFitSummary GetSummary(ClientRecord client)
+        {
+            if (client == null)
+                return new ClientFitSummary();
+            ClientFitSummary summary;
+            return fitSummaries.TryGetValue(client.Id, out summary) ? summary : new ClientFitSummary();
+        }
+
+        private ClientFitSummary BuildFitSummary(ClientRecord client)
+        {
+            ClientFitSummary summary = new ClientFitSummary();
+            try
+            {
+                FitSessionRepository fitRepository = new FitSessionRepository(client);
+                IList<FitSessionRecord> sessions = fitRepository.LoadAll();
+                summary.Sessions = sessions;
+                foreach (FitSessionRecord session in sessions)
+                {
+                    if (summary.LatestSession == null || session.SessionDate > summary.LatestFitDate ||
+                        (session.SessionDate == summary.LatestFitDate && session.ModifiedUtc > summary.LatestSession.ModifiedUtc))
+                    {
+                        summary.LatestSession = session;
+                        summary.LatestFitDate = session.SessionDate;
+                    }
+                    if (string.Equals(session.Status, "Complete", StringComparison.OrdinalIgnoreCase))
+                        summary.HasCompletedFit = true;
+                    else
+                        summary.HasInProgressFit = true;
+
+                    FitFollowUpEntry latest = GetLatestFollowUp(session);
+                    if (latest != null && (summary.LatestFollowUp == null || latest.CheckInDate > summary.LatestFollowUp.CheckInDate))
+                        summary.LatestFollowUp = latest;
+                    if (latest != null && latest.HasNextCheckIn && latest.NextCheckInDate != DateTime.MinValue &&
+                        (summary.NextFollowUpDate == DateTime.MinValue || latest.NextCheckInDate < summary.NextFollowUpDate))
+                        summary.NextFollowUpDate = latest.NextCheckInDate;
+                }
+            }
+            catch (Exception)
+            {
+                summary.LoadFailed = true;
+            }
+
+            summary.FollowUpDue = summary.NextFollowUpDate != DateTime.MinValue && summary.NextFollowUpDate.Date <= DateTime.Today;
+            string adaptation = summary.LatestFollowUp == null ? string.Empty : summary.LatestFollowUp.AdaptationStatus;
+            summary.NeedsAttention = string.Equals(adaptation, "Needs adjustment", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(adaptation, "Monitor", StringComparison.OrdinalIgnoreCase);
+            if (summary.FollowUpDue)
+                summary.FollowUpLabel = "Due " + summary.NextFollowUpDate.ToString("MMM d");
+            else if (summary.NextFollowUpDate != DateTime.MinValue)
+                summary.FollowUpLabel = "Next " + summary.NextFollowUpDate.ToString("MMM d");
+            else if (!string.IsNullOrWhiteSpace(adaptation))
+                summary.FollowUpLabel = adaptation;
+            else
+                summary.FollowUpLabel = "Not scheduled";
+
+            if (summary.LoadFailed)
+                summary.StatusLine = "Fit history is temporarily unavailable.";
+            else if (summary.LatestSession == null)
+                summary.StatusLine = "No saved fit sessions yet.";
+            else
+                summary.StatusLine = "Latest fit: " + summary.LatestSession.DisplayName + " · " + summary.FollowUpLabel;
+            return summary;
+        }
+
+        private static FitFollowUpEntry GetLatestFollowUp(FitSessionRecord session)
+        {
+            if (session == null || session.FollowUps == null)
+                return null;
+            FitFollowUpEntry latest = null;
+            foreach (FitFollowUpEntry entry in session.FollowUps)
+            {
+                if (entry != null && (latest == null || entry.CheckInDate > latest.CheckInDate ||
+                    (entry.CheckInDate == latest.CheckInDate && entry.CreatedUtc > latest.CreatedUtc)))
+                    latest = entry;
+            }
+            return latest;
+        }
+
+        private bool SummaryContains(ClientRecord client, string query)
+        {
+            ClientFitSummary summary = GetSummary(client);
+            if (Contains(summary.FollowUpLabel, query))
+                return true;
+            foreach (FitSessionRecord session in summary.Sessions)
+            {
+                if (Contains(session.DisplayName, query) || Contains(session.Status, query) ||
+                    Contains(session.FitTemplateBikeType, query) || Contains(session.FitProtocolBikeType, query))
+                    return true;
+            }
+            return false;
+        }
+
+        private void AddFollowUpToLatestFit()
+        {
+            ClientRecord client = SelectedClient;
+            ClientFitSummary summary = GetSummary(client);
+            if (client == null || summary.LatestSession == null)
+            {
+                MessageBox.Show(this, "This client needs a saved fit session before adding a follow-up.", "Client Follow-up", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (FitFollowUpForm form = new FitFollowUpForm(summary.LatestSession.DisplayName))
+            {
+                if (form.ShowDialog(this) != DialogResult.OK || form.Entry == null)
+                    return;
+                if (summary.LatestSession.FollowUps == null)
+                    summary.LatestSession.FollowUps = new List<FitFollowUpEntry>();
+                summary.LatestSession.FollowUps.Add(form.Entry);
+                new FitSessionRepository(client).Save(summary.LatestSession);
+            }
+            Guid selectedId = client.Id;
+            RefreshClients();
+            SelectClient(selectedId);
+        }
+
+        private void ToggleSelectedClientArchive()
+        {
+            ClientRecord client = SelectedClient;
+            if (client == null)
+                return;
+            bool archive = !client.IsArchived;
+            string action = archive ? "Archive" : "Restore";
+            string detail = archive
+                ? "The client will be hidden from the active list. No files, sessions, videos, or reports will be deleted."
+                : "The client will return to the active list.";
+            if (MessageBox.Show(this, action + " " + client.DisplayName + "?\n\n" + detail, action + " Client", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+            repository.SetArchived(client, archive);
+            RefreshClients();
         }
 
         private void NewClient_Click(object sender, EventArgs e)
@@ -428,6 +660,22 @@ namespace CassetteMotionPro.Clients
                     CassetteMotionTheme.StyleTextInput(control);
                 ApplyVisualIdentity(control);
             }
+        }
+
+        private sealed class ClientFitSummary
+        {
+            public IList<FitSessionRecord> Sessions = new List<FitSessionRecord>();
+            public FitSessionRecord LatestSession;
+            public DateTime LatestFitDate;
+            public FitFollowUpEntry LatestFollowUp;
+            public DateTime NextFollowUpDate;
+            public bool FollowUpDue;
+            public bool NeedsAttention;
+            public bool HasInProgressFit;
+            public bool HasCompletedFit;
+            public bool LoadFailed;
+            public string FollowUpLabel = "Not scheduled";
+            public string StatusLine = string.Empty;
         }
     }
 }

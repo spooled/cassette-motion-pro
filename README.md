@@ -5,7 +5,20 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.55.0 Client-ready Report and PDF Polish
+## Current milestone: 0.56.0 Fit Search, Filters, and Client Management
+
+- Client Fits now searches client names, bikes, email, phone, fit titles, fit status,
+  bike type, and follow-up status.
+- Filters highlight follow-ups due, clients needing attention, fits in progress, and
+  clients with completed fits.
+- Sorting supports recently opened clients, newest fit, next follow-up date, and name.
+- Each row shows the latest fit date and follow-up state, with overdue or attention
+  items visually highlighted.
+- Follow-ups can be added directly to a client's latest fit from Client Fits.
+- Clients can be archived and restored without deleting their folders, sessions,
+  videos, measurements, reports, or follow-up history.
+
+## Previous milestone: 0.55.0 Client-ready Report and PDF Polish
 
 - Reports now include a compact final-position snapshot for the five key bike
   contact-point measurements.

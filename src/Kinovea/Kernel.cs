@@ -891,7 +891,7 @@ namespace Kinovea.Root
         private void BuildRecentClientMenus()
         {
             mnuRecentClients.DropDownItems.Clear();
-            IList<ClientRecord> clients = clientRepository.LoadAll().Take(8).ToList();
+            IList<ClientRecord> clients = clientRepository.LoadAll().Where(client => !client.IsArchived).Take(8).ToList();
             if (clients.Count == 0)
             {
                 ToolStripMenuItem empty = new ToolStripMenuItem("No recent clients");

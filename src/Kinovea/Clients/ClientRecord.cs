@@ -24,6 +24,7 @@ namespace CassetteMotionPro.Clients
         public string BikeYear { get; set; }
         public string BikeType { get; set; }
         public string Notes { get; set; }
+        public bool IsArchived { get; set; }
         public DateTime CreatedUtc { get; set; }
         public DateTime LastOpenedUtc { get; set; }
 
