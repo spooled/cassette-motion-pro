@@ -20,7 +20,7 @@ namespace CassetteMotionPro.Workspace
     public static class FitSessionReportGenerator
     {
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "0.65.0";
+        private const string ReportVersion = "0.66.0";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
 
         private static StudioSettings ReportSettings { get { return StudioSettingsRepository.Current; } }
@@ -189,6 +189,8 @@ namespace CassetteMotionPro.Workspace
             AddSummarySection(text, "Tracking and camera quality", session.TrackingQualityReviewSummary);
             AddSummarySection(text, "Before smart measurement frames", session.SmartMeasurementBeforeSummary);
             AddSummarySection(text, "After smart measurement frames", session.SmartMeasurementAfterSummary);
+            AddSummarySection(text, "Before assisted bike landmarks", session.AssistedBikeLandmarksBeforeSummary);
+            AddSummarySection(text, "After assisted bike landmarks", session.AssistedBikeLandmarksAfterSummary);
 
             AddSummarySection(text, "Recommendations and notes", session.Notes);
 
@@ -472,6 +474,8 @@ namespace CassetteMotionPro.Workspace
             CopyPackageImage(session.PedalCycleAfterEvidencePath, "After pedal cycle", imagesFolder, imageMap);
             CopyPackageImage(session.SmartMeasurementBeforeEvidencePath, "Before smart measurement frames", imagesFolder, imageMap);
             CopyPackageImage(session.SmartMeasurementAfterEvidencePath, "After smart measurement frames", imagesFolder, imageMap);
+            CopyPackageImage(session.AssistedBikeLandmarksBeforeEvidencePath, "Before assisted bike landmarks", imagesFolder, imageMap);
+            CopyPackageImage(session.AssistedBikeLandmarksAfterEvidencePath, "After assisted bike landmarks", imagesFolder, imageMap);
         }
 
         private static void CopyPackageImage(string sourcePath, string label, string imagesFolder, Dictionary<string, string> imageMap)
@@ -752,6 +756,25 @@ namespace CassetteMotionPro.Workspace
                 html.AppendLine("<div class=\"section-card\">");
                 AddReportImage(html, "Measurement reference", session.MeasurementReferenceImagePath, true, imageSourceResolver);
                 html.AppendLine("</div>");
+            }
+
+            if (!string.IsNullOrWhiteSpace(session.AssistedBikeLandmarksBeforeSummary) || !string.IsNullOrWhiteSpace(session.AssistedBikeLandmarksAfterSummary))
+            {
+                html.AppendLine("<h2>Assisted Bike Landmark Tracking</h2>");
+                html.AppendLine("<div class=\"section-kicker\">Fitter-confirmed bottom bracket, saddle, handlebar, pedal, and wheel references used to assist bike measurements.</div>");
+                if (!string.IsNullOrWhiteSpace(session.AssistedBikeLandmarksBeforeSummary))
+                    html.AppendLine("<div class=\"note\"><strong>Before:</strong> " + Encode(session.AssistedBikeLandmarksBeforeSummary) + "</div>");
+                if (!string.IsNullOrWhiteSpace(session.AssistedBikeLandmarksAfterSummary))
+                    html.AppendLine("<div class=\"note\"><strong>After:</strong> " + Encode(session.AssistedBikeLandmarksAfterSummary) + "</div>");
+                if (HasReportImage(session.AssistedBikeLandmarksBeforeEvidencePath) || HasReportImage(session.AssistedBikeLandmarksAfterEvidencePath))
+                {
+                    html.AppendLine("<div class=\"media-grid\">");
+                    if (HasReportImage(session.AssistedBikeLandmarksBeforeEvidencePath))
+                        AddReportImage(html, "Before assisted bike landmarks", session.AssistedBikeLandmarksBeforeEvidencePath, false, imageSourceResolver);
+                    if (HasReportImage(session.AssistedBikeLandmarksAfterEvidencePath))
+                        AddReportImage(html, "After assisted bike landmarks", session.AssistedBikeLandmarksAfterEvidencePath, false, imageSourceResolver);
+                    html.AppendLine("</div>");
+                }
             }
 
             html.AppendLine("<h2>Bike Measurements</h2>");

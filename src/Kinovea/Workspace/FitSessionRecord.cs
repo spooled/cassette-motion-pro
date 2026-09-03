@@ -92,6 +92,10 @@ namespace CassetteMotionPro.Workspace
         public string BikeMetricsSetbackConventionAfter { get; set; }
         public string BikeMetricsCameraSetupBefore { get; set; }
         public string BikeMetricsCameraSetupAfter { get; set; }
+        public string AssistedBikeLandmarksBeforeSummary { get; set; }
+        public string AssistedBikeLandmarksAfterSummary { get; set; }
+        public string AssistedBikeLandmarksBeforeEvidencePath { get; set; }
+        public string AssistedBikeLandmarksAfterEvidencePath { get; set; }
 
         public string KneeAngleBefore { get; set; }
         public string KneeAngleAfter { get; set; }

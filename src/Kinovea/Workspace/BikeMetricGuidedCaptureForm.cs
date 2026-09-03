@@ -26,6 +26,7 @@ namespace CassetteMotionPro.Workspace
         }
 
         private readonly string imagePath;
+        private readonly string outputDirectory;
         private readonly List<PointF> calibrationPoints = new List<PointF>();
         private readonly List<PointF> levelReferencePoints = new List<PointF>();
         private readonly List<PointF> landmarkPoints = new List<PointF>();
@@ -78,6 +79,8 @@ namespace CassetteMotionPro.Workspace
         private PointF panStartOffset;
         private double millimetersPerPixel;
         private Dictionary<string, string> calculatedValues = new Dictionary<string, string>();
+        private bool landmarksSuggested;
+        private double landmarkSuggestionConfidence;
 
         private string[] ActiveLandmarkNames
         {
@@ -90,8 +93,15 @@ namespace CassetteMotionPro.Workspace
         public string LevelReferenceStatus { get; private set; }
         public string SaddleSetbackConvention { get; private set; }
         public string CameraSetupStatus { get; private set; }
+        public string AssistedLandmarkSummary { get; private set; }
+        public string AnnotatedImagePath { get; private set; }
 
         public BikeMetricGuidedCaptureForm(string imagePath)
+            : this(imagePath, string.IsNullOrEmpty(imagePath) ? null : Path.GetDirectoryName(imagePath))
+        {
+        }
+
+        public BikeMetricGuidedCaptureForm(string imagePath, string outputDirectory)
         {
             if (string.IsNullOrEmpty(imagePath))
                 throw new ArgumentNullException("imagePath");
@@ -99,6 +109,7 @@ namespace CassetteMotionPro.Workspace
                 throw new FileNotFoundException("The measurement reference image could not be found.", imagePath);
 
             this.imagePath = imagePath;
+            this.outputDirectory = string.IsNullOrWhiteSpace(outputDirectory) ? Path.GetDirectoryName(imagePath) : outputDirectory;
             CameraSetupStatus = "Not confirmed";
 
             Text = "Cassette Motion Pro - Guided Measurements";
@@ -177,12 +188,12 @@ namespace CassetteMotionPro.Workspace
                 "1. Review Camera Setup.\n" +
                 "2. Calibrate scale using a known bike length.\n" +
                 "3. Optional: click Level Reference using floor/axle line.\n" +
-                "4. Click Start Guided Capture.\n" +
+                "4. Click Suggest Bike Landmarks, or place them manually.\n" +
                 "   • Bottom bracket center\n" +
                 "   • Saddle top\n" +
                 "   • Saddle tip\n" +
                 "   • Grip / hood contact point\n" +
-                "5. Drag any orange point to fine-tune it.\n" +
+                "5. Confirm and drag every orange point to fine-tune it.\n" +
                 "6. Review values, then save to Before or After.";
             guide.Dock = DockStyle.Top;
             guide.Height = 160;
@@ -275,6 +286,7 @@ namespace CassetteMotionPro.Workspace
             Button calibrate = CreateButton("2. Calibrate Scale", false);
             levelReference = CreateButton("3. Level Reference", false);
             Button capture = CreateButton("4. Start Guided Capture", false);
+            Button suggest = CreateButton("Suggest Bike Landmarks", true);
             primaryAction = CreateButton("Continue: Camera Setup", true);
             undoLast = CreateButton("Undo Last Point", false);
             Button clear = CreateButton("Clear Points", false);
@@ -287,6 +299,7 @@ namespace CassetteMotionPro.Workspace
             calibrate.Dock = DockStyle.Top;
             levelReference.Dock = DockStyle.Top;
             capture.Dock = DockStyle.Top;
+            suggest.Dock = DockStyle.Top;
             undoLast.Dock = DockStyle.Top;
             clear.Dock = DockStyle.Top;
             recalculate.Dock = DockStyle.Top;
@@ -298,6 +311,7 @@ namespace CassetteMotionPro.Workspace
             calibrate.Height = 34;
             levelReference.Height = 34;
             capture.Height = 34;
+            suggest.Height = 42;
             undoLast.Height = 34;
             clear.Height = 34;
             recalculate.Height = 34;
@@ -309,6 +323,7 @@ namespace CassetteMotionPro.Workspace
             calibrate.Margin = new Padding(0, 6, 0, 0);
             levelReference.Margin = new Padding(0, 6, 0, 0);
             capture.Margin = new Padding(0, 6, 0, 0);
+            suggest.Margin = new Padding(0, 6, 0, 0);
             undoLast.Margin = new Padding(0, 6, 0, 0);
             clear.Margin = new Padding(0, 6, 0, 0);
             recalculate.Margin = new Padding(0, 6, 0, 0);
@@ -320,6 +335,7 @@ namespace CassetteMotionPro.Workspace
             calibrate.Click += Calibrate_Click;
             levelReference.Click += LevelReference_Click;
             capture.Click += Capture_Click;
+            suggest.Click += SuggestLandmarks_Click;
             undoLast.Click += UndoLast_Click;
             clear.Click += Clear_Click;
             recalculate.Click += Recalculate_Click;
@@ -345,6 +361,7 @@ namespace CassetteMotionPro.Workspace
             sideScroll.Controls.Add(clear);
             sideScroll.Controls.Add(undoLast);
             sideScroll.Controls.Add(capture);
+            sideScroll.Controls.Add(suggest);
             sideScroll.Controls.Add(levelReference);
             sideScroll.Controls.Add(calibrate);
             sideScroll.Controls.Add(cameraSetup);
@@ -525,6 +542,36 @@ namespace CassetteMotionPro.Workspace
             status.Text = "Click landmark 1 of " + ActiveLandmarkNames.Length.ToString(CultureInfo.InvariantCulture) + ": " + ActiveLandmarkNames[0] + ".";
             UpdateCurrentLandmarkInstruction();
             picture.Invalidate();
+        }
+
+        private void SuggestLandmarks_Click(object sender, EventArgs e)
+        {
+            if (millimetersPerPixel <= 0)
+            {
+                MessageBox.Show(this, "Calibrate the scale first. The assisted landmarks use that same calibrated image for the measurements.", "Scale required", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            advancedLandmarks.Checked = true;
+            BikeLandmarkSuggestion suggestion;
+            using (Bitmap bitmap = new Bitmap(loadedImage))
+                suggestion = BikeLandmarkSuggester.Suggest(bitmap);
+            landmarkPoints.Clear();
+            landmarkPoints.AddRange(suggestion.Points);
+            landmarksSuggested = true;
+            landmarkSuggestionConfidence = suggestion.Confidence;
+            mode = ClickMode.None;
+            CalculateMetrics();
+            undoLast.Enabled = true;
+            recalculate.Enabled = true;
+            flipSetbackSign.Enabled = true;
+            saveBefore.Enabled = true;
+            saveAfter.Enabled = true;
+            status.Text = "Eight bike landmarks suggested. Confirm every orange point before saving.";
+            currentLandmarkLabel.Text = "Assisted landmarks · confidence " + landmarkSuggestionConfidence.ToString("0", CultureInfo.InvariantCulture) + "%";
+            nextPointHintLabel.Text = "Drag BB, saddle, handlebar, pedal, and both axle points onto their exact centers. Suggestions are advisory.";
+            picture.Invalidate();
+            UpdateWizardProgress();
         }
 
         private void AdvancedLandmarks_CheckedChanged(object sender, EventArgs e)
@@ -861,11 +908,58 @@ namespace CassetteMotionPro.Workspace
             ResultValues = new Dictionary<string, string>(calculatedValues);
             ResultSide = side;
             CaptureMethod = advancedLandmarks.Checked ? "Guided Capture - Advanced Landmarks" : "Guided Capture";
+            if (landmarksSuggested)
+                CaptureMethod = "Assisted Bike Landmark Tracking - Fitter Confirmed";
             LevelReferenceStatus = GetCalculatedValue("LevelReference");
             SaddleSetbackConvention = GetCalculatedValue("SaddleSetbackConvention");
             CameraSetupStatus = GetCalculatedValue("CameraSetup");
+            AssistedLandmarkSummary = landmarksSuggested
+                ? "Eight suggested bike landmarks reviewed for bottom bracket, saddle top/tip, grip, pedal spindle, handlebar center, and wheel axles; starting confidence " + landmarkSuggestionConfidence.ToString("0", CultureInfo.InvariantCulture) + "%"
+                : "Bike landmarks placed manually by fitter";
+            AnnotatedImagePath = SaveAnnotatedLandmarkImage(side);
             DialogResult = DialogResult.OK;
             Close();
+        }
+
+        private string SaveAnnotatedLandmarkImage(string side)
+        {
+            string directory = string.IsNullOrWhiteSpace(outputDirectory) ? Directory.GetCurrentDirectory() : outputDirectory;
+            Directory.CreateDirectory(directory);
+            string path = Path.Combine(directory, side + "-Assisted-Bike-Landmarks-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + ".png");
+            using (Bitmap output = new Bitmap(loadedImage))
+            using (Graphics graphics = Graphics.FromImage(output))
+            using (Pen guide = new Pen(Color.FromArgb(255, 176, 74), Math.Max(3F, output.Width / 500F)))
+            using (Brush pointBrush = new SolidBrush(Color.FromArgb(255, 176, 74)))
+            using (Brush labelBrush = new SolidBrush(Color.FromArgb(220, 13, 19, 17)))
+            using (Brush textBrush = new SolidBrush(Color.White))
+            using (Font font = new Font("Segoe UI", Math.Max(10F, output.Width / 110F), FontStyle.Bold))
+            {
+                graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                guide.DashStyle = DashStyle.Dash;
+                if (landmarkPoints.Count >= 4)
+                {
+                    graphics.DrawLine(guide, landmarkPoints[0], landmarkPoints[1]);
+                    graphics.DrawLine(guide, landmarkPoints[0], landmarkPoints[3]);
+                }
+                if (landmarkPoints.Count >= 8)
+                {
+                    graphics.DrawLine(guide, landmarkPoints[0], landmarkPoints[4]);
+                    graphics.DrawLine(guide, landmarkPoints[6], landmarkPoints[7]);
+                }
+                float radius = Math.Max(8F, output.Width / 120F);
+                for (int i = 0; i < landmarkPoints.Count; i++)
+                {
+                    PointF point = landmarkPoints[i];
+                    graphics.FillEllipse(pointBrush, point.X - radius, point.Y - radius, radius * 2, radius * 2);
+                    string label = i < ActiveLandmarkNames.Length ? ActiveLandmarkNames[i] : "Landmark";
+                    SizeF size = graphics.MeasureString(label, font);
+                    RectangleF box = new RectangleF(point.X + radius, point.Y - size.Height / 2, size.Width + 12, size.Height + 4);
+                    graphics.FillRectangle(labelBrush, box);
+                    graphics.DrawString(label, font, textBrush, box.Left + 6, box.Top + 2);
+                }
+                output.Save(path, System.Drawing.Imaging.ImageFormat.Png);
+            }
+            return path;
         }
 
         private string BuildQualitySummary()
@@ -1525,6 +1619,106 @@ namespace CassetteMotionPro.Workspace
             button.ForeColor = Color.FromArgb(13, 19, 17);
             button.Font = new Font("Segoe UI", 9F, primary ? FontStyle.Bold : FontStyle.Regular);
             return button;
+        }
+    }
+
+    internal class BikeLandmarkSuggestion
+    {
+        public List<PointF> Points = new List<PointF>();
+        public double Confidence;
+    }
+
+    internal static class BikeLandmarkSuggester
+    {
+        public static BikeLandmarkSuggestion Suggest(Bitmap bitmap)
+        {
+            int step = Math.Max(2, Math.Min(bitmap.Width, bitmap.Height) / 220);
+            double border = EstimateBorderBrightness(bitmap, step);
+            int left = bitmap.Width, top = bitmap.Height, right = 0, bottom = 0, samples = 0, contrastSamples = 0;
+            for (int y = 0; y < bitmap.Height; y += step)
+            for (int x = 0; x < bitmap.Width; x += step)
+            {
+                double luma = Luma(bitmap.GetPixel(x, y));
+                samples++;
+                if (Math.Abs(luma - border) < 42 && luma > 55)
+                    continue;
+                left = Math.Min(left, x); right = Math.Max(right, x);
+                top = Math.Min(top, y); bottom = Math.Max(bottom, y);
+                contrastSamples++;
+            }
+
+            if (right <= left || bottom <= top)
+            {
+                left = (int)(bitmap.Width * 0.08); right = (int)(bitmap.Width * 0.92);
+                top = (int)(bitmap.Height * 0.10); bottom = (int)(bitmap.Height * 0.90);
+            }
+
+            float width = right - left;
+            float height = bottom - top;
+            float rearX = left + width * 0.18F;
+            float frontX = left + width * 0.82F;
+            float axleY = top + height * 0.74F;
+            float bbX = left + width * 0.44F;
+            float bbY = top + height * 0.66F;
+            PointF bottomBracket = RefineDarkCenter(bitmap, new PointF(bbX, bbY), width * 0.09F, height * 0.10F);
+            PointF saddleTop = RefineDarkCenter(bitmap, new PointF(left + width * 0.40F, top + height * 0.23F), width * 0.10F, height * 0.10F);
+            PointF saddleTip = RefineDarkCenter(bitmap, new PointF(left + width * 0.48F, top + height * 0.24F), width * 0.09F, height * 0.08F);
+            PointF grip = RefineDarkCenter(bitmap, new PointF(left + width * 0.72F, top + height * 0.25F), width * 0.11F, height * 0.12F);
+            PointF pedal = RefineDarkCenter(bitmap, new PointF(bottomBracket.X + width * 0.07F, bottomBracket.Y + height * 0.05F), width * 0.06F, height * 0.07F);
+            PointF handlebar = RefineDarkCenter(bitmap, new PointF(left + width * 0.70F, top + height * 0.30F), width * 0.11F, height * 0.13F);
+            PointF frontAxle = RefineDarkCenter(bitmap, new PointF(frontX, axleY), width * 0.08F, height * 0.08F);
+            PointF rearAxle = RefineDarkCenter(bitmap, new PointF(rearX, axleY), width * 0.08F, height * 0.08F);
+
+            BikeLandmarkSuggestion result = new BikeLandmarkSuggestion();
+            result.Points.Add(bottomBracket);
+            result.Points.Add(saddleTop);
+            result.Points.Add(saddleTip);
+            result.Points.Add(grip);
+            result.Points.Add(pedal);
+            result.Points.Add(handlebar);
+            result.Points.Add(frontAxle);
+            result.Points.Add(rearAxle);
+            double coverage = (double)contrastSamples / Math.Max(1, samples);
+            result.Confidence = Math.Max(35, Math.Min(82, 48 + coverage * 85));
+            return result;
+        }
+
+        private static PointF RefineDarkCenter(Bitmap bitmap, PointF seed, float radiusX, float radiusY)
+        {
+            int left = Math.Max(0, (int)(seed.X - radiusX));
+            int right = Math.Min(bitmap.Width - 1, (int)(seed.X + radiusX));
+            int top = Math.Max(0, (int)(seed.Y - radiusY));
+            int bottom = Math.Min(bitmap.Height - 1, (int)(seed.Y + radiusY));
+            int step = Math.Max(1, Math.Min(bitmap.Width, bitmap.Height) / 320);
+            double weightedX = 0, weightedY = 0, total = 0;
+            for (int y = top; y <= bottom; y += step)
+            for (int x = left; x <= right; x += step)
+            {
+                double weight = Math.Max(0, 175 - Luma(bitmap.GetPixel(x, y)));
+                weightedX += x * weight; weightedY += y * weight; total += weight;
+            }
+            if (total <= 0)
+                return seed;
+            return new PointF((float)(weightedX / total), (float)(weightedY / total));
+        }
+
+        private static double EstimateBorderBrightness(Bitmap bitmap, int step)
+        {
+            double total = 0; int count = 0;
+            for (int x = 0; x < bitmap.Width; x += step)
+            {
+                total += Luma(bitmap.GetPixel(x, 0)) + Luma(bitmap.GetPixel(x, bitmap.Height - 1)); count += 2;
+            }
+            for (int y = 0; y < bitmap.Height; y += step)
+            {
+                total += Luma(bitmap.GetPixel(0, y)) + Luma(bitmap.GetPixel(bitmap.Width - 1, y)); count += 2;
+            }
+            return total / Math.Max(1, count);
+        }
+
+        private static double Luma(Color color)
+        {
+            return color.R * 0.2126 + color.G * 0.7152 + color.B * 0.0722;
         }
     }
 }

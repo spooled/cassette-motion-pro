@@ -6343,7 +6343,7 @@ namespace CassetteMotionPro.Workspace
                 return;
             }
 
-            using (BikeMetricGuidedCaptureForm form = new BikeMetricGuidedCaptureForm(referencePath))
+            using (BikeMetricGuidedCaptureForm form = new BikeMetricGuidedCaptureForm(referencePath, GetSessionReportImagesFolderPath()))
             {
                 if (form.ShowDialog(this) != DialogResult.OK)
                     return;
@@ -6357,8 +6357,14 @@ namespace CassetteMotionPro.Workspace
 
                 ApplyGuidedCaptureTrace(form);
 
+                if (!string.IsNullOrWhiteSpace(form.AnnotatedImagePath) && File.Exists(form.AnnotatedImagePath))
+                {
+                    imageBoxes["MeasurementReferenceImagePath"].Text = form.AnnotatedImagePath;
+                    chkShowMeasurementReferenceImageInReport.Checked = true;
+                }
+
                 SaveCurrentSession();
-                UpdateSaveHint("Guided Bike Metrics saved to " + form.ResultSide.ToLowerInvariant() + ".");
+                UpdateSaveHint("Guided Bike Metrics and confirmed bike landmarks saved to " + form.ResultSide.ToLowerInvariant() + ".");
             }
         }
 
@@ -6373,6 +6379,8 @@ namespace CassetteMotionPro.Workspace
                 currentSession.BikeMetricsLevelReferenceBefore = form.LevelReferenceStatus;
                 currentSession.BikeMetricsSetbackConventionBefore = form.SaddleSetbackConvention;
                 currentSession.BikeMetricsCameraSetupBefore = form.CameraSetupStatus;
+                currentSession.AssistedBikeLandmarksBeforeSummary = form.AssistedLandmarkSummary;
+                currentSession.AssistedBikeLandmarksBeforeEvidencePath = form.AnnotatedImagePath;
                 return;
             }
 
@@ -6380,6 +6388,8 @@ namespace CassetteMotionPro.Workspace
             currentSession.BikeMetricsLevelReferenceAfter = form.LevelReferenceStatus;
             currentSession.BikeMetricsSetbackConventionAfter = form.SaddleSetbackConvention;
             currentSession.BikeMetricsCameraSetupAfter = form.CameraSetupStatus;
+            currentSession.AssistedBikeLandmarksAfterSummary = form.AssistedLandmarkSummary;
+            currentSession.AssistedBikeLandmarksAfterEvidencePath = form.AnnotatedImagePath;
         }
 
         private ImageMeasurementAssistantForm.DefaultMeasurementAxis GetDefaultBikeMetricAxis(string metricKey)
