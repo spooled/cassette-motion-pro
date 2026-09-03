@@ -3781,7 +3781,11 @@ namespace CassetteMotionPro.Workspace
                     return;
                 }
 
-                string[] orderedFrames = dialog.FileNames.OrderBy(path => Path.GetFileName(path), StringComparer.CurrentCultureIgnoreCase).ToArray();
+                string[] orderedFrames = (string[])dialog.FileNames.Clone();
+                Array.Sort(orderedFrames, delegate(string left, string right)
+                {
+                    return StringComparer.CurrentCultureIgnoreCase.Compare(Path.GetFileName(left), Path.GetFileName(right));
+                });
                 using (ShortClipRiderTrackingForm form = new ShortClipRiderTrackingForm(orderedFrames, GetSessionReportImagesFolderPath(), side))
                 {
                     if (form.ShowDialog(this) != DialogResult.OK)
