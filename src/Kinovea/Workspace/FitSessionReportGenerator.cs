@@ -20,7 +20,7 @@ namespace CassetteMotionPro.Workspace
     public static class FitSessionReportGenerator
     {
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "0.62.0";
+        private const string ReportVersion = "0.63.0";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
 
         private static StudioSettings ReportSettings { get { return StudioSettingsRepository.Current; } }
@@ -184,6 +184,8 @@ namespace CassetteMotionPro.Workspace
 
             AddSummarySection(text, "Before short-clip tracking", session.ShortClipTrackingBeforeSummary);
             AddSummarySection(text, "After short-clip tracking", session.ShortClipTrackingAfterSummary);
+            AddSummarySection(text, "Before pedal-cycle review", session.PedalCycleBeforeSummary);
+            AddSummarySection(text, "After pedal-cycle review", session.PedalCycleAfterSummary);
 
             AddSummarySection(text, "Recommendations and notes", session.Notes);
 
@@ -463,6 +465,8 @@ namespace CassetteMotionPro.Workspace
                 CopyPackageImage(session.AfterReportImagePath, "After", imagesFolder, imageMap);
             if (!session.HideMeasurementReferenceImageInReport)
                 CopyPackageImage(session.MeasurementReferenceImagePath, "Measurement reference", imagesFolder, imageMap);
+            CopyPackageImage(session.PedalCycleBeforeEvidencePath, "Before pedal cycle", imagesFolder, imageMap);
+            CopyPackageImage(session.PedalCycleAfterEvidencePath, "After pedal cycle", imagesFolder, imageMap);
         }
 
         private static void CopyPackageImage(string sourcePath, string label, string imagesFolder, Dictionary<string, string> imageMap)
@@ -689,6 +693,25 @@ namespace CassetteMotionPro.Workspace
                     html.AppendLine("<div class=\"note\"><strong>Before:</strong> " + Encode(session.ShortClipTrackingBeforeSummary) + "</div>");
                 if (!string.IsNullOrWhiteSpace(session.ShortClipTrackingAfterSummary))
                     html.AppendLine("<div class=\"note\"><strong>After:</strong> " + Encode(session.ShortClipTrackingAfterSummary) + "</div>");
+            }
+
+            if (!string.IsNullOrWhiteSpace(session.PedalCycleBeforeSummary) || !string.IsNullOrWhiteSpace(session.PedalCycleAfterSummary))
+            {
+                html.AppendLine("<h2>Pedal-Cycle Measurement Review</h2>");
+                html.AppendLine("<div class=\"section-kicker\">Fitter-approved angle ranges and identified top, bottom, front, and rear crank-position checkpoints.</div>");
+                if (!string.IsNullOrWhiteSpace(session.PedalCycleBeforeSummary))
+                    html.AppendLine("<div class=\"note\"><strong>Before cycle:</strong> " + Encode(session.PedalCycleBeforeSummary) + "</div>");
+                if (!string.IsNullOrWhiteSpace(session.PedalCycleAfterSummary))
+                    html.AppendLine("<div class=\"note\"><strong>After cycle:</strong> " + Encode(session.PedalCycleAfterSummary) + "</div>");
+                if (HasReportImage(session.PedalCycleBeforeEvidencePath) || HasReportImage(session.PedalCycleAfterEvidencePath))
+                {
+                    html.AppendLine("<div class=\"media-grid\">");
+                    if (HasReportImage(session.PedalCycleBeforeEvidencePath))
+                        AddReportImage(html, "Before pedal-cycle positions", session.PedalCycleBeforeEvidencePath, false, imageSourceResolver);
+                    if (HasReportImage(session.PedalCycleAfterEvidencePath))
+                        AddReportImage(html, "After pedal-cycle positions", session.PedalCycleAfterEvidencePath, false, imageSourceResolver);
+                    html.AppendLine("</div>");
+                }
             }
 
             if (hasMeasurementReference)

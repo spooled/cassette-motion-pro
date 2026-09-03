@@ -17,6 +17,7 @@ namespace CassetteMotionPro.Workspace
         private readonly string[] framePaths;
         private readonly string outputDirectory;
         private readonly string side;
+        private readonly bool pedalCycleMode;
         private readonly ShortClipTrackingCanvas canvas = new ShortClipTrackingCanvas();
         private readonly Label frameStatus = new Label();
         private readonly Label quality = new Label();
@@ -33,14 +34,22 @@ namespace CassetteMotionPro.Workspace
         public string EvidenceImagePath { get; private set; }
 
         public ShortClipRiderTrackingForm(string[] framePaths, string outputDirectory, string side)
+            : this(framePaths, outputDirectory, side, false)
+        {
+        }
+
+        public ShortClipRiderTrackingForm(string[] framePaths, string outputDirectory, string side, bool pedalCycleMode)
         {
             if (framePaths == null || framePaths.Length < 3)
                 throw new ArgumentException("At least three ordered checkpoint frames are required.");
-            this.framePaths = framePaths.Take(12).ToArray();
+            if (pedalCycleMode && framePaths.Length < 6)
+                throw new ArgumentException("At least six ordered checkpoint frames are required for a pedal-cycle review.");
+            this.framePaths = framePaths.Take(pedalCycleMode ? 16 : 12).ToArray();
             this.outputDirectory = outputDirectory;
             this.side = side;
+            this.pedalCycleMode = pedalCycleMode;
 
-            Text = "Cassette Motion Pro - Short-Clip Rider Tracking";
+            Text = pedalCycleMode ? "Cassette Motion Pro - Pedal-Cycle Measurement Review" : "Cassette Motion Pro - Short-Clip Rider Tracking";
             Font = new Font("Segoe UI", 9F);
             BackColor = Color.FromArgb(240, 243, 241);
             ClientSize = new Size(1280, 800);
@@ -64,11 +73,13 @@ namespace CassetteMotionPro.Workspace
             Panel header = new Panel();
             header.Dock = DockStyle.Fill;
             header.BackColor = Color.FromArgb(20, 27, 24);
-            Label title = NewLabel("Short-Clip Rider Tracking · " + side, 18F, true);
+            Label title = NewLabel((pedalCycleMode ? "Pedal-Cycle Measurement Review" : "Short-Clip Rider Tracking") + " · " + side, 18F, true);
             title.ForeColor = Color.White;
             title.Location = new Point(22, 12);
             title.AutoSize = true;
-            Label intro = NewLabel("Approve the first pose, then review each tracked checkpoint. Drag an orange point whenever tracking drifts.", 9F, false);
+            Label intro = NewLabel(pedalCycleMode
+                ? "Review one complete pedal turn. The ankle path identifies top, bottom, front, and rear crank positions after every checkpoint is approved."
+                : "Approve the first pose, then review each tracked checkpoint. Drag an orange point whenever tracking drifts.", 9F, false);
             intro.ForeColor = Color.FromArgb(205, 216, 210);
             intro.Location = new Point(24, 48);
             intro.AutoSize = true;
@@ -96,13 +107,13 @@ namespace CassetteMotionPro.Workspace
             quality.Height = 115;
             quality.Padding = new Padding(10);
             ranges.Dock = DockStyle.Top;
-            ranges.Height = 180;
+            ranges.Height = pedalCycleMode ? 310 : 180;
             ranges.Font = new Font("Consolas", 9.5F, FontStyle.Bold);
             ranges.Padding = new Padding(4, 12, 4, 4);
 
             ConfigureButton(previous, "Previous Checkpoint", false);
             ConfigureButton(approveNext, "Approve & Track Next", true);
-            ConfigureButton(finish, "Save Accepted Motion Range", true);
+            ConfigureButton(finish, pedalCycleMode ? "Save Pedal-Cycle Review" : "Save Accepted Motion Range", true);
             Button reset = new Button();
             ConfigureButton(reset, "Reset This Checkpoint", false);
             Button flip = new Button();
@@ -196,6 +207,17 @@ namespace CassetteMotionPro.Workspace
                 : "TRACKING CHECK: READY TO REVIEW\nConfidence " + canvas.Confidence.ToString("0", CultureInfo.InvariantCulture) + "% · Confirm every orange point before continuing.";
             quality.BackColor = drift ? Color.FromArgb(255, 244, 214) : Color.FromArgb(232, 246, 226);
             quality.ForeColor = drift ? Color.FromArgb(128, 82, 12) : Color.FromArgb(46, 108, 55);
+            if (pedalCycleMode && frames.Count == framePaths.Length)
+            {
+                Dictionary<string, int> positions = FindCrankPositions();
+                int distinctPositions = new HashSet<int>(positions.Values).Count;
+                if (distinctPositions < 4)
+                {
+                    quality.Text = "CYCLE COVERAGE: REVIEW\nTwo crank extremes landed on the same checkpoint. Add more evenly spaced frames or correct the foot-contact point before saving.";
+                    quality.BackColor = Color.FromArgb(255, 244, 214);
+                    quality.ForeColor = Color.FromArgb(128, 82, 12);
+                }
+            }
             previous.Enabled = frameIndex > 0;
             approveNext.Text = frameIndex == framePaths.Length - 1 ? "Approve Final Checkpoint" : "Approve & Track Next";
             finish.Enabled = frames.Count == framePaths.Length && frames.All(f => f.Approved);
@@ -207,13 +229,13 @@ namespace CassetteMotionPro.Workspace
             SaveCanvasToCurrent(true);
             if (!frames.All(f => f.Approved))
             {
-                MessageBox.Show(this, "Review and approve every checkpoint before saving the motion range.", "Short-Clip Tracking", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, "Review and approve every checkpoint before saving the motion range.", pedalCycleMode ? "Pedal-Cycle Measurement Review" : "Short-Clip Tracking", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
             DialogResult confirm = MessageBox.Show(this,
                 "Save this accepted " + side + " motion range to the client fit session?\n\n" + BuildRangeText(true) +
                 "\nThe tracking is advisory; the fitter remains responsible for each corrected point.",
-                "Save Short-Clip Tracking", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                pedalCycleMode ? "Save Pedal-Cycle Review" : "Save Short-Clip Tracking", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (confirm != DialogResult.Yes)
                 return;
 
@@ -231,9 +253,54 @@ namespace CassetteMotionPro.Workspace
             string text = "ACCEPTED MOTION RANGE\n" + RangeLine("Knee", values, "KneeAngle") +
                 RangeLine("Hip", values, "HipAngle") + RangeLine("Ankle", values, "AnkleAngle") +
                 RangeLine("Body reach", values, "TorsoAngle") + RangeLine("Back", values, "ShoulderAngle");
+            if (pedalCycleMode && frames.Count == framePaths.Length)
+                text += BuildCrankPositionText();
             if (includeCounts)
                 text += frames.Count + " checkpoints · " + correctionCount + " manual corrections\n";
             return text;
+        }
+
+        private string BuildCrankPositionText()
+        {
+            Dictionary<string, int> positions = FindCrankPositions();
+            string text = "\nCRANK POSITION CHECKPOINTS\n";
+            foreach (string position in new[] { "Top", "Bottom", "Front", "Rear" })
+            {
+                int index = positions[position];
+                Dictionary<string, double> pose = ShortClipTrackingCanvas.Calculate(frames[index].Points);
+                text += position.PadRight(9) + "#" + (index + 1).ToString(CultureInfo.InvariantCulture) +
+                    " · knee " + FormatAngle(pose["KneeAngle"]) +
+                    " · hip " + FormatAngle(pose["HipAngle"]) +
+                    " · ankle " + FormatAngle(pose["AnkleAngle"]) + "\n";
+            }
+            return text;
+        }
+
+        private Dictionary<string, int> FindCrankPositions()
+        {
+            Dictionary<string, int> positions = new Dictionary<string, int>();
+            bool facingRight = frames[0].Points[6].X >= frames[0].Points[4].X;
+            positions["Top"] = IndexOfExtreme(false, false);
+            positions["Bottom"] = IndexOfExtreme(false, true);
+            positions["Front"] = IndexOfExtreme(true, facingRight);
+            positions["Rear"] = IndexOfExtreme(true, !facingRight);
+            return positions;
+        }
+
+        private int IndexOfExtreme(bool horizontal, bool maximum)
+        {
+            int selected = 0;
+            float selectedValue = horizontal ? frames[0].Points[3].X : frames[0].Points[3].Y;
+            for (int i = 1; i < frames.Count; i++)
+            {
+                float value = horizontal ? frames[i].Points[3].X : frames[i].Points[3].Y;
+                if ((maximum && value > selectedValue) || (!maximum && value < selectedValue))
+                {
+                    selected = i;
+                    selectedValue = value;
+                }
+            }
+            return selected;
         }
 
         private Dictionary<string, List<double>> CollectValues()
@@ -260,23 +327,34 @@ namespace CassetteMotionPro.Workspace
         private string SaveEvidenceStrip()
         {
             Directory.CreateDirectory(outputDirectory);
-            string path = Path.Combine(outputDirectory, side + "-Short-Clip-Tracking-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + ".png");
-            int[] selected = { 0, frames.Count / 2, frames.Count - 1 };
-            using (Bitmap output = new Bitmap(1800, 720))
+            string path = Path.Combine(outputDirectory, side + (pedalCycleMode ? "-Pedal-Cycle-Review-" : "-Short-Clip-Tracking-") + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + ".png");
+            Dictionary<string, int> positions = pedalCycleMode ? FindCrankPositions() : null;
+            int[] selected = pedalCycleMode
+                ? new[] { positions["Top"], positions["Bottom"], positions["Front"], positions["Rear"] }
+                : new[] { 0, frames.Count / 2, frames.Count - 1 };
+            int columns = pedalCycleMode ? 2 : 3;
+            using (Bitmap output = new Bitmap(1800, pedalCycleMode ? 1400 : 720))
             using (Graphics graphics = Graphics.FromImage(output))
             using (Font title = new Font("Segoe UI", 22F, FontStyle.Bold))
             using (Brush white = new SolidBrush(Color.White))
             {
                 graphics.Clear(Color.FromArgb(20, 27, 24));
                 graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                graphics.DrawString(side.ToUpperInvariant() + " SHORT-CLIP RIDER TRACKING", title, white, 24, 18);
+                graphics.DrawString(side.ToUpperInvariant() + (pedalCycleMode ? " PEDAL-CYCLE MEASUREMENT REVIEW" : " SHORT-CLIP RIDER TRACKING"), title, white, 24, 18);
                 for (int i = 0; i < selected.Length; i++)
                 {
                     TrackedFrame frame = frames[selected[i]];
                     using (Image image = Image.FromFile(frame.Path))
-                        ShortClipTrackingCanvas.RenderPose(graphics, image, frame.Points, new RectangleF(20 + i * 595, 70, 570, 540), "CHECKPOINT " + (selected[i] + 1));
+                    {
+                        float width = pedalCycleMode ? 870 : 570;
+                        float x = 20 + (i % columns) * (pedalCycleMode ? 890 : 595);
+                        float y = 70 + (i / columns) * 545;
+                        string label = pedalCycleMode ? new[] { "TOP", "BOTTOM", "FRONT", "REAR" }[i] + " · CHECKPOINT " + (selected[i] + 1) : "CHECKPOINT " + (selected[i] + 1);
+                        ShortClipTrackingCanvas.RenderPose(graphics, image, frame.Points, new RectangleF(x, y, width, 520), label);
+                    }
                 }
-                graphics.DrawString(BuildRangeText(true), new Font("Segoe UI", 10F, FontStyle.Bold), white, new RectangleF(28, 625, 1740, 85));
+                float summaryY = pedalCycleMode ? 1160 : 625;
+                graphics.DrawString(BuildRangeText(true), new Font("Segoe UI", 10F, FontStyle.Bold), white, new RectangleF(28, summaryY, 1740, pedalCycleMode ? 225 : 85));
                 output.Save(path, ImageFormat.Png);
             }
             return path;

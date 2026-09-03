@@ -109,6 +109,10 @@ namespace CassetteMotionPro.Workspace
         public string ShortClipTrackingAfterSummary { get; set; }
         public string ShortClipTrackingBeforeEvidencePath { get; set; }
         public string ShortClipTrackingAfterEvidencePath { get; set; }
+        public string PedalCycleBeforeSummary { get; set; }
+        public string PedalCycleAfterSummary { get; set; }
+        public string PedalCycleBeforeEvidencePath { get; set; }
+        public string PedalCycleAfterEvidencePath { get; set; }
 
         public DateTime CreatedUtc { get; set; }
         public DateTime ModifiedUtc { get; set; }

@@ -5,7 +5,23 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.62.0 Short-Clip Rider Tracking
+## Current milestone: 0.63.0 Pedal-Cycle Measurement Review
+
+- Body Angles now includes Review Complete Pedal Cycle for Before or After motion.
+- The review accepts 6–16 ordered checkpoints covering one complete pedal revolution
+  and carries the approved rider landmarks through every image.
+- After fitter review and drift correction, the ankle path identifies the Top, Bottom,
+  Front, and Rear crank-position checkpoints for the selected riding direction.
+- Each identified position records knee, hip, and ankle angles, while the complete
+  cycle summarizes knee, hip, ankle, body-reach, and back-angle ranges.
+- A four-panel annotated cycle image labels the four crank positions and is saved in
+  the active client session as report evidence.
+- The identified positions, angle ranges, checkpoint count, and correction count are
+  retained in the session and included in generated reports.
+- Video Studio remains the place to select the complete pedal turn, save evenly spaced
+  frames, and use Kinovea playback, drawing, and precision measurement tools.
+
+## Previous milestone: 0.62.0 Short-Clip Rider Tracking
 
 - Body Angles now includes Track Short Before Clip and Track Short After Clip for
   reviewing motion across 3–12 ordered checkpoints from a short pedaling clip.

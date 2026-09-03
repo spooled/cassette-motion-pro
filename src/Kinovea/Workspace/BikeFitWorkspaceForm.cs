@@ -3644,6 +3644,9 @@ namespace CassetteMotionPro.Workspace
             Button shortAfter = CreateButton("Track Short After Clip", false);
             shortAfter.Size = new Size(190, 38);
             shortAfter.Click += delegate { ShowShortClipTracking("After"); };
+            Button pedalCycle = CreateButton("Review Complete Pedal Cycle", true);
+            pedalCycle.Size = new Size(220, 38);
+            pedalCycle.Click += ShowPedalCycleReview;
 
             Button measureBefore = CreateButton("Measure Before Video", false);
             measureBefore.Size = new Size(170, 38);
@@ -3659,12 +3662,13 @@ namespace CassetteMotionPro.Workspace
             actions.Controls.Add(compareTracking);
             actions.Controls.Add(shortBefore);
             actions.Controls.Add(shortAfter);
+            actions.Controls.Add(pedalCycle);
             actions.Controls.Add(measureBefore);
             actions.Controls.Add(measureAfter);
             actions.Controls.Add(reviewQuality);
 
             int actionRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 96));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 138));
             table.Controls.Add(actions, 0, actionRow);
             table.SetColumnSpan(actions, 3);
 
@@ -3808,6 +3812,73 @@ namespace CassetteMotionPro.Workspace
                     }
                     SaveCurrentSession();
                     UpdateSaveHint(side + " short-clip tracking saved with accepted motion ranges and correction history.");
+                }
+            }
+        }
+
+        private void ShowPedalCycleReview(object sender, EventArgs e)
+        {
+            if (currentSession == null)
+            {
+                MessageBox.Show(this, "Create or open a client fit session first.", "Pedal-Cycle Measurement Review", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            DialogResult sideChoice = MessageBox.Show(this,
+                "Which complete pedal cycle do you want to review?\n\nYes = Before\nNo = After",
+                "Pedal-Cycle Measurement Review", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+            if (sideChoice == DialogResult.Cancel)
+                return;
+            string side = sideChoice == DialogResult.Yes ? "Before" : "After";
+            string videoKey = side + "VideoPath";
+            if (!mediaBoxes.ContainsKey(videoKey) || !File.Exists(mediaBoxes[videoKey].Text))
+            {
+                MessageBox.Show(this, "Choose or record the " + side + " video first. In Video Studio, isolate one complete pedal turn and save 6–16 evenly spaced checkpoint images.", "Pedal-Cycle Measurement Review", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (OpenFileDialog dialog = new OpenFileDialog())
+            {
+                Directory.CreateDirectory(GetSessionReportImagesFolderPath());
+                dialog.Title = "Choose 6–16 " + side + " images covering one complete pedal turn";
+                dialog.Filter = "Pedal-cycle checkpoint images|*.png;*.jpg;*.jpeg;*.bmp|All files|*.*";
+                dialog.Multiselect = true;
+                dialog.InitialDirectory = GetSessionReportImagesFolderPath();
+                if (dialog.ShowDialog(this) != DialogResult.OK)
+                    return;
+                if (dialog.FileNames.Length < 6 || dialog.FileNames.Length > 16)
+                {
+                    MessageBox.Show(this, "Select between 6 and 16 ordered images covering one complete pedal turn.", "Pedal-Cycle Measurement Review", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                string[] orderedFrames = (string[])dialog.FileNames.Clone();
+                Array.Sort(orderedFrames, delegate(string left, string right)
+                {
+                    return StringComparer.CurrentCultureIgnoreCase.Compare(Path.GetFileName(left), Path.GetFileName(right));
+                });
+                using (ShortClipRiderTrackingForm form = new ShortClipRiderTrackingForm(orderedFrames, GetSessionReportImagesFolderPath(), side, true))
+                {
+                    if (form.ShowDialog(this) != DialogResult.OK)
+                        return;
+                    ApplyTrackedValues(form.ResultValues, side);
+                    if (side == "Before")
+                    {
+                        currentSession.PedalCycleBeforeSummary = form.TrackingSummary;
+                        currentSession.PedalCycleBeforeEvidencePath = form.EvidenceImagePath;
+                    }
+                    else
+                    {
+                        currentSession.PedalCycleAfterSummary = form.TrackingSummary;
+                        currentSession.PedalCycleAfterEvidencePath = form.EvidenceImagePath;
+                    }
+                    if (!string.IsNullOrWhiteSpace(form.EvidenceImagePath))
+                    {
+                        imageBoxes["MeasurementReferenceImagePath"].Text = form.EvidenceImagePath;
+                        chkShowMeasurementReferenceImageInReport.Checked = true;
+                    }
+                    SaveCurrentSession();
+                    UpdateSaveHint(side + " pedal-cycle positions, angle ranges, and evidence saved to this fit session.");
                 }
             }
         }
