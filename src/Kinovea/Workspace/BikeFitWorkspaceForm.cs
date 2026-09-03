@@ -3638,6 +3638,12 @@ namespace CassetteMotionPro.Workspace
             Button compareTracking = CreateButton("Compare Before + After", true);
             compareTracking.Size = new Size(205, 38);
             compareTracking.Click += ShowRiderTrackingComparison;
+            Button shortBefore = CreateButton("Track Short Before Clip", false);
+            shortBefore.Size = new Size(195, 38);
+            shortBefore.Click += delegate { ShowShortClipTracking("Before"); };
+            Button shortAfter = CreateButton("Track Short After Clip", false);
+            shortAfter.Size = new Size(190, 38);
+            shortAfter.Click += delegate { ShowShortClipTracking("After"); };
 
             Button measureBefore = CreateButton("Measure Before Video", false);
             measureBefore.Size = new Size(170, 38);
@@ -3651,6 +3657,8 @@ namespace CassetteMotionPro.Workspace
             actions.Controls.Add(guidedBefore);
             actions.Controls.Add(guidedAfter);
             actions.Controls.Add(compareTracking);
+            actions.Controls.Add(shortBefore);
+            actions.Controls.Add(shortAfter);
             actions.Controls.Add(measureBefore);
             actions.Controls.Add(measureAfter);
             actions.Controls.Add(reviewQuality);
@@ -3740,6 +3748,63 @@ namespace CassetteMotionPro.Workspace
                 string key = measurement.Key + side;
                 if (measurementBoxes.ContainsKey(key))
                     measurementBoxes[key].Text = measurement.Value;
+            }
+        }
+
+        private void ShowShortClipTracking(string side)
+        {
+            if (currentSession == null)
+            {
+                MessageBox.Show(this, "Create or open a client fit session first.", "Short-Clip Rider Tracking", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            string videoKey = side + "VideoPath";
+            if (!mediaBoxes.ContainsKey(videoKey) || !File.Exists(mediaBoxes[videoKey].Text))
+            {
+                MessageBox.Show(this, "Choose or record the " + side + " video first. Open it in Video Studio, select a short pedaling zone, and save 3–12 evenly spaced checkpoint images.", "Short-Clip Rider Tracking", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (OpenFileDialog dialog = new OpenFileDialog())
+            {
+                dialog.Title = "Choose 3–12 " + side + " checkpoint images in time order";
+                dialog.Filter = "Rider checkpoint images|*.png;*.jpg;*.jpeg;*.bmp|All files|*.*";
+                dialog.Multiselect = true;
+                Directory.CreateDirectory(GetSessionReportImagesFolderPath());
+                dialog.InitialDirectory = GetSessionReportImagesFolderPath();
+                if (dialog.ShowDialog(this) != DialogResult.OK)
+                    return;
+                if (dialog.FileNames.Length < 3 || dialog.FileNames.Length > 12)
+                {
+                    MessageBox.Show(this, "Select between 3 and 12 checkpoint images from one short clip.", "Short-Clip Rider Tracking", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                string[] orderedFrames = dialog.FileNames.OrderBy(path => Path.GetFileName(path), StringComparer.CurrentCultureIgnoreCase).ToArray();
+                using (ShortClipRiderTrackingForm form = new ShortClipRiderTrackingForm(orderedFrames, GetSessionReportImagesFolderPath(), side))
+                {
+                    if (form.ShowDialog(this) != DialogResult.OK)
+                        return;
+                    ApplyTrackedValues(form.ResultValues, side);
+                    if (string.Equals(side, "Before", StringComparison.OrdinalIgnoreCase))
+                    {
+                        currentSession.ShortClipTrackingBeforeSummary = form.TrackingSummary;
+                        currentSession.ShortClipTrackingBeforeEvidencePath = form.EvidenceImagePath;
+                    }
+                    else
+                    {
+                        currentSession.ShortClipTrackingAfterSummary = form.TrackingSummary;
+                        currentSession.ShortClipTrackingAfterEvidencePath = form.EvidenceImagePath;
+                    }
+                    if (!string.IsNullOrWhiteSpace(form.EvidenceImagePath))
+                    {
+                        imageBoxes["MeasurementReferenceImagePath"].Text = form.EvidenceImagePath;
+                        chkShowMeasurementReferenceImageInReport.Checked = true;
+                    }
+                    SaveCurrentSession();
+                    UpdateSaveHint(side + " short-clip tracking saved with accepted motion ranges and correction history.");
+                }
             }
         }
 

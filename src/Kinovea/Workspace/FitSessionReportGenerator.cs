@@ -20,7 +20,7 @@ namespace CassetteMotionPro.Workspace
     public static class FitSessionReportGenerator
     {
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "0.61.0";
+        private const string ReportVersion = "0.62.0";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
 
         private static StudioSettings ReportSettings { get { return StudioSettingsRepository.Current; } }
@@ -181,6 +181,9 @@ namespace CassetteMotionPro.Workspace
             AddSummaryMetric(text, "Body reach", session.TorsoAngleBefore, session.TorsoAngleAfter, !session.HideBeforeMeasurementsInReport);
             AddSummaryMetric(text, "Back angle", session.ShoulderAngleBefore, session.ShoulderAngleAfter, !session.HideBeforeMeasurementsInReport);
             text.AppendLine();
+
+            AddSummarySection(text, "Before short-clip tracking", session.ShortClipTrackingBeforeSummary);
+            AddSummarySection(text, "After short-clip tracking", session.ShortClipTrackingAfterSummary);
 
             AddSummarySection(text, "Recommendations and notes", session.Notes);
 
@@ -675,6 +678,17 @@ namespace CassetteMotionPro.Workspace
                     html.AppendLine("</div>");
                 }
                 html.AppendLine("</div>");
+
+            }
+
+            if (!string.IsNullOrWhiteSpace(session.ShortClipTrackingBeforeSummary) || !string.IsNullOrWhiteSpace(session.ShortClipTrackingAfterSummary))
+            {
+                html.AppendLine("<h2>Short-Clip Motion Review</h2>");
+                html.AppendLine("<div class=\"section-kicker\">Fitter-approved joint tracking across selected checkpoints from a short pedaling clip.</div>");
+                if (!string.IsNullOrWhiteSpace(session.ShortClipTrackingBeforeSummary))
+                    html.AppendLine("<div class=\"note\"><strong>Before:</strong> " + Encode(session.ShortClipTrackingBeforeSummary) + "</div>");
+                if (!string.IsNullOrWhiteSpace(session.ShortClipTrackingAfterSummary))
+                    html.AppendLine("<div class=\"note\"><strong>After:</strong> " + Encode(session.ShortClipTrackingAfterSummary) + "</div>");
             }
 
             if (hasMeasurementReference)

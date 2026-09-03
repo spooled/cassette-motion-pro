@@ -105,6 +105,10 @@ namespace CassetteMotionPro.Workspace
         public string ShoulderAngleAfter { get; set; }
         public string ElbowAngleBefore { get; set; }
         public string ElbowAngleAfter { get; set; }
+        public string ShortClipTrackingBeforeSummary { get; set; }
+        public string ShortClipTrackingAfterSummary { get; set; }
+        public string ShortClipTrackingBeforeEvidencePath { get; set; }
+        public string ShortClipTrackingAfterEvidencePath { get; set; }
 
         public DateTime CreatedUtc { get; set; }
         public DateTime ModifiedUtc { get; set; }
