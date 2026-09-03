@@ -20,7 +20,7 @@ namespace CassetteMotionPro.Workspace
     public static class FitSessionReportGenerator
     {
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "0.63.0";
+        private const string ReportVersion = "0.64.0";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
 
         private static StudioSettings ReportSettings { get { return StudioSettingsRepository.Current; } }
@@ -186,6 +186,7 @@ namespace CassetteMotionPro.Workspace
             AddSummarySection(text, "After short-clip tracking", session.ShortClipTrackingAfterSummary);
             AddSummarySection(text, "Before pedal-cycle review", session.PedalCycleBeforeSummary);
             AddSummarySection(text, "After pedal-cycle review", session.PedalCycleAfterSummary);
+            AddSummarySection(text, "Tracking and camera quality", session.TrackingQualityReviewSummary);
 
             AddSummarySection(text, "Recommendations and notes", session.Notes);
 
@@ -712,6 +713,13 @@ namespace CassetteMotionPro.Workspace
                         AddReportImage(html, "After pedal-cycle positions", session.PedalCycleAfterEvidencePath, false, imageSourceResolver);
                     html.AppendLine("</div>");
                 }
+            }
+
+            if (!string.IsNullOrWhiteSpace(session.TrackingQualityReviewSummary))
+            {
+                html.AppendLine("<h2>Tracking and Camera Quality</h2>");
+                html.AppendLine("<div class=\"section-kicker\">Advisory capture-quality review confirmed by the fitter.</div>");
+                html.AppendLine("<div class=\"note\">" + Encode(session.TrackingQualityReviewSummary) + "</div>");
             }
 
             if (hasMeasurementReference)

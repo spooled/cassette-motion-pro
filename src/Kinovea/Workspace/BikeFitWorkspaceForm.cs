@@ -3647,6 +3647,9 @@ namespace CassetteMotionPro.Workspace
             Button pedalCycle = CreateButton("Review Complete Pedal Cycle", true);
             pedalCycle.Size = new Size(220, 38);
             pedalCycle.Click += ShowPedalCycleReview;
+            Button trackingQuality = CreateButton("Camera & Tracking Quality", false);
+            trackingQuality.Size = new Size(210, 38);
+            trackingQuality.Click += ShowTrackingQualityReview;
 
             Button measureBefore = CreateButton("Measure Before Video", false);
             measureBefore.Size = new Size(170, 38);
@@ -3663,12 +3666,13 @@ namespace CassetteMotionPro.Workspace
             actions.Controls.Add(shortBefore);
             actions.Controls.Add(shortAfter);
             actions.Controls.Add(pedalCycle);
+            actions.Controls.Add(trackingQuality);
             actions.Controls.Add(measureBefore);
             actions.Controls.Add(measureAfter);
             actions.Controls.Add(reviewQuality);
 
             int actionRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 138));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 178));
             table.Controls.Add(actions, 0, actionRow);
             table.SetColumnSpan(actions, 3);
 
@@ -3880,6 +3884,30 @@ namespace CassetteMotionPro.Workspace
                     SaveCurrentSession();
                     UpdateSaveHint(side + " pedal-cycle positions, angle ranges, and evidence saved to this fit session.");
                 }
+            }
+        }
+
+        private void ShowTrackingQualityReview(object sender, EventArgs e)
+        {
+            if (currentSession == null)
+            {
+                MessageBox.Show(this, "Create or open a client fit session first.", "Tracking Quality", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            string beforePath = imageBoxes.ContainsKey("BeforeReportImagePath") ? imageBoxes["BeforeReportImagePath"].Text : string.Empty;
+            string afterPath = imageBoxes.ContainsKey("AfterReportImagePath") ? imageBoxes["AfterReportImagePath"].Text : string.Empty;
+            if (!File.Exists(beforePath) || !File.Exists(afterPath))
+            {
+                MessageBox.Show(this, "Choose matching Before and After report images first. Use clear side-view frames from the same camera position.", "Tracking Quality", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            using (TrackingQualityReviewForm form = new TrackingQualityReviewForm(beforePath, afterPath))
+            {
+                if (form.ShowDialog(this) != DialogResult.OK)
+                    return;
+                currentSession.TrackingQualityReviewSummary = form.ReviewSummary;
+                SaveCurrentSession();
+                UpdateSaveHint("Camera and tracking quality review saved to this fit session.");
             }
         }
 
