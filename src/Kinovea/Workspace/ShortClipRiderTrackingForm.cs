@@ -26,12 +26,15 @@ namespace CassetteMotionPro.Workspace
         private readonly Button approveNext = new Button();
         private readonly Button finish = new Button();
         private readonly List<TrackedFrame> frames = new List<TrackedFrame>();
+        private readonly Dictionary<string, TrackingImageQuality> frameQualityCache = new Dictionary<string, TrackingImageQuality>(StringComparer.OrdinalIgnoreCase);
         private int frameIndex;
         private int correctionCount;
 
         public Dictionary<string, string> ResultValues { get; private set; }
         public string TrackingSummary { get; private set; }
         public string EvidenceImagePath { get; private set; }
+        public string SmartFrameSummary { get; private set; }
+        public string SmartFrameEvidencePath { get; private set; }
 
         public ShortClipRiderTrackingForm(string[] framePaths, string outputDirectory, string side)
             : this(framePaths, outputDirectory, side, false)
@@ -107,7 +110,7 @@ namespace CassetteMotionPro.Workspace
             quality.Height = 115;
             quality.Padding = new Padding(10);
             ranges.Dock = DockStyle.Top;
-            ranges.Height = pedalCycleMode ? 310 : 180;
+            ranges.Height = pedalCycleMode ? 430 : 180;
             ranges.Font = new Font("Consolas", 9.5F, FontStyle.Bold);
             ranges.Padding = new Padding(4, 12, 4, 4);
 
@@ -243,6 +246,11 @@ namespace CassetteMotionPro.Workspace
             ResultValues = values.ToDictionary(p => p.Key, p => FormatAngle(p.Value.OrderBy(v => v).ElementAt(p.Value.Count / 2)));
             TrackingSummary = BuildRangeText(true).Replace("\n", "; ");
             EvidenceImagePath = SaveEvidenceStrip();
+            if (pedalCycleMode)
+            {
+                SmartFrameSummary = BuildSmartFrameSuggestionText().Replace("\n", "; ");
+                SmartFrameEvidencePath = SaveSmartFrameEvidence();
+            }
             DialogResult = DialogResult.OK;
             Close();
         }
@@ -254,7 +262,7 @@ namespace CassetteMotionPro.Workspace
                 RangeLine("Hip", values, "HipAngle") + RangeLine("Ankle", values, "AnkleAngle") +
                 RangeLine("Body reach", values, "TorsoAngle") + RangeLine("Back", values, "ShoulderAngle");
             if (pedalCycleMode && frames.Count == framePaths.Length)
-                text += BuildCrankPositionText();
+                text += BuildCrankPositionText() + BuildSmartFrameSuggestionText();
             if (includeCounts)
                 text += frames.Count + " checkpoints · " + correctionCount + " manual corrections\n";
             return text;
@@ -285,6 +293,75 @@ namespace CassetteMotionPro.Workspace
             positions["Front"] = IndexOfExtreme(true, facingRight);
             positions["Rear"] = IndexOfExtreme(true, !facingRight);
             return positions;
+        }
+
+        private string BuildSmartFrameSuggestionText()
+        {
+            if (!pedalCycleMode || frames.Count != framePaths.Length)
+                return string.Empty;
+            List<SmartFrameSuggestion> suggestions = FindSmartFrameSuggestions();
+            string text = "\nSMART MEASUREMENT FRAMES\n";
+            foreach (SmartFrameSuggestion suggestion in suggestions)
+            {
+                text += suggestion.Label.PadRight(16) + "#" + (suggestion.FrameIndex + 1).ToString(CultureInfo.InvariantCulture) +
+                    " · " + FormatAngle(suggestion.Angle) + " · clarity " + suggestion.Clarity.ToString("0", CultureInfo.InvariantCulture) + "/100\n";
+            }
+            text += "Suggestions are starting points—confirm the frame and measurement in Kinovea.\n";
+            return text;
+        }
+
+        private List<SmartFrameSuggestion> FindSmartFrameSuggestions()
+        {
+            List<SmartFrameCandidate> candidates = new List<SmartFrameCandidate>();
+            for (int i = 0; i < frames.Count; i++)
+            {
+                Dictionary<string, double> pose = ShortClipTrackingCanvas.Calculate(frames[i].Points);
+                TrackingImageQuality qualityCheck;
+                if (!frameQualityCache.TryGetValue(frames[i].Path, out qualityCheck))
+                {
+                    qualityCheck = TrackingImageQuality.Analyze(frames[i].Path, "Checkpoint " + (i + 1));
+                    frameQualityCache[frames[i].Path] = qualityCheck;
+                }
+                double lightPenalty = Math.Abs(qualityCheck.MeanBrightness - 140.0) * 0.18;
+                double score = 38.0 + frames[i].Confidence * 0.35 + Math.Min(qualityCheck.EdgeStrength, 25.0) * 1.6 -
+                    lightPenalty - qualityCheck.Warnings.Count * 4.0;
+                candidates.Add(new SmartFrameCandidate(i, pose, Math.Max(0, Math.Min(100, score))));
+            }
+
+            Dictionary<string, int> crank = FindCrankPositions();
+            double medianTorso = Median(candidates.Select(c => c.Pose["TorsoAngle"]));
+            double medianBack = Median(candidates.Select(c => c.Pose["ShoulderAngle"]));
+            SmartFrameCandidate knee = Clearest(candidates.OrderByDescending(c => c.Pose["KneeAngle"]).Take(3));
+            SmartFrameCandidate hip = Clearest(candidates.OrderBy(c => c.Pose["HipAngle"]).Take(3));
+            SmartFrameCandidate ankle = Clearest(Neighborhood(candidates, crank["Bottom"]));
+            SmartFrameCandidate reach = Clearest(candidates.OrderBy(c => Math.Abs(c.Pose["TorsoAngle"] - medianTorso)).Take(3));
+            SmartFrameCandidate back = Clearest(candidates.OrderBy(c => Math.Abs(c.Pose["ShoulderAngle"] - medianBack)).Take(3));
+
+            return new List<SmartFrameSuggestion>
+            {
+                new SmartFrameSuggestion("Knee extension", knee.Index, knee.Pose["KneeAngle"], knee.Clarity),
+                new SmartFrameSuggestion("Hip closure", hip.Index, hip.Pose["HipAngle"], hip.Clarity),
+                new SmartFrameSuggestion("Ankle position", ankle.Index, ankle.Pose["AnkleAngle"], ankle.Clarity),
+                new SmartFrameSuggestion("Body reach", reach.Index, reach.Pose["TorsoAngle"], reach.Clarity),
+                new SmartFrameSuggestion("Back angle", back.Index, back.Pose["ShoulderAngle"], back.Clarity)
+            };
+        }
+
+        private static IEnumerable<SmartFrameCandidate> Neighborhood(List<SmartFrameCandidate> candidates, int center)
+        {
+            int count = candidates.Count;
+            return new[] { candidates[(center - 1 + count) % count], candidates[center], candidates[(center + 1) % count] };
+        }
+
+        private static SmartFrameCandidate Clearest(IEnumerable<SmartFrameCandidate> candidates)
+        {
+            return candidates.OrderByDescending(c => c.Clarity).First();
+        }
+
+        private static double Median(IEnumerable<double> source)
+        {
+            double[] values = source.OrderBy(v => v).ToArray();
+            return values[values.Length / 2];
         }
 
         private int IndexOfExtreme(bool horizontal, bool maximum)
@@ -360,6 +437,39 @@ namespace CassetteMotionPro.Workspace
             return path;
         }
 
+        private string SaveSmartFrameEvidence()
+        {
+            Directory.CreateDirectory(outputDirectory);
+            string path = Path.Combine(outputDirectory, side + "-Smart-Measurement-Frames-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + ".png");
+            List<SmartFrameSuggestion> suggestions = FindSmartFrameSuggestions();
+            using (Bitmap output = new Bitmap(1800, 1780))
+            using (Graphics graphics = Graphics.FromImage(output))
+            using (Font title = new Font("Segoe UI", 22F, FontStyle.Bold))
+            using (Font note = new Font("Segoe UI", 10F, FontStyle.Bold))
+            using (Brush white = new SolidBrush(Color.White))
+            {
+                graphics.Clear(Color.FromArgb(20, 27, 24));
+                graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                graphics.DrawString(side.ToUpperInvariant() + " SMART MEASUREMENT CAPTURE", title, white, 24, 18);
+                for (int i = 0; i < suggestions.Count; i++)
+                {
+                    SmartFrameSuggestion suggestion = suggestions[i];
+                    TrackedFrame frame = frames[suggestion.FrameIndex];
+                    using (Image image = Image.FromFile(frame.Path))
+                    {
+                        float x = 20 + (i % 2) * 890;
+                        float y = 70 + (i / 2) * 520;
+                        string label = suggestion.Label.ToUpperInvariant() + " · CHECKPOINT " + (suggestion.FrameIndex + 1) +
+                            " · " + FormatAngle(suggestion.Angle) + " · CLARITY " + suggestion.Clarity.ToString("0", CultureInfo.InvariantCulture) + "/100";
+                        ShortClipTrackingCanvas.RenderPose(graphics, image, frame.Points, new RectangleF(x, y, 870, 490), label);
+                    }
+                }
+                graphics.DrawString("Frame suggestions are advisory. Confirm each pose and final measurement with Kinovea playback and drawing tools.", note, white, new RectangleF(28, 1650, 1740, 80));
+                output.Save(path, ImageFormat.Png);
+            }
+            return path;
+        }
+
         private static Label NewLabel(string text, float size, bool bold)
         {
             Label label = new Label(); label.Text = text; label.Font = new Font("Segoe UI", size, bold ? FontStyle.Bold : FontStyle.Regular); return label;
@@ -380,6 +490,20 @@ namespace CassetteMotionPro.Workspace
         public string Path; public List<PointF> Points; public double Confidence; public bool Approved;
         public TrackedFrame(string path, IEnumerable<PointF> points, double confidence, bool approved)
         { Path = path; Points = points.ToList(); Confidence = confidence; Approved = approved; }
+    }
+
+    internal class SmartFrameCandidate
+    {
+        public int Index; public Dictionary<string, double> Pose; public double Clarity;
+        public SmartFrameCandidate(int index, Dictionary<string, double> pose, double clarity)
+        { Index = index; Pose = pose; Clarity = clarity; }
+    }
+
+    internal class SmartFrameSuggestion
+    {
+        public string Label; public int FrameIndex; public double Angle; public double Clarity;
+        public SmartFrameSuggestion(string label, int frameIndex, double angle, double clarity)
+        { Label = label; FrameIndex = frameIndex; Angle = angle; Clarity = clarity; }
     }
 
     internal class TrackResult

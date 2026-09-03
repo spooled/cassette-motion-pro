@@ -5,7 +5,22 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.64.0 Tracking Quality and Camera Guidance
+## Current milestone: 0.65.0 Smart Measurement Capture
+
+- The complete pedal-cycle review now recommends the clearest checkpoint for knee
+  extension, hip closure, ankle position, body reach, and back angle.
+- Knee and hip suggestions choose the sharpest, best-lit candidate among the most
+  relevant angle extremes instead of blindly selecting a single numerical extreme.
+- Ankle position favors a clear checkpoint around bottom-dead-center, while body
+  reach and back angle favor stable representative positions through the cycle.
+- Every suggestion displays its checkpoint number, measured angle, and a 0–100
+  clarity score based on tracking confidence, lighting, sharpness, and warnings.
+- Saving the cycle review creates a separate five-panel Smart Measurement Capture
+  image in the active client session and adds the suggestions to the fit report.
+- Suggestions remain advisory so the fitter can confirm the frame, correct tracked
+  points, and perform the final measurement with Kinovea playback and drawing tools.
+
+## Previous milestone: 0.64.0 Tracking Quality and Camera Guidance
 
 - Body Angles now includes Camera & Tracking Quality for matching Before and After
   side-view frames.

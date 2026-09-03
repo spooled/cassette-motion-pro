@@ -20,7 +20,7 @@ namespace CassetteMotionPro.Workspace
     public static class FitSessionReportGenerator
     {
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "0.64.0";
+        private const string ReportVersion = "0.65.0";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
 
         private static StudioSettings ReportSettings { get { return StudioSettingsRepository.Current; } }
@@ -187,6 +187,8 @@ namespace CassetteMotionPro.Workspace
             AddSummarySection(text, "Before pedal-cycle review", session.PedalCycleBeforeSummary);
             AddSummarySection(text, "After pedal-cycle review", session.PedalCycleAfterSummary);
             AddSummarySection(text, "Tracking and camera quality", session.TrackingQualityReviewSummary);
+            AddSummarySection(text, "Before smart measurement frames", session.SmartMeasurementBeforeSummary);
+            AddSummarySection(text, "After smart measurement frames", session.SmartMeasurementAfterSummary);
 
             AddSummarySection(text, "Recommendations and notes", session.Notes);
 
@@ -468,6 +470,8 @@ namespace CassetteMotionPro.Workspace
                 CopyPackageImage(session.MeasurementReferenceImagePath, "Measurement reference", imagesFolder, imageMap);
             CopyPackageImage(session.PedalCycleBeforeEvidencePath, "Before pedal cycle", imagesFolder, imageMap);
             CopyPackageImage(session.PedalCycleAfterEvidencePath, "After pedal cycle", imagesFolder, imageMap);
+            CopyPackageImage(session.SmartMeasurementBeforeEvidencePath, "Before smart measurement frames", imagesFolder, imageMap);
+            CopyPackageImage(session.SmartMeasurementAfterEvidencePath, "After smart measurement frames", imagesFolder, imageMap);
         }
 
         private static void CopyPackageImage(string sourcePath, string label, string imagesFolder, Dictionary<string, string> imageMap)
@@ -720,6 +724,25 @@ namespace CassetteMotionPro.Workspace
                 html.AppendLine("<h2>Tracking and Camera Quality</h2>");
                 html.AppendLine("<div class=\"section-kicker\">Advisory capture-quality review confirmed by the fitter.</div>");
                 html.AppendLine("<div class=\"note\">" + Encode(session.TrackingQualityReviewSummary) + "</div>");
+            }
+
+            if (!string.IsNullOrWhiteSpace(session.SmartMeasurementBeforeSummary) || !string.IsNullOrWhiteSpace(session.SmartMeasurementAfterSummary))
+            {
+                html.AppendLine("<h2>Smart Measurement Capture</h2>");
+                html.AppendLine("<div class=\"section-kicker\">Clear-frame suggestions for knee extension, hip closure, ankle position, body reach, and back angle.</div>");
+                if (!string.IsNullOrWhiteSpace(session.SmartMeasurementBeforeSummary))
+                    html.AppendLine("<div class=\"note\"><strong>Before:</strong> " + Encode(session.SmartMeasurementBeforeSummary) + "</div>");
+                if (!string.IsNullOrWhiteSpace(session.SmartMeasurementAfterSummary))
+                    html.AppendLine("<div class=\"note\"><strong>After:</strong> " + Encode(session.SmartMeasurementAfterSummary) + "</div>");
+                if (HasReportImage(session.SmartMeasurementBeforeEvidencePath) || HasReportImage(session.SmartMeasurementAfterEvidencePath))
+                {
+                    html.AppendLine("<div class=\"media-grid\">");
+                    if (HasReportImage(session.SmartMeasurementBeforeEvidencePath))
+                        AddReportImage(html, "Before smart measurement frames", session.SmartMeasurementBeforeEvidencePath, false, imageSourceResolver);
+                    if (HasReportImage(session.SmartMeasurementAfterEvidencePath))
+                        AddReportImage(html, "After smart measurement frames", session.SmartMeasurementAfterEvidencePath, false, imageSourceResolver);
+                    html.AppendLine("</div>");
+                }
             }
 
             if (hasMeasurementReference)

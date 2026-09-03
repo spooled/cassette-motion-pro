@@ -114,6 +114,10 @@ namespace CassetteMotionPro.Workspace
         public string PedalCycleBeforeEvidencePath { get; set; }
         public string PedalCycleAfterEvidencePath { get; set; }
         public string TrackingQualityReviewSummary { get; set; }
+        public string SmartMeasurementBeforeSummary { get; set; }
+        public string SmartMeasurementAfterSummary { get; set; }
+        public string SmartMeasurementBeforeEvidencePath { get; set; }
+        public string SmartMeasurementAfterEvidencePath { get; set; }
 
         public DateTime CreatedUtc { get; set; }
         public DateTime ModifiedUtc { get; set; }
