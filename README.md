@@ -5,7 +5,22 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.68.0 Fit Change Recommendations
+## Current milestone: 0.69.0 Tracking Calibration and Accuracy Testing
+
+- Guided Measurements now includes a Calibration & Accuracy Test using a trusted,
+  known physical dimension.
+- An optional pixel span records the image scale in pixels per millimeter for a
+  transparent calibration reference.
+- Two or three repeated readings are compared with the known dimension to calculate
+  average measurement error and repeatability spread.
+- A 0–100 confidence score and High, Moderate, or Recalibrate result make questionable
+  measurement setups visible before the fitter relies on them.
+- Calibration inputs and results are saved with the active client session and appear
+  in the client report for traceability.
+- Results remain advisory and explicitly require manual calibration and landmark
+  confirmation with Kinovea's original measurement tools.
+
+## Previous milestone: 0.68.0 Fit Change Recommendations
 
 - Report Builder now converts meaningful Before/After measurement changes into an
   editable recommendation draft for fitter review.

@@ -930,11 +930,15 @@ namespace CassetteMotionPro.Workspace
             Button review = CreateButton("3. Review Measurements", false);
             review.Size = new Size(205, 42);
             review.Click += ReviewMetrics_Click;
+            Button calibration = CreateButton("Calibration & Accuracy Test", false);
+            calibration.Size = new Size(215, 42);
+            calibration.Click += ShowTrackingCalibrationAccuracy;
             Button edit = CreateButton("Open Bike Metrics", false);
             edit.Size = new Size(175, 42);
             edit.Click += delegate { SelectWorkspaceTab("Bike Metrics"); };
             workflowActions.Controls.Add(start);
             workflowActions.Controls.Add(review);
+            workflowActions.Controls.Add(calibration);
             workflowActions.Controls.Add(edit);
             layout.Controls.Add(workflowActions, 0, layout.RowCount++);
 
@@ -950,6 +954,37 @@ namespace CassetteMotionPro.Workspace
             page.AutoScroll = true;
             page.Controls.Add(layout);
             return page;
+        }
+
+        private void ShowTrackingCalibrationAccuracy(object sender, EventArgs e)
+        {
+            if (currentSession == null)
+            {
+                MessageBox.Show(this, "Create or open a client fit session first.", "Calibration and Accuracy Test", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (TrackingCalibrationAccuracyForm form = new TrackingCalibrationAccuracyForm(
+                currentSession.TrackingCalibrationReferenceName,
+                currentSession.TrackingCalibrationKnownDimensionMm,
+                currentSession.TrackingCalibrationPixelSpan,
+                currentSession.TrackingCalibrationTestOneMm,
+                currentSession.TrackingCalibrationTestTwoMm,
+                currentSession.TrackingCalibrationTestThreeMm))
+            {
+                if (form.ShowDialog(this) != DialogResult.OK)
+                    return;
+
+                currentSession.TrackingCalibrationReferenceName = form.ReferenceName;
+                currentSession.TrackingCalibrationKnownDimensionMm = form.KnownDimensionMm;
+                currentSession.TrackingCalibrationPixelSpan = form.PixelSpan;
+                currentSession.TrackingCalibrationTestOneMm = form.TestOneMm;
+                currentSession.TrackingCalibrationTestTwoMm = form.TestTwoMm;
+                currentSession.TrackingCalibrationTestThreeMm = form.TestThreeMm;
+                currentSession.TrackingCalibrationAccuracySummary = form.AccuracySummary;
+                SaveCurrentSession();
+                UpdateSaveHint("Calibration accuracy test saved with its repeatability and confidence result.");
+            }
         }
 
         private TabPage BuildReportWorkspaceTab()

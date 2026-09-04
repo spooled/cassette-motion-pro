@@ -120,6 +120,13 @@ namespace CassetteMotionPro.Workspace
         public string PedalCycleBeforeEvidencePath { get; set; }
         public string PedalCycleAfterEvidencePath { get; set; }
         public string TrackingQualityReviewSummary { get; set; }
+        public string TrackingCalibrationReferenceName { get; set; }
+        public string TrackingCalibrationKnownDimensionMm { get; set; }
+        public string TrackingCalibrationPixelSpan { get; set; }
+        public string TrackingCalibrationTestOneMm { get; set; }
+        public string TrackingCalibrationTestTwoMm { get; set; }
+        public string TrackingCalibrationTestThreeMm { get; set; }
+        public string TrackingCalibrationAccuracySummary { get; set; }
         public string SmartMeasurementBeforeSummary { get; set; }
         public string SmartMeasurementAfterSummary { get; set; }
         public string SmartMeasurementBeforeEvidencePath { get; set; }
