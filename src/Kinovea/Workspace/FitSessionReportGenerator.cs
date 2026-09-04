@@ -20,7 +20,7 @@ namespace CassetteMotionPro.Workspace
     public static class FitSessionReportGenerator
     {
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "0.66.0";
+        private const string ReportVersion = "0.67.0";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
 
         private static StudioSettings ReportSettings { get { return StudioSettingsRepository.Current; } }
@@ -70,6 +70,7 @@ namespace CassetteMotionPro.Workspace
             File.WriteAllText(Path.Combine(packageFolder, "Session Summary.txt"), BuildSessionSummaryText(client, session), Encoding.UTF8);
             File.WriteAllText(Path.Combine(packageFolder, "Client Handoff Notes.txt"), BuildHandoffText(client, session), Encoding.UTF8);
             File.WriteAllText(Path.Combine(packageFolder, "Bike Metrics Review.txt"), BuildBikeMetricsReviewText(client, session), Encoding.UTF8);
+            File.WriteAllText(Path.Combine(packageFolder, "Approved Fit Evidence.txt"), AutomatedFitEvidenceBuilder.BuildManifest(session), Encoding.UTF8);
 
             return packageFolder;
         }
@@ -125,7 +126,8 @@ namespace CassetteMotionPro.Workspace
             text.AppendLine("2. Open Session Summary.txt for a quick plain-text overview of the fit.");
             text.AppendLine("3. Open Bike Metrics Review.txt to check missing values or values that may need another look.");
             text.AppendLine("4. Open Client Handoff Notes.txt only if you used the handoff tab or want to copy follow-up notes.");
-            text.AppendLine("5. The Images folder contains the report images copied into this package.");
+            text.AppendLine("5. Open Approved Fit Evidence.txt to see the automatic inventory of saved measurements and approved visuals.");
+            text.AppendLine("6. The Images folder contains the approved report evidence copied into this package.");
             text.AppendLine();
             text.AppendLine("Suggested flow");
             text.AppendLine("--------------");
@@ -462,20 +464,9 @@ namespace CassetteMotionPro.Workspace
 
         private static void CopyPackageImages(FitSessionRecord session, string imagesFolder, Dictionary<string, string> imageMap)
         {
-            if (!session.HideSideBySideImageInReport)
-                CopyPackageImage(session.SideBySideReportImagePath, "Side-by-side", imagesFolder, imageMap);
-            if (!session.HideBeforeImageInReport)
-                CopyPackageImage(session.BeforeReportImagePath, "Before", imagesFolder, imageMap);
-            if (!session.HideAfterImageInReport)
-                CopyPackageImage(session.AfterReportImagePath, "After", imagesFolder, imageMap);
-            if (!session.HideMeasurementReferenceImageInReport)
-                CopyPackageImage(session.MeasurementReferenceImagePath, "Measurement reference", imagesFolder, imageMap);
-            CopyPackageImage(session.PedalCycleBeforeEvidencePath, "Before pedal cycle", imagesFolder, imageMap);
-            CopyPackageImage(session.PedalCycleAfterEvidencePath, "After pedal cycle", imagesFolder, imageMap);
-            CopyPackageImage(session.SmartMeasurementBeforeEvidencePath, "Before smart measurement frames", imagesFolder, imageMap);
-            CopyPackageImage(session.SmartMeasurementAfterEvidencePath, "After smart measurement frames", imagesFolder, imageMap);
-            CopyPackageImage(session.AssistedBikeLandmarksBeforeEvidencePath, "Before assisted bike landmarks", imagesFolder, imageMap);
-            CopyPackageImage(session.AssistedBikeLandmarksAfterEvidencePath, "After assisted bike landmarks", imagesFolder, imageMap);
+            FitEvidenceBundle evidence = AutomatedFitEvidenceBuilder.Collect(session);
+            foreach (FitEvidenceImage image in evidence.Images)
+                CopyPackageImage(image.Path, image.Label, imagesFolder, imageMap);
         }
 
         private static void CopyPackageImage(string sourcePath, string label, string imagesFolder, Dictionary<string, string> imageMap)
@@ -527,6 +518,7 @@ namespace CassetteMotionPro.Workspace
         private static string BuildHtml(ClientRecord client, FitSessionRecord session, Func<string, string> imageSourceResolver)
         {
             StringBuilder html = new StringBuilder();
+            FitEvidenceBundle evidence = AutomatedFitEvidenceBuilder.Collect(session);
             bool useCmBadge = string.Equals(session.ReportLogoStyle, "CM", StringComparison.OrdinalIgnoreCase);
             bool hideBrandLogo = string.Equals(session.ReportLogoStyle, "None", StringComparison.OrdinalIgnoreCase);
             string brandLogoDataUri = useCmBadge || hideBrandLogo
@@ -667,6 +659,17 @@ namespace CassetteMotionPro.Workspace
             html.AppendLine("</div>");
             html.AppendLine("</div>");
 
+            html.AppendLine("<h2>Fit Evidence Overview</h2>");
+            html.AppendLine("<div class=\"section-kicker\">Automatically assembled from measurements and visual evidence approved in this client fit session.</div>");
+            html.AppendLine("<div class=\"final-snapshot\">");
+            AddSnapshotCard(html, "Approved images", evidence.Images.Count.ToString(CultureInfo.InvariantCulture));
+            AddSnapshotCard(html, "Recorded measurements", evidence.TotalMeasurements.ToString(CultureInfo.InvariantCulture));
+            AddSnapshotCard(html, "Before measurements", (evidence.BeforeBikeMeasurements + evidence.BeforeRiderMeasurements).ToString(CultureInfo.InvariantCulture));
+            AddSnapshotCard(html, "After measurements", (evidence.AfterBikeMeasurements + evidence.AfterRiderMeasurements).ToString(CultureInfo.InvariantCulture));
+            AddSnapshotCard(html, "Before / After visuals", evidence.HasBeforeAfterVisual ? "Ready" : "Incomplete");
+            html.AppendLine("</div>");
+            html.AppendLine("<div class=\"note\">Only saved session evidence is collected. Hidden report images stay excluded, and fitter approval remains required before the report is shared.</div>");
+
             if (HasFitSummaryContent(session))
                 AddFitSummarySection(html, session);
 
@@ -702,6 +705,15 @@ namespace CassetteMotionPro.Workspace
                     html.AppendLine("<div class=\"note\"><strong>Before:</strong> " + Encode(session.ShortClipTrackingBeforeSummary) + "</div>");
                 if (!string.IsNullOrWhiteSpace(session.ShortClipTrackingAfterSummary))
                     html.AppendLine("<div class=\"note\"><strong>After:</strong> " + Encode(session.ShortClipTrackingAfterSummary) + "</div>");
+                if (HasReportImage(session.ShortClipTrackingBeforeEvidencePath) || HasReportImage(session.ShortClipTrackingAfterEvidencePath))
+                {
+                    html.AppendLine("<div class=\"media-grid\">");
+                    if (HasReportImage(session.ShortClipTrackingBeforeEvidencePath))
+                        AddReportImage(html, "Before approved rider tracking", session.ShortClipTrackingBeforeEvidencePath, false, imageSourceResolver);
+                    if (HasReportImage(session.ShortClipTrackingAfterEvidencePath))
+                        AddReportImage(html, "After approved rider tracking", session.ShortClipTrackingAfterEvidencePath, false, imageSourceResolver);
+                    html.AppendLine("</div>");
+                }
             }
 
             if (!string.IsNullOrWhiteSpace(session.PedalCycleBeforeSummary) || !string.IsNullOrWhiteSpace(session.PedalCycleAfterSummary))

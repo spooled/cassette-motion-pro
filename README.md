@@ -5,7 +5,25 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.66.0 Assisted Bike Landmark Tracking
+## Current milestone: 0.67.0 Automated Fit Evidence Builder
+
+- Report generation now automatically inventories the fitter-approved evidence saved
+  in the active client session instead of relying on manual package assembly.
+- The builder collects saved Before/After measurements, selected report images,
+  comparisons, approved rider-tracking overlays, pedal-cycle panels, smart-frame
+  evidence, and confirmed bike-landmark images.
+- Report hide/show choices remain authoritative, so images intentionally hidden by
+  the fitter are not silently added back into the client package.
+- A Fit Evidence Overview in the HTML report shows approved-image counts, recorded
+  measurement counts, and whether Before/After visual evidence is complete.
+- Short-clip rider evidence images are now included directly with their approved
+  tracking summaries, alongside the existing cycle, smart-frame, and bike evidence.
+- Every report package includes Approved Fit Evidence.txt with a readable inventory,
+  approval source, and original path for every collected item.
+- Missing or unsaved items stay excluded; automatic collection never treats random
+  files in the client folders as approved report evidence.
+
+## Previous milestone: 0.66.0 Assisted Bike Landmark Tracking
 
 - Guided Bike Metric Capture now includes Suggest Bike Landmarks after scale
   calibration, keeping the assistance inside the existing fit workflow.
