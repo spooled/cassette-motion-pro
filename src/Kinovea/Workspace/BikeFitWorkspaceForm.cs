@@ -1087,7 +1087,7 @@ namespace CassetteMotionPro.Workspace
             AddReportBuilderRow(layout, reportBuilderStatus, 142);
 
             GroupBox smartRecommendations = new GroupBox();
-            smartRecommendations.Text = "Smart Before / After recommendations";
+            smartRecommendations.Text = "Fit Change Recommendations — editable guidance";
             smartRecommendations.Dock = DockStyle.Fill;
             smartRecommendations.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             smartRecommendations.ForeColor = Color.FromArgb(37, 48, 43);
@@ -1103,7 +1103,7 @@ namespace CassetteMotionPro.Workspace
 
             smartRecommendationStatus.Dock = DockStyle.Fill;
             smartRecommendationStatus.ForeColor = Color.FromArgb(74, 87, 81);
-            smartRecommendationStatus.Text = "Generate a draft after entering Before and After measurements. You decide what becomes part of the client report.";
+            smartRecommendationStatus.Text = "Build guidance from saved measurements and fitter observations. Review and edit it—nothing is added automatically and it is not a diagnosis.";
 
             smartRecommendationDraft.Dock = DockStyle.Fill;
             smartRecommendationDraft.Multiline = true;
@@ -1116,8 +1116,8 @@ namespace CassetteMotionPro.Workspace
             recommendationActions.Dock = DockStyle.Fill;
             recommendationActions.FlowDirection = FlowDirection.LeftToRight;
             recommendationActions.WrapContents = true;
-            Button generateSuggestions = CreateButton("Generate Draft", true);
-            generateSuggestions.Size = new Size(145, 36);
+            Button generateSuggestions = CreateButton("Build Editable Draft", true);
+            generateSuggestions.Size = new Size(165, 36);
             generateSuggestions.Click += delegate { GenerateSmartRecommendationDraft(); };
             Button addRecommendations = CreateButton("Add to Recommendations", false);
             addRecommendations.Size = new Size(185, 36);
@@ -1127,7 +1127,13 @@ namespace CassetteMotionPro.Workspace
             addFollowUp.Click += delegate { AddSmartDraftToSummary(txtFitSummaryFollowUp, "Follow-up plan"); };
             Button clearDraft = CreateButton("Clear Draft", false);
             clearDraft.Size = new Size(110, 36);
-            clearDraft.Click += delegate { smartRecommendationDraft.Clear(); RefreshSmartRecommendationStatus(); };
+            clearDraft.Click += delegate
+            {
+                smartRecommendationDraft.Clear();
+                if (currentSession != null)
+                    SaveCurrentSession();
+                RefreshSmartRecommendationStatus();
+            };
             recommendationActions.Controls.Add(generateSuggestions);
             recommendationActions.Controls.Add(addRecommendations);
             recommendationActions.Controls.Add(addFollowUp);
@@ -4495,10 +4501,11 @@ namespace CassetteMotionPro.Workspace
                     pairs++;
             }
 
-            smartRecommendationStatus.Text = pairs == 0
-                ? "Add Before and After measurements, then generate an editable report draft. Nothing is added automatically."
-                : pairs.ToString() + " Before/After measurement pairs are available. " + (string.IsNullOrWhiteSpace(smartRecommendationDraft.Text) ? "Generate a draft when ready." : "Draft is editable; add it to the report only after reviewing it.");
-            smartRecommendationStatus.ForeColor = pairs == 0 ? Color.FromArgb(181, 118, 35) : Color.FromArgb(60, 145, 76);
+            bool hasObservations = HasFitChangeObservations();
+            smartRecommendationStatus.Text = pairs == 0 && !hasObservations
+                ? "Add measurements or fitter observations to build guidance. Nothing is added automatically."
+                : pairs.ToString() + " measurement pairs plus fitter observations are available. " + (string.IsNullOrWhiteSpace(smartRecommendationDraft.Text) ? "Build an editable draft when ready." : "Guidance only—review and edit before adding it to the report.");
+            smartRecommendationStatus.ForeColor = pairs == 0 && !hasObservations ? Color.FromArgb(181, 118, 35) : Color.FromArgb(60, 145, 76);
         }
 
         private void GenerateSmartRecommendationDraft()
@@ -4510,6 +4517,7 @@ namespace CassetteMotionPro.Workspace
             }
 
             List<string> observations = new List<string>();
+            List<string> recommendations = new List<string>();
             AddSmartChangeObservation(observations, "SaddleHeight", 2, "mm", "Saddle height was raised", "Saddle height was lowered");
             AddSmartChangeObservation(observations, "SaddleSetback", 2, "mm", "The saddle moved forward", "The saddle moved rearward");
             AddSmartChangeObservation(observations, "SaddleTipToGripReach", 3, "mm", "Saddle-to-grip reach increased", "Saddle-to-grip reach decreased");
@@ -4521,34 +4529,98 @@ namespace CassetteMotionPro.Workspace
             AddSmartChangeObservation(observations, "TorsoAngle", 1, "°", "Body reach angle increased", "Body reach angle decreased");
             AddSmartChangeObservation(observations, "ShoulderAngle", 1, "°", "Back angle became more upright", "Back angle became lower");
 
+            AddFitChangeRecommendation(recommendations, "SaddleHeight", 2, "Recheck knee extension, pelvic stability, and pedaling control after the saddle-height change.");
+            AddFitChangeRecommendation(recommendations, "SaddleSetback", 2, "Confirm weight distribution, hip stability, and access to the controls after the saddle-position change.");
+            AddFitChangeRecommendation(recommendations, "SaddleTipToGripReach", 3, "Recheck hand pressure, shoulder relaxation, and the rider's ability to sustain the revised reach.");
+            AddFitChangeRecommendation(recommendations, "HandlebarX", 3, "Review hand pressure and upper-body relaxation after the horizontal handlebar change.");
+            AddFitChangeRecommendation(recommendations, "HandlebarY", 3, "Review neck, shoulder, breathing, and control feedback after the handlebar-height change.");
+            AddFitChangeRecommendation(recommendations, "KneeAngle", 1, "Confirm knee extension through a complete pedal cycle using the approved camera view and rider feedback.");
+            AddFitChangeRecommendation(recommendations, "HipAngle", 1, "Review hip closure through the pedal cycle and confirm the rider can maintain the position comfortably.");
+            AddFitChangeRecommendation(recommendations, "AnkleAngle", 1, "Review the ankle pattern across several pedal cycles instead of relying on a single frame.");
+            AddFitChangeRecommendation(recommendations, "TorsoAngle", 1, "Confirm the revised body reach supports relaxed control, breathing, and the rider's stated goals.");
+            AddFitChangeRecommendation(recommendations, "ShoulderAngle", 1, "Confirm the revised back angle can be sustained without unwanted neck, shoulder, or hand tension.");
+            AddObservationBasedRecommendations(recommendations);
+
             int availablePairs = CountSmartRecommendationPairs();
-            if (availablePairs == 0)
+            if (availablePairs == 0 && !HasFitChangeObservations())
             {
-                MessageBox.Show(this, "Enter at least one matching Before and After measurement first.", "Smart Recommendations", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, "Enter at least one Before/After measurement or fitter observation first.", "Fit Change Recommendations", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
             System.Text.StringBuilder draft = new System.Text.StringBuilder();
-            draft.AppendLine("Draft Before / After observations:");
-            if (observations.Count == 0)
-                draft.AppendLine("• The recorded Before and After measurements show only small changes.");
-            else
+            draft.AppendLine("FIT CHANGE RECOMMENDATION DRAFT");
+            draft.AppendLine("Guidance only — fitter review required — not a diagnosis.");
+            draft.AppendLine();
+            draft.AppendLine("Recorded changes:");
+            if (observations.Count > 0)
             {
                 foreach (string observation in observations)
                     draft.AppendLine("• " + observation);
             }
+            else
+                draft.AppendLine("• No measurement change exceeded the review threshold; recommendations below use the fitter's written observations.");
 
             draft.AppendLine();
-            draft.AppendLine("Suggested follow-up:");
-            draft.AppendLine("• Confirm comfort, control, and pedaling response with the rider before treating the changes as final.");
-            draft.AppendLine("• Recheck the same camera view and crank position if any measurement does not match what was observed during the fit.");
-            draft.AppendLine("• Reassess after the rider has completed an appropriate adaptation period, especially if several contact points changed.");
+            draft.AppendLine("Editable recommendations:");
+            if (recommendations.Count == 0)
+                draft.AppendLine("• Confirm comfort, control, and pedaling response with the rider before treating the fit changes as final.");
+            else
+            {
+                foreach (string recommendation in recommendations)
+                    draft.AppendLine("• " + recommendation);
+            }
+            draft.AppendLine("• Recheck measurements using the same camera view and crank position when comparison evidence is uncertain.");
+            draft.AppendLine("• Reassess after an appropriate adaptation period and revise this guidance using the rider's feedback.");
             draft.AppendLine();
-            draft.Append("Fitter note: Review and edit this draft before including it in the client report. These observations describe recorded changes and are not a diagnosis.");
+            draft.Append("Fitter note: Edit or remove any statement that does not match the session. Persistent, worsening, or medically concerning symptoms should be evaluated by an appropriate healthcare professional.");
 
             smartRecommendationDraft.Text = draft.ToString();
+            currentSession.FitChangeRecommendationDraft = smartRecommendationDraft.Text;
+            SaveCurrentSession();
             RefreshSmartRecommendationStatus();
-            UpdateSaveHint("Smart Before/After draft generated. Review it before adding it to the report.");
+            UpdateSaveHint("Editable fit-change guidance created and saved with this session. Review it before adding it to the report.");
+        }
+
+        private bool HasFitChangeObservations()
+        {
+            return !string.IsNullOrWhiteSpace(txtGoals.Text) ||
+                !string.IsNullOrWhiteSpace(txtNotes.Text) ||
+                !string.IsNullOrWhiteSpace(txtFitSummaryKeyFindings.Text) ||
+                !string.IsNullOrWhiteSpace(txtFitSummaryChangesMade.Text);
+        }
+
+        private void AddFitChangeRecommendation(List<string> recommendations, string key, double minimumChange, string recommendation)
+        {
+            double before;
+            double after;
+            if (!TryParseMeasurementNumber(GetMeasurementText(key + "Before"), out before) || !TryParseMeasurementNumber(GetMeasurementText(key + "After"), out after))
+                return;
+            if (Math.Abs(after - before) >= minimumChange && !recommendations.Contains(recommendation))
+                recommendations.Add(recommendation);
+        }
+
+        private void AddObservationBasedRecommendations(List<string> recommendations)
+        {
+            string source = (txtGoals.Text + " " + txtNotes.Text + " " + txtFitSummaryKeyFindings.Text + " " + txtFitSummaryChangesMade.Text).ToLowerInvariant();
+            AddKeywordRecommendation(recommendations, source, new string[] { "knee", "kneecap" }, "Use the rider's knee feedback with repeat video and approved measurements to guide any further adjustment.");
+            AddKeywordRecommendation(recommendations, source, new string[] { "hand", "wrist", "shoulder", "neck" }, "Recheck hand pressure, wrist position, shoulder relaxation, and control access during the follow-up ride.");
+            AddKeywordRecommendation(recommendations, source, new string[] { "saddle", "seat", "sit bone" }, "Recheck saddle comfort, support, and pelvic stability after the rider has spent time in the revised position.");
+            AddKeywordRecommendation(recommendations, source, new string[] { "foot", "cleat", "ankle" }, "Review cleat and foot position together with the rider's pedaling pattern before making another change.");
+            AddKeywordRecommendation(recommendations, source, new string[] { "pain", "injury", "numb", "tingling" }, "Document the rider's reported symptoms and recommend appropriate clinical evaluation if they persist, worsen, or fall outside bike-fitting scope.");
+        }
+
+        private void AddKeywordRecommendation(List<string> recommendations, string source, string[] keywords, string recommendation)
+        {
+            foreach (string keyword in keywords)
+            {
+                if (source.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    if (!recommendations.Contains(recommendation))
+                        recommendations.Add(recommendation);
+                    return;
+                }
+            }
         }
 
         private int CountSmartRecommendationPairs()
@@ -5490,6 +5562,7 @@ namespace CassetteMotionPro.Workspace
             txtFitSummaryKeyFindings.Text = session.FitSummaryKeyFindings ?? string.Empty;
             txtFitSummaryChangesMade.Text = session.FitSummaryChangesMade ?? string.Empty;
             txtFitSummaryRecommendations.Text = session.FitSummaryRecommendations ?? string.Empty;
+            smartRecommendationDraft.Text = session.FitChangeRecommendationDraft ?? string.Empty;
             txtFitSummaryFollowUp.Text = session.FitSummaryFollowUp ?? string.Empty;
             txtHandoffWhatToSend.Text = session.HandoffWhatToSend ?? string.Empty;
             txtHandoffClientMessage.Text = session.HandoffClientMessage ?? string.Empty;
@@ -6128,6 +6201,7 @@ namespace CassetteMotionPro.Workspace
             currentSession.FitSummaryKeyFindings = txtFitSummaryKeyFindings.Text.Trim();
             currentSession.FitSummaryChangesMade = txtFitSummaryChangesMade.Text.Trim();
             currentSession.FitSummaryRecommendations = txtFitSummaryRecommendations.Text.Trim();
+            currentSession.FitChangeRecommendationDraft = smartRecommendationDraft.Text.Trim();
             currentSession.FitSummaryFollowUp = txtFitSummaryFollowUp.Text.Trim();
             currentSession.HandoffWhatToSend = txtHandoffWhatToSend.Text.Trim();
             currentSession.HandoffClientMessage = txtHandoffClientMessage.Text.Trim();

@@ -35,6 +35,7 @@ namespace CassetteMotionPro.Workspace
         public string FitSummaryKeyFindings { get; set; }
         public string FitSummaryChangesMade { get; set; }
         public string FitSummaryRecommendations { get; set; }
+        public string FitChangeRecommendationDraft { get; set; }
         public string FitSummaryFollowUp { get; set; }
         public string HandoffWhatToSend { get; set; }
         public string HandoffClientMessage { get; set; }
