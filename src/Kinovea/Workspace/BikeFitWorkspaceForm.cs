@@ -1127,13 +1127,7 @@ namespace CassetteMotionPro.Workspace
             addFollowUp.Click += delegate { AddSmartDraftToSummary(txtFitSummaryFollowUp, "Follow-up plan"); };
             Button clearDraft = CreateButton("Clear Draft", false);
             clearDraft.Size = new Size(110, 36);
-            clearDraft.Click += delegate
-            {
-                smartRecommendationDraft.Clear();
-                if (currentSession != null)
-                    SaveCurrentSession();
-                RefreshSmartRecommendationStatus();
-            };
+            clearDraft.Click += delegate { ClearSmartRecommendationDraft(); };
             recommendationActions.Controls.Add(generateSuggestions);
             recommendationActions.Controls.Add(addRecommendations);
             recommendationActions.Controls.Add(addFollowUp);
@@ -4662,9 +4656,43 @@ namespace CassetteMotionPro.Workspace
 
             string existing = destination.Text.Trim();
             destination.Text = string.IsNullOrEmpty(existing) ? draft : existing + Environment.NewLine + Environment.NewLine + draft;
+            currentSession.FitChangeRecommendationAppliedText = draft;
             SaveCurrentSession();
             UpdateReportBuilderStatus();
             UpdateSaveHint("Reviewed smart draft added to " + destinationName + ".");
+        }
+
+        private void ClearSmartRecommendationDraft()
+        {
+            string currentDraft = smartRecommendationDraft.Text.Trim();
+            string appliedDraft = currentSession == null ? string.Empty : (currentSession.FitChangeRecommendationAppliedText ?? string.Empty).Trim();
+
+            RemoveRecommendationDraftFrom(txtFitSummaryRecommendations, currentDraft);
+            RemoveRecommendationDraftFrom(txtFitSummaryFollowUp, currentDraft);
+            if (!string.Equals(appliedDraft, currentDraft, StringComparison.Ordinal))
+            {
+                RemoveRecommendationDraftFrom(txtFitSummaryRecommendations, appliedDraft);
+                RemoveRecommendationDraftFrom(txtFitSummaryFollowUp, appliedDraft);
+            }
+
+            smartRecommendationDraft.Clear();
+            if (currentSession != null)
+            {
+                currentSession.FitChangeRecommendationDraft = string.Empty;
+                currentSession.FitChangeRecommendationAppliedText = string.Empty;
+                SaveCurrentSession();
+            }
+            RefreshSmartRecommendationStatus();
+            UpdateReportBuilderStatus();
+            UpdateSaveHint("Fit-change draft cleared from the editor and report. Other recommendations were kept.");
+        }
+
+        private void RemoveRecommendationDraftFrom(TextBox destination, string draft)
+        {
+            if (destination == null || string.IsNullOrWhiteSpace(draft) || string.IsNullOrWhiteSpace(destination.Text))
+                return;
+
+            destination.Text = destination.Text.Replace(draft, string.Empty).Trim();
         }
 
         private void RefreshCombinedMeasurementReview()
