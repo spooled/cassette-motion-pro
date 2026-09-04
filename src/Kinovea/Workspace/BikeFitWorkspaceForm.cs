@@ -1287,7 +1287,7 @@ namespace CassetteMotionPro.Workspace
         {
             Panel panel = new Panel();
             panel.Dock = DockStyle.Top;
-            panel.Height = 610;
+            panel.Height = 670;
             panel.BackColor = CassetteMotionTheme.Canvas;
             panel.Padding = new Padding(28, 22, 28, 18);
 
@@ -1298,7 +1298,7 @@ namespace CassetteMotionPro.Workspace
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 70));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 130));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 66));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 112));
@@ -1314,7 +1314,7 @@ namespace CassetteMotionPro.Workspace
             title.TextAlign = ContentAlignment.MiddleLeft;
 
             Label description = new Label();
-            description.Text = "One clear path for today’s fitting. Complete each stage from left to right; Cassette Motion Pro keeps every save tied to the active client session.";
+            description.Text = "One assisted path: Intake → Record → Track → Measure → Approve → Report → Follow-up. Cassette Motion Pro keeps every save tied to the active client session.";
             description.Dock = DockStyle.Fill;
             description.ForeColor = CassetteMotionTheme.Muted;
 
@@ -1324,26 +1324,41 @@ namespace CassetteMotionPro.Workspace
             buttons.WrapContents = true;
             buttons.Padding = new Padding(0, 8, 0, 6);
 
-            Button clientInfo = CreateButton("1  CLIENT + SESSION", true);
-            clientInfo.Size = new Size(160, 46);
+            Button clientInfo = CreateButton("1  INTAKE", true);
+            clientInfo.Size = new Size(125, 46);
             clientInfo.Click += delegate { SelectFitSessionStart(); };
 
-            Button video = CreateButton("2  VIDEO STUDIO", false);
-            video.Size = new Size(150, 46);
-            video.Click += delegate { PrepareAndSelectVideoAnalysis(); };
+            Button video = CreateButton("2  RECORD", false);
+            video.Size = new Size(125, 46);
+            video.Click += delegate { OpenDualLiveCapture(); };
 
-            Button measurements = CreateButton("3  MEASUREMENTS", false);
-            measurements.Size = new Size(165, 46);
+            Button tracking = CreateButton("3  TRACK", false);
+            tracking.Size = new Size(125, 46);
+            tracking.Click += delegate { SelectWorkspaceTab("Body Angles"); };
+
+            Button measurements = CreateButton("4  MEASURE", false);
+            measurements.Size = new Size(125, 46);
             measurements.Click += delegate { SelectWorkspaceTab("Guided Measurements"); };
 
-            Button report = CreateButton("4  REPORT", false);
-            report.Size = new Size(130, 46);
+            Button approve = CreateButton("5  APPROVE", false);
+            approve.Size = new Size(125, 46);
+            approve.Click += delegate { SelectWorkspaceTab("Finalize Fit"); };
+
+            Button report = CreateButton("6  REPORT", false);
+            report.Size = new Size(125, 46);
             report.Click += delegate { SelectWorkspaceTab("Report Builder"); };
+
+            Button followUp = CreateButton("7  FOLLOW-UP", false);
+            followUp.Size = new Size(135, 46);
+            followUp.Click += delegate { AddClientFollowUp(); };
 
             buttons.Controls.Add(clientInfo);
             buttons.Controls.Add(video);
+            buttons.Controls.Add(tracking);
             buttons.Controls.Add(measurements);
+            buttons.Controls.Add(approve);
             buttons.Controls.Add(report);
+            buttons.Controls.Add(followUp);
 
             fitDayHomeStatus.Dock = DockStyle.Fill;
             fitDayHomeStatus.ForeColor = CassetteMotionTheme.Warning;
@@ -1376,7 +1391,7 @@ namespace CassetteMotionPro.Workspace
             {
                 fitDayAdvancedPanel.Visible = !fitDayAdvancedPanel.Visible;
                 advancedRow.Height = fitDayAdvancedPanel.Visible ? 180 : 0;
-                panel.Height = fitDayAdvancedPanel.Visible ? 790 : 610;
+                panel.Height = fitDayAdvancedPanel.Visible ? 850 : 670;
                 moreOptions.Text = fitDayAdvancedPanel.Visible ? "Hide Options" : "More Options + Folders";
             };
 
@@ -4901,9 +4916,30 @@ namespace CassetteMotionPro.Workspace
 
         private string GetFitDayHomeProgressText()
         {
-            return GetFitDayReadinessText() + " · " + GetReadinessSnapshotText() + Environment.NewLine +
+            return GetAssistedFitWorkflowProgressText() + Environment.NewLine +
                 GetActiveSaveTargetShortText() + Environment.NewLine +
                 GetNextFitDayHint();
+        }
+
+        private string GetAssistedFitWorkflowProgressText()
+        {
+            int ready = 0;
+            if (IsClientFlowStageReady()) ready++;
+            if (HasBeforeAfterVideos()) ready++;
+            if (HasTrackingWorkflowEvidence()) ready++;
+            if (HasCompleteMeasurementWorkflow()) ready++;
+            if (HasFitterApprovalContent()) ready++;
+            if (HasGeneratedClientReport()) ready++;
+            if (HasFollowUpPlan()) ready++;
+
+            return "ASSISTED FIT  " + ready.ToString() + "/7 complete · " +
+                FormatCompactReadiness("Intake", IsClientFlowStageReady()) + "  " +
+                FormatCompactReadiness("Record", HasBeforeAfterVideos()) + "  " +
+                FormatCompactReadiness("Track", HasTrackingWorkflowEvidence()) + "  " +
+                FormatCompactReadiness("Measure", HasCompleteMeasurementWorkflow()) + "  " +
+                FormatCompactReadiness("Approve", HasFitterApprovalContent()) + "  " +
+                FormatCompactReadiness("Report", HasGeneratedClientReport()) + "  " +
+                FormatCompactReadiness("Follow-up", HasFollowUpPlan());
         }
 
         private string GetActiveSaveTargetShortText()
@@ -4966,29 +5002,37 @@ namespace CassetteMotionPro.Workspace
                 return "Next best step: record or save the After video.";
             if (!HasAnalysisCaptureEvidence() && !HasSavedSessionEvidence())
                 return "Next best step: save useful Before / After / Dual evidence from Video Studio.";
-            if (!HasCoreBikeMetrics())
-                return "Next best step: enter Measurements from your Video Studio measurements.";
-            if (!HasReportImage())
-                return "Next best step: choose the report images for the report.";
-            return "Ready: preview the report and make sure the client story looks right.";
+            if (!HasTrackingWorkflowEvidence())
+                return "Next best step: review rider tracking and approve the useful joint points or pedal-cycle evidence.";
+            if (!HasCompleteMeasurementWorkflow())
+                return "Next best step: complete the bike and rider measurements, then run the accuracy review.";
+            if (!HasFitterApprovalContent())
+                return "Next best step: review the fit findings and recommendations, then approve the client story.";
+            if (!HasGeneratedClientReport())
+                return "Next best step: preview and generate the client report.";
+            if (!HasFollowUpPlan())
+                return "Next best step: add the adaptation or follow-up plan for this client.";
+            return "Complete: the fit has intake, media, tracking, measurements, approval, report, and follow-up.";
         }
 
         private string GetFitDayReadinessText()
         {
             int ready = 0;
-            const int total = 6;
+            const int total = 7;
 
-            if (currentSession != null && !string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
+            if (IsClientFlowStageReady())
                 ready++;
-            if (HasMediaFile("BeforeVideoPath"))
+            if (HasBeforeAfterVideos())
                 ready++;
-            if (HasMediaFile("AfterVideoPath"))
+            if (HasTrackingWorkflowEvidence())
                 ready++;
-            if (HasAnalysisCaptureEvidence() || HasSavedSessionEvidence())
+            if (HasCompleteMeasurementWorkflow())
                 ready++;
-            if (HasCoreBikeMetrics())
+            if (HasFitterApprovalContent())
                 ready++;
-            if (HasReportImage())
+            if (HasGeneratedClientReport())
+                ready++;
+            if (HasFollowUpPlan())
                 ready++;
 
             return "Ready check: " + ready + "/" + total + " complete";
@@ -4997,17 +5041,21 @@ namespace CassetteMotionPro.Workspace
         private string GetGuidedFitDayStageText()
         {
             int ready = 0;
-            const int total = 5;
+            const int total = 7;
 
             if (IsClientFlowStageReady())
                 ready++;
             if (HasBeforeAfterVideos())
                 ready++;
-            if (IsVideoFlowStageReady())
+            if (HasTrackingWorkflowEvidence())
                 ready++;
-            if (IsMeasurementFlowStageReady())
+            if (HasCompleteMeasurementWorkflow())
                 ready++;
-            if (IsReportFlowStageReady())
+            if (HasFitterApprovalContent())
+                ready++;
+            if (HasGeneratedClientReport())
+                ready++;
+            if (HasFollowUpPlan())
                 ready++;
 
             return "Roadmap: " + ready + "/" + total + " steps ready";
@@ -5021,6 +5069,53 @@ namespace CassetteMotionPro.Workspace
         private bool HasBeforeAfterVideos()
         {
             return HasMediaFile("BeforeVideoPath") && HasMediaFile("AfterVideoPath");
+        }
+
+        private bool HasTrackingWorkflowEvidence()
+        {
+            if (currentSession == null)
+                return false;
+
+            return !string.IsNullOrWhiteSpace(currentSession.ShortClipTrackingBeforeSummary) ||
+                !string.IsNullOrWhiteSpace(currentSession.ShortClipTrackingAfterSummary) ||
+                !string.IsNullOrWhiteSpace(currentSession.PedalCycleBeforeSummary) ||
+                !string.IsNullOrWhiteSpace(currentSession.PedalCycleAfterSummary) ||
+                !string.IsNullOrWhiteSpace(currentSession.TrackingQualityReviewSummary) ||
+                !string.IsNullOrWhiteSpace(currentSession.SmartMeasurementBeforeSummary) ||
+                !string.IsNullOrWhiteSpace(currentSession.SmartMeasurementAfterSummary);
+        }
+
+        private bool HasCompleteMeasurementWorkflow()
+        {
+            return HasCoreBikeMetrics() && HasAnyBodyAngleMeasurements();
+        }
+
+        private bool HasFitterApprovalContent()
+        {
+            return HasReportImage() && HasReportSummaryContent() &&
+                (!string.IsNullOrWhiteSpace(txtFitSummaryRecommendations.Text) || !string.IsNullOrWhiteSpace(txtFitSummaryFollowUp.Text));
+        }
+
+        private bool HasGeneratedClientReport()
+        {
+            if (!HasActiveFitSession())
+                return false;
+
+            try
+            {
+                string folder = GetSessionReportsFolderPath();
+                return Directory.Exists(folder) && Directory.GetFiles(folder, "*.html", SearchOption.TopDirectoryOnly).Length > 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private bool HasFollowUpPlan()
+        {
+            return !string.IsNullOrWhiteSpace(txtFitSummaryFollowUp.Text) ||
+                (currentSession != null && currentSession.FollowUps != null && currentSession.FollowUps.Count > 0);
         }
 
         private bool IsClientFlowStageReady()
@@ -5105,12 +5200,13 @@ namespace CassetteMotionPro.Workspace
 
         private string GetReadinessSnapshotText()
         {
-            return FormatCompactReadiness("Session", currentSession != null && !string.IsNullOrWhiteSpace(currentSession.StorageFolderName)) + "  " +
-                FormatCompactReadiness("Before", HasMediaFile("BeforeVideoPath")) + "  " +
-                FormatCompactReadiness("After", HasMediaFile("AfterVideoPath")) + "  " +
-                FormatCompactReadiness("Evidence", HasAnalysisCaptureEvidence() || HasSavedSessionEvidence()) + "  " +
-                FormatCompactReadiness("Metrics", HasCoreBikeMetrics()) + "  " +
-                FormatCompactReadiness("Report image", HasReportImage());
+            return FormatCompactReadiness("Intake", IsClientFlowStageReady()) + "  " +
+                FormatCompactReadiness("Record", HasBeforeAfterVideos()) + "  " +
+                FormatCompactReadiness("Track", HasTrackingWorkflowEvidence()) + "  " +
+                FormatCompactReadiness("Measure", HasCompleteMeasurementWorkflow()) + "  " +
+                FormatCompactReadiness("Approve", HasFitterApprovalContent()) + "  " +
+                FormatCompactReadiness("Report", HasGeneratedClientReport()) + "  " +
+                FormatCompactReadiness("Follow-up", HasFollowUpPlan());
         }
 
         private static string FormatCompactReadiness(string label, bool ready)
@@ -5400,7 +5496,7 @@ namespace CassetteMotionPro.Workspace
                 folderAction = delegate { OpenClientFolder(GetSessionVideoViewFolderPath(viewName), viewName + " videos"); };
                 color = Color.FromArgb(181, 118, 35);
             }
-            else if (!HasAnalysisCaptureEvidence())
+            else if (!HasAnalysisCaptureEvidence() && !HasSavedSessionEvidence())
             {
                 message = "Next best step: review the saved videos in Video Studio, then save the best images/videos as Before, After, or Dual evidence.";
                 actionText = "Review Evidence";
@@ -5409,29 +5505,56 @@ namespace CassetteMotionPro.Workspace
                 folderAction = OpenAnalysisCapturesFolder;
                 color = Color.FromArgb(181, 118, 35);
             }
-            else if (!HasCoreBikeMetrics())
+            else if (!HasTrackingWorkflowEvidence())
             {
-                message = "Next best step: enter Measurements from your Video Studio measurements.";
+                message = "Next best step: track the rider, review a short clip or pedal cycle, and approve the useful joint points.";
+                actionText = "Rider Tracking";
+                action = delegate { SelectWorkspaceTab("Body Angles"); };
+                folderActionText = "Captures";
+                folderAction = OpenAnalysisCapturesFolder;
+                color = Color.FromArgb(181, 118, 35);
+            }
+            else if (!HasCompleteMeasurementWorkflow())
+            {
+                message = "Next best step: complete the bike metrics and rider body measurements, then run the calibration accuracy test when needed.";
                 actionText = "Measurements";
-                action = delegate { SelectWorkspaceTab("Bike Metrics"); };
+                action = delegate { SelectWorkspaceTab("Guided Measurements"); };
                 folderActionText = "Session File";
                 folderAction = delegate { OpenClientFolder(GetSessionRecordFolderPath(), "Session record"); };
                 color = Color.FromArgb(181, 118, 35);
             }
-            else if (!HasReportImage())
+            else if (!HasFitterApprovalContent())
             {
-                message = "Next best step: choose the report images — Before, After, or Dual — so the report has the right visuals.";
-                actionText = "Report Images";
-                action = delegate { SelectWorkspaceTab("Report Images"); };
+                message = "Next best step: review measurements and evidence, then approve or edit the fit recommendations.";
+                actionText = "Fitter Approval";
+                action = delegate { SelectWorkspaceTab("Finalize Fit"); };
                 folderActionText = "Image Folder";
                 folderAction = delegate { OpenClientFolder(GetSessionReportImagesFolderPath(), "Report images"); };
                 color = Color.FromArgb(181, 118, 35);
             }
-            else
+            else if (!HasGeneratedClientReport())
             {
-                message = "Ready: preview the report and confirm everything looks right.";
+                message = "Next best step: preview the approved client story and generate the report.";
                 actionText = "Preview Report";
                 action = delegate { PreviewReport_Click(this, EventArgs.Empty); };
+                folderActionText = "Reports";
+                folderAction = delegate { OpenClientFolder(GetSessionReportsFolderPath(), "Reports"); };
+                color = Color.FromArgb(60, 145, 76);
+            }
+            else if (!HasFollowUpPlan())
+            {
+                message = "Next best step: add the rider's adaptation plan or schedule a follow-up check-in.";
+                actionText = "Add Follow-up";
+                action = AddClientFollowUp;
+                folderActionText = "Reports";
+                folderAction = delegate { OpenClientFolder(GetSessionReportsFolderPath(), "Reports"); };
+                color = Color.FromArgb(181, 118, 35);
+            }
+            else
+            {
+                message = "Fit workflow complete: intake, recording, tracking, measurements, fitter approval, report, and follow-up are ready.";
+                actionText = "Open Dashboard";
+                action = delegate { SelectWorkspaceTab(FitDayHomeTabName); };
                 folderActionText = "Reports";
                 folderAction = delegate { OpenClientFolder(GetSessionReportsFolderPath(), "Reports"); };
                 color = Color.FromArgb(60, 145, 76);
