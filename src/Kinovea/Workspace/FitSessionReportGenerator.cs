@@ -20,7 +20,7 @@ namespace CassetteMotionPro.Workspace
     public static class FitSessionReportGenerator
     {
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "0.70.0";
+        private const string ReportVersion = "0.71.0";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
 
         private static StudioSettings ReportSettings { get { return StudioSettingsRepository.Current; } }
@@ -190,6 +190,7 @@ namespace CassetteMotionPro.Workspace
             AddSummarySection(text, "After pedal-cycle review", session.PedalCycleAfterSummary);
             AddSummarySection(text, "Tracking and camera quality", session.TrackingQualityReviewSummary);
             AddSummarySection(text, "Tracking calibration and accuracy", session.TrackingCalibrationAccuracySummary);
+            AddSummarySection(text, "Assisted workflow recovery review", session.AssistedWorkflowRecoverySummary);
             AddSummarySection(text, "Before smart measurement frames", session.SmartMeasurementBeforeSummary);
             AddSummarySection(text, "After smart measurement frames", session.SmartMeasurementAfterSummary);
             AddSummarySection(text, "Before assisted bike landmarks", session.AssistedBikeLandmarksBeforeSummary);
@@ -748,6 +749,13 @@ namespace CassetteMotionPro.Workspace
                 html.AppendLine("<h2>Tracking Calibration and Accuracy</h2>");
                 html.AppendLine("<div class=\"section-kicker\">Known-dimension accuracy and repeatability check confirmed by the fitter.</div>");
                 html.AppendLine("<div class=\"note\">" + Encode(session.TrackingCalibrationAccuracySummary) + "</div>");
+            }
+
+            if (!string.IsNullOrWhiteSpace(session.AssistedWorkflowRecoverySummary))
+            {
+                html.AppendLine("<h2>Assisted Workflow Review</h2>");
+                html.AppendLine("<div class=\"section-kicker\">Saved workflow recovery check, including fitter-approved skipped stages.</div>");
+                html.AppendLine("<div class=\"note\">" + Encode(session.AssistedWorkflowRecoverySummary) + "</div>");
             }
 
             if (!string.IsNullOrWhiteSpace(session.SmartMeasurementBeforeSummary) || !string.IsNullOrWhiteSpace(session.SmartMeasurementAfterSummary))

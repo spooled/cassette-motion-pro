@@ -1326,31 +1326,31 @@ namespace CassetteMotionPro.Workspace
 
             Button clientInfo = CreateButton("1  INTAKE", true);
             clientInfo.Size = new Size(125, 46);
-            clientInfo.Click += delegate { SelectFitSessionStart(); };
+            clientInfo.Click += delegate { RunAssistedWorkflowStage("Intake", SelectFitSessionStart); };
 
             Button video = CreateButton("2  RECORD", false);
             video.Size = new Size(125, 46);
-            video.Click += delegate { OpenDualLiveCapture(); };
+            video.Click += delegate { RunAssistedWorkflowStage("Record", OpenDualLiveCapture); };
 
             Button tracking = CreateButton("3  TRACK", false);
             tracking.Size = new Size(125, 46);
-            tracking.Click += delegate { SelectWorkspaceTab("Body Angles"); };
+            tracking.Click += delegate { RunAssistedWorkflowStage("Track", delegate { SelectWorkspaceTab("Body Angles"); }); };
 
             Button measurements = CreateButton("4  MEASURE", false);
             measurements.Size = new Size(125, 46);
-            measurements.Click += delegate { SelectWorkspaceTab("Guided Measurements"); };
+            measurements.Click += delegate { RunAssistedWorkflowStage("Measure", delegate { SelectWorkspaceTab("Guided Measurements"); }); };
 
             Button approve = CreateButton("5  APPROVE", false);
             approve.Size = new Size(125, 46);
-            approve.Click += delegate { SelectWorkspaceTab("Finalize Fit"); };
+            approve.Click += delegate { RunAssistedWorkflowStage("Approve", delegate { SelectWorkspaceTab("Finalize Fit"); }); };
 
             Button report = CreateButton("6  REPORT", false);
             report.Size = new Size(125, 46);
-            report.Click += delegate { SelectWorkspaceTab("Report Builder"); };
+            report.Click += delegate { RunAssistedWorkflowStage("Report", delegate { SelectWorkspaceTab("Report Builder"); }); };
 
             Button followUp = CreateButton("7  FOLLOW-UP", false);
             followUp.Size = new Size(135, 46);
-            followUp.Click += delegate { AddClientFollowUp(); };
+            followUp.Click += delegate { RunAssistedWorkflowStage("Follow-up", AddClientFollowUp); };
 
             buttons.Controls.Add(clientInfo);
             buttons.Controls.Add(video);
@@ -1383,6 +1383,22 @@ namespace CassetteMotionPro.Workspace
             fitDayPrimaryAction.Margin = new Padding(0, 9, 0, 9);
             fitDayPrimaryAction.Click += delegate { RunNextBestFitDayStep(); };
 
+            FlowLayoutPanel primaryActions = new FlowLayoutPanel();
+            primaryActions.Dock = DockStyle.Fill;
+            primaryActions.FlowDirection = FlowDirection.LeftToRight;
+            primaryActions.WrapContents = true;
+            primaryActions.Controls.Add(fitDayPrimaryAction);
+            Button resume = CreateButton("Resume Last Stage", false);
+            resume.Size = new Size(165, 42);
+            resume.Margin = new Padding(8, 9, 0, 9);
+            resume.Click += delegate { ResumeAssistedWorkflow(); };
+            Button recovery = CreateButton("Workflow Check", false);
+            recovery.Size = new Size(150, 42);
+            recovery.Margin = new Padding(8, 9, 0, 9);
+            recovery.Click += delegate { ShowAssistedWorkflowRecovery(); };
+            primaryActions.Controls.Add(resume);
+            primaryActions.Controls.Add(recovery);
+
             Button moreOptions = CreateButton("More Options + Folders", false);
             moreOptions.Dock = DockStyle.Left;
             moreOptions.Width = 190;
@@ -1403,7 +1419,7 @@ namespace CassetteMotionPro.Workspace
             layout.Controls.Add(description, 0, 1);
             layout.Controls.Add(buttons, 0, 2);
             layout.Controls.Add(fitDayHomeStatus, 0, 3);
-            layout.Controls.Add(fitDayPrimaryAction, 0, 4);
+            layout.Controls.Add(primaryActions, 0, 4);
             layout.Controls.Add(fitDayHomeReadiness, 0, 5);
             layout.Controls.Add(moreOptions, 0, 6);
             layout.Controls.Add(fitDayAdvancedPanel, 0, 7);
@@ -4921,25 +4937,202 @@ namespace CassetteMotionPro.Workspace
                 GetNextFitDayHint();
         }
 
+        private void RunAssistedWorkflowStage(string stage, Action action)
+        {
+            SaveAssistedWorkflowRecoveryPoint(stage);
+            if (action != null)
+                action();
+            if (HasActiveFitSession())
+                SaveAssistedWorkflowRecoveryPoint(stage);
+            UpdateWorkflowChecklist();
+        }
+
+        private void SaveAssistedWorkflowRecoveryPoint(string stage)
+        {
+            if (!HasActiveFitSession())
+                return;
+            currentSession.AssistedWorkflowLastStage = stage ?? string.Empty;
+            currentSession.AssistedWorkflowLastSavedUtc = DateTime.UtcNow;
+            SaveCurrentSession();
+        }
+
+        private void ResumeAssistedWorkflow()
+        {
+            if (!HasActiveFitSession())
+            {
+                SelectFitSessionStart();
+                return;
+            }
+
+            string stage = string.IsNullOrWhiteSpace(currentSession.AssistedWorkflowLastStage) ? GetNextIncompleteWorkflowStage() : currentSession.AssistedWorkflowLastStage;
+            OpenAssistedWorkflowStage(stage);
+            UpdateSaveHint("Resumed the assisted workflow at " + stage + ". Progress was last saved " + FormatRecoveryTime(currentSession.AssistedWorkflowLastSavedUtc) + ".");
+        }
+
+        private void OpenAssistedWorkflowStage(string stage)
+        {
+            if (string.Equals(stage, "Intake", StringComparison.OrdinalIgnoreCase)) SelectFitSessionStart();
+            else if (string.Equals(stage, "Record", StringComparison.OrdinalIgnoreCase)) OpenDualLiveCapture();
+            else if (string.Equals(stage, "Track", StringComparison.OrdinalIgnoreCase)) SelectWorkspaceTab("Body Angles");
+            else if (string.Equals(stage, "Measure", StringComparison.OrdinalIgnoreCase)) SelectWorkspaceTab("Guided Measurements");
+            else if (string.Equals(stage, "Approve", StringComparison.OrdinalIgnoreCase)) SelectWorkspaceTab("Finalize Fit");
+            else if (string.Equals(stage, "Report", StringComparison.OrdinalIgnoreCase)) SelectWorkspaceTab("Report Builder");
+            else if (string.Equals(stage, "Follow-up", StringComparison.OrdinalIgnoreCase)) AddClientFollowUp();
+            else SelectWorkspaceTab(FitDayHomeTabName);
+        }
+
+        private void ShowAssistedWorkflowRecovery()
+        {
+            if (!HasActiveFitSession())
+            {
+                MessageBox.Show(this, "Create or open a client fit session first.", "Workflow Recovery", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                SelectFitSessionStart();
+                return;
+            }
+
+            string summary = BuildAssistedWorkflowRecoverySummary();
+            currentSession.AssistedWorkflowRecoverySummary = summary;
+            repository.Save(currentSession);
+            using (AssistedWorkflowRecoveryForm form = new AssistedWorkflowRecoveryForm(summary, GetNextIncompleteWorkflowStage()))
+            {
+                if (form.ShowDialog(this) != DialogResult.OK)
+                    return;
+                SetWorkflowStageSkipped(form.SelectedStage, !form.ClearSkip, form.SkipNote);
+                SaveAssistedWorkflowRecoveryPoint(form.SelectedStage);
+                currentSession.AssistedWorkflowRecoverySummary = BuildAssistedWorkflowRecoverySummary();
+                repository.Save(currentSession);
+                UpdateSaveHint(form.ClearSkip ? form.SelectedStage + " was restored to the assisted workflow." : form.SelectedStage + " was skipped with a fitter note.");
+            }
+        }
+
+        private string BuildAssistedWorkflowRecoverySummary()
+        {
+            System.Text.StringBuilder text = new System.Text.StringBuilder();
+            text.AppendLine("ASSISTED WORKFLOW TEST SUMMARY");
+            text.AppendLine("Last stage: " + (string.IsNullOrWhiteSpace(currentSession.AssistedWorkflowLastStage) ? "Not recorded" : currentSession.AssistedWorkflowLastStage));
+            text.AppendLine("Last autosave: " + FormatRecoveryTime(currentSession.AssistedWorkflowLastSavedUtc));
+            text.AppendLine();
+            AppendRecoveryStage(text, "Intake", IsClientFlowStageReady(), "Open the client session and enter rider goals.");
+            AppendRecoveryStage(text, "Record", HasBeforeAfterVideos(), GetMissingMediaRecoveryText());
+            AppendRecoveryStage(text, "Track", HasTrackingWorkflowEvidence(), "Approve rider tracking, pedal-cycle, or tracking-quality evidence.");
+            AppendRecoveryStage(text, "Measure", HasCompleteMeasurementWorkflow(), "Complete core bike metrics and at least one rider body measurement.");
+            AppendRecoveryStage(text, "Approve", HasFitterApprovalContent(), "Choose a report image and review the summary and recommendations.");
+            AppendRecoveryStage(text, "Report", HasGeneratedClientReport(), GetReportRecoveryText());
+            AppendRecoveryStage(text, "Follow-up", HasFollowUpPlan(), "Add an adaptation plan or client follow-up entry.");
+            if (!string.IsNullOrWhiteSpace(currentSession.AssistedWorkflowSkipNotes))
+            {
+                text.AppendLine();
+                text.AppendLine("SKIP NOTES");
+                text.AppendLine(currentSession.AssistedWorkflowSkipNotes.Trim());
+            }
+            return text.ToString();
+        }
+
+        private void AppendRecoveryStage(System.Text.StringBuilder text, string stage, bool actualReady, string recovery)
+        {
+            bool skipped = IsWorkflowStageSkipped(stage);
+            text.AppendLine((actualReady ? "✓ READY   " : skipped ? "↷ SKIPPED " : "○ CHECK   ") + stage + " — " + (actualReady ? "Completed." : skipped ? "Skipped by fitter; see note below." : recovery));
+        }
+
+        private string GetMissingMediaRecoveryText()
+        {
+            List<string> missing = new List<string>();
+            AddMissingWorkflowFile(missing, "Before video", currentSession.BeforeVideoPath);
+            AddMissingWorkflowFile(missing, "After video", currentSession.AfterVideoPath);
+            return missing.Count == 0 ? "Save both Before and After videos." : string.Join(" ", missing.ToArray());
+        }
+
+        private static void AddMissingWorkflowFile(List<string> missing, string label, string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                missing.Add(label + " has not been selected.");
+            else if (!File.Exists(path))
+                missing.Add(label + " was moved or deleted: " + path);
+        }
+
+        private string GetReportRecoveryText()
+        {
+            if (currentSession.AssistedWorkflowReportGeneratedUtc != DateTime.MinValue && currentSession.ModifiedUtc > currentSession.AssistedWorkflowReportGeneratedUtc.AddSeconds(5))
+                return "The session changed after the last report; preview and generate it again.";
+            return "Preview and generate the approved client report.";
+        }
+
+        private static string FormatRecoveryTime(DateTime utc)
+        {
+            return utc == DateTime.MinValue ? "Not recorded" : utc.ToLocalTime().ToString("MMM d, yyyy h:mm tt");
+        }
+
+        private bool IsWorkflowStageSkipped(string stage)
+        {
+            if (currentSession == null || string.IsNullOrWhiteSpace(stage))
+                return false;
+            string token = "|" + stage + "|";
+            return (currentSession.AssistedWorkflowSkippedStages ?? string.Empty).IndexOf(token, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private bool IsWorkflowStageSatisfied(string stage, bool actualReady)
+        {
+            return actualReady || IsWorkflowStageSkipped(stage);
+        }
+
+        private void SetWorkflowStageSkipped(string stage, bool skipped, string note)
+        {
+            string token = "|" + stage + "|";
+            string values = currentSession.AssistedWorkflowSkippedStages ?? string.Empty;
+            values = values.Replace(token, string.Empty);
+            if (skipped)
+                values += token;
+            currentSession.AssistedWorkflowSkippedStages = values;
+            if (skipped)
+                currentSession.AssistedWorkflowSkipNotes = ((currentSession.AssistedWorkflowSkipNotes ?? string.Empty).Trim() + Environment.NewLine + stage + ": " + note).Trim();
+            else
+                currentSession.AssistedWorkflowSkipNotes = RemoveWorkflowSkipNote(currentSession.AssistedWorkflowSkipNotes, stage);
+        }
+
+        private static string RemoveWorkflowSkipNote(string notes, string stage)
+        {
+            if (string.IsNullOrWhiteSpace(notes))
+                return string.Empty;
+            List<string> kept = new List<string>();
+            foreach (string line in notes.Split(new string[] { "\r\n", "\n" }, StringSplitOptions.None))
+            {
+                if (!line.TrimStart().StartsWith(stage + ":", StringComparison.OrdinalIgnoreCase))
+                    kept.Add(line);
+            }
+            return string.Join(Environment.NewLine, kept.ToArray()).Trim();
+        }
+
+        private string GetNextIncompleteWorkflowStage()
+        {
+            if (!IsWorkflowStageSatisfied("Intake", IsClientFlowStageReady())) return "Intake";
+            if (!IsWorkflowStageSatisfied("Record", HasBeforeAfterVideos())) return "Record";
+            if (!IsWorkflowStageSatisfied("Track", HasTrackingWorkflowEvidence())) return "Track";
+            if (!IsWorkflowStageSatisfied("Measure", HasCompleteMeasurementWorkflow())) return "Measure";
+            if (!IsWorkflowStageSatisfied("Approve", HasFitterApprovalContent())) return "Approve";
+            if (!IsWorkflowStageSatisfied("Report", HasGeneratedClientReport())) return "Report";
+            if (!IsWorkflowStageSatisfied("Follow-up", HasFollowUpPlan())) return "Follow-up";
+            return "Dashboard";
+        }
+
         private string GetAssistedFitWorkflowProgressText()
         {
             int ready = 0;
-            if (IsClientFlowStageReady()) ready++;
-            if (HasBeforeAfterVideos()) ready++;
-            if (HasTrackingWorkflowEvidence()) ready++;
-            if (HasCompleteMeasurementWorkflow()) ready++;
-            if (HasFitterApprovalContent()) ready++;
-            if (HasGeneratedClientReport()) ready++;
-            if (HasFollowUpPlan()) ready++;
+            if (IsWorkflowStageSatisfied("Intake", IsClientFlowStageReady())) ready++;
+            if (IsWorkflowStageSatisfied("Record", HasBeforeAfterVideos())) ready++;
+            if (IsWorkflowStageSatisfied("Track", HasTrackingWorkflowEvidence())) ready++;
+            if (IsWorkflowStageSatisfied("Measure", HasCompleteMeasurementWorkflow())) ready++;
+            if (IsWorkflowStageSatisfied("Approve", HasFitterApprovalContent())) ready++;
+            if (IsWorkflowStageSatisfied("Report", HasGeneratedClientReport())) ready++;
+            if (IsWorkflowStageSatisfied("Follow-up", HasFollowUpPlan())) ready++;
 
             return "ASSISTED FIT  " + ready.ToString() + "/7 complete · " +
-                FormatCompactReadiness("Intake", IsClientFlowStageReady()) + "  " +
-                FormatCompactReadiness("Record", HasBeforeAfterVideos()) + "  " +
-                FormatCompactReadiness("Track", HasTrackingWorkflowEvidence()) + "  " +
-                FormatCompactReadiness("Measure", HasCompleteMeasurementWorkflow()) + "  " +
-                FormatCompactReadiness("Approve", HasFitterApprovalContent()) + "  " +
-                FormatCompactReadiness("Report", HasGeneratedClientReport()) + "  " +
-                FormatCompactReadiness("Follow-up", HasFollowUpPlan());
+                FormatCompactReadiness("Intake", IsWorkflowStageSatisfied("Intake", IsClientFlowStageReady())) + "  " +
+                FormatCompactReadiness("Record", IsWorkflowStageSatisfied("Record", HasBeforeAfterVideos())) + "  " +
+                FormatCompactReadiness("Track", IsWorkflowStageSatisfied("Track", HasTrackingWorkflowEvidence())) + "  " +
+                FormatCompactReadiness("Measure", IsWorkflowStageSatisfied("Measure", HasCompleteMeasurementWorkflow())) + "  " +
+                FormatCompactReadiness("Approve", IsWorkflowStageSatisfied("Approve", HasFitterApprovalContent())) + "  " +
+                FormatCompactReadiness("Report", IsWorkflowStageSatisfied("Report", HasGeneratedClientReport())) + "  " +
+                FormatCompactReadiness("Follow-up", IsWorkflowStageSatisfied("Follow-up", HasFollowUpPlan()));
         }
 
         private string GetActiveSaveTargetShortText()
@@ -4994,23 +5187,23 @@ namespace CassetteMotionPro.Workspace
         {
             if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.StorageFolderName))
                 return "Next best step: click + New Session on the left or choose an existing session, then Save before opening Video Studio.";
-            if (!HasFitGoals())
+            if (!HasFitGoals() && !IsWorkflowStageSkipped("Intake"))
                 return "Next best step: enter rider goals before you start making fit changes.";
-            if (!HasMediaFile("BeforeVideoPath"))
+            if (!HasMediaFile("BeforeVideoPath") && !IsWorkflowStageSkipped("Record"))
                 return "Next best step: record or save the Before video.";
-            if (!HasMediaFile("AfterVideoPath"))
+            if (!HasMediaFile("AfterVideoPath") && !IsWorkflowStageSkipped("Record"))
                 return "Next best step: record or save the After video.";
-            if (!HasAnalysisCaptureEvidence() && !HasSavedSessionEvidence())
+            if (!HasAnalysisCaptureEvidence() && !HasSavedSessionEvidence() && !IsWorkflowStageSkipped("Record"))
                 return "Next best step: save useful Before / After / Dual evidence from Video Studio.";
-            if (!HasTrackingWorkflowEvidence())
+            if (!HasTrackingWorkflowEvidence() && !IsWorkflowStageSkipped("Track"))
                 return "Next best step: review rider tracking and approve the useful joint points or pedal-cycle evidence.";
-            if (!HasCompleteMeasurementWorkflow())
+            if (!HasCompleteMeasurementWorkflow() && !IsWorkflowStageSkipped("Measure"))
                 return "Next best step: complete the bike and rider measurements, then run the accuracy review.";
-            if (!HasFitterApprovalContent())
+            if (!HasFitterApprovalContent() && !IsWorkflowStageSkipped("Approve"))
                 return "Next best step: review the fit findings and recommendations, then approve the client story.";
-            if (!HasGeneratedClientReport())
+            if (!HasGeneratedClientReport() && !IsWorkflowStageSkipped("Report"))
                 return "Next best step: preview and generate the client report.";
-            if (!HasFollowUpPlan())
+            if (!HasFollowUpPlan() && !IsWorkflowStageSkipped("Follow-up"))
                 return "Next best step: add the adaptation or follow-up plan for this client.";
             return "Complete: the fit has intake, media, tracking, measurements, approval, report, and follow-up.";
         }
@@ -5020,19 +5213,19 @@ namespace CassetteMotionPro.Workspace
             int ready = 0;
             const int total = 7;
 
-            if (IsClientFlowStageReady())
+            if (IsWorkflowStageSatisfied("Intake", IsClientFlowStageReady()))
                 ready++;
-            if (HasBeforeAfterVideos())
+            if (IsWorkflowStageSatisfied("Record", HasBeforeAfterVideos()))
                 ready++;
-            if (HasTrackingWorkflowEvidence())
+            if (IsWorkflowStageSatisfied("Track", HasTrackingWorkflowEvidence()))
                 ready++;
-            if (HasCompleteMeasurementWorkflow())
+            if (IsWorkflowStageSatisfied("Measure", HasCompleteMeasurementWorkflow()))
                 ready++;
-            if (HasFitterApprovalContent())
+            if (IsWorkflowStageSatisfied("Approve", HasFitterApprovalContent()))
                 ready++;
-            if (HasGeneratedClientReport())
+            if (IsWorkflowStageSatisfied("Report", HasGeneratedClientReport()))
                 ready++;
-            if (HasFollowUpPlan())
+            if (IsWorkflowStageSatisfied("Follow-up", HasFollowUpPlan()))
                 ready++;
 
             return "Ready check: " + ready + "/" + total + " complete";
@@ -5043,19 +5236,19 @@ namespace CassetteMotionPro.Workspace
             int ready = 0;
             const int total = 7;
 
-            if (IsClientFlowStageReady())
+            if (IsWorkflowStageSatisfied("Intake", IsClientFlowStageReady()))
                 ready++;
-            if (HasBeforeAfterVideos())
+            if (IsWorkflowStageSatisfied("Record", HasBeforeAfterVideos()))
                 ready++;
-            if (HasTrackingWorkflowEvidence())
+            if (IsWorkflowStageSatisfied("Track", HasTrackingWorkflowEvidence()))
                 ready++;
-            if (HasCompleteMeasurementWorkflow())
+            if (IsWorkflowStageSatisfied("Measure", HasCompleteMeasurementWorkflow()))
                 ready++;
-            if (HasFitterApprovalContent())
+            if (IsWorkflowStageSatisfied("Approve", HasFitterApprovalContent()))
                 ready++;
-            if (HasGeneratedClientReport())
+            if (IsWorkflowStageSatisfied("Report", HasGeneratedClientReport()))
                 ready++;
-            if (HasFollowUpPlan())
+            if (IsWorkflowStageSatisfied("Follow-up", HasFollowUpPlan()))
                 ready++;
 
             return "Roadmap: " + ready + "/" + total + " steps ready";
@@ -5104,7 +5297,10 @@ namespace CassetteMotionPro.Workspace
             try
             {
                 string folder = GetSessionReportsFolderPath();
-                return Directory.Exists(folder) && Directory.GetFiles(folder, "*.html", SearchOption.TopDirectoryOnly).Length > 0;
+                bool hasReport = Directory.Exists(folder) && Directory.GetFiles(folder, "*.html", SearchOption.TopDirectoryOnly).Length > 0;
+                bool currentEnough = currentSession.AssistedWorkflowReportGeneratedUtc != DateTime.MinValue &&
+                    currentSession.ModifiedUtc <= currentSession.AssistedWorkflowReportGeneratedUtc.AddSeconds(5);
+                return hasReport && currentEnough;
             }
             catch
             {
@@ -5200,13 +5396,13 @@ namespace CassetteMotionPro.Workspace
 
         private string GetReadinessSnapshotText()
         {
-            return FormatCompactReadiness("Intake", IsClientFlowStageReady()) + "  " +
-                FormatCompactReadiness("Record", HasBeforeAfterVideos()) + "  " +
-                FormatCompactReadiness("Track", HasTrackingWorkflowEvidence()) + "  " +
-                FormatCompactReadiness("Measure", HasCompleteMeasurementWorkflow()) + "  " +
-                FormatCompactReadiness("Approve", HasFitterApprovalContent()) + "  " +
-                FormatCompactReadiness("Report", HasGeneratedClientReport()) + "  " +
-                FormatCompactReadiness("Follow-up", HasFollowUpPlan());
+            return FormatCompactReadiness("Intake", IsWorkflowStageSatisfied("Intake", IsClientFlowStageReady())) + "  " +
+                FormatCompactReadiness("Record", IsWorkflowStageSatisfied("Record", HasBeforeAfterVideos())) + "  " +
+                FormatCompactReadiness("Track", IsWorkflowStageSatisfied("Track", HasTrackingWorkflowEvidence())) + "  " +
+                FormatCompactReadiness("Measure", IsWorkflowStageSatisfied("Measure", HasCompleteMeasurementWorkflow())) + "  " +
+                FormatCompactReadiness("Approve", IsWorkflowStageSatisfied("Approve", HasFitterApprovalContent())) + "  " +
+                FormatCompactReadiness("Report", IsWorkflowStageSatisfied("Report", HasGeneratedClientReport())) + "  " +
+                FormatCompactReadiness("Follow-up", IsWorkflowStageSatisfied("Follow-up", HasFollowUpPlan()));
         }
 
         private static string FormatCompactReadiness(string label, bool ready)
@@ -5476,7 +5672,7 @@ namespace CassetteMotionPro.Workspace
                 folderAction = SelectFitSessionStart;
                 color = Color.FromArgb(181, 118, 35);
             }
-            else if (!HasFitGoals())
+            else if (!HasFitGoals() && !IsWorkflowStageSkipped("Intake"))
             {
                 message = "Next best step: enter rider goals first. This keeps the fit focused before you start changing the bike.";
                 actionText = "Open Goals";
@@ -5485,7 +5681,7 @@ namespace CassetteMotionPro.Workspace
                 folderAction = delegate { SelectWorkspaceTab("Client Files"); };
                 color = Color.FromArgb(181, 118, 35);
             }
-            else if (!HasMediaFile("BeforeVideoPath") || !HasMediaFile("AfterVideoPath"))
+            else if ((!HasMediaFile("BeforeVideoPath") || !HasMediaFile("AfterVideoPath")) && !IsWorkflowStageSkipped("Record"))
             {
                 bool beforeMissing = !HasMediaFile("BeforeVideoPath");
                 string viewName = beforeMissing ? "Before" : "After";
@@ -5496,7 +5692,7 @@ namespace CassetteMotionPro.Workspace
                 folderAction = delegate { OpenClientFolder(GetSessionVideoViewFolderPath(viewName), viewName + " videos"); };
                 color = Color.FromArgb(181, 118, 35);
             }
-            else if (!HasAnalysisCaptureEvidence() && !HasSavedSessionEvidence())
+            else if (!HasAnalysisCaptureEvidence() && !HasSavedSessionEvidence() && !IsWorkflowStageSkipped("Record"))
             {
                 message = "Next best step: review the saved videos in Video Studio, then save the best images/videos as Before, After, or Dual evidence.";
                 actionText = "Review Evidence";
@@ -5505,7 +5701,7 @@ namespace CassetteMotionPro.Workspace
                 folderAction = OpenAnalysisCapturesFolder;
                 color = Color.FromArgb(181, 118, 35);
             }
-            else if (!HasTrackingWorkflowEvidence())
+            else if (!HasTrackingWorkflowEvidence() && !IsWorkflowStageSkipped("Track"))
             {
                 message = "Next best step: track the rider, review a short clip or pedal cycle, and approve the useful joint points.";
                 actionText = "Rider Tracking";
@@ -5514,7 +5710,7 @@ namespace CassetteMotionPro.Workspace
                 folderAction = OpenAnalysisCapturesFolder;
                 color = Color.FromArgb(181, 118, 35);
             }
-            else if (!HasCompleteMeasurementWorkflow())
+            else if (!HasCompleteMeasurementWorkflow() && !IsWorkflowStageSkipped("Measure"))
             {
                 message = "Next best step: complete the bike metrics and rider body measurements, then run the calibration accuracy test when needed.";
                 actionText = "Measurements";
@@ -5523,7 +5719,7 @@ namespace CassetteMotionPro.Workspace
                 folderAction = delegate { OpenClientFolder(GetSessionRecordFolderPath(), "Session record"); };
                 color = Color.FromArgb(181, 118, 35);
             }
-            else if (!HasFitterApprovalContent())
+            else if (!HasFitterApprovalContent() && !IsWorkflowStageSkipped("Approve"))
             {
                 message = "Next best step: review measurements and evidence, then approve or edit the fit recommendations.";
                 actionText = "Fitter Approval";
@@ -5532,7 +5728,7 @@ namespace CassetteMotionPro.Workspace
                 folderAction = delegate { OpenClientFolder(GetSessionReportImagesFolderPath(), "Report images"); };
                 color = Color.FromArgb(181, 118, 35);
             }
-            else if (!HasGeneratedClientReport())
+            else if (!HasGeneratedClientReport() && !IsWorkflowStageSkipped("Report"))
             {
                 message = "Next best step: preview the approved client story and generate the report.";
                 actionText = "Preview Report";
@@ -5541,7 +5737,7 @@ namespace CassetteMotionPro.Workspace
                 folderAction = delegate { OpenClientFolder(GetSessionReportsFolderPath(), "Reports"); };
                 color = Color.FromArgb(60, 145, 76);
             }
-            else if (!HasFollowUpPlan())
+            else if (!HasFollowUpPlan() && !IsWorkflowStageSkipped("Follow-up"))
             {
                 message = "Next best step: add the rider's adaptation plan or schedule a follow-up check-in.";
                 actionText = "Add Follow-up";
@@ -5575,8 +5771,13 @@ namespace CassetteMotionPro.Workspace
         private void RunNextBestFitDayStep()
         {
             UpdateNextRecommendedStep();
+            string stage = GetNextIncompleteWorkflowStage();
+            SaveAssistedWorkflowRecoveryPoint(stage);
             if (nextRecommendedStepActionHandler != null)
                 nextRecommendedStepActionHandler();
+
+            if (HasActiveFitSession())
+                SaveAssistedWorkflowRecoveryPoint(stage);
 
             UpdateWorkflowChecklist();
             UpdateFitCommandCenterStatus();
@@ -6192,6 +6393,7 @@ namespace CassetteMotionPro.Workspace
                     return;
 
                 string reportPath = FitSessionReportGenerator.Generate(client, currentSession);
+                MarkAssistedWorkflowReportGenerated();
                 UpdateSaveHint("Report saved to this session’s Reports folder.");
                 MessageBox.Show(this,
                     "The report was saved in this fit session’s Reports folder.\n\n" + reportPath,
@@ -6214,6 +6416,7 @@ namespace CassetteMotionPro.Workspace
                     return;
 
                 string reportPath = FitSessionReportGenerator.Generate(client, currentSession);
+                MarkAssistedWorkflowReportGenerated();
                 Process.Start(reportPath);
                 UpdateSaveHint("Report preview opened. Use Print / Save PDF after reviewing it.");
             }
@@ -6232,6 +6435,7 @@ namespace CassetteMotionPro.Workspace
                     return;
 
                 string packageFolder = FitSessionReportGenerator.GeneratePackage(client, currentSession);
+                MarkAssistedWorkflowReportGenerated();
                 Process.Start(packageFolder);
                 UpdateSaveHint("Report package created and opened.");
                 MessageBox.Show(this,
@@ -6257,6 +6461,7 @@ namespace CassetteMotionPro.Workspace
                     return;
 
                 string zipPath = FitSessionReportGenerator.GeneratePackageZip(client, currentSession);
+                MarkAssistedWorkflowReportGenerated();
                 Process.Start(Path.GetDirectoryName(zipPath));
                 UpdateSaveHint("Zipped report package created in this session’s Reports folder.");
                 MessageBox.Show(this,
@@ -6276,6 +6481,17 @@ namespace CassetteMotionPro.Workspace
         {
             string folderPath = HasActiveFitSession() ? GetSessionReportsFolderPath() : client.ReportsPath;
             OpenClientFolder(folderPath, HasActiveFitSession() ? "Active session reports" : "Reports");
+        }
+
+        private void MarkAssistedWorkflowReportGenerated()
+        {
+            if (currentSession == null)
+                return;
+            currentSession.AssistedWorkflowReportGeneratedUtc = DateTime.UtcNow;
+            currentSession.AssistedWorkflowLastStage = "Report";
+            currentSession.AssistedWorkflowLastSavedUtc = DateTime.UtcNow;
+            repository.Save(currentSession);
+            UpdateWorkflowChecklist();
         }
 
         private void OpenClientFolder(string folderPath, string folderName)

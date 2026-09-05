@@ -38,6 +38,12 @@ namespace CassetteMotionPro.Workspace
         public string FitChangeRecommendationDraft { get; set; }
         public string FitChangeRecommendationAppliedText { get; set; }
         public string FitSummaryFollowUp { get; set; }
+        public string AssistedWorkflowLastStage { get; set; }
+        public string AssistedWorkflowSkippedStages { get; set; }
+        public string AssistedWorkflowSkipNotes { get; set; }
+        public string AssistedWorkflowRecoverySummary { get; set; }
+        public DateTime AssistedWorkflowLastSavedUtc { get; set; }
+        public DateTime AssistedWorkflowReportGeneratedUtc { get; set; }
         public string HandoffWhatToSend { get; set; }
         public string HandoffClientMessage { get; set; }
         public string HandoffHomework { get; set; }
