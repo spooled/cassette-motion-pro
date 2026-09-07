@@ -186,8 +186,8 @@ namespace CassetteMotionPro.Workspace
             }
 
             double offset = rightOne - leftOne;
-            double leftTwo;
-            double rightTwo;
+            double leftTwo = 0;
+            double rightTwo = 0;
             bool hasDriftCheck = TryNumber(eventTwoLeft.Text, out leftTwo) && TryNumber(eventTwoRight.Text, out rightTwo);
             double drift = hasDriftCheck ? (rightTwo - leftTwo) - offset : 0;
             double confidence = hasDriftCheck ? Math.Max(0, 100 - Math.Abs(drift) * 0.5) : 75;
