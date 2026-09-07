@@ -20,7 +20,7 @@ namespace CassetteMotionPro.Workspace
     public static class FitSessionReportGenerator
     {
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "0.72.0";
+        private const string ReportVersion = "0.74.0";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
 
         private static StudioSettings ReportSettings { get { return StudioSettingsRepository.Current; } }
@@ -41,7 +41,7 @@ namespace CassetteMotionPro.Workspace
 
             string fileName = BuildFileName(session);
             string path = Path.Combine(reportsPath, fileName);
-            File.WriteAllText(path, BuildHtml(client, session, ResolveAbsoluteImageSource), Encoding.UTF8);
+            File.WriteAllText(path, BuildHtml(client, session, ResolveAbsoluteImageSource, true), Encoding.UTF8);
             return path;
         }
 
@@ -65,7 +65,7 @@ namespace CassetteMotionPro.Workspace
             File.WriteAllText(reportPath, BuildHtml(client, session, delegate(string imagePath)
             {
                 return ResolvePackageImageSource(imagePath, imageMap);
-            }), Encoding.UTF8);
+            }, true), Encoding.UTF8);
             File.WriteAllText(Path.Combine(packageFolder, "README - Open This First.txt"), BuildPackageReadmeText(client, session), Encoding.UTF8);
             File.WriteAllText(Path.Combine(packageFolder, "Session Summary.txt"), BuildSessionSummaryText(client, session), Encoding.UTF8);
             File.WriteAllText(Path.Combine(packageFolder, "Client Handoff Notes.txt"), BuildHandoffText(client, session), Encoding.UTF8);
@@ -85,6 +85,39 @@ namespace CassetteMotionPro.Workspace
 
             ZipFile.CreateFromDirectory(packageFolder, zipPath);
             return zipPath;
+        }
+
+        public static string GenerateClientPortalPackage(ClientRecord client, FitSessionRecord session)
+        {
+            if (client == null)
+                throw new ArgumentNullException("client");
+            if (session == null)
+                throw new ArgumentNullException("session");
+
+            string reportsPath = GetSessionReportsPath(client, session);
+            string date = session.SessionDate == DateTime.MinValue ? DateTime.Today.ToString("yyyy-MM-dd") : session.SessionDate.ToString("yyyy-MM-dd");
+            string clientName = CleanFileName(string.IsNullOrWhiteSpace(client.DisplayName) ? "Client" : client.DisplayName);
+            string packageFolder = GetUniqueDirectoryPath(Path.Combine(reportsPath, date + " - " + clientName + " - Client Portal Package"));
+            string mediaFolder = Path.Combine(packageFolder, "Approved Media");
+            Directory.CreateDirectory(packageFolder);
+            Directory.CreateDirectory(mediaFolder);
+
+            Dictionary<string, string> imageMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            CopyPackageImages(session, mediaFolder, imageMap, "Approved Media");
+            File.WriteAllText(Path.Combine(packageFolder, "Bike Fit Report.html"), BuildHtml(client, session, delegate(string imagePath)
+            {
+                return ResolvePackageImageSource(imagePath, imageMap);
+            }, false), Encoding.UTF8);
+            File.WriteAllText(Path.Combine(packageFolder, "index.html"), BuildClientPortalIndex(client, session), Encoding.UTF8);
+            File.WriteAllText(Path.Combine(packageFolder, "Recommendations.txt"), BuildClientRecommendationsText(client, session), Encoding.UTF8);
+            File.WriteAllText(Path.Combine(packageFolder, "Follow-Up Plan.txt"), BuildClientFollowUpText(client, session), Encoding.UTF8);
+            File.WriteAllText(Path.Combine(packageFolder, "package.json"), BuildPortalMetadata(client, session, imageMap.Count), Encoding.UTF8);
+
+            string zipPath = packageFolder + ".zip";
+            if (File.Exists(zipPath))
+                zipPath = packageFolder + " " + DateTime.Now.ToString("HHmmss", CultureInfo.InvariantCulture) + ".zip";
+            ZipFile.CreateFromDirectory(packageFolder, zipPath);
+            return packageFolder;
         }
 
         private static string BuildFileName(FitSessionRecord session)
@@ -404,6 +437,15 @@ namespace CassetteMotionPro.Workspace
                 html.AppendLine("<div class=\"contact-label\">" + Encode(label) + "</div><div>" + Encode(value.Trim()) + "</div>");
         }
 
+        private static string BuildStudioContactLine()
+        {
+            List<string> parts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(StudioPhone)) parts.Add(StudioPhone.Trim());
+            if (!string.IsNullOrWhiteSpace(StudioEmail)) parts.Add(StudioEmail.Trim());
+            if (!string.IsNullOrWhiteSpace(StudioWebsite)) parts.Add(StudioWebsite.Trim());
+            return string.Join(" · ", parts.ToArray());
+        }
+
         private static void AddSummaryMetric(StringBuilder text, string label, string before, string after, bool includeBefore)
         {
             if (includeBefore)
@@ -452,6 +494,77 @@ namespace CassetteMotionPro.Workspace
             return (date + " - " + clientName + " - " + title + " - Cassette Motion Pro Report Package").Trim();
         }
 
+        private static string BuildClientPortalIndex(ClientRecord client, FitSessionRecord session)
+        {
+            string sessionDate = session.SessionDate == DateTime.MinValue ? DateTime.Today.ToString("MMMM d, yyyy") : session.SessionDate.ToString("MMMM d, yyyy");
+            StringBuilder html = new StringBuilder();
+            html.AppendLine("<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">");
+            html.AppendLine("<title>" + Encode(client.DisplayName) + " · Bike Fit</title>");
+            html.AppendLine("<style>body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:#e9efea;color:#18201d}.page{max-width:900px;margin:36px auto;background:#fff;border-radius:26px;overflow:hidden;box-shadow:0 24px 70px rgba(10,20,14,.15)}header{padding:42px;background:#111a16;color:#fff}small{color:#b8f34a;font-weight:900;letter-spacing:.16em}h1{font-size:40px;margin:10px 0 6px}header p{color:#c8d2cc}.content{padding:34px}.welcome{font-size:18px;line-height:1.55}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:28px 0}.card{display:block;text-decoration:none;color:#18201d;border:1px solid #dce5df;border-radius:18px;padding:20px;background:#f8faf8}.card strong{display:block;font-size:17px;margin-bottom:7px}.card span{color:#68766f;font-size:14px}.primary{background:#b8f34a;border-color:#92c52f}.contact{border-top:1px solid #e1e7e3;padding-top:22px;color:#68766f;line-height:1.6}@media(max-width:700px){.page{margin:0;border-radius:0}.cards{grid-template-columns:1fr}header,.content{padding:26px}h1{font-size:32px}}</style></head><body>");
+            html.AppendLine("<div class=\"page\"><header><small>CASSETTE MOTION PRO</small><h1>Your Bike Fit</h1><p>" + Encode(client.DisplayName) + " · " + Encode(sessionDate) + " · " + Encode(client.BikeDescription) + "</p></header><div class=\"content\">");
+            html.AppendLine("<div class=\"welcome\">Your completed fit information is organized below. Start with the full report, then review the recommendations and follow-up plan.</div>");
+            html.AppendLine("<div class=\"cards\"><a class=\"card primary\" href=\"Bike Fit Report.html\"><strong>Open Bike Fit Report</strong><span>Measurements, approved images, comparisons, and fit summary.</span></a>");
+            html.AppendLine("<a class=\"card\" href=\"Recommendations.txt\"><strong>Recommendations</strong><span>Client-ready guidance approved by your fitter.</span></a>");
+            html.AppendLine("<a class=\"card\" href=\"Follow-Up Plan.txt\"><strong>Follow-Up Plan</strong><span>Adaptation guidance, homework, and next steps.</span></a></div>");
+            html.AppendLine("<div class=\"contact\"><strong>Prepared by " + Encode(StudioName) + "</strong><br>" + Encode(FitterName) + " · " + Encode(PreparedByRole) + "<br>" + Encode(BuildStudioContactLine()) + "</div>");
+            html.AppendLine("</div></div></body></html>");
+            return html.ToString();
+        }
+
+        private static string BuildClientRecommendationsText(ClientRecord client, FitSessionRecord session)
+        {
+            StringBuilder text = NewClientFileHeader("Recommendations", client, session);
+            text.AppendLine(ValueOrPlaceholder(session.FitSummaryRecommendations));
+            text.AppendLine();
+            text.AppendLine("These recommendations were prepared for this fit session. Contact your fitter before making additional changes if comfort or symptoms change.");
+            return text.ToString();
+        }
+
+        private static string BuildClientFollowUpText(ClientRecord client, FitSessionRecord session)
+        {
+            StringBuilder text = NewClientFileHeader("Follow-Up Plan", client, session);
+            AddHandoffSection(text, "Fit follow-up plan", session.FitSummaryFollowUp);
+            AddHandoffSection(text, "Message from your fitter", session.HandoffClientMessage);
+            AddHandoffSection(text, "Ride instructions / homework", session.HandoffHomework);
+            AddHandoffSection(text, "Next appointment", session.HandoffNextAppointment);
+            text.AppendLine("If discomfort increases or new symptoms appear, stop and contact an appropriate qualified professional.");
+            return text.ToString();
+        }
+
+        private static StringBuilder NewClientFileHeader(string title, ClientRecord client, FitSessionRecord session)
+        {
+            StringBuilder text = new StringBuilder();
+            text.AppendLine("Cassette Motion Pro - " + title);
+            text.AppendLine(new string('=', 22 + title.Length));
+            text.AppendLine();
+            text.AppendLine("Client: " + ValueOrPlaceholder(client.DisplayName));
+            text.AppendLine("Bike: " + ValueOrPlaceholder(client.BikeDescription));
+            text.AppendLine("Session: " + ValueOrPlaceholder(session.DisplayName));
+            text.AppendLine("Date: " + (session.SessionDate == DateTime.MinValue ? DateTime.Today.ToString("MMM d, yyyy") : session.SessionDate.ToString("MMM d, yyyy")));
+            text.AppendLine();
+            return text;
+        }
+
+        private static string BuildPortalMetadata(ClientRecord client, FitSessionRecord session, int approvedImageCount)
+        {
+            string sessionDate = session.SessionDate == DateTime.MinValue ? DateTime.Today.ToString("yyyy-MM-dd") : session.SessionDate.ToString("yyyy-MM-dd");
+            return "{\r\n" +
+                "  \"packageType\": \"cassette-motion-pro-client-portal\",\r\n" +
+                "  \"packageVersion\": \"" + ReportVersion + "\",\r\n" +
+                "  \"createdUtc\": \"" + DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture) + "\",\r\n" +
+                "  \"clientName\": \"" + JsonEscape(client.DisplayName) + "\",\r\n" +
+                "  \"sessionName\": \"" + JsonEscape(session.DisplayName) + "\",\r\n" +
+                "  \"sessionDate\": \"" + sessionDate + "\",\r\n" +
+                "  \"studioName\": \"" + JsonEscape(StudioName) + "\",\r\n" +
+                "  \"approvedImageCount\": " + approvedImageCount.ToString(CultureInfo.InvariantCulture) + "\r\n" +
+                "}\r\n";
+        }
+
+        private static string JsonEscape(string value)
+        {
+            return (value ?? string.Empty).Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n");
+        }
+
         private static string GetUniqueDirectoryPath(string basePath)
         {
             if (!Directory.Exists(basePath))
@@ -469,12 +582,22 @@ namespace CassetteMotionPro.Workspace
 
         private static void CopyPackageImages(FitSessionRecord session, string imagesFolder, Dictionary<string, string> imageMap)
         {
+            CopyPackageImages(session, imagesFolder, imageMap, "Images");
+        }
+
+        private static void CopyPackageImages(FitSessionRecord session, string imagesFolder, Dictionary<string, string> imageMap, string relativeFolder)
+        {
             FitEvidenceBundle evidence = AutomatedFitEvidenceBuilder.Collect(session);
             foreach (FitEvidenceImage image in evidence.Images)
-                CopyPackageImage(image.Path, image.Label, imagesFolder, imageMap);
+                CopyPackageImage(image.Path, image.Label, imagesFolder, imageMap, relativeFolder);
         }
 
         private static void CopyPackageImage(string sourcePath, string label, string imagesFolder, Dictionary<string, string> imageMap)
+        {
+            CopyPackageImage(sourcePath, label, imagesFolder, imageMap, "Images");
+        }
+
+        private static void CopyPackageImage(string sourcePath, string label, string imagesFolder, Dictionary<string, string> imageMap, string relativeFolder)
         {
             if (!HasReportImage(sourcePath))
                 return;
@@ -500,7 +623,7 @@ namespace CassetteMotionPro.Workspace
             }
 
             File.Copy(sourcePath, destinationPath, false);
-            imageMap[sourceKey] = "Images/" + Uri.EscapeDataString(Path.GetFileName(destinationPath)).Replace("%20", " ");
+            imageMap[sourceKey] = relativeFolder + "/" + Uri.EscapeDataString(Path.GetFileName(destinationPath)).Replace("%20", " ");
         }
 
         private static string ResolveAbsoluteImageSource(string imagePath)
@@ -520,7 +643,7 @@ namespace CassetteMotionPro.Workspace
             return ResolveAbsoluteImageSource(imagePath);
         }
 
-        private static string BuildHtml(ClientRecord client, FitSessionRecord session, Func<string, string> imageSourceResolver)
+        private static string BuildHtml(ClientRecord client, FitSessionRecord session, Func<string, string> imageSourceResolver, bool includeFitterNotes)
         {
             StringBuilder html = new StringBuilder();
             FitEvidenceBundle evidence = AutomatedFitEvidenceBuilder.Collect(session);
@@ -883,7 +1006,7 @@ namespace CassetteMotionPro.Workspace
                 html.AppendLine("</div>");
             }
 
-            if (!string.IsNullOrWhiteSpace(session.Notes))
+            if (includeFitterNotes && !string.IsNullOrWhiteSpace(session.Notes))
             {
                 html.AppendLine("<h2>Additional Fit Notes</h2>");
                 html.AppendLine("<div class=\"note\">" + Encode(session.Notes) + "</div>");

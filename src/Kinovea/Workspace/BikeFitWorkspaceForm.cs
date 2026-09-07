@@ -1211,6 +1211,7 @@ namespace CassetteMotionPro.Workspace
             AddReportBuilderButton(actionButtons, "Generate Report", false, delegate { GenerateReport_Click(this, EventArgs.Empty); });
             AddReportBuilderButton(actionButtons, "Create Package", false, delegate { ReportPackage_Click(this, EventArgs.Empty); });
             AddReportBuilderButton(actionButtons, "Create Zip", false, delegate { ZipReportPackage_Click(this, EventArgs.Empty); });
+            AddReportBuilderButton(actionButtons, "Build Client Portal Package", true, delegate { ClientPortalPackage_Click(this, EventArgs.Empty); });
             AddReportBuilderButton(actionButtons, "Open Reports", false, delegate { OpenReports_Click(this, EventArgs.Empty); });
             actions.Controls.Add(actionButtons);
             AddReportBuilderRow(layout, actions, 98);
@@ -6536,6 +6537,49 @@ namespace CassetteMotionPro.Workspace
             {
                 MessageBox.Show(this, "The zipped report package could not be created.\n\n" + exception.Message, "Zip Report Package", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void ClientPortalPackage_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                SaveCurrentSession();
+                if (!ConfirmReportReadinessBeforeOutput("Build client portal package") || !ConfirmClientPortalReadiness())
+                    return;
+
+                string packageFolder = FitSessionReportGenerator.GenerateClientPortalPackage(client, currentSession);
+                MarkAssistedWorkflowReportGenerated();
+                Process.Start(packageFolder);
+                UpdateSaveHint("Client portal package and upload-ready zip created in this session’s Reports folder.");
+                MessageBox.Show(this,
+                    "The client portal package is ready.\n\n" + packageFolder + "\n\n" +
+                    "Open index.html to review the client experience. A matching zip was created beside the folder for future portal upload. Fitter-only internal notes were excluded.",
+                    "Client portal package created",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "The client portal package could not be created.\n\n" + exception.Message, "Client Portal Package", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private bool ConfirmClientPortalReadiness()
+        {
+            List<string> missing = new List<string>();
+            if (string.IsNullOrWhiteSpace(currentSession.FitSummaryRecommendations))
+                missing.Add("Client recommendations");
+            if (string.IsNullOrWhiteSpace(currentSession.FitSummaryFollowUp) && string.IsNullOrWhiteSpace(currentSession.HandoffClientMessage) && string.IsNullOrWhiteSpace(currentSession.HandoffHomework))
+                missing.Add("Client follow-up plan or ride instructions");
+            if (AutomatedFitEvidenceBuilder.Collect(currentSession).Images.Count == 0)
+                missing.Add("At least one approved report image");
+
+            if (missing.Count == 0)
+                return true;
+
+            string detail = "CLIENT PORTAL READINESS\n\nStill missing:\n- " + string.Join("\n- ", missing.ToArray()) +
+                "\n\nThe package can still be created, but these client-facing sections will show as not recorded. Continue?";
+            return MessageBox.Show(this, detail, "Client Portal Package", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes;
         }
 
         private void OpenReports_Click(object sender, EventArgs e)

@@ -5,7 +5,24 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.73.0 Measurement Trend Charts Across Pedal Cycle
+## Current milestone: 0.74.0 Client Portal-Ready Report Package
+
+- Report Builder now includes Build Client Portal Package as a separate, deliberate
+  client-delivery action.
+- A polished offline index page gives the client one simple starting point for the
+  report, recommendations, and follow-up plan.
+- Approved report images, comparison evidence, and pedal-cycle trend charts are
+  copied into a predictable Approved Media folder.
+- Client recommendations and follow-up instructions are exported as clear standalone
+  files while fitter-only internal handoff notes remain excluded.
+- A readiness check warns about missing recommendations, follow-up guidance, or
+  approved images while still leaving the final decision with the fitter.
+- Every package includes portal-friendly metadata with the package version, creation
+  time, client/session identity, session date, studio name, and approved-image count.
+- The app creates both an offline folder and a matching upload-ready zip, allowing the
+  same package format to move into a future online client portal.
+
+## Previous milestone: 0.73.0 Measurement Trend Charts Across Pedal Cycle
 
 - Each completed Before or After pedal-cycle review now plots knee, hip, ankle,
   body-reach, and back-angle values across every fitter-approved checkpoint.
