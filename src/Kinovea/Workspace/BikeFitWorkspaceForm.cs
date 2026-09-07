@@ -3995,6 +3995,8 @@ namespace CassetteMotionPro.Workspace
                         currentSession.PedalCycleBeforeEvidencePath = form.EvidenceImagePath;
                         currentSession.SmartMeasurementBeforeSummary = form.SmartFrameSummary;
                         currentSession.SmartMeasurementBeforeEvidencePath = form.SmartFrameEvidencePath;
+                        currentSession.PedalCycleTrendBeforeSummary = form.TrendSummary;
+                        currentSession.PedalCycleTrendBeforeEvidencePath = form.TrendEvidencePath;
                     }
                     else
                     {
@@ -4002,6 +4004,8 @@ namespace CassetteMotionPro.Workspace
                         currentSession.PedalCycleAfterEvidencePath = form.EvidenceImagePath;
                         currentSession.SmartMeasurementAfterSummary = form.SmartFrameSummary;
                         currentSession.SmartMeasurementAfterEvidencePath = form.SmartFrameEvidencePath;
+                        currentSession.PedalCycleTrendAfterSummary = form.TrendSummary;
+                        currentSession.PedalCycleTrendAfterEvidencePath = form.TrendEvidencePath;
                     }
                     if (!string.IsNullOrWhiteSpace(form.EvidenceImagePath))
                     {
@@ -4009,7 +4013,7 @@ namespace CassetteMotionPro.Workspace
                         chkShowMeasurementReferenceImageInReport.Checked = true;
                     }
                     SaveCurrentSession();
-                    UpdateSaveHint(side + " pedal-cycle positions and five smart measurement frames saved to this fit session.");
+                    UpdateSaveHint(side + " pedal-cycle positions, angle trend chart, and five smart measurement frames saved to this fit session.");
                 }
             }
         }

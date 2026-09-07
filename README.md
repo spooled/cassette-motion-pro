@@ -5,7 +5,22 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.72.0 Dual-Camera Synchronization and Comparison
+## Current milestone: 0.73.0 Measurement Trend Charts Across Pedal Cycle
+
+- Each completed Before or After pedal-cycle review now plots knee, hip, ankle,
+  body-reach, and back-angle values across every fitter-approved checkpoint.
+- Color-coded traces make angle movement through the full revolution easier to review
+  than a minimum/maximum value alone.
+- Top, Bottom, Front, and Rear crank-position markers are shown directly on the trend
+  chart so measurements retain their position context.
+- The chart updates while checkpoints are reviewed and only saves after every point is
+  approved, keeping tracking corrections under fitter control.
+- A client-ready PNG is saved automatically in the active session and included in the
+  approved evidence collection and generated report.
+- Trend charts remain advisory and preserve Kinovea playback, drawing, and precision
+  measurement tools for final professional confirmation.
+
+## Previous milestone: 0.72.0 Dual-Camera Synchronization and Comparison
 
 - Video Studio now includes Sync + Compare Two Cameras for pairing two clips from the
   active client fit session.

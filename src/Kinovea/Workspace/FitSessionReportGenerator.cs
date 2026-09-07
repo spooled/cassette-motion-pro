@@ -188,6 +188,8 @@ namespace CassetteMotionPro.Workspace
             AddSummarySection(text, "After short-clip tracking", session.ShortClipTrackingAfterSummary);
             AddSummarySection(text, "Before pedal-cycle review", session.PedalCycleBeforeSummary);
             AddSummarySection(text, "After pedal-cycle review", session.PedalCycleAfterSummary);
+            AddSummarySection(text, "Before pedal-cycle trends", session.PedalCycleTrendBeforeSummary);
+            AddSummarySection(text, "After pedal-cycle trends", session.PedalCycleTrendAfterSummary);
             AddSummarySection(text, "Tracking and camera quality", session.TrackingQualityReviewSummary);
             AddSummarySection(text, "Tracking calibration and accuracy", session.TrackingCalibrationAccuracySummary);
             AddSummarySection(text, "Dual-camera synchronization", session.DualCameraSynchronizationSummary);
@@ -734,6 +736,17 @@ namespace CassetteMotionPro.Workspace
                         AddReportImage(html, "Before pedal-cycle positions", session.PedalCycleBeforeEvidencePath, false, imageSourceResolver);
                     if (HasReportImage(session.PedalCycleAfterEvidencePath))
                         AddReportImage(html, "After pedal-cycle positions", session.PedalCycleAfterEvidencePath, false, imageSourceResolver);
+                    html.AppendLine("</div>");
+                }
+                if (HasReportImage(session.PedalCycleTrendBeforeEvidencePath) || HasReportImage(session.PedalCycleTrendAfterEvidencePath))
+                {
+                    html.AppendLine("<h3>Angle Trends Across the Pedal Cycle</h3>");
+                    html.AppendLine("<div class=\"section-kicker\">Fitter-approved knee, hip, ankle, body-reach, and back-angle traces across ordered checkpoints.</div>");
+                    html.AppendLine("<div class=\"media-grid\">");
+                    if (HasReportImage(session.PedalCycleTrendBeforeEvidencePath))
+                        AddReportImage(html, "Before pedal-cycle angle trends", session.PedalCycleTrendBeforeEvidencePath, false, imageSourceResolver);
+                    if (HasReportImage(session.PedalCycleTrendAfterEvidencePath))
+                        AddReportImage(html, "After pedal-cycle angle trends", session.PedalCycleTrendAfterEvidencePath, false, imageSourceResolver);
                     html.AppendLine("</div>");
                 }
             }

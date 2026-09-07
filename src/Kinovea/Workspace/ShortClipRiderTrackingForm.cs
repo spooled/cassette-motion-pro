@@ -22,6 +22,7 @@ namespace CassetteMotionPro.Workspace
         private readonly Label frameStatus = new Label();
         private readonly Label quality = new Label();
         private readonly Label ranges = new Label();
+        private readonly PedalCycleTrendChart trendChart = new PedalCycleTrendChart();
         private readonly Button previous = new Button();
         private readonly Button approveNext = new Button();
         private readonly Button finish = new Button();
@@ -35,6 +36,8 @@ namespace CassetteMotionPro.Workspace
         public string EvidenceImagePath { get; private set; }
         public string SmartFrameSummary { get; private set; }
         public string SmartFrameEvidencePath { get; private set; }
+        public string TrendSummary { get; private set; }
+        public string TrendEvidencePath { get; private set; }
 
         public ShortClipRiderTrackingForm(string[] framePaths, string outputDirectory, string side)
             : this(framePaths, outputDirectory, side, false)
@@ -110,9 +113,12 @@ namespace CassetteMotionPro.Workspace
             quality.Height = 115;
             quality.Padding = new Padding(10);
             ranges.Dock = DockStyle.Top;
-            ranges.Height = pedalCycleMode ? 430 : 180;
+            ranges.Height = pedalCycleMode ? 300 : 180;
             ranges.Font = new Font("Consolas", 9.5F, FontStyle.Bold);
             ranges.Padding = new Padding(4, 12, 4, 4);
+            trendChart.Dock = DockStyle.Top;
+            trendChart.Height = pedalCycleMode ? 250 : 0;
+            trendChart.Visible = pedalCycleMode;
 
             ConfigureButton(previous, "Previous Checkpoint", false);
             ConfigureButton(approveNext, "Approve & Track Next", true);
@@ -136,6 +142,7 @@ namespace CassetteMotionPro.Workspace
             panel.Controls.Add(previous);
             panel.Controls.Add(reset);
             panel.Controls.Add(flip);
+            panel.Controls.Add(trendChart);
             panel.Controls.Add(ranges);
             panel.Controls.Add(quality);
             panel.Controls.Add(frameStatus);
@@ -225,6 +232,8 @@ namespace CassetteMotionPro.Workspace
             approveNext.Text = frameIndex == framePaths.Length - 1 ? "Approve Final Checkpoint" : "Approve & Track Next";
             finish.Enabled = frames.Count == framePaths.Length && frames.All(f => f.Approved);
             ranges.Text = BuildRangeText(false);
+            if (pedalCycleMode)
+                trendChart.SetData(CollectValues(), frames.Count == framePaths.Length ? FindCrankPositions() : null, frames.Count(f => f.Approved), framePaths.Length);
         }
 
         private void Finish_Click(object sender, EventArgs e)
@@ -250,6 +259,8 @@ namespace CassetteMotionPro.Workspace
             {
                 SmartFrameSummary = BuildSmartFrameSuggestionText().Replace("\n", "; ");
                 SmartFrameEvidencePath = SaveSmartFrameEvidence();
+                TrendSummary = BuildTrendSummary();
+                TrendEvidencePath = SaveTrendChartEvidence();
             }
             DialogResult = DialogResult.OK;
             Close();
@@ -394,6 +405,36 @@ namespace CassetteMotionPro.Workspace
             return values;
         }
 
+        private string BuildTrendSummary()
+        {
+            Dictionary<string, List<double>> values = CollectValues();
+            return "Approved pedal-cycle trend chart across " + frames.Count.ToString(CultureInfo.InvariantCulture) +
+                " checkpoints. Knee range " + FormatAngle(values["KneeAngle"].Min()) + "–" + FormatAngle(values["KneeAngle"].Max()) +
+                "; hip " + FormatAngle(values["HipAngle"].Min()) + "–" + FormatAngle(values["HipAngle"].Max()) +
+                "; ankle " + FormatAngle(values["AnkleAngle"].Min()) + "–" + FormatAngle(values["AnkleAngle"].Max()) +
+                "; body reach " + FormatAngle(values["TorsoAngle"].Min()) + "–" + FormatAngle(values["TorsoAngle"].Max()) +
+                "; back " + FormatAngle(values["ShoulderAngle"].Min()) + "–" + FormatAngle(values["ShoulderAngle"].Max()) + ".";
+        }
+
+        private string SaveTrendChartEvidence()
+        {
+            Directory.CreateDirectory(outputDirectory);
+            string path = Path.Combine(outputDirectory, side + "-Pedal-Cycle-Trend-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + ".png");
+            using (Bitmap output = new Bitmap(1800, 980))
+            using (Graphics graphics = Graphics.FromImage(output))
+            using (Font title = new Font("Segoe UI", 25F, FontStyle.Bold))
+            using (Font note = new Font("Segoe UI", 12F))
+            using (Brush white = new SolidBrush(Color.White))
+            {
+                graphics.Clear(Color.FromArgb(20, 27, 24));
+                graphics.DrawString(side.ToUpperInvariant() + " PEDAL-CYCLE MEASUREMENT TRENDS", title, white, 34, 24);
+                trendChart.DrawChart(graphics, new Rectangle(34, 92, 1732, 760), CollectValues(), FindCrankPositions(), true);
+                graphics.DrawString("Fitter-approved checkpoints · trends are measurement guidance and remain subject to Kinovea precision review.", note, white, 38, 890);
+                output.Save(path, ImageFormat.Png);
+            }
+            return path;
+        }
+
         private static string RangeLine(string label, Dictionary<string, List<double>> values, string key)
         {
             if (!values.ContainsKey(key) || values[key].Count == 0)
@@ -483,6 +524,120 @@ namespace CassetteMotionPro.Workspace
         }
 
         private static string FormatAngle(double value) { return value.ToString("0.0", CultureInfo.InvariantCulture) + "°"; }
+    }
+
+    internal sealed class PedalCycleTrendChart : Control
+    {
+        private Dictionary<string, List<double>> values;
+        private Dictionary<string, int> crankPositions;
+        private int approvedCount;
+        private int expectedCount;
+
+        public PedalCycleTrendChart()
+        {
+            DoubleBuffered = true;
+            BackColor = Color.FromArgb(247, 249, 247);
+        }
+
+        public void SetData(Dictionary<string, List<double>> values, Dictionary<string, int> crankPositions, int approvedCount, int expectedCount)
+        {
+            this.values = values;
+            this.crankPositions = crankPositions;
+            this.approvedCount = approvedCount;
+            this.expectedCount = expectedCount;
+            Invalidate();
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            if (values == null || approvedCount < 2)
+            {
+                using (Brush brush = new SolidBrush(Color.FromArgb(92, 104, 98)))
+                    e.Graphics.DrawString("Angle trends appear as checkpoints are approved (" + approvedCount + "/" + expectedCount + ").", Font, brush, new RectangleF(12, 18, Math.Max(40, Width - 24), 60));
+                return;
+            }
+            DrawChart(e.Graphics, new Rectangle(8, 8, Math.Max(40, Width - 16), Math.Max(40, Height - 16)), values, crankPositions, false);
+        }
+
+        public void DrawChart(Graphics graphics, Rectangle bounds, Dictionary<string, List<double>> data, Dictionary<string, int> positions, bool large)
+        {
+            if (data == null || data.Count == 0 || data.First().Value.Count < 2)
+                return;
+            graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            Color background = large ? Color.FromArgb(34, 43, 39) : Color.White;
+            using (Brush backgroundBrush = new SolidBrush(background)) graphics.FillRectangle(backgroundBrush, bounds);
+
+            int legendHeight = large ? 82 : 54;
+            Rectangle plot = new Rectangle(bounds.Left + (large ? 82 : 42), bounds.Top + legendHeight, bounds.Width - (large ? 118 : 58), bounds.Height - legendHeight - (large ? 72 : 42));
+            double minimum = data.SelectMany(p => p.Value).Min();
+            double maximum = data.SelectMany(p => p.Value).Max();
+            if (maximum - minimum < 10) { minimum -= 5; maximum += 5; }
+            int count = data.First().Value.Count;
+
+            using (Pen grid = new Pen(large ? Color.FromArgb(75, 91, 83) : Color.FromArgb(222, 228, 224), 1))
+            using (Brush axisBrush = new SolidBrush(large ? Color.White : Color.FromArgb(62, 73, 67)))
+            using (Font axisFont = new Font("Segoe UI", large ? 11F : 7.5F))
+            {
+                for (int row = 0; row <= 4; row++)
+                {
+                    int y = plot.Top + row * plot.Height / 4;
+                    graphics.DrawLine(grid, plot.Left, y, plot.Right, y);
+                    double angle = maximum - row * (maximum - minimum) / 4.0;
+                    graphics.DrawString(angle.ToString("0", CultureInfo.InvariantCulture) + "°", axisFont, axisBrush, bounds.Left + 5, y - 8);
+                }
+                for (int i = 0; i < count; i++)
+                {
+                    int x = plot.Left + i * plot.Width / Math.Max(1, count - 1);
+                    graphics.DrawLine(grid, x, plot.Top, x, plot.Bottom);
+                    graphics.DrawString((i + 1).ToString(CultureInfo.InvariantCulture), axisFont, axisBrush, x - 4, plot.Bottom + 5);
+                }
+            }
+
+            if (positions != null)
+            {
+                using (Font markerFont = new Font("Segoe UI", large ? 10F : 7F, FontStyle.Bold))
+                using (Brush markerBrush = new SolidBrush(large ? Color.FromArgb(184, 243, 74) : Color.FromArgb(72, 111, 21)))
+                using (Pen markerPen = new Pen(large ? Color.FromArgb(184, 243, 74) : Color.FromArgb(130, 172, 55), large ? 2 : 1))
+                {
+                    foreach (KeyValuePair<string, int> marker in positions)
+                    {
+                        int x = plot.Left + marker.Value * plot.Width / Math.Max(1, count - 1);
+                        markerPen.DashStyle = DashStyle.Dash;
+                        graphics.DrawLine(markerPen, x, plot.Top, x, plot.Bottom);
+                        graphics.DrawString(marker.Key, markerFont, markerBrush, x + 3, plot.Top + 3);
+                    }
+                }
+            }
+
+            string[] keys = { "KneeAngle", "HipAngle", "AnkleAngle", "TorsoAngle", "ShoulderAngle" };
+            string[] labels = { "Knee", "Hip", "Ankle", "Body reach", "Back" };
+            Color[] colors = { Color.FromArgb(76, 175, 80), Color.FromArgb(33, 150, 243), Color.FromArgb(255, 152, 0), Color.FromArgb(156, 39, 176), Color.FromArgb(0, 150, 136) };
+            using (Font legendFont = new Font("Segoe UI", large ? 12F : 7.5F, FontStyle.Bold))
+            {
+                for (int series = 0; series < keys.Length; series++)
+                {
+                    List<double> points = data[keys[series]];
+                    using (Pen pen = new Pen(colors[series], large ? 5F : 2F))
+                    using (Brush brush = new SolidBrush(colors[series]))
+                    {
+                        int legendX = bounds.Left + 12 + series * (large ? 310 : Math.Max(58, bounds.Width / 5));
+                        int legendY = bounds.Top + (large ? 28 : 14);
+                        graphics.DrawLine(pen, legendX, legendY + 7, legendX + (large ? 42 : 18), legendY + 7);
+                        graphics.DrawString(labels[series], legendFont, brush, legendX + (large ? 50 : 22), legendY - 2);
+                        PointF[] plotted = new PointF[points.Count];
+                        for (int i = 0; i < points.Count; i++)
+                        {
+                            float x = plot.Left + i * plot.Width / (float)Math.Max(1, points.Count - 1);
+                            float y = plot.Bottom - (float)((points[i] - minimum) / (maximum - minimum) * plot.Height);
+                            plotted[i] = new PointF(x, y);
+                        }
+                        if (plotted.Length > 1) graphics.DrawLines(pen, plotted);
+                        foreach (PointF point in plotted) graphics.FillEllipse(brush, point.X - (large ? 5 : 2), point.Y - (large ? 5 : 2), large ? 10 : 4, large ? 10 : 4);
+                    }
+                }
+            }
+        }
     }
 
     internal class TrackedFrame

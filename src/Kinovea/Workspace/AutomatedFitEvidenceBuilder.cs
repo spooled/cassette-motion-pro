@@ -62,6 +62,8 @@ namespace CassetteMotionPro.Workspace
             AddImage(bundle, "After short-clip rider tracking", session.ShortClipTrackingAfterEvidencePath, "Approved rider tracking");
             AddImage(bundle, "Before pedal-cycle review", session.PedalCycleBeforeEvidencePath, "Approved pedal-cycle review");
             AddImage(bundle, "After pedal-cycle review", session.PedalCycleAfterEvidencePath, "Approved pedal-cycle review");
+            AddImage(bundle, "Before pedal-cycle trend chart", session.PedalCycleTrendBeforeEvidencePath, "Approved pedal-cycle measurement trends");
+            AddImage(bundle, "After pedal-cycle trend chart", session.PedalCycleTrendAfterEvidencePath, "Approved pedal-cycle measurement trends");
             AddImage(bundle, "Before smart measurement frames", session.SmartMeasurementBeforeEvidencePath, "Approved smart-frame review");
             AddImage(bundle, "After smart measurement frames", session.SmartMeasurementAfterEvidencePath, "Approved smart-frame review");
             AddImage(bundle, "Before assisted bike landmarks", session.AssistedBikeLandmarksBeforeEvidencePath, "Fitter-confirmed bike landmarks");
@@ -74,6 +76,7 @@ namespace CassetteMotionPro.Workspace
             bundle.ApprovedWorkflowSummaries = CountValues(new[] {
                 session.ShortClipTrackingBeforeSummary, session.ShortClipTrackingAfterSummary,
                 session.PedalCycleBeforeSummary, session.PedalCycleAfterSummary,
+                session.PedalCycleTrendBeforeSummary, session.PedalCycleTrendAfterSummary,
                 session.SmartMeasurementBeforeSummary, session.SmartMeasurementAfterSummary,
                 session.AssistedBikeLandmarksBeforeSummary, session.AssistedBikeLandmarksAfterSummary,
                 session.TrackingQualityReviewSummary
