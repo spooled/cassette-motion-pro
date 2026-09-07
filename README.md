@@ -5,7 +5,20 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.71.0 Assisted Workflow Testing and Recovery
+## Current milestone: 0.72.0 Dual-Camera Synchronization and Comparison
+
+- Video Studio now includes Sync + Compare Two Cameras for pairing two clips from the
+  active client fit session.
+- Each video keeps a clear camera role such as side, front, drive-side, or rear view.
+- Matching Event 1 timestamps calculate the playback offset between the two cameras.
+- An optional second matching event measures synchronization drift across the clips
+  and produces a visible 0–100 confidence score.
+- Save + Open Pair launches both selected clips in Kinovea's two playback screens for
+  visual alignment and measurement comparison.
+- Synchronization inputs, offset, drift, and confidence stay saved with the client
+  session and appear in the client report for traceability.
+
+## Previous milestone: 0.71.0 Assisted Workflow Testing and Recovery
 
 - The Fit Day Dashboard now saves a recovery point whenever the fitter opens or
   advances an assisted workflow stage.

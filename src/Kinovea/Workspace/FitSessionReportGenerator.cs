@@ -20,7 +20,7 @@ namespace CassetteMotionPro.Workspace
     public static class FitSessionReportGenerator
     {
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "0.71.0";
+        private const string ReportVersion = "0.72.0";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
 
         private static StudioSettings ReportSettings { get { return StudioSettingsRepository.Current; } }
@@ -190,6 +190,7 @@ namespace CassetteMotionPro.Workspace
             AddSummarySection(text, "After pedal-cycle review", session.PedalCycleAfterSummary);
             AddSummarySection(text, "Tracking and camera quality", session.TrackingQualityReviewSummary);
             AddSummarySection(text, "Tracking calibration and accuracy", session.TrackingCalibrationAccuracySummary);
+            AddSummarySection(text, "Dual-camera synchronization", session.DualCameraSynchronizationSummary);
             AddSummarySection(text, "Assisted workflow recovery review", session.AssistedWorkflowRecoverySummary);
             AddSummarySection(text, "Before smart measurement frames", session.SmartMeasurementBeforeSummary);
             AddSummarySection(text, "After smart measurement frames", session.SmartMeasurementAfterSummary);
@@ -749,6 +750,13 @@ namespace CassetteMotionPro.Workspace
                 html.AppendLine("<h2>Tracking Calibration and Accuracy</h2>");
                 html.AppendLine("<div class=\"section-kicker\">Known-dimension accuracy and repeatability check confirmed by the fitter.</div>");
                 html.AppendLine("<div class=\"note\">" + Encode(session.TrackingCalibrationAccuracySummary) + "</div>");
+            }
+
+            if (!string.IsNullOrWhiteSpace(session.DualCameraSynchronizationSummary))
+            {
+                html.AppendLine("<h2>Dual-Camera Synchronization</h2>");
+                html.AppendLine("<div class=\"section-kicker\">Fitter-confirmed matching-event offset and drift review for the paired camera views.</div>");
+                html.AppendLine("<div class=\"note\">" + Encode(session.DualCameraSynchronizationSummary) + "</div>");
             }
 
             if (!string.IsNullOrWhiteSpace(session.AssistedWorkflowRecoverySummary))

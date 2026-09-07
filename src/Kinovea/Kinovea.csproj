@@ -47,7 +47,7 @@
     <PublisherName>Cassette Fit Studio</PublisherName>
     <OpenBrowserOnPublish>false</OpenBrowserOnPublish>
     <ApplicationRevision>0</ApplicationRevision>
-    <ApplicationVersion>0.71.0.0</ApplicationVersion>
+    <ApplicationVersion>0.72.0.0</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
@@ -218,6 +218,9 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Workspace\AssistedWorkflowRecoveryForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Workspace\DualCameraSynchronizationForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Workspace\ImageMeasurementAssistantForm.cs">

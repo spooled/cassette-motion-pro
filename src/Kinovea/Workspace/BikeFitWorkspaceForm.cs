@@ -2728,6 +2728,11 @@ namespace CassetteMotionPro.Workspace
             latestBoth.Click += delegate { UseLatestBothVideos(); };
             comparisons.Controls.Add(latestBoth);
 
+            Button synchronize = CreateButton("Sync + Compare Two Cameras", false);
+            synchronize.Size = new Size(235, 38);
+            synchronize.Click += ShowDualCameraSynchronization;
+            comparisons.Controls.Add(synchronize);
+
             int comparisonRow = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 88));
             table.Controls.Add(comparisons, 1, comparisonRow);
@@ -2796,6 +2801,58 @@ namespace CassetteMotionPro.Workspace
             page.AutoScroll = true;
             page.Controls.Add(table);
             return page;
+        }
+
+        private void ShowDualCameraSynchronization(object sender, EventArgs e)
+        {
+            if (!RequireActiveFitSessionBeforeKinovea("Dual-Camera Synchronization"))
+                return;
+
+            using (DualCameraSynchronizationForm form = new DualCameraSynchronizationForm(
+                GetSessionVideosFolderPath(),
+                currentSession.DualCameraLeftVideoPath,
+                currentSession.DualCameraRightVideoPath,
+                currentSession.DualCameraLeftRole,
+                currentSession.DualCameraRightRole,
+                currentSession.DualCameraEventOneLeftMs,
+                currentSession.DualCameraEventOneRightMs,
+                currentSession.DualCameraEventTwoLeftMs,
+                currentSession.DualCameraEventTwoRightMs))
+            {
+                if (form.ShowDialog(this) != DialogResult.OK)
+                    return;
+
+                currentSession.DualCameraLeftVideoPath = form.LeftVideoPath;
+                currentSession.DualCameraRightVideoPath = form.RightVideoPath;
+                currentSession.DualCameraLeftRole = form.LeftCameraRole;
+                currentSession.DualCameraRightRole = form.RightCameraRole;
+                currentSession.DualCameraEventOneLeftMs = form.EventOneLeftMs;
+                currentSession.DualCameraEventOneRightMs = form.EventOneRightMs;
+                currentSession.DualCameraEventTwoLeftMs = form.EventTwoLeftMs;
+                currentSession.DualCameraEventTwoRightMs = form.EventTwoRightMs;
+                currentSession.DualCameraSynchronizationSummary = form.SynchronizationSummary;
+                SaveCurrentSession();
+                UpdateSaveHint("Dual-camera synchronization saved. " + form.SynchronizationSummary);
+
+                if (form.OpenComparisonRequested)
+                    OpenDualCameraComparison(form.LeftVideoPath, form.RightVideoPath);
+            }
+        }
+
+        private void OpenDualCameraComparison(string first, string second)
+        {
+            if (!ValidateVideo(first) || !ValidateVideo(second))
+                return;
+            PrepareAnalysisCaptureFolder();
+            SetFitCommandCenterMode("Synchronized dual-camera comparison");
+            Close();
+            if (openVideoPair != null)
+                openVideoPair(first, second);
+            else if (openVideo != null)
+            {
+                openVideo(first);
+                openVideo(second);
+            }
         }
 
         private Control BuildCameraProfilePanel()
