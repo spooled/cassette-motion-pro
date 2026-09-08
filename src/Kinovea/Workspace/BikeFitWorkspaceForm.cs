@@ -110,6 +110,11 @@ namespace CassetteMotionPro.Workspace
         private FitSessionRecord currentSession;
         private Action nextRecommendedStepActionHandler;
         private Action nextRecommendedFolderActionHandler;
+        private bool loadingSession;
+        private bool outputInProgress;
+        private string cachedEvidenceFolder;
+        private int cachedEvidenceCount;
+        private DateTime cachedEvidenceUtc = DateTime.MinValue;
         private string fitCommandCenterMode = "Plan";
         private const string FitDayHomeTabName = "Fit Day";
         private const string SessionSetupTabName = "Session Setup";
@@ -131,6 +136,8 @@ namespace CassetteMotionPro.Workspace
             repository = new FitSessionRepository(client);
 
             Text = client.DisplayName + " — Cassette Motion Pro Fit Day";
+            SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
+            KeyPreview = true;
             CassetteMotionTheme.ApplyForm(this);
             ClientSize = new Size(1180, 760);
             MinimumSize = new Size(980, 650);
@@ -139,9 +146,33 @@ namespace CassetteMotionPro.Workspace
             VideoSaveTarget.VideoSaved += VideoSaveTarget_VideoSaved;
             FormClosing += BikeFitWorkspaceForm_FormClosing;
 
+            SuspendLayout();
             BuildInterface();
             ApplyVisualIdentity(this);
+            ResumeLayout(true);
             RefreshSessions(Guid.Empty);
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (keyData == (Keys.Control | Keys.S))
+            {
+                Save_Click(this, EventArgs.Empty);
+                return true;
+            }
+            if (keyData == Keys.F6)
+            {
+                if (nextRecommendedStepActionHandler != null)
+                    nextRecommendedStepActionHandler();
+                UpdateWorkflowChecklist();
+                return true;
+            }
+            if (keyData == (Keys.Control | Keys.D1)) { SelectWorkspaceTab(FitDayHomeTabName); return true; }
+            if (keyData == (Keys.Control | Keys.D2)) { SelectWorkspaceTab(KinoveaVideoTabName); return true; }
+            if (keyData == (Keys.Control | Keys.D3)) { SelectWorkspaceTab("Bike Metrics"); return true; }
+            if (keyData == (Keys.Control | Keys.D4)) { SelectWorkspaceTab("Body Angles"); return true; }
+            if (keyData == (Keys.Control | Keys.D5)) { SelectWorkspaceTab("Report Builder"); return true; }
+            return base.ProcessCmdKey(ref msg, keyData);
         }
 
         private void BuildInterface()
@@ -189,11 +220,22 @@ namespace CassetteMotionPro.Workspace
             activeSessionStatus.Location = new Point(720, 19);
             activeSessionStatus.Anchor = AnchorStyles.Top | AnchorStyles.Right;
 
+            Label shortcuts = new Label();
+            shortcuts.Text = "Ctrl+S Save   ·   F6 Next Step   ·   Ctrl+1–5 Navigate";
+            shortcuts.Font = new Font("Segoe UI", 8F, FontStyle.Bold);
+            shortcuts.ForeColor = Color.FromArgb(175, 187, 181);
+            shortcuts.TextAlign = ContentAlignment.MiddleRight;
+            shortcuts.AutoSize = false;
+            shortcuts.Size = new Size(430, 22);
+            shortcuts.Location = new Point(720, 91);
+            shortcuts.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+
             header.Controls.Add(brandBadge);
             header.Controls.Add(eyebrow);
             header.Controls.Add(title);
             header.Controls.Add(bike);
             header.Controls.Add(activeSessionStatus);
+            header.Controls.Add(shortcuts);
 
             SplitContainer split = new SplitContainer();
             split.Dock = DockStyle.Fill;
@@ -4486,6 +4528,9 @@ namespace CassetteMotionPro.Workspace
 
         private void UpdateWorkflowChecklist()
         {
+            if (loadingSession)
+                return;
+
             foreach (WorkflowChecklistItem item in workflowChecklistItems)
             {
                 bool ready = false;
@@ -4914,7 +4959,7 @@ namespace CassetteMotionPro.Workspace
 
         private void UpdateReportBuilderStatus()
         {
-            if (reportBuilderStatus == null || reportBuilderOutput == null)
+            if (loadingSession || reportBuilderStatus == null || reportBuilderOutput == null)
                 return;
 
             bool hasSession = HasActiveFitSession();
@@ -5889,9 +5934,16 @@ namespace CassetteMotionPro.Workspace
             if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
                 return 0;
 
+            if (string.Equals(cachedEvidenceFolder, folderPath, StringComparison.OrdinalIgnoreCase) &&
+                DateTime.UtcNow - cachedEvidenceUtc < TimeSpan.FromSeconds(3))
+                return cachedEvidenceCount;
+
             try
             {
-                return Directory.GetFiles(folderPath, "*", SearchOption.AllDirectories).Length;
+                cachedEvidenceCount = Directory.GetFiles(folderPath, "*", SearchOption.AllDirectories).Length;
+                cachedEvidenceFolder = folderPath;
+                cachedEvidenceUtc = DateTime.UtcNow;
+                return cachedEvidenceCount;
             }
             catch
             {
@@ -5999,6 +6051,7 @@ namespace CassetteMotionPro.Workspace
 
         private void LoadSession(FitSessionRecord session)
         {
+            loadingSession = true;
             currentSession = session;
             txtTitle.Text = session.Title ?? string.Empty;
             dtpDate.Value = session.SessionDate == DateTime.MinValue ? DateTime.Today : session.SessionDate;
@@ -6074,6 +6127,9 @@ namespace CassetteMotionPro.Workspace
             SelectFitProtocol(string.IsNullOrWhiteSpace(session.FitProtocolBikeType) ? session.FitTemplateBikeType : session.FitProtocolBikeType);
             RefreshCameraProfiles(session.CameraSetupProfileName);
             RefreshClientHistory();
+            loadingSession = false;
+            cachedEvidenceFolder = null;
+            cachedEvidenceUtc = DateTime.MinValue;
             UpdateActiveSessionStatus();
             UpdateWorkflowChecklist();
             RefreshAnalysisCapturesStatus();
@@ -6448,6 +6504,7 @@ namespace CassetteMotionPro.Workspace
 
         private void GenerateReport_Click(object sender, EventArgs e)
         {
+            if (!BeginOutputOperation()) return;
             try
             {
                 SaveCurrentSession();
@@ -6467,10 +6524,12 @@ namespace CassetteMotionPro.Workspace
             {
                 MessageBox.Show(this, "The report could not be created.\n\n" + exception.Message, "Report", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            finally { EndOutputOperation(); }
         }
 
         private void PreviewReport_Click(object sender, EventArgs e)
         {
+            if (!BeginOutputOperation()) return;
             try
             {
                 SaveCurrentSession();
@@ -6486,10 +6545,12 @@ namespace CassetteMotionPro.Workspace
             {
                 MessageBox.Show(this, "The report preview could not be opened.\n\n" + exception.Message, "Report Preview", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            finally { EndOutputOperation(); }
         }
 
         private void ReportPackage_Click(object sender, EventArgs e)
         {
+            if (!BeginOutputOperation()) return;
             try
             {
                 SaveCurrentSession();
@@ -6512,10 +6573,12 @@ namespace CassetteMotionPro.Workspace
             {
                 MessageBox.Show(this, "The report package could not be created.\n\n" + exception.Message, "Report Package", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            finally { EndOutputOperation(); }
         }
 
         private void ZipReportPackage_Click(object sender, EventArgs e)
         {
+            if (!BeginOutputOperation()) return;
             try
             {
                 SaveCurrentSession();
@@ -6537,10 +6600,12 @@ namespace CassetteMotionPro.Workspace
             {
                 MessageBox.Show(this, "The zipped report package could not be created.\n\n" + exception.Message, "Zip Report Package", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            finally { EndOutputOperation(); }
         }
 
         private void ClientPortalPackage_Click(object sender, EventArgs e)
         {
+            if (!BeginOutputOperation()) return;
             try
             {
                 SaveCurrentSession();
@@ -6562,6 +6627,25 @@ namespace CassetteMotionPro.Workspace
             {
                 MessageBox.Show(this, "The client portal package could not be created.\n\n" + exception.Message, "Client Portal Package", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            finally { EndOutputOperation(); }
+        }
+
+        private bool BeginOutputOperation()
+        {
+            if (outputInProgress)
+            {
+                UpdateSaveHint("Please wait—the current report action is still finishing.");
+                return false;
+            }
+            outputInProgress = true;
+            UseWaitCursor = true;
+            return true;
+        }
+
+        private void EndOutputOperation()
+        {
+            outputInProgress = false;
+            UseWaitCursor = false;
         }
 
         private bool ConfirmClientPortalReadiness()
