@@ -22,6 +22,7 @@ namespace CassetteMotionPro.Workspace
     {
         private readonly ClientRecord client;
         private readonly FitSessionRepository repository;
+        private readonly FitSessionRecoveryStore recoveryStore;
         private readonly FitSessionTemplateRepository templateRepository = new FitSessionTemplateRepository();
         private readonly CameraSetupProfileRepository cameraProfileRepository = new CameraSetupProfileRepository();
         private readonly Action<string> openVideo;
@@ -68,6 +69,7 @@ namespace CassetteMotionPro.Workspace
         private readonly TextBox txtHandoffNextAppointment = new TextBox();
         private readonly TextBox txtHandoffInternalNotes = new TextBox();
         private readonly Label saveHint = new Label();
+        private readonly Label autosaveStatus = new Label();
         private readonly Label activeSessionStatus = new Label();
         private readonly Label analysisCapturesStatus = new Label();
         private readonly Label recordingFoldersGuide = new Label();
@@ -112,6 +114,9 @@ namespace CassetteMotionPro.Workspace
         private Action nextRecommendedFolderActionHandler;
         private bool loadingSession;
         private bool outputInProgress;
+        private readonly Timer autosaveTimer = new Timer();
+        private bool hasUnsavedChanges;
+        private string lastSavedFingerprint = string.Empty;
         private string cachedEvidenceFolder;
         private int cachedEvidenceCount;
         private DateTime cachedEvidenceUtc = DateTime.MinValue;
@@ -134,6 +139,7 @@ namespace CassetteMotionPro.Workspace
             this.openProfileDualLiveCaptureFolders = openProfileDualLiveCaptureFolders;
             this.openBodyAngleGuide = openBodyAngleGuide;
             repository = new FitSessionRepository(client);
+            recoveryStore = new FitSessionRecoveryStore(repository.RootPath);
 
             Text = client.DisplayName + " — Cassette Motion Pro Fit Day";
             SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
@@ -151,6 +157,13 @@ namespace CassetteMotionPro.Workspace
             ApplyVisualIdentity(this);
             ResumeLayout(true);
             RefreshSessions(Guid.Empty);
+            OfferCrashRecovery();
+            WireAutosaveEvents(this);
+            lastSavedFingerprint = BuildAutosaveFingerprint();
+            SetAutosaveStatus("Saved", false);
+            autosaveTimer.Interval = 6000;
+            autosaveTimer.Tick += AutosaveTimer_Tick;
+            autosaveTimer.Start();
         }
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
@@ -173,6 +186,141 @@ namespace CassetteMotionPro.Workspace
             if (keyData == (Keys.Control | Keys.D4)) { SelectWorkspaceTab("Body Angles"); return true; }
             if (keyData == (Keys.Control | Keys.D5)) { SelectWorkspaceTab("Report Builder"); return true; }
             return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        private void WireAutosaveEvents(Control parent)
+        {
+            foreach (Control control in parent.Controls)
+            {
+                TextBox textBox = control as TextBox;
+                ComboBox comboBox = control as ComboBox;
+                CheckBox checkBox = control as CheckBox;
+                DateTimePicker datePicker = control as DateTimePicker;
+                TabControl tabs = control as TabControl;
+                if (textBox != null) textBox.TextChanged += AutosaveValueChanged;
+                if (comboBox != null) comboBox.SelectedIndexChanged += AutosaveValueChanged;
+                if (checkBox != null) checkBox.CheckedChanged += AutosaveValueChanged;
+                if (datePicker != null) datePicker.ValueChanged += AutosaveValueChanged;
+                if (tabs != null) tabs.SelectedIndexChanged += AutosaveValueChanged;
+                if (control.HasChildren) WireAutosaveEvents(control);
+            }
+        }
+
+        private void AutosaveValueChanged(object sender, EventArgs e)
+        {
+            if (loadingSession || outputInProgress)
+                return;
+            hasUnsavedChanges = true;
+            SetAutosaveStatus("Unsaved changes", true);
+        }
+
+        private void AutosaveTimer_Tick(object sender, EventArgs e)
+        {
+            if (!hasUnsavedChanges || loadingSession || outputInProgress || currentSession == null)
+                return;
+            string fingerprint = BuildAutosaveFingerprint();
+            if (string.Equals(fingerprint, lastSavedFingerprint, StringComparison.Ordinal))
+            {
+                hasUnsavedChanges = false;
+                SetAutosaveStatus("Saved", false);
+                return;
+            }
+
+            try
+            {
+                SetAutosaveStatus("Saving…", false);
+                SaveCurrentSession();
+                UpdateSaveHint("Autosaved " + DateTime.Now.ToString("h:mm:ss tt") + ".");
+            }
+            catch
+            {
+                hasUnsavedChanges = true;
+                SetAutosaveStatus("Autosave needs attention", true);
+            }
+        }
+
+        private string BuildAutosaveFingerprint()
+        {
+            List<string> values = new List<string>();
+            values.Add(txtTitle.Text);
+            values.Add(dtpDate.Value.Date.ToString("yyyy-MM-dd"));
+            values.Add(Convert.ToString(cmbStatus.SelectedItem));
+            values.Add(txtGoals.Text);
+            values.Add(txtNotes.Text);
+            values.Add(txtFitSummaryMainGoal.Text);
+            values.Add(txtFitSummaryKeyFindings.Text);
+            values.Add(txtFitSummaryChangesMade.Text);
+            values.Add(txtFitSummaryRecommendations.Text);
+            values.Add(smartRecommendationDraft.Text);
+            values.Add(txtFitSummaryFollowUp.Text);
+            values.Add(txtHandoffWhatToSend.Text);
+            values.Add(txtHandoffClientMessage.Text);
+            values.Add(txtHandoffHomework.Text);
+            values.Add(txtHandoffNextAppointment.Text);
+            values.Add(txtHandoffInternalNotes.Text);
+            foreach (TextBox box in mediaBoxes.Values) values.Add(box.Text);
+            foreach (TextBox box in imageBoxes.Values) values.Add(box.Text);
+            foreach (TextBox box in measurementBoxes.Values) values.Add(box.Text);
+            values.Add(chkShowBeforeMeasurementsInReport.Checked.ToString());
+            values.Add(chkShowSideBySideImageInReport.Checked.ToString());
+            values.Add(chkShowBeforeImageInReport.Checked.ToString());
+            values.Add(chkShowAfterImageInReport.Checked.ToString());
+            values.Add(chkShowMeasurementReferenceImageInReport.Checked.ToString());
+            values.Add(chkShowMeasurementCaptureTraceInReport.Checked.ToString());
+            values.Add(GetReportLogoStyle());
+            values.Add(GetCurrentWorkspaceSection());
+            return string.Join("\u001f", values.ToArray());
+        }
+
+        private void SetAutosaveStatus(string text, bool warning)
+        {
+            autosaveStatus.Text = text;
+            autosaveStatus.ForeColor = warning ? Color.FromArgb(255, 197, 92) : Color.FromArgb(184, 243, 74);
+        }
+
+        private string GetCurrentWorkspaceSection()
+        {
+            return GetCurrentWorkspaceSection(editorTabs);
+        }
+
+        private static string GetCurrentWorkspaceSection(TabControl tabs)
+        {
+            if (tabs == null || tabs.SelectedTab == null)
+                return FitDayHomeTabName;
+            foreach (Control control in tabs.SelectedTab.Controls)
+            {
+                TabControl nested = control as TabControl;
+                if (nested != null)
+                    return GetCurrentWorkspaceSection(nested);
+            }
+            return tabs.SelectedTab.Text;
+        }
+
+        private void OfferCrashRecovery()
+        {
+            FitSessionRecord recovered;
+            string workspaceSection;
+            DateTime savedUtc;
+            if (!recoveryStore.TryLoad(out recovered, out workspaceSection, out savedUtc))
+                return;
+
+            DialogResult result = MessageBox.Show(this,
+                "Cassette Motion Pro found a fit-day recovery point from " + savedUtc.ToLocalTime().ToString("MMM d, h:mm tt") + ".\n\n" +
+                "Session: " + recovered.DisplayName + "\n\nRestore it and return to the last workspace section?",
+                "Recover Fit-Day Work",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+            if (result == DialogResult.Yes)
+            {
+                LoadSession(recovered);
+                if (!string.IsNullOrWhiteSpace(workspaceSection))
+                    SelectWorkspaceTab(workspaceSection);
+                UpdateSaveHint("Recovered the last autosaved fit-day session.");
+            }
+            else
+            {
+                recoveryStore.Clear();
+            }
         }
 
         private void BuildInterface()
@@ -230,12 +378,20 @@ namespace CassetteMotionPro.Workspace
             shortcuts.Location = new Point(720, 91);
             shortcuts.Anchor = AnchorStyles.Top | AnchorStyles.Right;
 
+            autosaveStatus.Text = "Saved";
+            autosaveStatus.Font = new Font("Segoe UI", 8F, FontStyle.Bold);
+            autosaveStatus.ForeColor = Color.FromArgb(184, 243, 74);
+            autosaveStatus.AutoSize = false;
+            autosaveStatus.Size = new Size(300, 20);
+            autosaveStatus.Location = new Point(98, 94);
+
             header.Controls.Add(brandBadge);
             header.Controls.Add(eyebrow);
             header.Controls.Add(title);
             header.Controls.Add(bike);
             header.Controls.Add(activeSessionStatus);
             header.Controls.Add(shortcuts);
+            header.Controls.Add(autosaveStatus);
 
             SplitContainer split = new SplitContainer();
             split.Dock = DockStyle.Fill;
@@ -6033,8 +6189,23 @@ namespace CassetteMotionPro.Workspace
             if (sessionList.SelectedItems.Count == 0)
                 return;
             FitSessionRecord selected = sessionList.SelectedItems[0].Tag as FitSessionRecord;
-            if (selected != null)
-                LoadSession(selected);
+            if (selected == null)
+                return;
+
+            if (currentSession != null && currentSession.Id != selected.Id && hasUnsavedChanges)
+            {
+                try
+                {
+                    SaveCurrentSession();
+                }
+                catch (Exception exception)
+                {
+                    MessageBox.Show(this, "The current fit session could not be autosaved before switching.\n\n" + exception.Message,
+                        "Bike Fit Workspace", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+            }
+            LoadSession(selected);
         }
 
         private void BeginNewSession()
@@ -6136,6 +6307,9 @@ namespace CassetteMotionPro.Workspace
             RefreshRecordingFolderGuide();
             UpdateReportImageSaveTarget();
             UpdateVideoSaveTarget();
+            lastSavedFingerprint = BuildAutosaveFingerprint();
+            hasUnsavedChanges = false;
+            SetAutosaveStatus("Saved", false);
         }
 
         private void SetMedia(string key, string value)
@@ -6699,8 +6873,10 @@ namespace CassetteMotionPro.Workspace
 
         private void BikeFitWorkspaceForm_FormClosing(object sender, FormClosingEventArgs e)
         {
+            autosaveTimer.Stop();
             if (currentSession == null)
             {
+                recoveryStore.Clear();
                 ReportImageSaveTarget.ReportImageSaved -= ReportImageSaveTarget_ReportImageSaved;
                 VideoSaveTarget.VideoSaved -= VideoSaveTarget_VideoSaved;
                 return;
@@ -6709,12 +6885,14 @@ namespace CassetteMotionPro.Workspace
             try
             {
                 SaveCurrentSession();
+                recoveryStore.Clear();
                 ReportImageSaveTarget.ReportImageSaved -= ReportImageSaveTarget_ReportImageSaved;
                 VideoSaveTarget.VideoSaved -= VideoSaveTarget_VideoSaved;
             }
             catch (Exception exception)
             {
                 e.Cancel = true;
+                autosaveTimer.Start();
                 MessageBox.Show(this, "The fit session could not be saved.\n\n" + exception.Message, "Bike Fit Workspace", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -6843,6 +7021,10 @@ namespace CassetteMotionPro.Workspace
             currentSession.ShoulderAngleBefore = measurementBoxes["ShoulderAngleBefore"].Text.Trim();
             currentSession.ShoulderAngleAfter = measurementBoxes["ShoulderAngleAfter"].Text.Trim();
             repository.Save(currentSession);
+            recoveryStore.Save(currentSession, GetCurrentWorkspaceSection());
+            lastSavedFingerprint = BuildAutosaveFingerprint();
+            hasUnsavedChanges = false;
+            SetAutosaveStatus("Saved " + DateTime.Now.ToString("h:mm tt"), false);
             UpdateActiveSessionStatus();
             UpdateWorkflowChecklist();
             RefreshRecordingFolderGuide();

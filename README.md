@@ -5,7 +5,22 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.75.0 Real Fit-Day Usability and Performance Pass
+## Current milestone: 0.76.0 Fit-Day Autosave and Crash Recovery
+
+- Fit-session changes are detected quietly and saved after a short pause, without
+  interrupting Kinovea capture, playback, drawing, or report output.
+- The workspace header now shows a simple Saved, Unsaved changes, Saving, or
+  Autosave needs attention status throughout the fitting.
+- Each successful save also creates an independent recovery point containing the
+  active client session and the last workspace section used.
+- After an unexpected shutdown, the next workspace opening offers to restore that
+  recovery point and return the fitter to the same part of the workflow.
+- Switching between fit sessions protects pending changes first, while a normal
+  clean close saves once more and removes the no-longer-needed recovery point.
+- Recovery files stay inside the client's Sessions area and do not replace or alter
+  the normal session record, videos, images, reports, or Kinovea tools.
+
+## Previous milestone: 0.75.0 Real Fit-Day Usability and Performance Pass
 
 - Workspace layout creation is now batched and double-buffered to reduce opening
   flicker and unnecessary repainting on fit-day laptops.
