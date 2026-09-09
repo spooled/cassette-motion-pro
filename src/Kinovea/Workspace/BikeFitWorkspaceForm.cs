@@ -2965,9 +2965,14 @@ namespace CassetteMotionPro.Workspace
             checkCaptures.Size = new Size(190, 38);
             checkCaptures.Click += delegate { CheckSavedAnalysisEvidence(); };
 
+            Button favoriteFrames = CreateButton("Review Favorite Frames", true);
+            favoriteFrames.Size = new Size(205, 38);
+            favoriteFrames.Click += delegate { ReviewFavoriteFrames(); };
+
             analysisActions.Controls.Add(prepare);
             analysisActions.Controls.Add(captures);
             analysisActions.Controls.Add(checkCaptures);
+            analysisActions.Controls.Add(favoriteFrames);
 
             int analysisActionsRow = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 60));
@@ -3814,12 +3819,17 @@ namespace CassetteMotionPro.Workspace
             checkCaptures.Size = new Size(190, 38);
             checkCaptures.Click += delegate { CheckSavedAnalysisEvidence(); };
 
+            Button favoriteFrames = CreateButton("Review Favorite Frames", true);
+            favoriteFrames.Size = new Size(205, 38);
+            favoriteFrames.Click += delegate { ReviewFavoriteFrames(); };
+
             actions.Controls.Add(before);
             actions.Controls.Add(after);
             actions.Controls.Add(pair);
             actions.Controls.Add(prepare);
             actions.Controls.Add(captures);
             actions.Controls.Add(checkCaptures);
+            actions.Controls.Add(favoriteFrames);
 
             int actionRow = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 120));
@@ -7967,6 +7977,93 @@ namespace CassetteMotionPro.Workspace
             catch (Exception exception)
             {
                 MessageBox.Show(this, "The Analysis Captures folder could not be opened.\n\n" + exception.Message, "Analysis Captures", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void ReviewFavoriteFrames()
+        {
+            if (!HasActiveFitSession())
+            {
+                MessageBox.Show(this, "Create or open a client fit session first so favorite frames can be saved to the correct report.",
+                    "Favorite Frame Review", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            DialogResult sideChoice = MessageBox.Show(this,
+                "Which fit stage are these frames for?\n\nYes = Before\nNo = After",
+                "Favorite Frame Review", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+            if (sideChoice == DialogResult.Cancel)
+                return;
+            string side = sideChoice == DialogResult.Yes ? "Before" : "After";
+
+            try
+            {
+                SaveCurrentSession();
+                string[] frames = FindReviewFrames(side);
+                if (frames.Length == 0)
+                {
+                    MessageBox.Show(this,
+                        "No saved frames were found for this session yet.\n\nOpen the " + side + " video in Video Studio, pause on useful positions, and use Save Image. Then return here and click Review Favorite Frames.",
+                        "Favorite Frame Review", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                using (FavoriteFrameReviewForm form = new FavoriteFrameReviewForm(frames, side))
+                {
+                    if (form.ShowDialog(this) != DialogResult.OK || string.IsNullOrWhiteSpace(form.SelectedFramePath))
+                        return;
+
+                    string destinationFolder = Path.Combine(GetSessionReportImagesFolderPath(), side);
+                    Directory.CreateDirectory(destinationFolder);
+                    string extension = Path.GetExtension(form.SelectedFramePath);
+                    if (string.IsNullOrWhiteSpace(extension)) extension = ".png";
+                    string destinationPath = Path.Combine(destinationFolder,
+                        "Favorite-" + side + "-" + DateTime.Now.ToString("yyyyMMdd-HHmmssfff") + extension);
+                    File.Copy(form.SelectedFramePath, destinationPath, false);
+
+                    string key = side + "ReportImagePath";
+                    imageBoxes[key].Text = destinationPath;
+                    if (side == "Before") chkShowBeforeImageInReport.Checked = true;
+                    else chkShowAfterImageInReport.Checked = true;
+                    SaveCurrentSession();
+                    RefreshSavedEvidenceReview();
+                    UpdateWorkflowChecklist();
+                    UpdateSaveHint("Favorite " + side.ToLowerInvariant() + " frame selected and added to this fit session’s report.");
+                }
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "Favorite frames could not be reviewed.\n\n" + exception.Message,
+                    "Favorite Frame Review", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private string[] FindReviewFrames(string side)
+        {
+            List<string> frames = new List<string>();
+            AddReviewFrames(frames, GetSessionAnalysisCapturesFolderPath(), true);
+            AddReviewFrames(frames, Path.Combine(GetSessionReportImagesFolderPath(), side), true);
+            AddReviewFrames(frames, GetSessionPhotosFolderPath(), false);
+
+            frames.Sort(delegate(string left, string right)
+            {
+                int timeComparison = File.GetLastWriteTime(left).CompareTo(File.GetLastWriteTime(right));
+                return timeComparison != 0 ? timeComparison : StringComparer.CurrentCultureIgnoreCase.Compare(Path.GetFileName(left), Path.GetFileName(right));
+            });
+            if (frames.Count > 120)
+                frames.RemoveRange(0, frames.Count - 120);
+            return frames.ToArray();
+        }
+
+        private static void AddReviewFrames(List<string> frames, string folder, bool recursive)
+        {
+            if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+                return;
+            string[] files = Directory.GetFiles(folder, "*.*", recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly);
+            foreach (string file in files)
+            {
+                if (IsEvidenceFile(file, false) && !frames.Contains(file))
+                    frames.Add(file);
             }
         }
 

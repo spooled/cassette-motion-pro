@@ -182,6 +182,7 @@
     <Compile Include="Workspace\FitSessionRecord.cs" />
     <Compile Include="Workspace\FitSessionRepository.cs" />
     <Compile Include="Workspace\FitSessionRecoveryStore.cs" />
+    <Compile Include="Workspace\FavoriteFrameReviewForm.cs" />
     <Compile Include="Workspace\FitSessionTemplateRepository.cs" />
     <Compile Include="Workspace\FitProtocolCatalog.cs" />
     <Compile Include="Workspace\FitFollowUpEntry.cs" />
