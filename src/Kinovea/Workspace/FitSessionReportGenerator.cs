@@ -20,7 +20,7 @@ namespace CassetteMotionPro.Workspace
     public static class FitSessionReportGenerator
     {
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "0.77.0";
+        private const string ReportVersion = "0.78.0";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
 
         private static StudioSettings ReportSettings { get { return StudioSettingsRepository.Current; } }
@@ -229,6 +229,9 @@ namespace CassetteMotionPro.Workspace
             AddSummarySection(text, "Assisted workflow recovery review", session.AssistedWorkflowRecoverySummary);
             AddSummarySection(text, "Before smart measurement frames", session.SmartMeasurementBeforeSummary);
             AddSummarySection(text, "After smart measurement frames", session.SmartMeasurementAfterSummary);
+            AddSummarySection(text, "Favorite-frame comparison quality", session.FavoriteFrameComparisonQuality);
+            AddSummarySection(text, "Favorite Before frame notes", session.FavoriteFrameBeforeNotes);
+            AddSummarySection(text, "Favorite After frame notes", session.FavoriteFrameAfterNotes);
             AddSummarySection(text, "Before assisted bike landmarks", session.AssistedBikeLandmarksBeforeSummary);
             AddSummarySection(text, "After assisted bike landmarks", session.AssistedBikeLandmarksAfterSummary);
 
@@ -811,6 +814,16 @@ namespace CassetteMotionPro.Workspace
                 html.AppendLine("<div class=\"section-card\">");
                 if (!session.HideSideBySideImageInReport && HasReportImage(session.SideBySideReportImagePath))
                     AddReportImage(html, "Side-by-side comparison", session.SideBySideReportImagePath, true, imageSourceResolver);
+                if (!string.IsNullOrWhiteSpace(session.FavoriteFrameComparisonQuality) ||
+                    !string.IsNullOrWhiteSpace(session.FavoriteFrameBeforeNotes) ||
+                    !string.IsNullOrWhiteSpace(session.FavoriteFrameAfterNotes))
+                {
+                    html.AppendLine("<div class=\"note\"><strong>Favorite-frame approval:</strong> " + Encode(session.FavoriteFrameComparisonQuality) + "</div>");
+                    if (!string.IsNullOrWhiteSpace(session.FavoriteFrameBeforeNotes))
+                        html.AppendLine("<div class=\"note\"><strong>Before frame:</strong> " + Encode(session.FavoriteFrameBeforeNotes) + "</div>");
+                    if (!string.IsNullOrWhiteSpace(session.FavoriteFrameAfterNotes))
+                        html.AppendLine("<div class=\"note\"><strong>After frame:</strong> " + Encode(session.FavoriteFrameAfterNotes) + "</div>");
+                }
                 if ((!session.HideBeforeImageInReport && HasReportImage(session.BeforeReportImagePath)) ||
                     (!session.HideAfterImageInReport && HasReportImage(session.AfterReportImagePath)))
                 {

@@ -63,6 +63,10 @@ namespace CassetteMotionPro.Workspace
         public string BeforeReportImagePath { get; set; }
         public string AfterReportImagePath { get; set; }
         public string SideBySideReportImagePath { get; set; }
+        public string FavoriteFrameBeforeNotes { get; set; }
+        public string FavoriteFrameAfterNotes { get; set; }
+        public string FavoriteFrameComparisonQuality { get; set; }
+        public DateTime FavoriteFrameComparisonApprovedUtc { get; set; }
         public string MeasurementReferenceImagePath { get; set; }
         public bool HideBeforeMeasurementsInReport { get; set; }
         public bool HideSideBySideImageInReport { get; set; }

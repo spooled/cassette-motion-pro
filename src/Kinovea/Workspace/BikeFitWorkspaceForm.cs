@@ -2969,13 +2969,18 @@ namespace CassetteMotionPro.Workspace
             favoriteFrames.Size = new Size(205, 38);
             favoriteFrames.Click += delegate { ReviewFavoriteFrames(); };
 
+            Button compareFrames = CreateButton("Compare + Approve Frames", false);
+            compareFrames.Size = new Size(220, 38);
+            compareFrames.Click += delegate { CompareAndApproveFavoriteFrames(); };
+
             analysisActions.Controls.Add(prepare);
             analysisActions.Controls.Add(captures);
             analysisActions.Controls.Add(checkCaptures);
             analysisActions.Controls.Add(favoriteFrames);
+            analysisActions.Controls.Add(compareFrames);
 
             int analysisActionsRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 60));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 105));
             table.Controls.Add(analysisActions, 1, analysisActionsRow);
             table.SetColumnSpan(analysisActions, 4);
 
@@ -3823,6 +3828,10 @@ namespace CassetteMotionPro.Workspace
             favoriteFrames.Size = new Size(205, 38);
             favoriteFrames.Click += delegate { ReviewFavoriteFrames(); };
 
+            Button compareFrames = CreateButton("Compare + Approve Frames", false);
+            compareFrames.Size = new Size(220, 38);
+            compareFrames.Click += delegate { CompareAndApproveFavoriteFrames(); };
+
             actions.Controls.Add(before);
             actions.Controls.Add(after);
             actions.Controls.Add(pair);
@@ -3830,6 +3839,7 @@ namespace CassetteMotionPro.Workspace
             actions.Controls.Add(captures);
             actions.Controls.Add(checkCaptures);
             actions.Controls.Add(favoriteFrames);
+            actions.Controls.Add(compareFrames);
 
             int actionRow = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 120));
@@ -8036,6 +8046,73 @@ namespace CassetteMotionPro.Workspace
                 MessageBox.Show(this, "Favorite frames could not be reviewed.\n\n" + exception.Message,
                     "Favorite Frame Review", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void CompareAndApproveFavoriteFrames()
+        {
+            if (!HasActiveFitSession())
+            {
+                MessageBox.Show(this, "Create or open a client fit session first.",
+                    "Favorite-Frame Comparison", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            string beforePath = imageBoxes["BeforeReportImagePath"].Text;
+            string afterPath = imageBoxes["AfterReportImagePath"].Text;
+            if (!File.Exists(beforePath) || !File.Exists(afterPath))
+            {
+                MessageBox.Show(this,
+                    "Select both a Before and an After report image first.\n\nUse Review Favorite Frames for each side, then return to Compare + Approve Frames.",
+                    "Favorite-Frame Comparison", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                using (FavoriteFrameComparisonForm form = new FavoriteFrameComparisonForm(
+                    beforePath, afterPath, currentSession.FavoriteFrameBeforeNotes, currentSession.FavoriteFrameAfterNotes))
+                {
+                    if (form.ShowDialog(this) != DialogResult.OK)
+                        return;
+
+                    string approvedBefore = CopyApprovedFavoriteFrame(form.BeforePath, "Before");
+                    string approvedAfter = CopyApprovedFavoriteFrame(form.AfterPath, "After");
+                    imageBoxes["BeforeReportImagePath"].Text = approvedBefore;
+                    imageBoxes["AfterReportImagePath"].Text = approvedAfter;
+                    chkShowBeforeImageInReport.Checked = true;
+                    chkShowAfterImageInReport.Checked = true;
+
+                    currentSession.FavoriteFrameBeforeNotes = form.BeforeNotes;
+                    currentSession.FavoriteFrameAfterNotes = form.AfterNotes;
+                    currentSession.FavoriteFrameComparisonQuality = form.QualitySummary;
+                    currentSession.FavoriteFrameComparisonApprovedUtc = DateTime.UtcNow;
+
+                    string combinedPath = CreateBeforeAfterCombinedImage(approvedBefore, approvedAfter);
+                    imageBoxes["SideBySideReportImagePath"].Text = combinedPath;
+                    chkShowSideBySideImageInReport.Checked = true;
+                    SaveCurrentSession();
+                    RefreshSavedEvidenceReview();
+                    UpdateWorkflowChecklist();
+                    UpdateSaveHint("Favorite Before/After pair approved and a new Dual report image was created.");
+                }
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "The favorite-frame comparison could not be approved.\n\n" + exception.Message,
+                    "Favorite-Frame Comparison", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private string CopyApprovedFavoriteFrame(string sourcePath, string side)
+        {
+            string destinationFolder = Path.Combine(GetSessionReportImagesFolderPath(), side);
+            Directory.CreateDirectory(destinationFolder);
+            string extension = Path.GetExtension(sourcePath);
+            if (string.IsNullOrWhiteSpace(extension)) extension = ".png";
+            string destinationPath = Path.Combine(destinationFolder,
+                "Approved-Favorite-" + side + "-" + DateTime.Now.ToString("yyyyMMdd-HHmmssfff") + extension);
+            File.Copy(sourcePath, destinationPath, false);
+            return destinationPath;
         }
 
         private string[] FindReviewFrames(string side)
