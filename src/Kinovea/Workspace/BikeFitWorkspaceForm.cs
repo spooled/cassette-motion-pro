@@ -3547,6 +3547,11 @@ namespace CassetteMotionPro.Workspace
             combine.Click += delegate { CombineBeforeAfterImages(true); };
             combineActions.Controls.Add(combine);
 
+            Button mediaLibrary = CreateButton("Session Media Library", false);
+            mediaLibrary.Size = new Size(180, 34);
+            mediaLibrary.Click += delegate { OpenSessionMediaLibrary(); };
+            combineActions.Controls.Add(mediaLibrary);
+
             int actionRow = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
             table.Controls.Add(combineActions, 1, actionRow);
@@ -3832,6 +3837,10 @@ namespace CassetteMotionPro.Workspace
             compareFrames.Size = new Size(220, 38);
             compareFrames.Click += delegate { CompareAndApproveFavoriteFrames(); };
 
+            Button mediaLibrary = CreateButton("Session Media Library", true);
+            mediaLibrary.Size = new Size(190, 38);
+            mediaLibrary.Click += delegate { OpenSessionMediaLibrary(); };
+
             actions.Controls.Add(before);
             actions.Controls.Add(after);
             actions.Controls.Add(pair);
@@ -3840,6 +3849,7 @@ namespace CassetteMotionPro.Workspace
             actions.Controls.Add(checkCaptures);
             actions.Controls.Add(favoriteFrames);
             actions.Controls.Add(compareFrames);
+            actions.Controls.Add(mediaLibrary);
 
             int actionRow = table.RowCount++;
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 120));
@@ -7988,6 +7998,137 @@ namespace CassetteMotionPro.Workspace
             {
                 MessageBox.Show(this, "The Analysis Captures folder could not be opened.\n\n" + exception.Message, "Analysis Captures", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void OpenSessionMediaLibrary()
+        {
+            if (!HasActiveFitSession())
+            {
+                MessageBox.Show(this, "Create or open a client fit session first so the media library can show the correct files.",
+                    "Session Media Library", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                SaveCurrentSession();
+                List<SessionMediaItem> items = BuildSessionMediaLibrary();
+                using (SessionMediaLibraryForm form = new SessionMediaLibraryForm(items, client.DisplayName + " · " + currentSession.DisplayName))
+                {
+                    DialogResult result = form.ShowDialog(this);
+                    if (result == DialogResult.Retry && File.Exists(form.VideoToAnalyze))
+                    {
+                        PrepareAnalysisCaptureFolder();
+                        SetFitCommandCenterMode("Analyze from Media Library");
+                        string videoPath = form.VideoToAnalyze;
+                        Close();
+                        if (openVideo != null) openVideo(videoPath);
+                        return;
+                    }
+                    if (result == DialogResult.OK && File.Exists(form.ImageToAssign))
+                        AssignMediaLibraryImage(form.ImageToAssign, form.AssignmentRole);
+                }
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "The session media library could not be opened.\n\n" + exception.Message,
+                    "Session Media Library", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private List<SessionMediaItem> BuildSessionMediaLibrary()
+        {
+            List<SessionMediaItem> items = new List<SessionMediaItem>();
+            HashSet<string> knownPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            AddSessionMediaFolder(items, knownPaths, GetSessionVideoViewFolderPath("Before"), "Before", "Videos", false);
+            AddSessionMediaFolder(items, knownPaths, GetSessionVideoViewFolderPath("After"), "After", "Videos", false);
+            AddSessionMediaFolder(items, knownPaths, GetSessionVideoViewFolderPath("Dual"), "Dual", "Videos", false);
+            AddSessionMediaFolder(items, knownPaths, GetSessionAnalysisCapturesFolderPath(), "Captures", "Analysis Captures", true);
+            string reportImages = GetSessionReportImagesFolderPath();
+            AddSessionMediaFolder(items, knownPaths, Path.Combine(reportImages, "Before"), "Before", "Report Images", true);
+            AddSessionMediaFolder(items, knownPaths, Path.Combine(reportImages, "After"), "After", "Report Images", true);
+            AddSessionMediaFolder(items, knownPaths, Path.Combine(reportImages, "Dual"), "Dual", "Report Images", true);
+            AddSessionMediaFolder(items, knownPaths, reportImages, "Report Images", "Report Images", false);
+            AddSessionMediaFolder(items, knownPaths, GetSessionSideBySideFolderPath(), "Dual", "Side-by-Side", true);
+            AddSessionMediaFile(items, knownPaths, currentSession.BeforeVideoPath, "Before", "Selected Video");
+            AddSessionMediaFile(items, knownPaths, currentSession.AfterVideoPath, "After", "Selected Video");
+            AddSessionMediaFile(items, knownPaths, currentSession.BeforeReportImagePath, "Before", "Selected Report Image");
+            AddSessionMediaFile(items, knownPaths, currentSession.AfterReportImagePath, "After", "Selected Report Image");
+            AddSessionMediaFile(items, knownPaths, currentSession.SideBySideReportImagePath, "Dual", "Selected Report Image");
+            AddSessionMediaFile(items, knownPaths, currentSession.MeasurementReferenceImagePath, "Report Images", "Measurement Reference");
+            items.Sort(delegate(SessionMediaItem left, SessionMediaItem right) { return right.SavedAt.CompareTo(left.SavedAt); });
+            return items;
+        }
+
+        private static void AddSessionMediaFolder(List<SessionMediaItem> items, HashSet<string> knownPaths, string folder,
+            string role, string location, bool recursive)
+        {
+            if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder)) return;
+            string[] files = Directory.GetFiles(folder, "*.*", recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly);
+            foreach (string file in files)
+                AddSessionMediaFile(items, knownPaths, file, role, location);
+        }
+
+        private static void AddSessionMediaFile(List<SessionMediaItem> items, HashSet<string> knownPaths, string path,
+            string role, string location)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path) || knownPaths.Contains(path)) return;
+            bool video = IsEvidenceFile(path, true);
+            bool image = IsEvidenceFile(path, false);
+            if (!video && !image) return;
+            FileInfo info = new FileInfo(path);
+            knownPaths.Add(path);
+            items.Add(new SessionMediaItem
+            {
+                Path = path,
+                Kind = video ? "Video" : "Image",
+                Role = role,
+                Location = location,
+                SavedAt = info.LastWriteTime,
+                SizeBytes = info.Length
+            });
+        }
+
+        private void AssignMediaLibraryImage(string sourcePath, string role)
+        {
+            string key;
+            string destinationFolder;
+            if (string.Equals(role, "Before", StringComparison.OrdinalIgnoreCase))
+            {
+                key = "BeforeReportImagePath";
+                destinationFolder = Path.Combine(GetSessionReportImagesFolderPath(), "Before");
+                chkShowBeforeImageInReport.Checked = true;
+            }
+            else if (string.Equals(role, "After", StringComparison.OrdinalIgnoreCase))
+            {
+                key = "AfterReportImagePath";
+                destinationFolder = Path.Combine(GetSessionReportImagesFolderPath(), "After");
+                chkShowAfterImageInReport.Checked = true;
+            }
+            else if (string.Equals(role, "Dual", StringComparison.OrdinalIgnoreCase))
+            {
+                key = "SideBySideReportImagePath";
+                destinationFolder = GetSessionSideBySideFolderPath();
+                chkShowSideBySideImageInReport.Checked = true;
+            }
+            else
+            {
+                key = "MeasurementReferenceImagePath";
+                destinationFolder = Path.Combine(GetSessionReportImagesFolderPath(), "Reference");
+                chkShowMeasurementReferenceImageInReport.Checked = true;
+            }
+
+            Directory.CreateDirectory(destinationFolder);
+            string extension = Path.GetExtension(sourcePath);
+            if (string.IsNullOrWhiteSpace(extension)) extension = ".png";
+            string destinationPath = Path.Combine(destinationFolder,
+                "Library-" + role.Replace(" ", "-") + "-" + DateTime.Now.ToString("yyyyMMdd-HHmmssfff") + extension);
+            File.Copy(sourcePath, destinationPath, false);
+            imageBoxes[key].Text = destinationPath;
+            SaveCurrentSession();
+            RefreshSavedEvidenceReview();
+            UpdateWorkflowChecklist();
+            UpdateSaveHint("Media library image assigned as " + role + " report evidence.");
         }
 
         private void ReviewFavoriteFrames()

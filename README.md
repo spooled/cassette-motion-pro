@@ -5,7 +5,24 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.78.0 Favorite-Frame Comparison and Approval
+## Current milestone: 0.79.0 Session Media Library and Evidence Organization
+
+- Session Media Library gathers the active fit session's Before, After, and Dual
+  videos, Analysis Captures, report images, and measurement references in one view.
+- Media can be filtered by video/image type, evidence role, or a filename/location
+  search without browsing through the client folder tree.
+- Every item shows its role, source area, saved time, and file size, with an inline
+  preview for images and clear handling for video clips.
+- A selected video can be sent directly back to Video Studio for full Kinovea
+  playback, drawing, and measurement work.
+- A selected image can be assigned to Before, After, Dual, or Measurement Reference;
+  the app copies it into the correct session folder and updates the report selection.
+- Open File and Open Folder remain available for direct evidence inspection, while
+  the library itself does not delete or alter original captures.
+- The library is available from both Video Studio and Report Images so the fitter
+  can organize evidence at the natural points in the client-first workflow.
+
+## Previous milestone: 0.78.0 Favorite-Frame Comparison and Approval
 
 - Compare + Approve Frames opens the chosen Before and After report images in a
   dedicated side-by-side review without leaving the active client fit session.
