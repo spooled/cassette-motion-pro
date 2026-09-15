@@ -1034,6 +1034,9 @@ namespace CassetteMotionPro.Workspace
             Button quality = CreateButton("Run Quality Check", false);
             quality.Size = new Size(160, 38);
             quality.Click += ReviewMetrics_Click;
+            Button accuracy = CreateButton("Assisted Accuracy Review", true);
+            accuracy.Size = new Size(195, 38);
+            accuracy.Click += ShowAssistedMeasurementAccuracyReview;
             Button bike = CreateButton("Edit Bike Metrics", false);
             bike.Size = new Size(145, 38);
             bike.Click += delegate { SelectWorkspaceTab("Bike Metrics"); };
@@ -1045,6 +1048,7 @@ namespace CassetteMotionPro.Workspace
             report.Click += delegate { SelectWorkspaceTab("Report Builder"); };
             actions.Controls.Add(refresh);
             actions.Controls.Add(quality);
+            actions.Controls.Add(accuracy);
             actions.Controls.Add(bike);
             actions.Controls.Add(rider);
             actions.Controls.Add(report);
@@ -1183,6 +1187,102 @@ namespace CassetteMotionPro.Workspace
                 SaveCurrentSession();
                 UpdateSaveHint("Calibration accuracy test saved with its repeatability and confidence result.");
             }
+        }
+
+        private void ShowAssistedMeasurementAccuracyReview(object sender, EventArgs e)
+        {
+            if (currentSession == null)
+            {
+                MessageBox.Show(this, "Create or open a client fit session first.", "Assisted Accuracy Review", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            int score;
+            string scoreText;
+            string summary = BuildAssistedMeasurementAccuracySummary(out score, out scoreText);
+            bool approved = !string.IsNullOrWhiteSpace(currentSession.AssistedMeasurementAccuracyApprovedUtc);
+            using (AssistedMeasurementAccuracyReviewForm form = new AssistedMeasurementAccuracyReviewForm(currentSession.DisplayName, scoreText, summary, currentSession.AssistedMeasurementAccuracyNotes, approved))
+            {
+                if (form.ShowDialog(this) != DialogResult.OK || !form.Approved)
+                    return;
+
+                currentSession.AssistedMeasurementAccuracySummary = scoreText + Environment.NewLine + summary;
+                currentSession.AssistedMeasurementAccuracyNotes = form.ReviewNotes;
+                currentSession.AssistedMeasurementAccuracyApprovedUtc = DateTime.UtcNow.ToString("o", System.Globalization.CultureInfo.InvariantCulture);
+                SaveCurrentSession();
+                RefreshCombinedMeasurementReview();
+                UpdateSaveHint("Assisted measurement accuracy review approved and saved to the client session.");
+            }
+        }
+
+        private string BuildAssistedMeasurementAccuracySummary(out int score, out string scoreText)
+        {
+            string[] keys = new string[] { "SaddleHeight", "SaddleSetback", "SaddleTipToGripReach", "HandlebarX", "HandlebarY", "HandlebarReach", "HandlebarDrop", "CrankLength", "Wheelbase", "KneeAngle", "HipAngle", "AnkleAngle", "TorsoAngle", "ShoulderAngle" };
+            string[] labels = new string[] { "Saddle height", "Saddle setback", "Saddle tip to grip", "Handlebar X", "Handlebar Y", "Handlebar reach", "Handlebar drop", "Crank length", "Wheelbase", "Knee angle", "Hip angle", "Ankle angle", "Body reach", "Back angle" };
+            double[] minimums = new double[] { 450, -180, 250, 150, -350, 200, -300, 130, 700, 90, 25, 40, 0, 5 };
+            double[] maximums = new double[] { 950, 180, 900, 900, 500, 900, 350, 220, 1300, 175, 150, 160, 120, 85 };
+            double[] maxChanges = new double[] { 60, 50, 100, 100, 100, 100, 100, 30, 100, 20, 20, 25, 30, 20 };
+
+            int warnings = 0;
+            int complete = 0;
+            System.Text.StringBuilder text = new System.Text.StringBuilder();
+            text.AppendLine("MEASUREMENT                 BEFORE       AFTER        QUALITY");
+            text.AppendLine("──────────────────────────────────────────────────────────────");
+            for (int index = 0; index < keys.Length; index++)
+            {
+                string beforeText = GetMeasurementText(keys[index] + "Before");
+                string afterText = GetMeasurementText(keys[index] + "After");
+                double before;
+                double after;
+                string quality;
+                bool hasBefore = TryParseMeasurementNumber(beforeText, out before);
+                bool hasAfter = TryParseMeasurementNumber(afterText, out after);
+                if (!hasBefore && !hasAfter)
+                    quality = "OPTIONAL / NOT RECORDED";
+                else if (!hasBefore || !hasAfter)
+                {
+                    quality = "CHECK: incomplete pair";
+                    warnings++;
+                }
+                else
+                {
+                    complete++;
+                    bool rangeWarning = before < minimums[index] || before > maximums[index] || after < minimums[index] || after > maximums[index];
+                    bool changeWarning = Math.Abs(after - before) > maxChanges[index];
+                    if (rangeWarning)
+                    {
+                        quality = "CHECK: broad range";
+                        warnings++;
+                    }
+                    else if (changeWarning)
+                    {
+                        quality = "CHECK: large change";
+                        warnings++;
+                    }
+                    else
+                        quality = "PASS";
+                }
+                text.AppendLine(labels[index].PadRight(28) + DisplayReviewValue(beforeText).PadRight(13) + DisplayReviewValue(afterText).PadRight(13) + quality);
+            }
+
+            text.AppendLine();
+            text.AppendLine("CALIBRATION, TRACKING, AND EVIDENCE");
+            bool calibrated = !string.IsNullOrWhiteSpace(currentSession.TrackingCalibrationAccuracySummary);
+            bool trackingReviewed = !string.IsNullOrWhiteSpace(currentSession.TrackingQualityReviewSummary);
+            bool hasTracking = !string.IsNullOrWhiteSpace(currentSession.ShortClipTrackingBeforeSummary) || !string.IsNullOrWhiteSpace(currentSession.ShortClipTrackingAfterSummary);
+            text.AppendLine((calibrated ? "PASS  " : "CHECK ") + "Known-dimension calibration and repeatability test");
+            text.AppendLine((trackingReviewed ? "PASS  " : "CHECK ") + "Camera and tracking quality review");
+            text.AppendLine((hasTracking ? "PASS  " : "INFO  ") + "Short-clip tracking evidence");
+            if (!calibrated) warnings++;
+            if (!trackingReviewed) warnings++;
+
+            score = Math.Max(0, 100 - warnings * 10 - (complete == 0 ? 30 : 0));
+            string tier = score >= 90 ? "HIGH CONFIDENCE" : score >= 70 ? "REVIEW ADVISED" : "INCOMPLETE / VERIFY";
+            scoreText = "Quality score " + score.ToString() + "/100 · " + tier;
+            text.AppendLine();
+            text.AppendLine("This score is a transparent workflow-quality check, not a guarantee of measurement accuracy or a diagnosis.");
+            text.AppendLine("Verify warnings with Kinovea's playback and drawing tools before approving the report.");
+            return text.ToString();
         }
 
         private TabPage BuildReportWorkspaceTab()
@@ -5086,6 +5186,10 @@ namespace CassetteMotionPro.Workspace
                 foreach (string note in notes)
                     text.AppendLine("• " + note);
             }
+            text.AppendLine();
+            text.AppendLine(string.IsNullOrWhiteSpace(currentSession == null ? string.Empty : currentSession.AssistedMeasurementAccuracyApprovedUtc)
+                ? "ASSISTED ACCURACY REVIEW: Not yet fitter-approved"
+                : "ASSISTED ACCURACY REVIEW: Approved by fitter");
 
             combinedMeasurementReview.Text = text.ToString();
             string sessionName = currentSession == null ? "No active session" : currentSession.DisplayName;

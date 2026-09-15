@@ -20,7 +20,7 @@ namespace CassetteMotionPro.Workspace
     public static class FitSessionReportGenerator
     {
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "0.79.0";
+        private const string ReportVersion = "0.80.0";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
 
         private static StudioSettings ReportSettings { get { return StudioSettingsRepository.Current; } }
@@ -225,6 +225,8 @@ namespace CassetteMotionPro.Workspace
             AddSummarySection(text, "After pedal-cycle trends", session.PedalCycleTrendAfterSummary);
             AddSummarySection(text, "Tracking and camera quality", session.TrackingQualityReviewSummary);
             AddSummarySection(text, "Tracking calibration and accuracy", session.TrackingCalibrationAccuracySummary);
+            AddSummarySection(text, "Assisted measurement accuracy review", session.AssistedMeasurementAccuracySummary);
+            AddSummarySection(text, "Assisted measurement fitter notes", session.AssistedMeasurementAccuracyNotes);
             AddSummarySection(text, "Dual-camera synchronization", session.DualCameraSynchronizationSummary);
             AddSummarySection(text, "Assisted workflow recovery review", session.AssistedWorkflowRecoverySummary);
             AddSummarySection(text, "Before smart measurement frames", session.SmartMeasurementBeforeSummary);
@@ -899,6 +901,17 @@ namespace CassetteMotionPro.Workspace
                 html.AppendLine("<h2>Tracking Calibration and Accuracy</h2>");
                 html.AppendLine("<div class=\"section-kicker\">Known-dimension accuracy and repeatability check confirmed by the fitter.</div>");
                 html.AppendLine("<div class=\"note\">" + Encode(session.TrackingCalibrationAccuracySummary) + "</div>");
+            }
+
+            if (!string.IsNullOrWhiteSpace(session.AssistedMeasurementAccuracySummary))
+            {
+                html.AppendLine("<h2>Assisted Measurement Accuracy Review</h2>");
+                html.AppendLine("<div class=\"section-kicker\">Workflow-quality checks reviewed and explicitly approved by the fitter.</div>");
+                html.AppendLine("<div class=\"note\">" + Encode(session.AssistedMeasurementAccuracySummary) + "</div>");
+                if (!string.IsNullOrWhiteSpace(session.AssistedMeasurementAccuracyApprovedUtc))
+                    html.AppendLine("<div class=\"note\"><strong>Fitter approval recorded:</strong> " + Encode(session.AssistedMeasurementAccuracyApprovedUtc) + "</div>");
+                if (!string.IsNullOrWhiteSpace(session.AssistedMeasurementAccuracyNotes))
+                    html.AppendLine("<div class=\"note\"><strong>Fitter notes:</strong> " + Encode(session.AssistedMeasurementAccuracyNotes) + "</div>");
             }
 
             if (!string.IsNullOrWhiteSpace(session.DualCameraSynchronizationSummary))

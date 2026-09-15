@@ -141,6 +141,9 @@ namespace CassetteMotionPro.Workspace
         public string TrackingCalibrationTestTwoMm { get; set; }
         public string TrackingCalibrationTestThreeMm { get; set; }
         public string TrackingCalibrationAccuracySummary { get; set; }
+        public string AssistedMeasurementAccuracySummary { get; set; }
+        public string AssistedMeasurementAccuracyNotes { get; set; }
+        public string AssistedMeasurementAccuracyApprovedUtc { get; set; }
         public string DualCameraLeftVideoPath { get; set; }
         public string DualCameraRightVideoPath { get; set; }
         public string DualCameraLeftRole { get; set; }

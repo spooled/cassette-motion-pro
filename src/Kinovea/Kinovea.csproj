@@ -221,6 +221,9 @@
     <Compile Include="Workspace\TrackingCalibrationAccuracyForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Workspace\AssistedMeasurementAccuracyReviewForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Workspace\AssistedWorkflowRecoveryForm.cs">
       <SubType>Form</SubType>
     </Compile>
