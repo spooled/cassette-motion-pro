@@ -227,6 +227,9 @@
     <Compile Include="Workspace\ReportReviewApprovalForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Workspace\FitDayDiagnosticsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Workspace\AssistedWorkflowRecoveryForm.cs">
       <SubType>Form</SubType>
     </Compile>

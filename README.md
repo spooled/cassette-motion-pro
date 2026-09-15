@@ -5,7 +5,23 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.81.0 Report Review, Approval, and Delivery Center
+## Current milestone: 0.82.0 Fit-Day Reliability Testing and Diagnostics
+
+- Fit-Day Diagnostics is available directly from the dashboard before or during a
+  client session, without adding another permanent workspace tab.
+- Tests cover client/session folder access, Before/After/Dual capture destinations,
+  report-image and analysis-evidence folders, and final report output access.
+- The center verifies autosave state, in-memory session save/recovery compatibility,
+  Kinovea playback and live-capture connections, selected media files, report
+  evidence, report approval, and available recording disk space.
+- Temporary write probes are removed immediately and never alter client evidence;
+  expected session folders are created when missing so capture routing is ready.
+- Results are separated into PASS, WARN, and FAIL with plain-language next actions,
+  and can be copied or saved as a timestamped troubleshooting report.
+- Workflow navigation now consistently opens Review & Deliver instead of the older
+  Finalize Fit tab name.
+
+## Previous milestone: 0.81.0 Report Review, Approval, and Delivery Center
 
 - The former Finalize Fit page is now a focused Review & Deliver center for the
   last stage of the client-first workflow.

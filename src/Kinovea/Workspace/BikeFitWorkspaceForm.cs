@@ -14,6 +14,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Xml.Serialization;
 using System.Windows.Forms;
 
 namespace CassetteMotionPro.Workspace
@@ -1649,7 +1650,7 @@ namespace CassetteMotionPro.Workspace
 
             Button approve = CreateButton("5  APPROVE", false);
             approve.Size = new Size(125, 46);
-            approve.Click += delegate { RunAssistedWorkflowStage("Approve", delegate { SelectWorkspaceTab("Finalize Fit"); }); };
+            approve.Click += delegate { RunAssistedWorkflowStage("Approve", delegate { SelectWorkspaceTab("Review & Deliver"); }); };
 
             Button report = CreateButton("6  REPORT", false);
             report.Size = new Size(125, 46);
@@ -1703,8 +1704,13 @@ namespace CassetteMotionPro.Workspace
             recovery.Size = new Size(150, 42);
             recovery.Margin = new Padding(8, 9, 0, 9);
             recovery.Click += delegate { ShowAssistedWorkflowRecovery(); };
+            Button diagnostics = CreateButton("Fit-Day Diagnostics", false);
+            diagnostics.Size = new Size(170, 42);
+            diagnostics.Margin = new Padding(8, 9, 0, 9);
+            diagnostics.Click += ShowFitDayDiagnostics;
             primaryActions.Controls.Add(resume);
             primaryActions.Controls.Add(recovery);
+            primaryActions.Controls.Add(diagnostics);
 
             Button moreOptions = CreateButton("More Options + Folders", false);
             moreOptions.Dock = DockStyle.Left;
@@ -1733,6 +1739,132 @@ namespace CassetteMotionPro.Workspace
             panel.Controls.Add(layout);
             UpdateFitDayHomeStatus();
             return panel;
+        }
+
+        private void ShowFitDayDiagnostics(object sender, EventArgs e)
+        {
+            string saveFolder = HasActiveFitSession() ? GetSessionReportsFolderPath() : client.ReportsPath;
+            using (FitDayDiagnosticsForm form = new FitDayDiagnosticsForm(BuildFitDayDiagnosticResults, saveFolder))
+                form.ShowDialog(this);
+        }
+
+        private List<FitDayDiagnosticResult> BuildFitDayDiagnosticResults()
+        {
+            List<FitDayDiagnosticResult> results = new List<FitDayDiagnosticResult>();
+            AddDiagnostic(results, client != null && Directory.Exists(client.FolderPath) ? "PASS" : "FAIL", "Client folder", client != null && Directory.Exists(client.FolderPath) ? client.FolderPath : "Client folder is unavailable. Reopen the client before the fit.");
+            ProbeWritableFolder(results, "Client folder write access", client == null ? string.Empty : client.FolderPath, false);
+            AddDiagnostic(results, autosaveTimer.Enabled ? "PASS" : "FAIL", "Autosave timer", autosaveTimer.Enabled ? "Autosave is running every " + (autosaveTimer.Interval / 1000).ToString() + " seconds." : "Autosave is stopped. Close and reopen the workspace before the fit.");
+            AddDiagnostic(results, hasUnsavedChanges ? "WARN" : "PASS", "Current save state", hasUnsavedChanges ? "Changes are waiting for the next autosave. Press Save before switching computers or closing unexpectedly." : "The workspace has no pending edits.");
+            AddDiagnostic(results, openVideo != null ? "PASS" : "FAIL", "Kinovea playback connection", openVideo != null ? "Single-video playback is connected." : "Playback connection is unavailable.");
+            AddDiagnostic(results, openVideoPair != null ? "PASS" : "WARN", "Dual playback connection", openVideoPair != null ? "Before/After dual playback is connected." : "Dual playback is unavailable; single playback can still be used.");
+            AddDiagnostic(results, openLiveCaptureFolder != null ? "PASS" : "FAIL", "Live capture connection", openLiveCaptureFolder != null ? "Live capture can receive the active client folder." : "Live capture connection is unavailable.");
+            AddDiagnostic(results, openDualLiveCaptureFolders != null ? "PASS" : "WARN", "Dual live capture connection", openDualLiveCaptureFolders != null ? "Dual capture folder routing is connected." : "Dual capture is unavailable; single capture can still be used.");
+
+            if (!HasActiveFitSession())
+            {
+                AddDiagnostic(results, "WARN", "Active fit session", "No session is open. Create or open one to test its Before, After, evidence, autosave, and report folders.");
+                CheckDiskSpace(results, client == null ? string.Empty : client.FolderPath);
+                return results;
+            }
+
+            AddDiagnostic(results, "PASS", "Active fit session", currentSession.DisplayName + " · " + currentSession.StorageFolderName);
+            ProbeWritableFolder(results, "Session record folder", GetSessionRecordFolderPath(), false);
+            ProbeWritableFolder(results, "Before video folder", GetSessionVideoViewFolderPath("Before"), true);
+            ProbeWritableFolder(results, "After video folder", GetSessionVideoViewFolderPath("After"), true);
+            ProbeWritableFolder(results, "Dual video folder", GetSessionVideoViewFolderPath("Dual"), true);
+            ProbeWritableFolder(results, "Report image folder", GetSessionReportImagesFolderPath(), true);
+            ProbeWritableFolder(results, "Analysis capture folder", GetSessionAnalysisCapturesFolderPath(), true);
+            ProbeWritableFolder(results, "Report output folder", GetSessionReportsFolderPath(), true);
+            TestSessionSerialization(results);
+            AddSavedFileDiagnostic(results, "Before video selection", currentSession.BeforeVideoPath, "Record or select a Before clip when the fit begins.");
+            AddSavedFileDiagnostic(results, "After video selection", currentSession.AfterVideoPath, "An After clip is normally added after fit changes.");
+            AddDiagnostic(results, HasReportImage() ? "PASS" : "WARN", "Report evidence", HasReportImage() ? "At least one selected report image exists." : "No report image is selected yet; this is normal early in a fit.");
+            AddDiagnostic(results, IsCurrentReportApprovalValid() ? "PASS" : "WARN", "Report approval", IsCurrentReportApprovalValid() ? "Current client-facing report content is approved." : "Report approval is pending or stale; approve it only after final review.");
+            CheckDiskSpace(results, client.FolderPath);
+            return results;
+        }
+
+        private static void AddDiagnostic(List<FitDayDiagnosticResult> results, string status, string area, string detail)
+        {
+            results.Add(new FitDayDiagnosticResult { Status = status, Area = area, Detail = detail });
+        }
+
+        private static void ProbeWritableFolder(List<FitDayDiagnosticResult> results, string area, string folder, bool createIfMissing)
+        {
+            if (string.IsNullOrWhiteSpace(folder))
+            {
+                AddDiagnostic(results, "FAIL", area, "Folder path is unavailable.");
+                return;
+            }
+
+            string probe = string.Empty;
+            try
+            {
+                if (!Directory.Exists(folder))
+                {
+                    if (!createIfMissing)
+                    {
+                        AddDiagnostic(results, "FAIL", area, "Folder does not exist: " + folder);
+                        return;
+                    }
+                    Directory.CreateDirectory(folder);
+                }
+                probe = Path.Combine(folder, ".cmp-write-test-" + Guid.NewGuid().ToString("N") + ".tmp");
+                File.WriteAllText(probe, "Cassette Motion Pro fit-day write test");
+                File.Delete(probe);
+                AddDiagnostic(results, "PASS", area, "Writable: " + folder);
+            }
+            catch (Exception exception)
+            {
+                try { if (!string.IsNullOrWhiteSpace(probe) && File.Exists(probe)) File.Delete(probe); }
+                catch { }
+                AddDiagnostic(results, "FAIL", area, "Cannot write here: " + folder + " · " + exception.Message);
+            }
+        }
+
+        private void TestSessionSerialization(List<FitDayDiagnosticResult> results)
+        {
+            try
+            {
+                XmlSerializer serializer = new XmlSerializer(typeof(FitSessionRecord));
+                using (MemoryStream stream = new MemoryStream())
+                {
+                    serializer.Serialize(stream, currentSession);
+                    stream.Position = 0;
+                    FitSessionRecord restored = serializer.Deserialize(stream) as FitSessionRecord;
+                    AddDiagnostic(results, restored != null && restored.Id == currentSession.Id ? "PASS" : "FAIL", "Session save format", restored != null && restored.Id == currentSession.Id ? "Session data completed an in-memory save and recovery test." : "Session data did not round-trip correctly.");
+                }
+            }
+            catch (Exception exception)
+            {
+                AddDiagnostic(results, "FAIL", "Session save format", "Session data could not complete a save/recovery test: " + exception.Message);
+            }
+        }
+
+        private static void AddSavedFileDiagnostic(List<FitDayDiagnosticResult> results, string area, string path, string missingDetail)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                AddDiagnostic(results, "WARN", area, missingDetail);
+            else if (File.Exists(path))
+                AddDiagnostic(results, "PASS", area, "Selected file exists: " + path);
+            else
+                AddDiagnostic(results, "FAIL", area, "A file is selected but cannot be found: " + path);
+        }
+
+        private static void CheckDiskSpace(List<FitDayDiagnosticResult> results, string path)
+        {
+            try
+            {
+                string root = Path.GetPathRoot(Path.GetFullPath(path));
+                DriveInfo drive = new DriveInfo(root);
+                double freeGb = drive.AvailableFreeSpace / 1073741824.0;
+                string status = freeGb >= 5 ? "PASS" : freeGb >= 2 ? "WARN" : "FAIL";
+                AddDiagnostic(results, status, "Recording disk space", freeGb.ToString("0.0") + " GB free on " + root + (freeGb < 5 ? " · Free space before recording long dual-camera clips." : string.Empty));
+            }
+            catch (Exception exception)
+            {
+                AddDiagnostic(results, "WARN", "Recording disk space", "Free space could not be checked: " + exception.Message);
+            }
         }
 
         private Control BuildFitDayHomeFolderPanel()
@@ -5068,7 +5200,7 @@ namespace CassetteMotionPro.Workspace
         {
             if (!HasActiveFitSession())
             {
-                MessageBox.Show(this, "Open or create a client fit session first.", "Finalize Fit", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, "Open or create a client fit session first.", "Review & Deliver", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return false;
             }
 
@@ -5080,7 +5212,7 @@ namespace CassetteMotionPro.Workspace
             string message = warnings.Count == 0
                 ? "Mark this fit session Complete?\n\nYou can still reopen and edit it later."
                 : "This session still has items to review:\n\n• " + string.Join("\n• ", warnings.ToArray()) + "\n\nMark it Complete anyway?";
-            DialogResult result = MessageBox.Show(this, message, "Finalize Fit Session", MessageBoxButtons.YesNo, warnings.Count == 0 ? MessageBoxIcon.Question : MessageBoxIcon.Warning);
+            DialogResult result = MessageBox.Show(this, message, "Complete Fit Session", MessageBoxButtons.YesNo, warnings.Count == 0 ? MessageBoxIcon.Question : MessageBoxIcon.Warning);
             if (result != DialogResult.Yes)
                 return false;
 
@@ -5526,7 +5658,7 @@ namespace CassetteMotionPro.Workspace
             else if (string.Equals(stage, "Record", StringComparison.OrdinalIgnoreCase)) OpenDualLiveCapture();
             else if (string.Equals(stage, "Track", StringComparison.OrdinalIgnoreCase)) SelectWorkspaceTab("Body Angles");
             else if (string.Equals(stage, "Measure", StringComparison.OrdinalIgnoreCase)) SelectWorkspaceTab("Guided Measurements");
-            else if (string.Equals(stage, "Approve", StringComparison.OrdinalIgnoreCase)) SelectWorkspaceTab("Finalize Fit");
+            else if (string.Equals(stage, "Approve", StringComparison.OrdinalIgnoreCase)) SelectWorkspaceTab("Review & Deliver");
             else if (string.Equals(stage, "Report", StringComparison.OrdinalIgnoreCase)) SelectWorkspaceTab("Report Builder");
             else if (string.Equals(stage, "Follow-up", StringComparison.OrdinalIgnoreCase)) AddClientFollowUp();
             else SelectWorkspaceTab(FitDayHomeTabName);
@@ -6274,7 +6406,7 @@ namespace CassetteMotionPro.Workspace
             {
                 message = "Next best step: review measurements and evidence, then approve or edit the fit recommendations.";
                 actionText = "Fitter Approval";
-                action = delegate { SelectWorkspaceTab("Finalize Fit"); };
+                action = delegate { SelectWorkspaceTab("Review & Deliver"); };
                 folderActionText = "Image Folder";
                 folderAction = delegate { OpenClientFolder(GetSessionReportImagesFolderPath(), "Report images"); };
                 color = Color.FromArgb(181, 118, 35);
