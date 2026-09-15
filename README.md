@@ -5,7 +5,22 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.80.0 Assisted Measurement Accuracy and Workflow
+## Current milestone: 0.81.0 Report Review, Approval, and Delivery Center
+
+- The former Finalize Fit page is now a focused Review & Deliver center for the
+  last stage of the client-first workflow.
+- One checklist combines required fit-day evidence, report polish, measurement
+  quality, session status, fitter approval, and the latest prepared delivery file.
+- Review + Approve opens a deliberate client-report quality gate covering report
+  writing, selected evidence, final measurements, and privacy confirmation.
+- Approval is tied to the exact client-facing report content. Editing report text,
+  measurements, images, or report options automatically requires a fresh approval.
+- Report package, ZIP, and client-portal delivery outputs require current fitter
+  approval, while preview remains available for safe review and correction.
+- The session remembers the approval notes and the most recently prepared delivery
+  format, path, and time without claiming that a file was sent externally.
+
+## Previous milestone: 0.80.0 Assisted Measurement Accuracy and Workflow
 
 - A new Assisted Accuracy Review brings bike measurements, rider angles,
   calibration, tracking quality, and short-clip evidence into one quality gate.

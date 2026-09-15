@@ -184,7 +184,7 @@ namespace CassetteMotionPro.Workspace
             if (keyData == (Keys.Control | Keys.D2)) { SelectWorkspaceTab(KinoveaVideoTabName); return true; }
             if (keyData == (Keys.Control | Keys.D3)) { SelectWorkspaceTab("Bike Metrics"); return true; }
             if (keyData == (Keys.Control | Keys.D4)) { SelectWorkspaceTab("Body Angles"); return true; }
-            if (keyData == (Keys.Control | Keys.D5)) { SelectWorkspaceTab("Report Builder"); return true; }
+            if (keyData == (Keys.Control | Keys.D5)) { SelectWorkspaceTab("Review & Deliver"); return true; }
             return base.ProcessCmdKey(ref msg, keyData);
         }
 
@@ -259,8 +259,8 @@ namespace CassetteMotionPro.Workspace
             values.Add(txtHandoffNextAppointment.Text);
             values.Add(txtHandoffInternalNotes.Text);
             foreach (TextBox box in mediaBoxes.Values) values.Add(box.Text);
-            foreach (TextBox box in imageBoxes.Values) values.Add(box.Text);
-            foreach (TextBox box in measurementBoxes.Values) values.Add(box.Text);
+            AddSortedTextBoxValues(values, imageBoxes);
+            AddSortedTextBoxValues(values, measurementBoxes);
             values.Add(chkShowBeforeMeasurementsInReport.Checked.ToString());
             values.Add(chkShowSideBySideImageInReport.Checked.ToString());
             values.Add(chkShowBeforeImageInReport.Checked.ToString());
@@ -1292,7 +1292,7 @@ namespace CassetteMotionPro.Workspace
 
         private TabPage BuildFitSessionFinalizationTab()
         {
-            TabPage page = NewTab("Finalize Fit");
+            TabPage page = NewTab("Review & Deliver");
             TableLayoutPanel layout = new TableLayoutPanel();
             layout.Dock = DockStyle.Fill;
             layout.Padding = new Padding(24, 22, 24, 18);
@@ -1306,13 +1306,13 @@ namespace CassetteMotionPro.Workspace
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 62));
 
             Label eyebrow = new Label();
-            eyebrow.Text = "FIT SESSION FINALIZATION ASSISTANT";
+            eyebrow.Text = "REPORT REVIEW, APPROVAL, AND DELIVERY CENTER";
             eyebrow.Dock = DockStyle.Fill;
             eyebrow.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             eyebrow.ForeColor = Color.FromArgb(85, 122, 18);
 
             Label title = new Label();
-            title.Text = "Finish, review, and package the client fit";
+            title.Text = "Review once, approve clearly, deliver confidently";
             title.Dock = DockStyle.Fill;
             title.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
             title.ForeColor = Color.FromArgb(24, 31, 29);
@@ -1348,10 +1348,14 @@ namespace CassetteMotionPro.Workspace
             Button preview = CreateButton("Preview Report", false);
             preview.Size = new Size(135, 38);
             preview.Click += delegate { PreviewReport_Click(this, EventArgs.Empty); };
+            Button approve = CreateButton("Review + Approve", true);
+            approve.Size = new Size(160, 38);
+            approve.Click += ShowReportReviewApproval;
             reviewActions.Controls.Add(refresh);
             reviewActions.Controls.Add(measurements);
             reviewActions.Controls.Add(recommendations);
             reviewActions.Controls.Add(preview);
+            reviewActions.Controls.Add(approve);
 
             FlowLayoutPanel finishActions = new FlowLayoutPanel();
             finishActions.Dock = DockStyle.Fill;
@@ -1370,10 +1374,14 @@ namespace CassetteMotionPro.Workspace
             Button open = CreateButton("Open Finished Folder", false);
             open.Size = new Size(175, 38);
             open.Click += delegate { OpenReports_Click(this, EventArgs.Empty); };
+            Button portal = CreateButton("Portal Package", false);
+            portal.Size = new Size(145, 38);
+            portal.Click += delegate { ClientPortalPackage_Click(this, EventArgs.Empty); };
             finishActions.Controls.Add(complete);
             finishActions.Controls.Add(package);
             finishActions.Controls.Add(zip);
             finishActions.Controls.Add(open);
+            finishActions.Controls.Add(portal);
 
             layout.Controls.Add(eyebrow, 0, 0);
             layout.Controls.Add(title, 0, 1);
@@ -4857,6 +4865,7 @@ namespace CassetteMotionPro.Workspace
             bool hasRecommendations = !string.IsNullOrWhiteSpace(txtFitSummaryRecommendations.Text) || !string.IsNullOrWhiteSpace(txtFitSummaryFollowUp.Text);
             bool hasBodyAngles = HasAnyBodyAngleMeasurements();
             bool isComplete = string.Equals(Convert.ToString(cmbStatus.SelectedItem), "Complete", StringComparison.OrdinalIgnoreCase);
+            bool isApproved = IsCurrentReportApprovalValid();
 
             System.Text.StringBuilder checklist = new System.Text.StringBuilder();
             checklist.AppendLine("REQUIRED FIT-DAY ITEMS");
@@ -4875,7 +4884,10 @@ namespace CassetteMotionPro.Workspace
             checklist.AppendLine(FinalizationLine(qualityNotes.Count == 0, "Measurement quality review", qualityNotes.Count == 0 ? "No broad warnings found." : qualityNotes.Count.ToString() + " item(s) need professional review."));
             checklist.AppendLine();
             checklist.AppendLine("OUTPUT");
+            checklist.AppendLine(FinalizationLine(isApproved, "Fitter report approval", isApproved ? "Current report content is approved for delivery." : "Preview, review, and approve the current report."));
             checklist.AppendLine(FinalizationLine(isComplete, "Session status", isComplete ? "Complete" : "Mark complete after reviewing the preview."));
+            if (currentSession.ReportDeliveryPreparedUtc != DateTime.MinValue)
+                checklist.AppendLine("✓ PREPARED  " + currentSession.ReportDeliveryFormat + " — " + currentSession.ReportDeliveryOutputPath);
             checklist.AppendLine("Reports folder: " + GetSessionReportsFolderPath());
 
             if (required.Count > 0)
@@ -4888,10 +4900,152 @@ namespace CassetteMotionPro.Workspace
 
             finalizationChecklist.Text = checklist.ToString();
             bool ready = required.Count == 0;
-            finalizationStatus.Text = (ready ? "READY FOR FINAL PREVIEW" : "NEEDS " + required.Count.ToString() + " REQUIRED STEP(S)") +
+            finalizationStatus.Text = (ready && isApproved ? "APPROVED FOR DELIVERY" : ready ? "READY FOR PREVIEW AND APPROVAL" : "NEEDS " + required.Count.ToString() + " REQUIRED STEP(S)") +
                 "   ·   Session status: " + Convert.ToString(cmbStatus.SelectedItem) + Environment.NewLine +
-                (ready ? "Preview the report, then mark complete and create the client package or ZIP." : "Use the checklist below to return to the unfinished parts of the fit.");
-            finalizationStatus.ForeColor = ready ? Color.FromArgb(60, 145, 76) : Color.FromArgb(181, 118, 35);
+                (ready && isApproved ? "Create the client package, ZIP, or portal package below." : ready ? "Preview the client-facing report, then use Review + Approve." : "Use the checklist below to return to the unfinished parts of the fit.");
+            finalizationStatus.ForeColor = ready && isApproved ? Color.FromArgb(60, 145, 76) : Color.FromArgb(181, 118, 35);
+        }
+
+        private void ShowReportReviewApproval(object sender, EventArgs e)
+        {
+            if (!HasActiveFitSession())
+            {
+                MessageBox.Show(this, "Open or create a client fit session first.", "Report Review", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            SaveCurrentSession();
+            List<string> warnings = GetReportReadinessWarnings();
+            System.Text.StringBuilder review = new System.Text.StringBuilder();
+            review.AppendLine("REPORT READINESS");
+            review.AppendLine(warnings.Count == 0 ? "✓ Required report items are ready." : "○ " + warnings.Count.ToString() + " item(s) still need attention.");
+            foreach (string warning in warnings)
+                review.AppendLine("• " + warning);
+            review.AppendLine();
+            review.AppendLine("CLIENT-FACING CONTENT");
+            review.AppendLine(FinalizationLine(HasReportSummaryContent(), "Fit summary", "Review findings, changes, and recommendations."));
+            review.AppendLine(FinalizationLine(HasReportImage(), "Selected evidence", "Review the Before, After, or Dual image."));
+            review.AppendLine(FinalizationLine(HasCoreBikeMetrics(), "Final bike metrics", "Confirm the After measurements."));
+            review.AppendLine(FinalizationLine(!string.IsNullOrWhiteSpace(currentSession.AssistedMeasurementAccuracyApprovedUtc), "Measurement accuracy review", "Recommended before client delivery."));
+            review.AppendLine();
+            review.AppendLine("Approval applies only to the current report content. Editing report text, measurements, images, or report options will require approval again.");
+
+            using (ReportReviewApprovalForm form = new ReportReviewApprovalForm(currentSession.DisplayName, review.ToString(), currentSession.ReportApprovalNotes))
+            {
+                if (form.ShowDialog(this) != DialogResult.OK)
+                    return;
+                currentSession.ReportApprovalNotes = form.ApprovalNotes;
+                currentSession.ReportApprovalFingerprint = BuildReportContentFingerprint();
+                currentSession.ReportApprovedUtc = DateTime.UtcNow;
+                repository.Save(currentSession);
+                RefreshFitSessionFinalization();
+                UpdateSaveHint("Current client report approved for delivery. Later report edits will require a fresh approval.");
+            }
+        }
+
+        private bool IsCurrentReportApprovalValid()
+        {
+            return currentSession != null && currentSession.ReportApprovedUtc != DateTime.MinValue &&
+                !string.IsNullOrWhiteSpace(currentSession.ReportApprovalFingerprint) &&
+                string.Equals(currentSession.ReportApprovalFingerprint, BuildReportContentFingerprint(), StringComparison.Ordinal);
+        }
+
+        private bool EnsureCurrentReportApproval()
+        {
+            if (IsCurrentReportApprovalValid())
+                return true;
+
+            MessageBox.Show(this, "Preview and approve the current report before creating a delivery package. If the report was approved earlier, its client-facing content has changed since then.", "Report Approval Required", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            SelectWorkspaceTab("Review & Deliver");
+            return false;
+        }
+
+        private string BuildReportContentFingerprint()
+        {
+            List<string> values = new List<string>();
+            values.Add(client == null ? string.Empty : client.DisplayName);
+            values.Add(client == null ? string.Empty : client.BikeDescription);
+            values.Add(txtTitle.Text);
+            values.Add(dtpDate.Value.Date.ToString("yyyy-MM-dd"));
+            values.Add(txtGoals.Text);
+            values.Add(txtNotes.Text);
+            values.Add(txtFitSummaryMainGoal.Text);
+            values.Add(txtFitSummaryKeyFindings.Text);
+            values.Add(txtFitSummaryChangesMade.Text);
+            values.Add(txtFitSummaryRecommendations.Text);
+            values.Add(txtFitSummaryFollowUp.Text);
+            values.Add(txtHandoffWhatToSend.Text);
+            values.Add(txtHandoffClientMessage.Text);
+            values.Add(txtHandoffHomework.Text);
+            values.Add(txtHandoffNextAppointment.Text);
+            values.Add(currentSession == null ? string.Empty : currentSession.TrackingQualityReviewSummary);
+            values.Add(currentSession == null ? string.Empty : currentSession.TrackingCalibrationAccuracySummary);
+            values.Add(currentSession == null ? string.Empty : currentSession.AssistedMeasurementAccuracySummary);
+            values.Add(currentSession == null ? string.Empty : currentSession.FavoriteFrameComparisonQuality);
+            AddSortedReportImageValues(values, imageBoxes);
+            AddSortedTextBoxValues(values, measurementBoxes);
+            values.Add(chkShowBeforeMeasurementsInReport.Checked.ToString());
+            values.Add(chkShowSideBySideImageInReport.Checked.ToString());
+            values.Add(chkShowBeforeImageInReport.Checked.ToString());
+            values.Add(chkShowAfterImageInReport.Checked.ToString());
+            values.Add(chkShowMeasurementReferenceImageInReport.Checked.ToString());
+            values.Add(chkShowMeasurementCaptureTraceInReport.Checked.ToString());
+            values.Add(GetReportLogoStyle());
+
+            string content = string.Join("\u001f", values.ToArray());
+            unchecked
+            {
+                ulong hash = 1469598103934665603UL;
+                for (int index = 0; index < content.Length; index++)
+                {
+                    hash ^= content[index];
+                    hash *= 1099511628211UL;
+                }
+                return hash.ToString("X16", System.Globalization.CultureInfo.InvariantCulture);
+            }
+        }
+
+        private static void AddSortedTextBoxValues(List<string> values, Dictionary<string, TextBox> boxes)
+        {
+            List<string> keys = new List<string>(boxes.Keys);
+            keys.Sort(StringComparer.Ordinal);
+            foreach (string key in keys)
+                values.Add(key + "=" + boxes[key].Text);
+        }
+
+        private static void AddSortedReportImageValues(List<string> values, Dictionary<string, TextBox> boxes)
+        {
+            List<string> keys = new List<string>(boxes.Keys);
+            keys.Sort(StringComparer.Ordinal);
+            foreach (string key in keys)
+            {
+                string path = boxes[key].Text;
+                string fileState = string.Empty;
+                try
+                {
+                    if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
+                    {
+                        FileInfo info = new FileInfo(path);
+                        fileState = "|" + info.Length.ToString() + "|" + info.LastWriteTimeUtc.Ticks.ToString();
+                    }
+                }
+                catch
+                {
+                    fileState = "|unavailable";
+                }
+                values.Add(key + "=" + path + fileState);
+            }
+        }
+
+        private void RecordReportDeliveryPrepared(string format, string path)
+        {
+            if (currentSession == null)
+                return;
+            currentSession.ReportDeliveryFormat = format;
+            currentSession.ReportDeliveryOutputPath = path;
+            currentSession.ReportDeliveryPreparedUtc = DateTime.UtcNow;
+            repository.Save(currentSession);
+            RefreshFitSessionFinalization();
         }
 
         private static string FinalizationLine(bool ready, string label, string detail)
@@ -5278,7 +5432,7 @@ namespace CassetteMotionPro.Workspace
             }
 
             reportBuilderOutput.Text = "Output folder: " + GetSessionReportsFolderPath() + Environment.NewLine +
-                "Preview opens the current HTML report. Package collects the report, images, summary, and handoff files; Zip makes it ready to send.";
+                (IsCurrentReportApprovalValid() ? "APPROVED: current report content is ready for a delivery package." : "NOT YET APPROVED: preview the report, then approve it in Review & Deliver.");
             reportBuilderOutput.ForeColor = Color.FromArgb(74, 87, 81);
         }
 
@@ -6864,9 +7018,12 @@ namespace CassetteMotionPro.Workspace
                 SaveCurrentSession();
                 if (!ConfirmReportReadinessBeforeOutput("Package report"))
                     return;
+                if (!EnsureCurrentReportApproval())
+                    return;
 
                 string packageFolder = FitSessionReportGenerator.GeneratePackage(client, currentSession);
                 MarkAssistedWorkflowReportGenerated();
+                RecordReportDeliveryPrepared("Client report package", packageFolder);
                 Process.Start(packageFolder);
                 UpdateSaveHint("Report package created and opened.");
                 MessageBox.Show(this,
@@ -6892,9 +7049,12 @@ namespace CassetteMotionPro.Workspace
                 SaveCurrentSession();
                 if (!ConfirmReportReadinessBeforeOutput("Zip report package"))
                     return;
+                if (!EnsureCurrentReportApproval())
+                    return;
 
                 string zipPath = FitSessionReportGenerator.GeneratePackageZip(client, currentSession);
                 MarkAssistedWorkflowReportGenerated();
+                RecordReportDeliveryPrepared("Client ZIP package", zipPath);
                 Process.Start(Path.GetDirectoryName(zipPath));
                 UpdateSaveHint("Zipped report package created in this session’s Reports folder.");
                 MessageBox.Show(this,
@@ -6919,9 +7079,12 @@ namespace CassetteMotionPro.Workspace
                 SaveCurrentSession();
                 if (!ConfirmReportReadinessBeforeOutput("Build client portal package") || !ConfirmClientPortalReadiness())
                     return;
+                if (!EnsureCurrentReportApproval())
+                    return;
 
                 string packageFolder = FitSessionReportGenerator.GenerateClientPortalPackage(client, currentSession);
                 MarkAssistedWorkflowReportGenerated();
+                RecordReportDeliveryPrepared("Client portal package", packageFolder);
                 Process.Start(packageFolder);
                 UpdateSaveHint("Client portal package and upload-ready zip created in this session’s Reports folder.");
                 MessageBox.Show(this,
