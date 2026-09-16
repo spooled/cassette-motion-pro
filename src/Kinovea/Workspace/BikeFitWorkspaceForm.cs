@@ -994,7 +994,7 @@ namespace CassetteMotionPro.Workspace
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 72));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 62));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 106));
 
             Label eyebrow = new Label();
             eyebrow.Text = "BIKE + RIDER MEASUREMENT REVIEW";
@@ -1038,6 +1038,9 @@ namespace CassetteMotionPro.Workspace
             Button accuracy = CreateButton("Assisted Accuracy Review", true);
             accuracy.Size = new Size(195, 38);
             accuracy.Click += ShowAssistedMeasurementAccuracyReview;
+            Button repeatability = CreateButton("Repeatability Lab", false);
+            repeatability.Size = new Size(165, 38);
+            repeatability.Click += ShowMeasurementRepeatabilityLab;
             Button bike = CreateButton("Edit Bike Metrics", false);
             bike.Size = new Size(145, 38);
             bike.Click += delegate { SelectWorkspaceTab("Bike Metrics"); };
@@ -1050,6 +1053,7 @@ namespace CassetteMotionPro.Workspace
             actions.Controls.Add(refresh);
             actions.Controls.Add(quality);
             actions.Controls.Add(accuracy);
+            actions.Controls.Add(repeatability);
             actions.Controls.Add(bike);
             actions.Controls.Add(rider);
             actions.Controls.Add(report);
@@ -1213,6 +1217,25 @@ namespace CassetteMotionPro.Workspace
                 SaveCurrentSession();
                 RefreshCombinedMeasurementReview();
                 UpdateSaveHint("Assisted measurement accuracy review approved and saved to the client session.");
+            }
+        }
+
+        private void ShowMeasurementRepeatabilityLab(object sender, EventArgs e)
+        {
+            if (currentSession == null)
+            {
+                MessageBox.Show(this, "Create or open a client fit session first.", "Repeatability Lab", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            using (MeasurementRepeatabilityLabForm form = new MeasurementRepeatabilityLabForm(currentSession.MeasurementRepeatabilityChecks))
+            {
+                form.ShowDialog(this);
+                if (!form.Changed)
+                    return;
+                currentSession.MeasurementRepeatabilityChecks = form.Checks;
+                SaveCurrentSession();
+                RefreshCombinedMeasurementReview();
+                UpdateSaveHint("Repeatability checks saved to the client session.");
             }
         }
 
@@ -5197,6 +5220,9 @@ namespace CassetteMotionPro.Workspace
             values.Add(currentSession == null ? string.Empty : currentSession.TrackingQualityReviewSummary);
             values.Add(currentSession == null ? string.Empty : currentSession.TrackingCalibrationAccuracySummary);
             values.Add(currentSession == null ? string.Empty : currentSession.AssistedMeasurementAccuracySummary);
+            if (currentSession != null && currentSession.MeasurementRepeatabilityChecks != null)
+                foreach (MeasurementRepeatabilityCheck check in currentSession.MeasurementRepeatabilityChecks)
+                    values.Add(check.Summary + check.ApprovedForReport.ToString());
             values.Add(currentSession == null ? string.Empty : currentSession.FavoriteFrameComparisonQuality);
             AddSortedReportImageValues(values, imageBoxes);
             AddSortedTextBoxValues(values, measurementBoxes);
@@ -5560,6 +5586,13 @@ namespace CassetteMotionPro.Workspace
             text.AppendLine(string.IsNullOrWhiteSpace(currentSession == null ? string.Empty : currentSession.AssistedMeasurementAccuracyApprovedUtc)
                 ? "ASSISTED ACCURACY REVIEW: Not yet fitter-approved"
                 : "ASSISTED ACCURACY REVIEW: Approved by fitter");
+            if (currentSession != null && currentSession.MeasurementRepeatabilityChecks != null && currentSession.MeasurementRepeatabilityChecks.Count > 0)
+            {
+                text.AppendLine();
+                text.AppendLine("REPEATABILITY CHECKS");
+                foreach (MeasurementRepeatabilityCheck check in currentSession.MeasurementRepeatabilityChecks)
+                    text.AppendLine("• " + check.Summary + (check.ApprovedForReport ? " [approved]" : " [session only]"));
+            }
 
             combinedMeasurementReview.Text = text.ToString();
             string sessionName = currentSession == null ? "No active session" : currentSession.DisplayName;

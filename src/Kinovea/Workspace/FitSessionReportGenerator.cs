@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
@@ -20,7 +21,7 @@ namespace CassetteMotionPro.Workspace
     public static class FitSessionReportGenerator
     {
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "0.83.0";
+        private const string ReportVersion = "0.84.0";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
 
         private static StudioSettings ReportSettings { get { return StudioSettingsRepository.Current; } }
@@ -227,6 +228,10 @@ namespace CassetteMotionPro.Workspace
             AddSummarySection(text, "Tracking calibration and accuracy", session.TrackingCalibrationAccuracySummary);
             AddSummarySection(text, "Assisted measurement accuracy review", session.AssistedMeasurementAccuracySummary);
             AddSummarySection(text, "Assisted measurement fitter notes", session.AssistedMeasurementAccuracyNotes);
+            if (session.MeasurementRepeatabilityChecks != null)
+                foreach (MeasurementRepeatabilityCheck check in session.MeasurementRepeatabilityChecks)
+                    if (check.ApprovedForReport)
+                        AddSummarySection(text, "Fitter-approved measurement repeatability", check.Summary);
             AddSummarySection(text, "Dual-camera synchronization", session.DualCameraSynchronizationSummary);
             AddSummarySection(text, "Assisted workflow recovery review", session.AssistedWorkflowRecoverySummary);
             AddSummarySection(text, "Before smart measurement frames", session.SmartMeasurementBeforeSummary);
@@ -912,6 +917,15 @@ namespace CassetteMotionPro.Workspace
                     html.AppendLine("<div class=\"note\"><strong>Fitter approval recorded:</strong> " + Encode(session.AssistedMeasurementAccuracyApprovedUtc) + "</div>");
                 if (!string.IsNullOrWhiteSpace(session.AssistedMeasurementAccuracyNotes))
                     html.AppendLine("<div class=\"note\"><strong>Fitter notes:</strong> " + Encode(session.AssistedMeasurementAccuracyNotes) + "</div>");
+            }
+
+            if (session.MeasurementRepeatabilityChecks != null && session.MeasurementRepeatabilityChecks.Any(check => check.ApprovedForReport))
+            {
+                html.AppendLine("<h2>Measurement Repeatability</h2>");
+                html.AppendLine("<div class=\"section-kicker\">Three repeated landmark placements per measurement; fitter-approved checks only. Consistency does not establish absolute accuracy.</div>");
+                foreach (MeasurementRepeatabilityCheck check in session.MeasurementRepeatabilityChecks)
+                    if (check.ApprovedForReport)
+                        html.AppendLine("<div class=\"note\">" + Encode(check.Summary) + "</div>");
             }
 
             if (!string.IsNullOrWhiteSpace(session.DualCameraSynchronizationSummary))

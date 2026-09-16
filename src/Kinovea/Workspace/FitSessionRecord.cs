@@ -150,6 +150,7 @@ namespace CassetteMotionPro.Workspace
         public string AssistedMeasurementAccuracySummary { get; set; }
         public string AssistedMeasurementAccuracyNotes { get; set; }
         public string AssistedMeasurementAccuracyApprovedUtc { get; set; }
+        public List<MeasurementRepeatabilityCheck> MeasurementRepeatabilityChecks { get; set; }
         public string DualCameraLeftVideoPath { get; set; }
         public string DualCameraRightVideoPath { get; set; }
         public string DualCameraLeftRole { get; set; }
@@ -196,6 +197,40 @@ namespace CassetteMotionPro.Workspace
         public string ManifestPath
         {
             get { return Path.Combine(FolderPath ?? string.Empty, "session.xml"); }
+        }
+    }
+
+    [Serializable]
+    public class MeasurementRepeatabilityCheck
+    {
+        public string Measurement { get; set; }
+        public string Phase { get; set; }
+        public string Unit { get; set; }
+        public double ReadingOne { get; set; }
+        public double ReadingTwo { get; set; }
+        public double ReadingThree { get; set; }
+        public double AllowedRange { get; set; }
+        public bool ApprovedForReport { get; set; }
+        public DateTime CheckedUtc { get; set; }
+
+        [XmlIgnore]
+        public double Range { get { return Math.Max(ReadingOne, Math.Max(ReadingTwo, ReadingThree)) - Math.Min(ReadingOne, Math.Min(ReadingTwo, ReadingThree)); } }
+
+        [XmlIgnore]
+        public double Mean { get { return (ReadingOne + ReadingTwo + ReadingThree) / 3.0; } }
+
+        [XmlIgnore]
+        public bool WithinRange { get { return Range <= AllowedRange; } }
+
+        public string Summary
+        {
+            get
+            {
+                return string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                    "{0} {1}: {2:0.##}, {3:0.##}, {4:0.##} {5}; mean {6:0.##}, spread {7:0.##} (limit {8:0.##}) — {9}",
+                    Phase, Measurement, ReadingOne, ReadingTwo, ReadingThree, Unit, Mean, Range, AllowedRange,
+                    WithinRange ? "consistent within chosen limit" : "review landmark placement");
+            }
         }
     }
 }

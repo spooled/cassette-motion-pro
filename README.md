@@ -5,7 +5,13 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.83.0 Fit-Day Readiness and Practice Mode
+## Current milestone: 0.84.0 Measurement Repeatability Lab
+
+- In Measurements → Combined Review, use Repeatability Lab to enter three independent placements of the same bike or rider landmark for Before or After.
+- The lab keeps the raw readings, mean, spread, and fitter-selected tolerance in the client session. It flags checks outside that tolerance for review, without changing the final measured value.
+- Only checks explicitly approved by the fitter appear in the report. Repeatability describes consistency, not absolute accuracy.
+
+## Previous milestone: 0.83.0 Fit-Day Readiness and Practice Mode
 
 - Practice Mode is available beside Fit-Day Diagnostics on the dashboard and can
   be used before a real fit session begins.
