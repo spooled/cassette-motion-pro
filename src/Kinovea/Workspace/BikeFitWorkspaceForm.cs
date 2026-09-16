@@ -1708,9 +1708,14 @@ namespace CassetteMotionPro.Workspace
             diagnostics.Size = new Size(170, 42);
             diagnostics.Margin = new Padding(8, 9, 0, 9);
             diagnostics.Click += ShowFitDayDiagnostics;
+            Button practice = CreateButton("Practice Mode", false);
+            practice.Size = new Size(140, 42);
+            practice.Margin = new Padding(8, 9, 0, 9);
+            practice.Click += ShowFitDayPracticeMode;
             primaryActions.Controls.Add(resume);
             primaryActions.Controls.Add(recovery);
             primaryActions.Controls.Add(diagnostics);
+            primaryActions.Controls.Add(practice);
 
             Button moreOptions = CreateButton("More Options + Folders", false);
             moreOptions.Dock = DockStyle.Left;
@@ -1746,6 +1751,85 @@ namespace CassetteMotionPro.Workspace
             string saveFolder = HasActiveFitSession() ? GetSessionReportsFolderPath() : client.ReportsPath;
             using (FitDayDiagnosticsForm form = new FitDayDiagnosticsForm(BuildFitDayDiagnosticResults, saveFolder))
                 form.ShowDialog(this);
+        }
+
+        private void ShowFitDayPracticeMode(object sender, EventArgs e)
+        {
+            string practiceRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Cassette Motion Pro", "Practice Mode");
+            bool captureConnected = openDualLiveCaptureFolders != null || openLiveCaptureFolder != null;
+            bool playbackConnected = openVideoPair != null || openVideo != null;
+            bool storageReady;
+            string storageDetail;
+            GetPracticeStorageReadiness(out storageReady, out storageDetail);
+            bool calibrationReady = currentSession != null && !string.IsNullOrWhiteSpace(currentSession.TrackingCalibrationAccuracySummary);
+            using (FitDayPracticeModeForm form = new FitDayPracticeModeForm(practiceRoot, captureConnected, playbackConnected, Directory.Exists(client.FolderPath), storageReady, storageDetail, calibrationReady))
+            {
+                if (form.ShowDialog(this) != DialogResult.OK)
+                    return;
+
+                if (currentSession != null)
+                    SaveCurrentSession();
+
+                try
+                {
+                    if (form.RequestedAction == PracticeModeAction.RecordDual)
+                    {
+                        Directory.CreateDirectory(form.CameraOneFolder);
+                        Directory.CreateDirectory(form.CameraTwoFolder);
+                        WritePracticeModeHint(form.CameraOneFolder, "Camera 1");
+                        WritePracticeModeHint(form.CameraTwoFolder, "Camera 2");
+                        Close();
+                        if (openDualLiveCaptureFolders != null)
+                            openDualLiveCaptureFolders(form.CameraOneFolder, form.CameraTwoFolder);
+                        else if (openLiveCaptureFolder != null)
+                        {
+                            openLiveCaptureFolder(form.CameraOneFolder);
+                            openLiveCaptureFolder(form.CameraTwoFolder);
+                        }
+                    }
+                    else if (form.RequestedAction == PracticeModeAction.PlayLatest)
+                    {
+                        Close();
+                        if (openVideoPair != null)
+                            openVideoPair(form.LatestCameraOneVideo, form.LatestCameraTwoVideo);
+                        else if (openVideo != null)
+                        {
+                            openVideo(form.LatestCameraOneVideo);
+                            openVideo(form.LatestCameraTwoVideo);
+                        }
+                    }
+                }
+                catch (Exception exception)
+                {
+                    MessageBox.Show(this, "Practice Mode could not open Video Studio.\n\n" + exception.Message, "Practice Mode", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private void GetPracticeStorageReadiness(out bool ready, out string detail)
+        {
+            ready = false;
+            detail = "Recording storage could not be checked.";
+            try
+            {
+                string root = Path.GetPathRoot(Path.GetFullPath(client.FolderPath));
+                DriveInfo drive = new DriveInfo(root);
+                double freeGb = drive.AvailableFreeSpace / 1073741824.0;
+                ready = freeGb >= 2;
+                detail = freeGb.ToString("0.0") + " GB free on " + root + (freeGb < 5 ? " · Free additional space before a long dual-camera fit." : string.Empty);
+            }
+            catch (Exception exception)
+            {
+                detail = "Recording storage could not be checked: " + exception.Message;
+            }
+        }
+
+        private static void WritePracticeModeHint(string folder, string cameraName)
+        {
+            string text = "Cassette Motion Pro Practice Mode" + Environment.NewLine +
+                "Temporary " + cameraName + " test recordings only." + Environment.NewLine +
+                "These files are intentionally separate from real client fit-session evidence.";
+            File.WriteAllText(Path.Combine(folder, "Practice Capture Folder.txt"), text);
         }
 
         private List<FitDayDiagnosticResult> BuildFitDayDiagnosticResults()

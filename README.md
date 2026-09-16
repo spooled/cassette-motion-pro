@@ -5,7 +5,22 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.82.0 Fit-Day Reliability Testing and Diagnostics
+## Current milestone: 0.83.0 Fit-Day Readiness and Practice Mode
+
+- Practice Mode is available beside Fit-Day Diagnostics on the dashboard and can
+  be used before a real fit session begins.
+- Dual test recordings are routed into isolated Camera 1 and Camera 2 app-data
+  practice folders, never into any client's Before, After, or report evidence.
+- The newest two practice clips can be opened together in Kinovea playback to
+  confirm camera assignment, framing, height, image quality, and usable video.
+- A readiness checklist covers client-folder access, recording storage, capture and
+  playback connections, practice-folder writes, test clips, and calibration status.
+- Ready for Fit requires both test clips plus explicit camera and playback
+  confirmation, and saves a timestamped readiness report for the next pre-fit check.
+- Clean Practice Files removes only the isolated practice recordings and readiness
+  report after confirmation; real client-session media is never targeted.
+
+## Previous milestone: 0.82.0 Fit-Day Reliability Testing and Diagnostics
 
 - Fit-Day Diagnostics is available directly from the dashboard before or during a
   client session, without adding another permanent workspace tab.
