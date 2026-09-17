@@ -5,7 +5,13 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.84.0 Measurement Repeatability Lab
+## Current milestone: 0.85.0 Assisted Tracking Corrections
+
+- In short-clip tracking and pedal-cycle review, drag a drifting orange joint point, choose how many following checkpoints to affect, then click Carry Corrected Joint Forward.
+- Only that joint is re-tracked through the chosen checkpoints. Any affected approvals are cleared so the fitter must review those frames again before saving.
+- Returning to a checkpoint now restores its reviewed points instead of silently re-tracking and replacing them. The accepted tracking summary records the number of re-tracked checkpoints.
+
+## Previous milestone: 0.84.0 Measurement Repeatability Lab
 
 - In Measurements → Combined Review, use Repeatability Lab to enter three independent placements of the same bike or rider landmark for Before or After.
 - The lab keeps the raw readings, mean, spread, and fitter-selected tolerance in the client session. It flags checks outside that tolerance for review, without changing the final measured value.

@@ -26,10 +26,13 @@ namespace CassetteMotionPro.Workspace
         private readonly Button previous = new Button();
         private readonly Button approveNext = new Button();
         private readonly Button finish = new Button();
+        private readonly Button carryCorrection = new Button();
+        private readonly NumericUpDown carryCount = new NumericUpDown();
         private readonly List<TrackedFrame> frames = new List<TrackedFrame>();
         private readonly Dictionary<string, TrackingImageQuality> frameQualityCache = new Dictionary<string, TrackingImageQuality>(StringComparer.OrdinalIgnoreCase);
         private int frameIndex;
         private int correctionCount;
+        private int carriedCheckpointCount;
 
         public Dictionary<string, string> ResultValues { get; private set; }
         public string TrackingSummary { get; private set; }
@@ -85,7 +88,7 @@ namespace CassetteMotionPro.Workspace
             title.AutoSize = true;
             Label intro = NewLabel(pedalCycleMode
                 ? "Review one complete pedal turn. The ankle path identifies top, bottom, front, and rear crank positions after every checkpoint is approved."
-                : "Approve the first pose, then review each tracked checkpoint. Drag an orange point whenever tracking drifts.", 9F, false);
+                : "Approve the first pose, then review each tracked checkpoint. Drag a point, then carry that joint correction forward if drift persists.", 9F, false);
             intro.ForeColor = Color.FromArgb(205, 216, 210);
             intro.Location = new Point(24, 48);
             intro.AutoSize = true;
@@ -96,7 +99,7 @@ namespace CassetteMotionPro.Workspace
 
             canvas.Dock = DockStyle.Fill;
             canvas.Margin = new Padding(12);
-            canvas.PoseCorrected += delegate { correctionCount++; UpdateStatus(); };
+            canvas.PoseCorrected += delegate { correctionCount++; SaveCanvasToCurrent(false); UpdateStatus(); };
             root.Controls.Add(canvas, 0, 1);
 
             Panel panel = new Panel();
@@ -123,6 +126,17 @@ namespace CassetteMotionPro.Workspace
             ConfigureButton(previous, "Previous Checkpoint", false);
             ConfigureButton(approveNext, "Approve & Track Next", true);
             ConfigureButton(finish, pedalCycleMode ? "Save Pedal-Cycle Review" : "Save Accepted Motion Range", true);
+            ConfigureButton(carryCorrection, "Carry Corrected Joint Forward", false);
+            carryCorrection.Click += CarryCorrection_Click;
+            carryCount.Minimum = 1;
+            carryCount.Maximum = Math.Max(1, framePaths.Length - 1);
+            carryCount.Value = Math.Min(3, framePaths.Length - 1);
+            carryCount.Width = 60;
+            FlowLayoutPanel carryOptions = new FlowLayoutPanel();
+            carryOptions.Dock = DockStyle.Top;
+            carryOptions.Height = 38;
+            carryOptions.Controls.Add(new Label { Text = "Next checkpoints:", AutoSize = true, Padding = new Padding(0, 8, 0, 0) });
+            carryOptions.Controls.Add(carryCount);
             Button reset = new Button();
             ConfigureButton(reset, "Reset This Checkpoint", false);
             Button flip = new Button();
@@ -140,6 +154,8 @@ namespace CassetteMotionPro.Workspace
             panel.Controls.Add(finish);
             panel.Controls.Add(approveNext);
             panel.Controls.Add(previous);
+            panel.Controls.Add(carryCorrection);
+            panel.Controls.Add(carryOptions);
             panel.Controls.Add(reset);
             panel.Controls.Add(flip);
             panel.Controls.Add(trendChart);
@@ -170,6 +186,11 @@ namespace CassetteMotionPro.Workspace
             List<PointF> seed = canvas.Points;
             string previousPath = framePaths[frameIndex];
             frameIndex++;
+            if (frameIndex < frames.Count)
+            {
+                RestoreCurrentFrame();
+                return;
+            }
             TrackResult tracked = ShortClipPointTracker.Track(previousPath, framePaths[frameIndex], seed);
             canvas.LoadFrame(framePaths[frameIndex], tracked.Points);
             canvas.Confidence = tracked.Confidence;
@@ -183,11 +204,52 @@ namespace CassetteMotionPro.Workspace
 
         private void Previous_Click(object sender, EventArgs e)
         {
-            SaveCanvasToCurrent(false);
+            SaveCanvasToCurrent(frames[frameIndex].Approved);
             if (frameIndex == 0)
                 return;
             frameIndex--;
             RestoreCurrentFrame();
+        }
+
+        private void CarryCorrection_Click(object sender, EventArgs e)
+        {
+            int joint = canvas.LastCorrectedPointIndex;
+            if (joint < 0 || frameIndex >= framePaths.Length - 1)
+                return;
+            int end = Math.Min(framePaths.Length - 1, frameIndex + (int)carryCount.Value);
+            bool overwritesApproved = frames.Skip(frameIndex + 1).Take(end - frameIndex).Any(frame => frame.Approved);
+            if (overwritesApproved && MessageBox.Show(this,
+                "This will update the selected joint in already-approved checkpoints and require you to review them again. Continue?",
+                "Carry Joint Correction", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                return;
+
+            SaveCanvasToCurrent(false);
+            PointF point = frames[frameIndex].Points[joint];
+            for (int index = frameIndex + 1; index <= end; index++)
+            {
+                TrackResult jointTrack = ShortClipPointTracker.Track(framePaths[index - 1], framePaths[index], new[] { point });
+                point = jointTrack.Points[0];
+                TrackedFrame frame;
+                if (index < frames.Count)
+                {
+                    frame = frames[index];
+                    frame.Points[joint] = point;
+                    frame.Confidence = Math.Min(frame.Confidence, jointTrack.Confidence);
+                    frame.Approved = false;
+                }
+                else
+                {
+                    TrackedFrame previousFrame = frames[index - 1];
+                    TrackResult fullTrack = ShortClipPointTracker.Track(framePaths[index - 1], framePaths[index], previousFrame.Points);
+                    fullTrack.Points[joint] = point;
+                    frame = new TrackedFrame(framePaths[index], fullTrack.Points, Math.Min(fullTrack.Confidence, jointTrack.Confidence), false);
+                    frames.Add(frame);
+                }
+            }
+            carriedCheckpointCount += end - frameIndex;
+            UpdateStatus();
+            MessageBox.Show(this, "Joint " + (joint + 1) + " was re-tracked through checkpoints " + (frameIndex + 2) + "–" + (end + 1) + ". Review and approve each affected checkpoint before saving.",
+                "Joint Correction Carried Forward", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void RestoreCurrentFrame()
@@ -230,6 +292,8 @@ namespace CassetteMotionPro.Workspace
             }
             previous.Enabled = frameIndex > 0;
             approveNext.Text = frameIndex == framePaths.Length - 1 ? "Approve Final Checkpoint" : "Approve & Track Next";
+            carryCorrection.Enabled = canvas.LastCorrectedPointIndex >= 0 && frameIndex < framePaths.Length - 1;
+            carryCount.Maximum = Math.Max(1, framePaths.Length - frameIndex - 1);
             finish.Enabled = frames.Count == framePaths.Length && frames.All(f => f.Approved);
             ranges.Text = BuildRangeText(false);
             if (pedalCycleMode)
@@ -275,7 +339,7 @@ namespace CassetteMotionPro.Workspace
             if (pedalCycleMode && frames.Count == framePaths.Length)
                 text += BuildCrankPositionText() + BuildSmartFrameSuggestionText();
             if (includeCounts)
-                text += frames.Count + " checkpoints · " + correctionCount + " manual corrections\n";
+                text += frames.Count + " checkpoints · " + correctionCount + " manual corrections · " + carriedCheckpointCount + " re-tracked checkpoints\n";
             return text;
         }
 
@@ -725,6 +789,7 @@ namespace CassetteMotionPro.Workspace
         private int dragIndex = -1;
         private bool facingRight = true;
         private bool correctedThisDrag;
+        public int LastCorrectedPointIndex { get; private set; } = -1;
         public event EventHandler PoseCorrected;
         public double Confidence { get; set; }
         public List<PointF> Points { get { return points.ToList(); } }
@@ -737,6 +802,8 @@ namespace CassetteMotionPro.Workspace
             MouseMove += OnMouseMove;
             MouseUp += delegate
             {
+                if (correctedThisDrag)
+                    LastCorrectedPointIndex = dragIndex;
                 dragIndex = -1;
                 if (correctedThisDrag && PoseCorrected != null)
                     PoseCorrected(this, EventArgs.Empty);
@@ -749,6 +816,7 @@ namespace CassetteMotionPro.Workspace
             if (image != null) image.Dispose();
             image = Image.FromFile(path);
             points.Clear();
+            LastCorrectedPointIndex = -1;
             if (trackedPoints != null) points.AddRange(trackedPoints);
             Invalidate();
         }
