@@ -1214,6 +1214,7 @@ namespace CassetteMotionPro.Workspace
                 currentSession.AssistedMeasurementAccuracySummary = scoreText + Environment.NewLine + summary;
                 currentSession.AssistedMeasurementAccuracyNotes = form.ReviewNotes;
                 currentSession.AssistedMeasurementAccuracyApprovedUtc = DateTime.UtcNow.ToString("o", System.Globalization.CultureInfo.InvariantCulture);
+                AddTimelineEvent("Approval", "Assisted measurement accuracy review approved");
                 SaveCurrentSession();
                 RefreshCombinedMeasurementReview();
                 UpdateSaveHint("Assisted measurement accuracy review approved and saved to the client session.");
@@ -1233,6 +1234,7 @@ namespace CassetteMotionPro.Workspace
                 if (!form.Changed)
                     return;
                 currentSession.MeasurementRepeatabilityChecks = form.Checks;
+                AddTimelineEvent("Measurements", "Repeatability checks saved");
                 SaveCurrentSession();
                 RefreshCombinedMeasurementReview();
                 UpdateSaveHint("Repeatability checks saved to the client session.");
@@ -1735,10 +1737,15 @@ namespace CassetteMotionPro.Workspace
             practice.Size = new Size(140, 42);
             practice.Margin = new Padding(8, 9, 0, 9);
             practice.Click += ShowFitDayPracticeMode;
+            Button timeline = CreateButton("Session Timeline", false);
+            timeline.Size = new Size(155, 42);
+            timeline.Margin = new Padding(8, 9, 0, 9);
+            timeline.Click += ShowFitSessionTimeline;
             primaryActions.Controls.Add(resume);
             primaryActions.Controls.Add(recovery);
             primaryActions.Controls.Add(diagnostics);
             primaryActions.Controls.Add(practice);
+            primaryActions.Controls.Add(timeline);
 
             Button moreOptions = CreateButton("More Options + Folders", false);
             moreOptions.Dock = DockStyle.Left;
@@ -4513,6 +4520,7 @@ namespace CassetteMotionPro.Workspace
                         imageBoxes["MeasurementReferenceImagePath"].Text = form.EvidenceImagePath;
                         chkShowMeasurementReferenceImageInReport.Checked = true;
                     }
+                    AddTimelineEvent("Measurements", side + " short-clip tracking reviewed and saved");
                     SaveCurrentSession();
                     UpdateSaveHint(side + " short-clip tracking saved with accepted motion ranges and correction history.");
                 }
@@ -4588,6 +4596,7 @@ namespace CassetteMotionPro.Workspace
                         imageBoxes["MeasurementReferenceImagePath"].Text = form.EvidenceImagePath;
                         chkShowMeasurementReferenceImageInReport.Checked = true;
                     }
+                    AddTimelineEvent("Measurements", side + " pedal-cycle review saved");
                     SaveCurrentSession();
                     UpdateSaveHint(side + " pedal-cycle positions, angle trend chart, and five smart measurement frames saved to this fit session.");
                 }
@@ -5176,6 +5185,7 @@ namespace CassetteMotionPro.Workspace
                 currentSession.ReportApprovalNotes = form.ApprovalNotes;
                 currentSession.ReportApprovalFingerprint = BuildReportContentFingerprint();
                 currentSession.ReportApprovedUtc = DateTime.UtcNow;
+                AddTimelineEvent("Approval", "Report approved by fitter");
                 repository.Save(currentSession);
                 RefreshFitSessionFinalization();
                 UpdateSaveHint("Current client report approved for delivery. Later report edits will require a fresh approval.");
@@ -7223,6 +7233,7 @@ namespace CassetteMotionPro.Workspace
                     return;
 
                 string reportPath = FitSessionReportGenerator.Generate(client, currentSession);
+                AddTimelineEvent("Report", "Report generated: " + Path.GetFileName(reportPath));
                 MarkAssistedWorkflowReportGenerated();
                 UpdateSaveHint("Report saved to this session’s Reports folder.");
                 MessageBox.Show(this,
@@ -7248,6 +7259,7 @@ namespace CassetteMotionPro.Workspace
                     return;
 
                 string reportPath = FitSessionReportGenerator.Generate(client, currentSession);
+                AddTimelineEvent("Report", "Report preview generated: " + Path.GetFileName(reportPath));
                 MarkAssistedWorkflowReportGenerated();
                 Process.Start(reportPath);
                 UpdateSaveHint("Report preview opened. Use Print / Save PDF after reviewing it.");
@@ -7271,6 +7283,7 @@ namespace CassetteMotionPro.Workspace
                     return;
 
                 string packageFolder = FitSessionReportGenerator.GeneratePackage(client, currentSession);
+                AddTimelineEvent("Delivery", "Report package prepared: " + Path.GetFileName(packageFolder));
                 MarkAssistedWorkflowReportGenerated();
                 RecordReportDeliveryPrepared("Client report package", packageFolder);
                 Process.Start(packageFolder);
@@ -7302,6 +7315,7 @@ namespace CassetteMotionPro.Workspace
                     return;
 
                 string zipPath = FitSessionReportGenerator.GeneratePackageZip(client, currentSession);
+                AddTimelineEvent("Delivery", "ZIP package prepared: " + Path.GetFileName(zipPath));
                 MarkAssistedWorkflowReportGenerated();
                 RecordReportDeliveryPrepared("Client ZIP package", zipPath);
                 Process.Start(Path.GetDirectoryName(zipPath));
@@ -7332,6 +7346,7 @@ namespace CassetteMotionPro.Workspace
                     return;
 
                 string packageFolder = FitSessionReportGenerator.GenerateClientPortalPackage(client, currentSession);
+                AddTimelineEvent("Delivery", "Client portal package prepared: " + Path.GetFileName(packageFolder));
                 MarkAssistedWorkflowReportGenerated();
                 RecordReportDeliveryPrepared("Client portal package", packageFolder);
                 Process.Start(packageFolder);
@@ -7479,6 +7494,7 @@ namespace CassetteMotionPro.Workspace
 
             if (string.Equals(slot, "Dual", StringComparison.OrdinalIgnoreCase))
             {
+                AddTimelineEvent("Recording", "Dual recording saved: " + Path.GetFileName(path));
                 SaveCurrentSession();
                 UpdateWorkflowChecklist();
                 UpdateFitCommandCenterStatus();
@@ -7502,6 +7518,8 @@ namespace CassetteMotionPro.Workspace
         {
             if (currentSession == null)
                 currentSession = new FitSessionRecord();
+
+            RecordSessionChangesForTimeline();
 
             string title = txtTitle.Text.Trim();
             if (string.IsNullOrEmpty(title))
@@ -7574,6 +7592,77 @@ namespace CassetteMotionPro.Workspace
             UpdateActiveSessionStatus();
             UpdateWorkflowChecklist();
             RefreshRecordingFolderGuide();
+        }
+
+        private void ShowFitSessionTimeline(object sender, EventArgs e)
+        {
+            if (!HasActiveFitSession())
+            {
+                MessageBox.Show(this, "Open or create a client fit session first.", "Session Timeline", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            if (hasUnsavedChanges)
+                SaveCurrentSession();
+            using (FitSessionTimelineForm form = new FitSessionTimelineForm(currentSession))
+                form.ShowDialog(this);
+        }
+
+        private void AddTimelineEvent(string category, string description)
+        {
+            if (currentSession == null)
+                return;
+            if (currentSession.TimelineEvents == null)
+                currentSession.TimelineEvents = new List<FitSessionTimelineEvent>();
+            currentSession.TimelineEvents.Add(new FitSessionTimelineEvent
+            {
+                OccurredUtc = DateTime.UtcNow,
+                Category = category,
+                Description = description
+            });
+        }
+
+        private void RecordSessionChangesForTimeline()
+        {
+            if (currentSession.Id == Guid.Empty &&
+                (currentSession.TimelineEvents == null || !currentSession.TimelineEvents.Exists(item => item.Category == "Session")))
+                AddTimelineEvent("Session", "Fit session created");
+
+            string newStatus = Convert.ToString(cmbStatus.SelectedItem);
+            if (currentSession.Id != Guid.Empty && !string.Equals(currentSession.Status ?? string.Empty, newStatus ?? string.Empty, StringComparison.Ordinal))
+                AddTimelineEvent("Session", "Status changed to " + newStatus);
+
+            string beforeVideo = mediaBoxes["BeforeVideoPath"].Text;
+            string afterVideo = mediaBoxes["AfterVideoPath"].Text;
+            if (!string.IsNullOrWhiteSpace(beforeVideo) && !string.Equals(beforeVideo, currentSession.BeforeVideoPath, StringComparison.OrdinalIgnoreCase))
+                AddTimelineEvent("Recording", "Before recording selected: " + Path.GetFileName(beforeVideo));
+            if (!string.IsNullOrWhiteSpace(afterVideo) && !string.Equals(afterVideo, currentSession.AfterVideoPath, StringComparison.OrdinalIgnoreCase))
+                AddTimelineEvent("Recording", "After recording selected: " + Path.GetFileName(afterVideo));
+
+            string[] imageKeys = { "BeforeReportImagePath", "AfterReportImagePath", "SideBySideReportImagePath" };
+            foreach (string key in imageKeys)
+            {
+                string path = imageBoxes[key].Text;
+                string old = Convert.ToString(currentSession.GetType().GetProperty(key).GetValue(currentSession, null));
+                if (!string.IsNullOrWhiteSpace(path) && !string.Equals(path, old, StringComparison.OrdinalIgnoreCase))
+                    AddTimelineEvent("Image", key.Replace("ReportImagePath", " report image") + " saved: " + Path.GetFileName(path));
+            }
+
+            List<string> changedMeasurements = new List<string>();
+            foreach (KeyValuePair<string, TextBox> pair in measurementBoxes)
+            {
+                System.Reflection.PropertyInfo property = currentSession.GetType().GetProperty(pair.Key);
+                if (property == null)
+                    continue;
+                string old = Convert.ToString(property.GetValue(currentSession, null));
+                if (!string.Equals(old ?? string.Empty, pair.Value.Text.Trim(), StringComparison.Ordinal))
+                    changedMeasurements.Add(pair.Key);
+            }
+            if (changedMeasurements.Count > 0)
+                AddTimelineEvent("Measurements", changedMeasurements.Count + " measurement value(s) updated: " + string.Join(", ", changedMeasurements.ToArray()));
+
+            if (!string.Equals(currentSession.FitSummaryChangesMade ?? string.Empty, txtFitSummaryChangesMade.Text.Trim(), StringComparison.Ordinal) ||
+                !string.Equals(currentSession.FitSummaryRecommendations ?? string.Empty, txtFitSummaryRecommendations.Text.Trim(), StringComparison.Ordinal))
+                AddTimelineEvent("Fit changes", "Changes made or recommendations updated");
         }
 
         private string GetReportLogoStyle()
@@ -8743,6 +8832,7 @@ namespace CassetteMotionPro.Workspace
                     currentSession.FavoriteFrameAfterNotes = form.AfterNotes;
                     currentSession.FavoriteFrameComparisonQuality = form.QualitySummary;
                     currentSession.FavoriteFrameComparisonApprovedUtc = DateTime.UtcNow;
+                    AddTimelineEvent("Approval", "Favorite Before/After frame pair approved");
 
                     string combinedPath = CreateBeforeAfterCombinedImage(approvedBefore, approvedAfter);
                     imageBoxes["SideBySideReportImagePath"].Text = combinedPath;

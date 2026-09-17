@@ -5,7 +5,13 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.85.0 Assisted Tracking Corrections
+## Current milestone: 0.86.0 Fit Session Timeline
+
+- Open Session Timeline from the Fit Day Dashboard to see recordings, report images, measurement updates, fit changes, approvals, and report activity in newest-first order.
+- New activity is recorded in the active client's session, including measurement edits and report milestones. Older sessions show reliable saved timestamps and file dates where available; undated past edits are not assigned invented times.
+- Timeline activity stays internal to the fit session and does not add clutter to the client-facing report.
+
+## Previous milestone: 0.85.0 Assisted Tracking Corrections
 
 - In short-clip tracking and pedal-cycle review, drag a drifting orange joint point, choose how many following checkpoints to affect, then click Carry Corrected Joint Forward.
 - Only that joint is re-tracked through the chosen checkpoints. Any affected approvals are cleared so the fitter must review those frames again before saving.

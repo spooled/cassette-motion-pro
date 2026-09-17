@@ -50,6 +50,7 @@ namespace CassetteMotionPro.Workspace
         public string HandoffNextAppointment { get; set; }
         public string HandoffInternalNotes { get; set; }
         public List<FitFollowUpEntry> FollowUps { get; set; }
+        public List<FitSessionTimelineEvent> TimelineEvents { get; set; }
 
         public string LeftVideoPath { get; set; }
         public string RightVideoPath { get; set; }
@@ -198,6 +199,14 @@ namespace CassetteMotionPro.Workspace
         {
             get { return Path.Combine(FolderPath ?? string.Empty, "session.xml"); }
         }
+    }
+
+    [Serializable]
+    public class FitSessionTimelineEvent
+    {
+        public DateTime OccurredUtc { get; set; }
+        public string Category { get; set; }
+        public string Description { get; set; }
     }
 
     [Serializable]

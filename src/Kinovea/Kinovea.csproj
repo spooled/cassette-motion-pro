@@ -180,6 +180,9 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Workspace\FitSessionRecord.cs" />
+    <Compile Include="Workspace\FitSessionTimelineForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Workspace\FitSessionRepository.cs" />
     <Compile Include="Workspace\FitSessionRecoveryStore.cs" />
     <Compile Include="Workspace\FavoriteFrameReviewForm.cs" />
