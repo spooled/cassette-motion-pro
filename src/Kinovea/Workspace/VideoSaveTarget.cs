@@ -207,7 +207,7 @@ namespace CassetteMotionPro.Workspace
                 MaximizeBox = false;
                 MinimizeBox = false;
                 ShowInTaskbar = false;
-                ClientSize = new Size(620, 236);
+                ClientSize = new Size(620, 250);
 
                 Label titleLabel = new Label();
                 titleLabel.AutoSize = false;
@@ -230,11 +230,11 @@ namespace CassetteMotionPro.Workspace
                 hintLabel.Location = new Point(18, 134);
                 hintLabel.Size = new Size(580, 18);
 
-                beforeButton = CreateButton("Before", 18, 176, 82);
-                afterButton = CreateButton("After", 116, 176, 82);
-                dualButton = CreateButton("Dual", 214, 176, 82);
-                regularButton = CreateButton("Regular Save", 312, 176, 104);
-                cancelButton = CreateButton("Cancel", 432, 176, 82);
+                beforeButton = CreateButton("&Before", 18, 178, 110);
+                afterButton = CreateButton("&After", 138, 178, 110);
+                dualButton = CreateButton("&Dual", 258, 178, 110);
+                regularButton = CreateButton("&Regular Save", 378, 178, 110);
+                cancelButton = CreateButton("&Cancel", 498, 178, 110);
 
                 beforeButton.Click += delegate
                 {
@@ -282,7 +282,8 @@ namespace CassetteMotionPro.Workspace
                 Button button = new Button();
                 button.Text = text;
                 button.Location = new Point(left, top);
-                button.Size = new Size(width, 32);
+                button.Size = new Size(width, 48);
+                button.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
                 return button;
             }
         }

@@ -189,7 +189,7 @@ namespace CassetteMotionPro.Workspace
             MinimizeBox = false;
             MaximizeBox = false;
             ShowInTaskbar = false;
-            ClientSize = new Size(540, 178);
+            ClientSize = new Size(540, 198);
 
             Label title = new Label();
             title.Text = "Save this Video Studio image into the client fit session:";
@@ -207,23 +207,23 @@ namespace CassetteMotionPro.Workspace
             folder.ForeColor = SystemColors.ControlDarkDark;
             Controls.Add(folder);
 
-            Button before = CreateButton("Before", 18, DialogResult.OK);
+            Button before = CreateButton("&Before", 18, DialogResult.OK);
             before.Click += delegate { SelectedSlot = "Before"; };
             Controls.Add(before);
 
-            Button after = CreateButton("After", 116, DialogResult.OK);
+            Button after = CreateButton("&After", 120, DialogResult.OK);
             after.Click += delegate { SelectedSlot = "After"; };
             Controls.Add(after);
 
-            Button dual = CreateButton("Dual", 214, DialogResult.OK);
+            Button dual = CreateButton("&Dual", 222, DialogResult.OK);
             dual.Click += delegate { SelectedSlot = "Dual"; };
             Controls.Add(dual);
 
-            Button regular = CreateButton("Regular Save", 312, DialogResult.Ignore);
-            regular.Width = 92;
+            Button regular = CreateButton("&Regular Save", 324, DialogResult.Ignore);
+            regular.Width = 104;
             Controls.Add(regular);
 
-            Button cancel = CreateButton("Cancel", 424, DialogResult.Cancel);
+            Button cancel = CreateButton("&Cancel", 438, DialogResult.Cancel);
             Controls.Add(cancel);
 
             AcceptButton = before;
@@ -235,8 +235,9 @@ namespace CassetteMotionPro.Workspace
             Button button = new Button();
             button.Text = text;
             button.DialogResult = result;
-            button.Location = new Point(left, 116);
-            button.Size = new Size(82, 32);
+            button.Location = new Point(left, 130);
+            button.Size = new Size(92, 46);
+            button.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             return button;
         }
     }

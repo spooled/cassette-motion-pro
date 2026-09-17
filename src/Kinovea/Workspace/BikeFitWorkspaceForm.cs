@@ -186,6 +186,10 @@ namespace CassetteMotionPro.Workspace
             if (keyData == (Keys.Control | Keys.D3)) { SelectWorkspaceTab("Bike Metrics"); return true; }
             if (keyData == (Keys.Control | Keys.D4)) { SelectWorkspaceTab("Body Angles"); return true; }
             if (keyData == (Keys.Control | Keys.D5)) { SelectWorkspaceTab("Review & Deliver"); return true; }
+            if (keyData == (Keys.Control | Keys.Shift | Keys.R)) { OpenDualLiveCapture(); return true; }
+            if (keyData == (Keys.Control | Keys.Shift | Keys.P)) { UseLatestBothVideos(); return true; }
+            if (keyData == (Keys.Control | Keys.Shift | Keys.F)) { ReviewFavoriteFrames(); return true; }
+            if (keyData == (Keys.Control | Keys.Shift | Keys.E)) { PrepareAndSelectVideoAnalysis(); return true; }
             return base.ProcessCmdKey(ref msg, keyData);
         }
 
@@ -2203,7 +2207,7 @@ namespace CassetteMotionPro.Workspace
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 76));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 20));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 92));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 118));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 20));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
@@ -2373,8 +2377,8 @@ namespace CassetteMotionPro.Workspace
         private void AddFitCommandButton(FlowLayoutPanel buttons, string text, bool primary, Action action)
         {
             Button button = CreateButton(text, primary);
-            button.Size = new Size(148, 34);
-            button.Margin = new Padding(0, 3, 7, 3);
+            button.Size = new Size(174, 48);
+            button.Margin = new Padding(0, 4, 9, 4);
             button.Click += delegate
             {
                 if (action != null)
@@ -4153,6 +4157,16 @@ namespace CassetteMotionPro.Workspace
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 70));
             table.Controls.Add(explanation, 0, explanationRow);
 
+            Label keyboardHint = new Label();
+            keyboardHint.Text = "FIT-DAY KEYS (while this workspace is open): Ctrl+Shift+R Record Live · Ctrl+Shift+P open latest playback · Ctrl+Shift+F favorite frames · Ctrl+Shift+E prepare evidence saving. In Video Studio, use Save Image / Save Video; choose Before, After, or Dual with Alt+B / Alt+A / Alt+D.";
+            keyboardHint.Dock = DockStyle.Fill;
+            keyboardHint.ForeColor = Color.FromArgb(54, 83, 37);
+            keyboardHint.BackColor = Color.FromArgb(240, 250, 223);
+            keyboardHint.Padding = new Padding(10, 7, 10, 4);
+            int keyboardRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 68));
+            table.Controls.Add(keyboardHint, 0, keyboardRow);
+
             FlowLayoutPanel actions = new FlowLayoutPanel();
             actions.Dock = DockStyle.Fill;
             actions.FlowDirection = FlowDirection.LeftToRight;
@@ -4160,39 +4174,39 @@ namespace CassetteMotionPro.Workspace
             actions.Padding = new Padding(0, 12, 0, 0);
 
             Button before = CreateButton("Analyze Before Video", false);
-            before.Size = new Size(170, 38);
+            before.Size = new Size(190, 48);
             before.Click += delegate { OpenSingle("BeforeVideoPath"); };
 
             Button after = CreateButton("Analyze After Video", true);
-            after.Size = new Size(170, 38);
+            after.Size = new Size(190, 48);
             after.Click += delegate { OpenSingle("AfterVideoPath"); };
 
             Button pair = CreateButton("Analyze Latest Before + After", false);
-            pair.Size = new Size(270, 38);
+            pair.Size = new Size(285, 48);
             pair.Click += delegate { UseLatestBothVideos(); };
 
             Button prepare = CreateButton("Prepare Capture Folder", true);
-            prepare.Size = new Size(205, 38);
+            prepare.Size = new Size(215, 48);
             prepare.Click += delegate { PrepareAnalysisCaptureFolder(); };
 
             Button captures = CreateButton("Open Captures Folder", false);
-            captures.Size = new Size(180, 38);
+            captures.Size = new Size(190, 48);
             captures.Click += delegate { OpenAnalysisCapturesFolder(); };
 
             Button checkCaptures = CreateButton("Check Saved Evidence", true);
-            checkCaptures.Size = new Size(190, 38);
+            checkCaptures.Size = new Size(205, 48);
             checkCaptures.Click += delegate { CheckSavedAnalysisEvidence(); };
 
             Button favoriteFrames = CreateButton("Review Favorite Frames", true);
-            favoriteFrames.Size = new Size(205, 38);
+            favoriteFrames.Size = new Size(215, 48);
             favoriteFrames.Click += delegate { ReviewFavoriteFrames(); };
 
             Button compareFrames = CreateButton("Compare + Approve Frames", false);
-            compareFrames.Size = new Size(220, 38);
+            compareFrames.Size = new Size(225, 48);
             compareFrames.Click += delegate { CompareAndApproveFavoriteFrames(); };
 
             Button mediaLibrary = CreateButton("Session Media Library", true);
-            mediaLibrary.Size = new Size(190, 38);
+            mediaLibrary.Size = new Size(200, 48);
             mediaLibrary.Click += delegate { OpenSessionMediaLibrary(); };
 
             actions.Controls.Add(before);
@@ -4206,7 +4220,7 @@ namespace CassetteMotionPro.Workspace
             actions.Controls.Add(mediaLibrary);
 
             int actionRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 120));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 190));
             table.Controls.Add(actions, 0, actionRow);
 
             analysisCapturesStatus.Text = "Evidence status: click Prepare Capture Folder or Analyze to set this session as the active Video Studio capture destination.";

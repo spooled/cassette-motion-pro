@@ -53,7 +53,7 @@ namespace CassetteMotionPro.Workspace
             root.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 300));
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 82));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 94));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 116));
 
             Panel header = new Panel();
             header.Dock = DockStyle.Fill;
@@ -111,13 +111,13 @@ namespace CassetteMotionPro.Workspace
             controls.Padding = new Padding(14, 8, 14, 8);
             controls.ColumnCount = 6;
             controls.RowCount = 2;
-            controls.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 115));
-            controls.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 115));
-            controls.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 145));
-            controls.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 190));
+            controls.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 125));
+            controls.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 125));
+            controls.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 165));
+            controls.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 200));
             controls.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            controls.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
-            controls.RowStyles.Add(new RowStyle(SizeType.Absolute, 43));
+            controls.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 105));
+            controls.RowStyles.Add(new RowStyle(SizeType.Absolute, 60));
             controls.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
             Button previous = MakeButton("← Previous", false);
@@ -137,7 +137,7 @@ namespace CassetteMotionPro.Workspace
             frameStatus.TextAlign = ContentAlignment.MiddleLeft;
             frameStatus.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             shortcutHint.Dock = DockStyle.Fill;
-            shortcutHint.Text = "Keyboard: ←/→ review · Space favorite · Enter use frame · Home/End jump";
+            shortcutHint.Text = "Keyboard: ←/→ review · Space favorite · Enter use frame · Home/End jump. Touch: use the larger buttons above.";
             shortcutHint.ForeColor = Color.FromArgb(92, 104, 98);
 
             controls.Controls.Add(previous, 0, 0);
@@ -164,12 +164,12 @@ namespace CassetteMotionPro.Workspace
         private static void StyleButton(Button button, bool primary)
         {
             button.Dock = DockStyle.Fill;
-            button.Margin = new Padding(4);
+            button.Margin = new Padding(4, 6, 4, 6);
             button.FlatStyle = FlatStyle.Flat;
             button.FlatAppearance.BorderColor = primary ? Color.FromArgb(142, 182, 0) : Color.FromArgb(188, 198, 193);
             button.BackColor = primary ? Color.FromArgb(184, 228, 35) : Color.White;
             button.ForeColor = Color.FromArgb(26, 34, 31);
-            button.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            button.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
         }
 
         private void ShowFrame(int index)
