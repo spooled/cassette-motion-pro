@@ -111,6 +111,7 @@ namespace CassetteMotionPro.Workspace
         private readonly List<FitDayFlowStep> fitDayFlowSteps = new List<FitDayFlowStep>();
         private TabControl editorTabs;
         private FitSessionRecord currentSession;
+        public event Action<string> ActiveSessionChanged;
         private Action nextRecommendedStepActionHandler;
         private Action nextRecommendedFolderActionHandler;
         private bool loadingSession;
@@ -7727,6 +7728,8 @@ namespace CassetteMotionPro.Workspace
 
             if (currentSession == null)
             {
+                if (ActiveSessionChanged != null)
+                    ActiveSessionChanged(string.Empty);
                 ReportImageSaveTarget.Clear();
                 VideoSaveTarget.Clear();
                 activeSessionStatus.Text = "Active session\nChoose or create a fit session";
@@ -7742,6 +7745,8 @@ namespace CassetteMotionPro.Workspace
             activeSessionStatus.Text = "Active session: " + currentSession.DisplayName + " · " + status + "\n" +
                 "Client: " + client.DisplayName + "\n" +
                 "Session record: Measurements → Sessions → " + folder;
+            if (ActiveSessionChanged != null)
+                ActiveSessionChanged(currentSession.DisplayName);
             UpdateFitCommandCenterStatus();
         }
 

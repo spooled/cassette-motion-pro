@@ -67,6 +67,11 @@ namespace Kinovea.Root
         private string lockedSingleCapturePrefix;
         private int clientCaptureFolderLockTicks;
         private bool startupFitDayPromptShown;
+        private BikeFitWorkspaceForm fitWorkspace;
+        private ClientRecord fitWorkspaceClient;
+        private readonly ToolStripDropDownButton toolClientPicker = new ToolStripDropDownButton();
+        private ToolStripTextBox toolClientSearch;
+        private readonly ToolStripButton toolFitWorkspace = new ToolStripButton();
         
         #region Menus
 
@@ -138,7 +143,6 @@ namespace Kinovea.Root
         #endregion
         
         private ToolStripButton toolOpenFile = new ToolStripButton();
-        private ToolStripButton toolClients = new ToolStripButton();
         private ToolStripStatusLabel statusLabel = new ToolStripStatusLabel();
 
         private static readonly log4net.ILog log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
@@ -213,6 +217,15 @@ namespace Kinovea.Root
 
             // Build the host UI.
             mainWindow = new KinoveaMainWindow(this);
+            mainWindow.FormClosing += delegate(object sender, FormClosingEventArgs e)
+            {
+                if (fitWorkspace == null || fitWorkspace.IsDisposed)
+                    return;
+                BikeFitWorkspaceForm openWorkspace = fitWorkspace;
+                openWorkspace.Close();
+                if (!openWorkspace.IsDisposed)
+                    e.Cancel = true; // Do not exit if the session refused to close after a save error.
+            };
 
             // Hook to global events.
             NotificationCenter.RecentFilesChanged += NotificationCenter_RecentFilesChanged;
@@ -295,13 +308,13 @@ namespace Kinovea.Root
                 "3. Record/analyze in Video Studio\n" +
                 "4. Save Before / After / Dual evidence\n" +
                 "5. Build the report\n\n" +
-                "Choose Yes to open Client Manager now, or No to stay in Video Studio.",
+                "Choose Yes to select a client in Video Studio now, or No to stay without a fit session.",
                 "Start Fit Day",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Information);
 
             if (result == DialogResult.Yes)
-                mnuClientManager_Click(this, EventArgs.Empty);
+                toolClientPicker.ShowDropDown();
         }
         #endregion
         
@@ -632,10 +645,26 @@ namespace Kinovea.Root
         }
         private void GetModuleToolBar(ToolStrip toolbar)
         {
-            toolClients.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            toolClients.Image = Properties.Resources.user_detective;
-            toolClients.ToolTipText = "Client Manager";
-            toolClients.Click += mnuClientManager_Click;
+            toolClientPicker.Text = "Choose client + session";
+            toolClientPicker.Image = Properties.Resources.user_detective;
+            toolClientPicker.DisplayStyle = ToolStripItemDisplayStyle.ImageAndText;
+            toolClientPicker.ToolTipText = "Choose a client and open the fit workspace";
+            toolClientPicker.DropDownOpening += delegate { BuildClientPickerMenu(); };
+
+            toolFitWorkspace.Text = "Fit Workspace";
+            toolFitWorkspace.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            toolFitWorkspace.ToolTipText = "Return to the active client fit session";
+            toolFitWorkspace.Click += delegate
+            {
+                if (fitWorkspace != null && !fitWorkspace.IsDisposed)
+                {
+                    fitWorkspace.Show();
+                    fitWorkspace.WindowState = FormWindowState.Normal;
+                    fitWorkspace.Activate();
+                }
+                else
+                    toolClientPicker.ShowDropDown();
+            };
 
             // Open.
             toolOpenFile.DisplayStyle = ToolStripItemDisplayStyle.Image;
@@ -643,7 +672,8 @@ namespace Kinovea.Root
             toolOpenFile.ToolTipText = ScreenManagerLang.mnuOpenVideo;
             toolOpenFile.Click += new EventHandler(mnuOpenFileOnClick);
             
-            toolbar.Items.Add(toolClients);
+            toolbar.Items.Add(toolClientPicker);
+            toolbar.Items.Add(toolFitWorkspace);
             toolbar.Items.Add(new ToolStripSeparator());
             toolbar.Items.Add(toolOpenFile);
         }
@@ -774,11 +804,104 @@ namespace Kinovea.Root
             if (client == null)
                 return;
 
+            if (fitWorkspace != null && !fitWorkspace.IsDisposed)
+            {
+                if (fitWorkspaceClient != null && fitWorkspaceClient.Id == client.Id)
+                {
+                    fitWorkspace.Show();
+                    fitWorkspace.WindowState = FormWindowState.Normal;
+                    fitWorkspace.Activate();
+                    return;
+                }
+                BikeFitWorkspaceForm previousWorkspace = fitWorkspace;
+                previousWorkspace.Close();
+                if (!previousWorkspace.IsDisposed)
+                    return; // A save failure cancelled closing; keep the current session safe.
+            }
+
             clientRepository.MarkOpened(client);
             statusLabel.Text = string.Format("Fit session: {0} · {1}", client.DisplayName, client.BikeDescription);
-            using (BikeFitWorkspaceForm form = new BikeFitWorkspaceForm(client, OpenAnalysisFromPath, OpenBeforeAfterPair, PrepareClientAnalysisCaptureFolder, OpenClientCaptureFolder, OpenDualClientCaptureFolders, OpenProfileDualClientCaptureFolders, OpenBodyAngleGuide))
-                form.ShowDialog(mainWindow);
+            fitWorkspaceClient = client;
+            try
+            {
+                fitWorkspace = new BikeFitWorkspaceForm(client, OpenAnalysisFromPath, OpenBeforeAfterPair, PrepareClientAnalysisCaptureFolder, OpenClientCaptureFolder, OpenDualClientCaptureFolders, OpenProfileDualClientCaptureFolders, OpenBodyAngleGuide);
+            }
+            catch (Exception exception)
+            {
+                fitWorkspaceClient = null;
+                toolClientPicker.Text = "Choose client + session";
+                MessageBox.Show(mainWindow, "The fit workspace could not open.\n\n" + exception.Message, "Client Fit", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            fitWorkspace.ActiveSessionChanged += delegate(string sessionName)
+            {
+                string label = string.IsNullOrWhiteSpace(sessionName)
+                    ? client.DisplayName + " · choose session"
+                    : client.DisplayName + " · " + sessionName;
+                toolClientPicker.Text = label.Length > 48 ? label.Substring(0, 45) + "…" : label;
+                toolClientPicker.ToolTipText = label;
+            };
+            fitWorkspace.FormClosed += delegate
+            {
+                fitWorkspace = null;
+                fitWorkspaceClient = null;
+                toolClientPicker.Text = "Choose client + session";
+                ReportImageSaveTarget.Clear();
+                VideoSaveTarget.Clear();
+                BuildRecentClientMenus();
+            };
+            toolClientPicker.Text = client.DisplayName + " · choose session";
+            fitWorkspace.Show();
             BuildRecentClientMenus();
+        }
+
+        private void ShowVideoStudioForFit()
+        {
+            if (fitWorkspace != null && !fitWorkspace.IsDisposed)
+                fitWorkspace.Hide();
+            mainWindow.Activate();
+        }
+
+        private void BuildClientPickerMenu()
+        {
+            toolClientPicker.DropDownItems.Clear();
+            toolClientSearch = new ToolStripTextBox();
+            toolClientSearch.AutoSize = false;
+            toolClientSearch.Width = 280;
+            toolClientSearch.ToolTipText = "Search clients by name or bike";
+            toolClientPicker.DropDownItems.Add(toolClientSearch);
+            toolClientSearch.TextChanged += delegate { PopulateClientPickerResults(); };
+            PopulateClientPickerResults();
+        }
+
+        private void PopulateClientPickerResults()
+        {
+            while (toolClientPicker.DropDownItems.Count > 1)
+                toolClientPicker.DropDownItems.RemoveAt(1);
+
+            string query = toolClientSearch.Text.Trim();
+            IList<ClientRecord> matches = clientRepository.LoadAll()
+                .Where(c => !c.IsArchived && (query.Length == 0 ||
+                    c.DisplayName.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    c.BikeDescription.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0))
+                .Take(20).ToList();
+            foreach (ClientRecord client in matches)
+            {
+                ClientRecord selected = client;
+                ToolStripMenuItem item = new ToolStripMenuItem(client.DisplayName + "  ·  " + client.BikeDescription);
+                item.Click += delegate { OpenClientWorkspace(selected); };
+                toolClientPicker.DropDownItems.Add(item);
+            }
+            if (matches.Count == 0)
+                toolClientPicker.DropDownItems.Add(new ToolStripMenuItem("No matching clients") { Enabled = false });
+
+            toolClientPicker.DropDownItems.Add(new ToolStripSeparator());
+            ToolStripMenuItem newClient = new ToolStripMenuItem("+ New Client");
+            newClient.Click += mnuNewClient_Click;
+            toolClientPicker.DropDownItems.Add(newClient);
+            ToolStripMenuItem allClients = new ToolStripMenuItem("Full Client Manager…");
+            allClients.Click += mnuClientManager_Click;
+            toolClientPicker.DropDownItems.Add(allClients);
         }
 
         private void OpenClientCaptureFolder(string path)
@@ -786,6 +909,7 @@ namespace Kinovea.Root
             if (string.IsNullOrEmpty(path))
                 return;
 
+            ShowVideoStudioForFit();
             Directory.CreateDirectory(path);
             CaptureFolder captureFolder = PreferencesManager.CapturePreferences.AddCaptureFolder(path);
 
@@ -806,6 +930,7 @@ namespace Kinovea.Root
             if (string.IsNullOrEmpty(beforePath) || string.IsNullOrEmpty(afterPath))
                 return;
 
+            ShowVideoStudioForFit();
             Directory.CreateDirectory(beforePath);
             Directory.CreateDirectory(afterPath);
             CaptureFolder beforeFolder = PreferencesManager.CapturePreferences.AddCaptureFolder(beforePath);
@@ -829,6 +954,7 @@ namespace Kinovea.Root
             if (string.IsNullOrEmpty(leftPath) || string.IsNullOrEmpty(rightPath))
                 return;
 
+            ShowVideoStudioForFit();
             Directory.CreateDirectory(leftPath);
             Directory.CreateDirectory(rightPath);
             CaptureFolder leftFolder = PreferencesManager.CapturePreferences.AddCaptureFolder(leftPath);
@@ -872,6 +998,7 @@ namespace Kinovea.Root
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
                 return;
 
+            ShowVideoStudioForFit();
             int target = screenManager.FindTargetScreen(typeof(PlayerScreen));
             if (target < 0)
                 target = 0;
@@ -1507,6 +1634,7 @@ namespace Kinovea.Root
                 return;
             }
 
+            ShowVideoStudioForFit();
             EnsurePlaybackScreenCount(1);
             LoadVideoInTargetScreen(path, 0);
             screenManager.OrganizeScreens();
@@ -1517,6 +1645,7 @@ namespace Kinovea.Root
             if (string.IsNullOrEmpty(beforePath) || string.IsNullOrEmpty(afterPath) || !File.Exists(beforePath) || !File.Exists(afterPath))
                 return;
 
+            ShowVideoStudioForFit();
             EnsurePlaybackScreenCount(2);
             LoadVideoInTargetScreen(beforePath, 0);
             LoadVideoInTargetScreen(afterPath, 1);

@@ -5,7 +5,14 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.90.0 Production Readiness Release Candidate
+## Current milestone: 0.91.0 Integrated Client Selector
+
+- The Video Studio toolbar now includes a searchable client selector. Choose a client there to open or resume that client's fit workspace without navigating through the separate Client Manager.
+- The fit workspace stays open while Kinovea capture and playback are in use. Starting capture or analysis returns to Video Studio; **Fit Workspace** in the toolbar brings the same session back without closing it.
+- The active client and session appear in the toolbar. The full Client Manager remains available for advanced search, archival, and management; Kinovea's capture, playback, and drawing tools are unchanged.
+- This is the first integration pass, not a full workspace redesign. Test switching between clients with unsaved work carefully; a failed save must leave the original workspace open.
+
+## Previous milestone: 0.90.0 Production Readiness Release Candidate
 
 - Session manifests and fit-day autosaves now replace the previous file atomically and retain a last-known-good `.bak` copy. If the newest XML is damaged, opening the client or resuming recovery can read the backup. The backup is not a substitute for an off-device client-data backup.
 - The Windows build now runs a session-compatibility and recovery smoke check: an older minimal manifest, current saves, damaged-manifest fallback, autosave fallback, and recovery cleanup.
