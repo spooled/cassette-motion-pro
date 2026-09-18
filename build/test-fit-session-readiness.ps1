@@ -7,7 +7,7 @@ $sources = @(
   'src/Kinovea/Workspace/FitSessionRepository.cs',
   'src/Kinovea/Workspace/FitSessionRecoveryStore.cs'
 )
-$usings = "using System;`nusing System.IO;`nusing System.Collections.Generic;`nusing System.Linq;`nusing System.Xml.Serialization;`n"
+$usings = "using System;`nusing System.IO;`nusing System.Collections.Generic;`nusing System.Linq;`nusing System.Xml.Serialization;`nusing CassetteMotionPro.Clients;`n"
 $source = $usings + (($sources | ForEach-Object { (Get-Content $_ -Raw) -replace '(?m)^using [^;]+;\r?\n', '' }) -join "`n")
 Add-Type -TypeDefinition $source -Language CSharp
 
