@@ -17,6 +17,7 @@ namespace CassetteMotionPro.Workspace
     public class FitSessionRepository
     {
         private const string ManifestFileName = "session.xml";
+        private const string BackupSuffix = ".bak";
         private readonly XmlSerializer serializer = new XmlSerializer(typeof(FitSessionRecord));
 
         public ClientRecord Client { get; private set; }
@@ -42,28 +43,14 @@ namespace CassetteMotionPro.Workspace
             foreach (string directory in Directory.GetDirectories(RootPath))
             {
                 string manifestPath = Path.Combine(directory, ManifestFileName);
-                if (!File.Exists(manifestPath))
+                if (!File.Exists(manifestPath) && !File.Exists(manifestPath + BackupSuffix))
                     continue;
 
-                try
-                {
-                    using (FileStream stream = File.OpenRead(manifestPath))
-                    {
-                        FitSessionRecord session = serializer.Deserialize(stream) as FitSessionRecord;
-                        if (session == null)
-                            continue;
-                        session.FolderPath = directory;
-                        sessions.Add(session);
-                    }
-                }
-                catch (InvalidOperationException)
-                {
-                    // Keep one malformed session from blocking the whole workspace.
-                }
-                catch (IOException)
-                {
-                    // The session may be temporarily unavailable; retry on refresh.
-                }
+                FitSessionRecord session = TryRead(manifestPath) ?? TryRead(manifestPath + BackupSuffix);
+                if (session == null)
+                    continue;
+                session.FolderPath = directory;
+                sessions.Add(session);
             }
 
             return sessions
@@ -92,10 +79,30 @@ namespace CassetteMotionPro.Workspace
             }
 
             Directory.CreateDirectory(session.FolderPath);
-            using (FileStream stream = File.Create(Path.Combine(session.FolderPath, ManifestFileName)))
+            string manifestPath = Path.Combine(session.FolderPath, ManifestFileName);
+            string temporaryPath = manifestPath + ".tmp";
+            using (FileStream stream = File.Create(temporaryPath))
                 serializer.Serialize(stream, session);
+            if (File.Exists(manifestPath))
+                File.Replace(temporaryPath, manifestPath, manifestPath + BackupSuffix);
+            else
+                File.Move(temporaryPath, manifestPath);
 
             return session;
+        }
+
+        private FitSessionRecord TryRead(string path)
+        {
+            if (!File.Exists(path))
+                return null;
+            try
+            {
+                using (FileStream stream = File.OpenRead(path))
+                    return serializer.Deserialize(stream) as FitSessionRecord;
+            }
+            catch (InvalidOperationException) { return null; }
+            catch (IOException) { return null; }
+            catch (UnauthorizedAccessException) { return null; }
         }
     }
 }

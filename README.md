@@ -5,7 +5,14 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.87.0 Faster Fit-Day Keyboard and Touch Controls
+## Current milestone: 0.90.0 Production Readiness Release Candidate
+
+- Session manifests and fit-day autosaves now replace the previous file atomically and retain a last-known-good `.bak` copy. If the newest XML is damaged, opening the client or resuming recovery can read the backup. The backup is not a substitute for an off-device client-data backup.
+- The Windows build now runs a session-compatibility and recovery smoke check: an older minimal manifest, current saves, damaged-manifest fallback, autosave fallback, and recovery cleanup.
+- The Fit Day Dashboard has a **Getting Started** guide that points new fitters through intake, practice/diagnostics, Kinovea capture, measurement approval, and reporting.
+- This is a **release candidate**, not a claim that field testing is complete. Use [the v0.90.0 test plan](docs/v0.90.0-release-candidate.md) before treating it as a production release.
+
+## Previous milestone: 0.87.0 Faster Fit-Day Keyboard and Touch Controls
 
 - While the fit workspace is open: Ctrl+Shift+R opens dual live capture; Ctrl+Shift+P opens the latest Before/After videos for playback; Ctrl+Shift+F opens favorite-frame review; Ctrl+Shift+E prepares the active session's evidence destination and opens the Video Studio guide.
 - The Video Studio Save Image and Save Video destination dialogs now have larger touch-friendly buttons. Alt+B, Alt+A, Alt+D, and Alt+R choose Before, After, Dual, or Regular Save. The native Video Studio Save Image/Save Video controls still perform the actual capture/export.

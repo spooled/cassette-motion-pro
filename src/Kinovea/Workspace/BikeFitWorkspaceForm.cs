@@ -1741,6 +1741,20 @@ namespace CassetteMotionPro.Workspace
             practice.Size = new Size(140, 42);
             practice.Margin = new Padding(8, 9, 0, 9);
             practice.Click += ShowFitDayPracticeMode;
+            Button gettingStarted = CreateButton("Getting Started", false);
+            gettingStarted.Size = new Size(150, 42);
+            gettingStarted.Margin = new Padding(8, 9, 0, 9);
+            gettingStarted.Click += delegate
+            {
+                MessageBox.Show(this,
+                    "1. Create or open a client and fit session using INTAKE.\n\n" +
+                    "2. Run Practice Mode and Fit-Day Diagnostics before a real recording.\n\n" +
+                    "3. Use RECORD for Kinovea live capture, then TRACK and MEASURE.\n\n" +
+                    "4. Review the evidence, approve the fit, and create the report.\n\n" +
+                    "If a session was interrupted, reopen that client first and use Workflow Check to review recovery. " +
+                    "Keep a separate backup of the client folder before updating or moving computers.",
+                    "Getting Started — Cassette Motion Pro", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
             Button timeline = CreateButton("Session Timeline", false);
             timeline.Size = new Size(155, 42);
             timeline.Margin = new Padding(8, 9, 0, 9);
@@ -1749,6 +1763,7 @@ namespace CassetteMotionPro.Workspace
             primaryActions.Controls.Add(recovery);
             primaryActions.Controls.Add(diagnostics);
             primaryActions.Controls.Add(practice);
+            primaryActions.Controls.Add(gettingStarted);
             primaryActions.Controls.Add(timeline);
 
             Button moreOptions = CreateButton("More Options + Folders", false);

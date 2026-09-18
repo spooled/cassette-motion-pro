@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  VERSION: 0.87.0
+  VERSION: 0.90.0
   KINOVEA_UPSTREAM_REF: 7e7c9dcf55b6e6f0d6a7080e191a7ae9485ff3e9
 
 jobs:
@@ -183,6 +183,10 @@ jobs:
 
       - name: Build solution
         run: msbuild src/CassetteMotionPro.sln /p:Platform="x64" /p:Configuration=Release /p:AllowedReferenceRelatedFileExtensions=none /p:AllowUnsafeBlocks=true
+
+      - name: Check session compatibility and recovery
+        shell: pwsh
+        run: ./build/test-fit-session-readiness.ps1
 
       - name: Verify and stage x64 video assemblies
         shell: pwsh

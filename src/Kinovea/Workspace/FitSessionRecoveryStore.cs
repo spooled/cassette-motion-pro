@@ -30,8 +30,9 @@ namespace CassetteMotionPro.Workspace
             using (FileStream stream = File.Create(temporaryPath))
                 serializer.Serialize(stream, session);
             if (File.Exists(recoveryPath))
-                File.Delete(recoveryPath);
-            File.Move(temporaryPath, recoveryPath);
+                File.Replace(temporaryPath, recoveryPath, recoveryPath + ".bak");
+            else
+                File.Move(temporaryPath, recoveryPath);
             File.WriteAllText(workspacePath, workspaceSection ?? string.Empty);
         }
 
@@ -40,27 +41,43 @@ namespace CassetteMotionPro.Workspace
             session = null;
             workspaceSection = string.Empty;
             savedUtc = DateTime.MinValue;
-            if (!File.Exists(recoveryPath))
-                return false;
+            bool current = TryRead(recoveryPath, out session, out savedUtc);
+            if (current || TryRead(recoveryPath + ".bak", out session, out savedUtc))
+            {
+                // The section file belongs to the newest snapshot, not necessarily its backup.
+                try { workspaceSection = current && File.Exists(workspacePath) ? File.ReadAllText(workspacePath).Trim() : string.Empty; }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+                return true;
+            }
+            return false;
+        }
 
+        private bool TryRead(string path, out FitSessionRecord session, out DateTime savedUtc)
+        {
+            session = null;
+            savedUtc = DateTime.MinValue;
+            if (!File.Exists(path))
+                return false;
             try
             {
-                using (FileStream stream = File.OpenRead(recoveryPath))
+                using (FileStream stream = File.OpenRead(path))
                     session = serializer.Deserialize(stream) as FitSessionRecord;
                 if (session == null)
                     return false;
-                workspaceSection = File.Exists(workspacePath) ? File.ReadAllText(workspacePath).Trim() : string.Empty;
-                savedUtc = File.GetLastWriteTimeUtc(recoveryPath);
+                savedUtc = File.GetLastWriteTimeUtc(path);
                 return true;
             }
             catch (IOException) { return false; }
             catch (InvalidOperationException) { return false; }
+            catch (UnauthorizedAccessException) { return false; }
         }
 
         public void Clear()
         {
             TryDelete(recoveryPath);
             TryDelete(recoveryPath + ".tmp");
+            TryDelete(recoveryPath + ".bak");
             TryDelete(workspacePath);
             try
             {
