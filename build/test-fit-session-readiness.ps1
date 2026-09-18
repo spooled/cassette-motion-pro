@@ -9,6 +9,30 @@ $sources = @(
 )
 $usings = "using System;`nusing System.IO;`nusing System.Collections.Generic;`nusing System.Linq;`nusing System.Xml.Serialization;`nusing CassetteMotionPro.Clients;`n"
 $source = $usings + (($sources | ForEach-Object { (Get-Content $_ -Raw) -replace '(?m)^using [^;]+;\r?\n', '' }) -join "`n")
+$source += @'
+
+public static class FitSessionRecoveryProbe
+{
+    public static void Run(string sessionsRoot, CassetteMotionPro.Workspace.FitSessionRecord session)
+    {
+        var recovery = new CassetteMotionPro.Workspace.FitSessionRecoveryStore(sessionsRoot);
+        recovery.Save(session, "Report");
+        recovery.Save(session, "Measure");
+        string autosave = Path.Combine(sessionsRoot, ".fit-day-recovery", "autosave.xml");
+        File.WriteAllText(autosave, "<broken");
+        CassetteMotionPro.Workspace.FitSessionRecord draft;
+        string section;
+        DateTime savedUtc;
+        if (!recovery.TryLoad(out draft, out section, out savedUtc) || draft.Id != session.Id)
+            throw new InvalidOperationException("Autosave backup recovery failed.");
+        if (section != string.Empty)
+            throw new InvalidOperationException("A backup draft inherited the newer workspace section.");
+        recovery.Clear();
+        if (File.Exists(autosave) || File.Exists(autosave + ".bak"))
+            throw new InvalidOperationException("Recovery cleanup failed.");
+    }
+}
+'@
 Add-Type -TypeDefinition $source -Language CSharp
 
 $root = Join-Path ([System.IO.Path]::GetTempPath()) ('cassette-readiness-' + [guid]::NewGuid().ToString('N'))
@@ -40,17 +64,7 @@ try {
   $restored = @($repository.LoadAll() | Where-Object { $_.Id -eq $session.Id })
   if ($restored.Count -ne 1 -or $restored[0].Goals -ne 'Comfort and stability') { throw 'Session backup recovery failed.' }
 
-  $recovery = [CassetteMotionPro.Workspace.FitSessionRecoveryStore]::new($repository.RootPath)
-  $recovery.Save($session, 'Report')
-  $recovery.Save($session, 'Measure')
-  $autosave = Join-Path $repository.RootPath '.fit-day-recovery/autosave.xml'
-  [System.IO.File]::WriteAllText($autosave, '<broken')
-  $draft = $null
-  $section = ''
-  $savedUtc = [datetime]::MinValue
-  if (!$recovery.TryLoad([ref]$draft, [ref]$section, [ref]$savedUtc) -or $draft.Id -ne $session.Id) { throw 'Autosave backup recovery failed.' }
-  $recovery.Clear()
-  if ((Test-Path $autosave) -or (Test-Path ($autosave + '.bak'))) { throw 'Recovery cleanup failed.' }
+  [FitSessionRecoveryProbe]::Run($repository.RootPath, $session)
 
   Write-Host 'PASS: legacy session load, current session round-trip, manifest backup recovery, autosave backup recovery, recovery cleanup.'
 }
