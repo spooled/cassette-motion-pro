@@ -224,7 +224,7 @@ namespace Kinovea.Root
             mainWindow.SizeChanged += delegate
             {
                 if (fitWorkspacePanel != null && !fitWorkspacePanel.IsDisposed && fitWorkspacePanel.Visible)
-                    fitWorkspacePanel.Width = Math.Max(520, Math.Min(720, mainWindow.ClientSize.Width / 2));
+                    fitWorkspacePanel.Width = GetFitWorkspacePanelWidth();
             };
             mainWindow.FormClosing += delegate(object sender, FormClosingEventArgs e)
             {
@@ -890,7 +890,7 @@ namespace Kinovea.Root
             fitWorkspacePanel = new Panel();
             fitWorkspacePanel.Name = "CassetteMotionFitWorkspacePanel";
             fitWorkspacePanel.Dock = DockStyle.Right;
-            fitWorkspacePanel.Width = Math.Max(520, Math.Min(720, mainWindow.ClientSize.Width / 2));
+            fitWorkspacePanel.Width = GetFitWorkspacePanelWidth();
             fitWorkspacePanel.BackColor = CassetteMotionTheme.Canvas;
             fitWorkspacePanel.BorderStyle = BorderStyle.FixedSingle;
 
@@ -938,12 +938,20 @@ namespace Kinovea.Root
             toolFitWorkspace.Text = visible ? "Hide Fit Panel" : "Show Fit Panel";
             if (visible)
             {
-                fitWorkspacePanel.Width = Math.Max(520, Math.Min(720, mainWindow.ClientSize.Width / 2));
+                fitWorkspacePanel.Width = GetFitWorkspacePanelWidth();
                 fitWorkspacePanel.BringToFront();
                 if (fitWorkspace != null && !fitWorkspace.IsDisposed)
                     fitWorkspace.Focus();
             }
             mainWindow.PerformLayout();
+        }
+
+        private int GetFitWorkspacePanelWidth()
+        {
+            int windowWidth = Math.Max(900, mainWindow.ClientSize.Width);
+            int preferredWidth = windowWidth * 72 / 100;
+            int maximumWithVideoVisible = Math.Max(620, windowWidth - 320);
+            return Math.Max(620, Math.Min(1080, Math.Min(preferredWidth, maximumWithVideoVisible)));
         }
 
         private void ClearFitWorkspacePanel()
