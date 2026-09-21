@@ -38,6 +38,7 @@ using Kinovea.Updater;
 using Kinovea.Video;
 using Kinovea.Camera;
 using System.Linq;
+using CassetteMotionPro;
 using CassetteMotionPro.Clients;
 using CassetteMotionPro.Workspace;
 
