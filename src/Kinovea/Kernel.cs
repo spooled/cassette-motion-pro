@@ -875,6 +875,7 @@ namespace Kinovea.Root
             fitWorkspace.TopLevel = false;
             fitWorkspace.FormBorderStyle = FormBorderStyle.None;
             fitWorkspace.MinimumSize = Size.Empty;
+            fitWorkspace.ConfigureEmbeddedLayout();
             fitWorkspace.Dock = DockStyle.Fill;
             fitWorkspaceHost.Controls.Add(fitWorkspace);
             fitWorkspace.BringToFront();

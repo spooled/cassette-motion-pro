@@ -110,11 +110,88 @@ namespace CassetteMotionPro.Workspace
         private readonly List<WorkflowChecklistItem> workflowChecklistItems = new List<WorkflowChecklistItem>();
         private readonly List<FitDayFlowStep> fitDayFlowSteps = new List<FitDayFlowStep>();
         private TabControl editorTabs;
+        private TableLayoutPanel workspaceRoot;
+        private SplitContainer workspaceSplit;
+        private Panel editorActionPanel;
+        private FlowLayoutPanel editorActionButtons;
+        private Button embeddedSaveButton;
+        private Button embeddedCloseButton;
+        private Button embeddedReviewButton;
+        private Button embeddedPreviewButton;
+        private Button embeddedNextButton;
+        private bool embeddedLayout;
         private FitSessionRecord currentSession;
         public event Action<string> ActiveSessionChanged;
         public string ActiveSessionDisplayName
         {
             get { return currentSession == null ? string.Empty : currentSession.DisplayName; }
+        }
+
+        public void ConfigureEmbeddedLayout()
+        {
+            embeddedLayout = true;
+            if (workspaceRoot != null && workspaceRoot.RowStyles.Count > 0)
+                workspaceRoot.RowStyles[0].Height = 82;
+            if (workspaceSplit != null)
+            {
+                workspaceSplit.Panel1MinSize = 190;
+                workspaceSplit.Panel2MinSize = 360;
+                workspaceSplit.SplitterDistance = Math.Min(230, Math.Max(190, workspaceSplit.Width / 4));
+            }
+            if (editorActionPanel != null)
+            {
+                editorActionPanel.Height = 76;
+                editorActionPanel.Padding = new Padding(14, 7, 14, 7);
+            }
+            if (embeddedCloseButton != null)
+                embeddedCloseButton.Visible = false;
+            EnableEmbeddedScrolling(this);
+            EnlargeEmbeddedButtons(this);
+            UpdateEmbeddedActionBar();
+        }
+
+        private static void EnableEmbeddedScrolling(Control root)
+        {
+            foreach (Control control in root.Controls)
+            {
+                TabPage page = control as TabPage;
+                if (page != null)
+                    page.AutoScroll = true;
+                FlowLayoutPanel flow = control as FlowLayoutPanel;
+                if (flow != null)
+                    flow.AutoScroll = true;
+                EnableEmbeddedScrolling(control);
+            }
+        }
+
+        private static void EnlargeEmbeddedButtons(Control root)
+        {
+            foreach (Control control in root.Controls)
+            {
+                Button button = control as Button;
+                if (button != null && button.Visible)
+                {
+                    button.MinimumSize = new Size(Math.Min(110, Math.Max(88, button.Width)), 40);
+                    button.Margin = new Padding(Math.Max(4, button.Margin.Left), Math.Max(4, button.Margin.Top), 6, 6);
+                }
+                EnlargeEmbeddedButtons(control);
+            }
+        }
+
+        private void UpdateEmbeddedActionBar()
+        {
+            if (!embeddedLayout || editorTabs == null || editorTabs.SelectedTab == null)
+                return;
+
+            bool reportStage = string.Equals(editorTabs.SelectedTab.Text, "Report", StringComparison.OrdinalIgnoreCase);
+            chkShowBeforeMeasurementsInReport.Visible = reportStage;
+            embeddedReviewButton.Visible = reportStage;
+            embeddedPreviewButton.Visible = reportStage;
+            embeddedNextButton.Visible = !reportStage;
+            embeddedSaveButton.Text = reportStage ? "Save Draft" : "Save";
+            saveHint.Text = reportStage
+                ? "Report stage: save the draft, review readiness, then preview the client report."
+                : "Autosaved to this client session. Use Next Step to continue the fit-day path.";
         }
         private Action nextRecommendedStepActionHandler;
         private Action nextRecommendedFolderActionHandler;
@@ -403,23 +480,23 @@ namespace CassetteMotionPro.Workspace
             header.Controls.Add(shortcuts);
             header.Controls.Add(autosaveStatus);
 
-            SplitContainer split = new SplitContainer();
-            split.Dock = DockStyle.Fill;
-            split.SplitterDistance = 260;
-            split.Panel1.BackColor = CassetteMotionTheme.Surface;
-            split.Panel2.BackColor = CassetteMotionTheme.Canvas;
-            BuildSessionPanel(split.Panel1);
-            BuildEditor(split.Panel2);
+            workspaceSplit = new SplitContainer();
+            workspaceSplit.Dock = DockStyle.Fill;
+            workspaceSplit.SplitterDistance = 260;
+            workspaceSplit.Panel1.BackColor = CassetteMotionTheme.Surface;
+            workspaceSplit.Panel2.BackColor = CassetteMotionTheme.Canvas;
+            BuildSessionPanel(workspaceSplit.Panel1);
+            BuildEditor(workspaceSplit.Panel2);
 
-            TableLayoutPanel root = new TableLayoutPanel();
-            root.Dock = DockStyle.Fill;
-            root.ColumnCount = 1;
-            root.RowCount = 2;
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 118));
-            root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-            root.Controls.Add(header, 0, 0);
-            root.Controls.Add(split, 0, 1);
-            Controls.Add(root);
+            workspaceRoot = new TableLayoutPanel();
+            workspaceRoot.Dock = DockStyle.Fill;
+            workspaceRoot.ColumnCount = 1;
+            workspaceRoot.RowCount = 2;
+            workspaceRoot.RowStyles.Add(new RowStyle(SizeType.Absolute, 118));
+            workspaceRoot.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            workspaceRoot.Controls.Add(header, 0, 0);
+            workspaceRoot.Controls.Add(workspaceSplit, 0, 1);
+            Controls.Add(workspaceRoot);
 
             Panel accentLine = new Panel();
             accentLine.Dock = DockStyle.Bottom;
@@ -488,7 +565,11 @@ namespace CassetteMotionPro.Workspace
             editorTabs.Dock = DockStyle.Fill;
             editorTabs.Padding = new Point(18, 8);
             CassetteMotionTheme.StyleTabs(editorTabs);
-            editorTabs.SelectedIndexChanged += delegate { UpdateWorkflowChecklist(); };
+            editorTabs.SelectedIndexChanged += delegate
+            {
+                UpdateWorkflowChecklist();
+                UpdateEmbeddedActionBar();
+            };
             editorTabs.TabPages.Add(BuildFitDayDashboardTab());
             editorTabs.TabPages.Add(BuildOverviewTab());
             editorTabs.TabPages.Add(BuildClientFilesTab());
@@ -497,27 +578,31 @@ namespace CassetteMotionPro.Workspace
             editorTabs.TabPages.Add(BuildMeasurementsWorkspaceTab());
             editorTabs.TabPages.Add(BuildReportWorkspaceTab());
 
-            Panel actions = new Panel();
-            actions.Dock = DockStyle.Bottom;
-            actions.Height = 98;
-            actions.Padding = new Padding(24, 10, 24, 10);
-            actions.BackColor = CassetteMotionTheme.Surface;
+            editorActionPanel = new Panel();
+            editorActionPanel.Dock = DockStyle.Bottom;
+            editorActionPanel.Height = 98;
+            editorActionPanel.Padding = new Padding(24, 10, 24, 10);
+            editorActionPanel.BackColor = CassetteMotionTheme.Surface;
 
-            Button close = CreateButton("Save && Close", false);
-            close.Width = 105;
-            close.Click += delegate { Close(); };
+            embeddedCloseButton = CreateButton("Save && Close", false);
+            embeddedCloseButton.Width = 105;
+            embeddedCloseButton.Click += delegate { Close(); };
 
-            Button save = CreateButton("Save", true);
-            save.Width = 82;
-            save.Click += Save_Click;
+            embeddedSaveButton = CreateButton("Save", true);
+            embeddedSaveButton.Width = 82;
+            embeddedSaveButton.Click += Save_Click;
 
-            Button previewReport = CreateButton("Preview", false);
-            previewReport.Width = 88;
-            previewReport.Click += PreviewReport_Click;
+            embeddedPreviewButton = CreateButton("Preview", false);
+            embeddedPreviewButton.Width = 88;
+            embeddedPreviewButton.Click += PreviewReport_Click;
 
-            Button reviewSession = CreateButton("Review", true);
-            reviewSession.Width = 86;
-            reviewSession.Click += ReviewSession_Click;
+            embeddedReviewButton = CreateButton("Review", true);
+            embeddedReviewButton.Width = 86;
+            embeddedReviewButton.Click += ReviewSession_Click;
+
+            embeddedNextButton = CreateButton("Next Step", true);
+            embeddedNextButton.Width = 112;
+            embeddedNextButton.Click += delegate { RunNextBestFitDayStep(); };
 
             chkShowBeforeMeasurementsInReport.Text = "Show Before measurements in report";
             chkShowBeforeMeasurementsInReport.Checked = true;
@@ -536,24 +621,25 @@ namespace CassetteMotionPro.Workspace
             saveHint.TextAlign = ContentAlignment.MiddleLeft;
             saveHint.ForeColor = Color.FromArgb(92, 104, 98);
 
-            FlowLayoutPanel actionButtons = new FlowLayoutPanel();
-            actionButtons.Dock = DockStyle.Bottom;
-            actionButtons.Height = 52;
-            actionButtons.FlowDirection = FlowDirection.LeftToRight;
-            actionButtons.WrapContents = true;
-            actionButtons.AutoScroll = true;
-            actionButtons.Padding = new Padding(0);
+            editorActionButtons = new FlowLayoutPanel();
+            editorActionButtons.Dock = DockStyle.Bottom;
+            editorActionButtons.Height = 52;
+            editorActionButtons.FlowDirection = FlowDirection.LeftToRight;
+            editorActionButtons.WrapContents = false;
+            editorActionButtons.AutoScroll = true;
+            editorActionButtons.Padding = new Padding(0);
 
-            actionButtons.Controls.Add(chkShowBeforeMeasurementsInReport);
-            actionButtons.Controls.Add(save);
-            actionButtons.Controls.Add(close);
-            actionButtons.Controls.Add(reviewSession);
-            actionButtons.Controls.Add(previewReport);
+            editorActionButtons.Controls.Add(chkShowBeforeMeasurementsInReport);
+            editorActionButtons.Controls.Add(embeddedSaveButton);
+            editorActionButtons.Controls.Add(embeddedCloseButton);
+            editorActionButtons.Controls.Add(embeddedNextButton);
+            editorActionButtons.Controls.Add(embeddedReviewButton);
+            editorActionButtons.Controls.Add(embeddedPreviewButton);
 
-            actions.Controls.Add(actionButtons);
-            actions.Controls.Add(saveHint);
+            editorActionPanel.Controls.Add(editorActionButtons);
+            editorActionPanel.Controls.Add(saveHint);
             parent.Controls.Add(editorTabs);
-            parent.Controls.Add(actions);
+            parent.Controls.Add(editorActionPanel);
         }
 
         private TabPage BuildOverviewTab()
@@ -1766,10 +1852,18 @@ namespace CassetteMotionPro.Workspace
             timeline.Click += ShowFitSessionTimeline;
             primaryActions.Controls.Add(resume);
             primaryActions.Controls.Add(recovery);
-            primaryActions.Controls.Add(diagnostics);
-            primaryActions.Controls.Add(practice);
-            primaryActions.Controls.Add(gettingStarted);
-            primaryActions.Controls.Add(timeline);
+
+            FlowLayoutPanel secondaryActions = new FlowLayoutPanel();
+            secondaryActions.Dock = DockStyle.Top;
+            secondaryActions.Height = 58;
+            secondaryActions.FlowDirection = FlowDirection.LeftToRight;
+            secondaryActions.WrapContents = false;
+            secondaryActions.AutoScroll = true;
+            secondaryActions.Padding = new Padding(0, 5, 0, 5);
+            secondaryActions.Controls.Add(diagnostics);
+            secondaryActions.Controls.Add(practice);
+            secondaryActions.Controls.Add(gettingStarted);
+            secondaryActions.Controls.Add(timeline);
 
             Button moreOptions = CreateButton("More Options + Folders", false);
             moreOptions.Dock = DockStyle.Left;
@@ -1778,14 +1872,17 @@ namespace CassetteMotionPro.Workspace
             moreOptions.Click += delegate
             {
                 fitDayAdvancedPanel.Visible = !fitDayAdvancedPanel.Visible;
-                advancedRow.Height = fitDayAdvancedPanel.Visible ? 180 : 0;
-                panel.Height = fitDayAdvancedPanel.Visible ? 850 : 670;
+                advancedRow.Height = fitDayAdvancedPanel.Visible ? 240 : 0;
+                panel.Height = fitDayAdvancedPanel.Visible ? 910 : 670;
                 moreOptions.Text = fitDayAdvancedPanel.Visible ? "Hide Options" : "More Options + Folders";
             };
 
             fitDayAdvancedPanel.Dock = DockStyle.Fill;
             fitDayAdvancedPanel.Visible = false;
-            fitDayAdvancedPanel.Controls.Add(BuildFitDayHomeFolderPanel());
+            Control folderPanel = BuildFitDayHomeFolderPanel();
+            folderPanel.Dock = DockStyle.Fill;
+            fitDayAdvancedPanel.Controls.Add(folderPanel);
+            fitDayAdvancedPanel.Controls.Add(secondaryActions);
 
             layout.Controls.Add(title, 0, 0);
             layout.Controls.Add(description, 0, 1);
