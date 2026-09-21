@@ -112,6 +112,10 @@ namespace CassetteMotionPro.Workspace
         private TabControl editorTabs;
         private FitSessionRecord currentSession;
         public event Action<string> ActiveSessionChanged;
+        public string ActiveSessionDisplayName
+        {
+            get { return currentSession == null ? string.Empty : currentSession.DisplayName; }
+        }
         private Action nextRecommendedStepActionHandler;
         private Action nextRecommendedFolderActionHandler;
         private bool loadingSession;

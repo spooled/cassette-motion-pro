@@ -69,6 +69,9 @@ namespace Kinovea.Root
         private bool startupFitDayPromptShown;
         private BikeFitWorkspaceForm fitWorkspace;
         private ClientRecord fitWorkspaceClient;
+        private Panel fitWorkspacePanel;
+        private Panel fitWorkspaceHost;
+        private Label fitWorkspacePanelTitle;
         private readonly ToolStripDropDownButton toolClientPicker = new ToolStripDropDownButton();
         private ToolStripTextBox toolClientSearch;
         private readonly ToolStripButton toolFitWorkspace = new ToolStripButton();
@@ -217,6 +220,11 @@ namespace Kinovea.Root
 
             // Build the host UI.
             mainWindow = new KinoveaMainWindow(this);
+            mainWindow.SizeChanged += delegate
+            {
+                if (fitWorkspacePanel != null && !fitWorkspacePanel.IsDisposed && fitWorkspacePanel.Visible)
+                    fitWorkspacePanel.Width = Math.Max(520, Math.Min(720, mainWindow.ClientSize.Width / 2));
+            };
             mainWindow.FormClosing += delegate(object sender, FormClosingEventArgs e)
             {
                 if (fitWorkspace == null || fitWorkspace.IsDisposed)
@@ -658,9 +666,7 @@ namespace Kinovea.Root
             {
                 if (fitWorkspace != null && !fitWorkspace.IsDisposed)
                 {
-                    fitWorkspace.Show();
-                    fitWorkspace.WindowState = FormWindowState.Normal;
-                    fitWorkspace.Activate();
+                    SetFitWorkspacePanelVisible(fitWorkspacePanel == null || !fitWorkspacePanel.Visible);
                 }
                 else
                     toolClientPicker.ShowDropDown();
@@ -808,9 +814,7 @@ namespace Kinovea.Root
             {
                 if (fitWorkspaceClient != null && fitWorkspaceClient.Id == client.Id)
                 {
-                    fitWorkspace.Show();
-                    fitWorkspace.WindowState = FormWindowState.Normal;
-                    fitWorkspace.Activate();
+                    SetFitWorkspacePanelVisible(true);
                     return;
                 }
                 BikeFitWorkspaceForm previousWorkspace = fitWorkspace;
@@ -840,25 +844,124 @@ namespace Kinovea.Root
                     : client.DisplayName + " · " + sessionName;
                 toolClientPicker.Text = label.Length > 48 ? label.Substring(0, 45) + "…" : label;
                 toolClientPicker.ToolTipText = label;
+                if (fitWorkspacePanelTitle != null)
+                    fitWorkspacePanelTitle.Text = label;
             };
             fitWorkspace.FormClosed += delegate
             {
                 fitWorkspace = null;
                 fitWorkspaceClient = null;
+                ClearFitWorkspacePanel();
                 toolClientPicker.Text = "Choose client + session";
                 ReportImageSaveTarget.Clear();
                 VideoSaveTarget.Clear();
                 BuildRecentClientMenus();
             };
-            toolClientPicker.Text = client.DisplayName + " · choose session";
-            fitWorkspace.Show();
+            string activeSessionName = fitWorkspace.ActiveSessionDisplayName;
+            string activeLabel = string.IsNullOrWhiteSpace(activeSessionName)
+                ? client.DisplayName + " · choose session"
+                : client.DisplayName + " · " + activeSessionName;
+            toolClientPicker.Text = activeLabel.Length > 48 ? activeLabel.Substring(0, 45) + "…" : activeLabel;
+            toolClientPicker.ToolTipText = activeLabel;
+            EmbedFitWorkspace(client);
             BuildRecentClientMenus();
+        }
+
+        private void EmbedFitWorkspace(ClientRecord client)
+        {
+            EnsureFitWorkspacePanel();
+            fitWorkspacePanelTitle.Text = toolClientPicker.ToolTipText;
+            fitWorkspace.TopLevel = false;
+            fitWorkspace.FormBorderStyle = FormBorderStyle.None;
+            fitWorkspace.MinimumSize = Size.Empty;
+            fitWorkspace.Dock = DockStyle.Fill;
+            fitWorkspaceHost.Controls.Add(fitWorkspace);
+            fitWorkspace.BringToFront();
+            fitWorkspace.Show();
+            SetFitWorkspacePanelVisible(true);
+        }
+
+        private void EnsureFitWorkspacePanel()
+        {
+            if (fitWorkspacePanel != null && !fitWorkspacePanel.IsDisposed)
+                return;
+
+            fitWorkspacePanel = new Panel();
+            fitWorkspacePanel.Name = "CassetteMotionFitWorkspacePanel";
+            fitWorkspacePanel.Dock = DockStyle.Right;
+            fitWorkspacePanel.Width = Math.Max(520, Math.Min(720, mainWindow.ClientSize.Width / 2));
+            fitWorkspacePanel.BackColor = CassetteMotionTheme.Canvas;
+            fitWorkspacePanel.BorderStyle = BorderStyle.FixedSingle;
+
+            fitWorkspaceHost = new Panel();
+            fitWorkspaceHost.Dock = DockStyle.Fill;
+            fitWorkspaceHost.BackColor = CassetteMotionTheme.Canvas;
+
+            Panel header = new Panel();
+            header.Dock = DockStyle.Top;
+            header.Height = 42;
+            header.BackColor = CassetteMotionTheme.Header;
+
+            fitWorkspacePanelTitle = new Label();
+            fitWorkspacePanelTitle.Dock = DockStyle.Fill;
+            fitWorkspacePanelTitle.Padding = new Padding(12, 0, 8, 0);
+            fitWorkspacePanelTitle.TextAlign = ContentAlignment.MiddleLeft;
+            fitWorkspacePanelTitle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            fitWorkspacePanelTitle.ForeColor = Color.White;
+
+            Button collapse = new Button();
+            collapse.Dock = DockStyle.Right;
+            collapse.Width = 92;
+            collapse.Text = "Video ›";
+            collapse.FlatStyle = FlatStyle.Flat;
+            collapse.FlatAppearance.BorderSize = 0;
+            collapse.BackColor = CassetteMotionTheme.Accent;
+            collapse.ForeColor = CassetteMotionTheme.Header;
+            collapse.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            collapse.Click += delegate { SetFitWorkspacePanelVisible(false); };
+
+            header.Controls.Add(fitWorkspacePanelTitle);
+            header.Controls.Add(collapse);
+            fitWorkspacePanel.Controls.Add(fitWorkspaceHost);
+            fitWorkspacePanel.Controls.Add(header);
+            header.BringToFront();
+            mainWindow.Controls.Add(fitWorkspacePanel);
+            fitWorkspacePanel.BringToFront();
+        }
+
+        private void SetFitWorkspacePanelVisible(bool visible)
+        {
+            if (fitWorkspacePanel == null || fitWorkspacePanel.IsDisposed)
+                return;
+            fitWorkspacePanel.Visible = visible;
+            toolFitWorkspace.Text = visible ? "Hide Fit Panel" : "Show Fit Panel";
+            if (visible)
+            {
+                fitWorkspacePanel.Width = Math.Max(520, Math.Min(720, mainWindow.ClientSize.Width / 2));
+                fitWorkspacePanel.BringToFront();
+                if (fitWorkspace != null && !fitWorkspace.IsDisposed)
+                    fitWorkspace.Focus();
+            }
+            mainWindow.PerformLayout();
+        }
+
+        private void ClearFitWorkspacePanel()
+        {
+            if (fitWorkspacePanel != null && !fitWorkspacePanel.IsDisposed)
+            {
+                fitWorkspacePanel.Controls.Clear();
+                mainWindow.Controls.Remove(fitWorkspacePanel);
+                fitWorkspacePanel.Dispose();
+            }
+            fitWorkspacePanel = null;
+            fitWorkspaceHost = null;
+            fitWorkspacePanelTitle = null;
+            toolFitWorkspace.Text = "Fit Workspace";
         }
 
         private void ShowVideoStudioForFit()
         {
-            if (fitWorkspace != null && !fitWorkspace.IsDisposed)
-                fitWorkspace.Hide();
+            SetFitWorkspacePanelVisible(false);
             mainWindow.Activate();
         }
 
