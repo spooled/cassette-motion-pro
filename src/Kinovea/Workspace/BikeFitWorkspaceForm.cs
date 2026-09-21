@@ -122,9 +122,41 @@ namespace CassetteMotionPro.Workspace
         private bool embeddedLayout;
         private FitSessionRecord currentSession;
         public event Action<string> ActiveSessionChanged;
+        public event Action FitDayHeaderChanged;
         public string ActiveSessionDisplayName
         {
             get { return currentSession == null ? string.Empty : currentSession.DisplayName; }
+        }
+        public string ActiveClientDisplayName
+        {
+            get { return client == null ? string.Empty : client.DisplayName; }
+        }
+        public bool HasBeforeVideo
+        {
+            get { return HasMediaFile("BeforeVideoPath"); }
+        }
+        public bool HasAfterVideo
+        {
+            get { return HasMediaFile("AfterVideoPath"); }
+        }
+        public string FitDayAutosaveSummary
+        {
+            get { return autosaveStatus == null || string.IsNullOrWhiteSpace(autosaveStatus.Text) ? "Autosave ready" : autosaveStatus.Text; }
+        }
+        public string FitDayNextActionSummary
+        {
+            get { return GetNextFitDayHint(); }
+        }
+
+        public void RunFitDayNextAction()
+        {
+            RunNextBestFitDayStep();
+        }
+
+        private void RaiseFitDayHeaderChanged()
+        {
+            if (FitDayHeaderChanged != null)
+                FitDayHeaderChanged();
         }
 
         public void ConfigureEmbeddedLayout()
@@ -363,6 +395,7 @@ namespace CassetteMotionPro.Workspace
         {
             autosaveStatus.Text = text;
             autosaveStatus.ForeColor = warning ? Color.FromArgb(255, 197, 92) : Color.FromArgb(184, 243, 74);
+            RaiseFitDayHeaderChanged();
         }
 
         private string GetCurrentWorkspaceSection()
@@ -6707,6 +6740,7 @@ namespace CassetteMotionPro.Workspace
             nextRecommendedFolderAction.Text = folderActionText;
             nextRecommendedFolderAction.Enabled = folderAction != null;
             nextRecommendedFolderActionHandler = folderAction;
+            RaiseFitDayHeaderChanged();
         }
 
         private void RunNextBestFitDayStep()
@@ -7835,6 +7869,7 @@ namespace CassetteMotionPro.Workspace
                 VideoSaveTarget.Clear();
                 activeSessionStatus.Text = "Active session\nChoose or create a fit session";
                 UpdateFitCommandCenterStatus();
+                RaiseFitDayHeaderChanged();
                 return;
             }
 
@@ -7849,6 +7884,7 @@ namespace CassetteMotionPro.Workspace
             if (ActiveSessionChanged != null)
                 ActiveSessionChanged(currentSession.DisplayName);
             UpdateFitCommandCenterStatus();
+            RaiseFitDayHeaderChanged();
         }
 
         private void UpdateReportImageSaveTarget()

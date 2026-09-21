@@ -5,7 +5,11 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 0.93.0 Unified Layout Polish
+## Current milestone: 0.94.0 Persistent Fit-Day Header
+
+The main Kinovea window now keeps the active client, fit session, Before/After video status, autosave state, and next recommended action visible throughout fit day—even while the embedded Fit Panel is hidden for capture or analysis. A single **Do Next** action reopens the workspace and continues the guided workflow.
+
+### Previous milestone: 0.93.0 Unified Layout Polish
 
 - The embedded workspace uses a shorter header and narrower session list, giving the selected fit stage more usable room on laptop screens.
 - Workspace pages and button rows scroll when space is limited, and embedded buttons receive larger minimum touch targets.

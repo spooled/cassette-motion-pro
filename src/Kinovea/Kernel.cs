@@ -73,6 +73,13 @@ namespace Kinovea.Root
         private Panel fitWorkspacePanel;
         private Panel fitWorkspaceHost;
         private Label fitWorkspacePanelTitle;
+        private Panel fitDayHeader;
+        private Label fitDayHeaderClient;
+        private Label fitDayHeaderSession;
+        private Label fitDayHeaderMedia;
+        private Label fitDayHeaderAutosave;
+        private Label fitDayHeaderNext;
+        private Button fitDayHeaderAction;
         private readonly ToolStripDropDownButton toolClientPicker = new ToolStripDropDownButton();
         private ToolStripTextBox toolClientSearch;
         private readonly ToolStripButton toolFitWorkspace = new ToolStripButton();
@@ -847,7 +854,9 @@ namespace Kinovea.Root
                 toolClientPicker.ToolTipText = label;
                 if (fitWorkspacePanelTitle != null)
                     fitWorkspacePanelTitle.Text = label;
+                UpdateFitDayHeader();
             };
+            fitWorkspace.FitDayHeaderChanged += UpdateFitDayHeader;
             fitWorkspace.FormClosed += delegate
             {
                 fitWorkspace = null;
@@ -856,6 +865,7 @@ namespace Kinovea.Root
                 toolClientPicker.Text = "Choose client + session";
                 ReportImageSaveTarget.Clear();
                 VideoSaveTarget.Clear();
+                ClearFitDayHeader();
                 BuildRecentClientMenus();
             };
             string activeSessionName = fitWorkspace.ActiveSessionDisplayName;
@@ -865,7 +875,114 @@ namespace Kinovea.Root
             toolClientPicker.Text = activeLabel.Length > 48 ? activeLabel.Substring(0, 45) + "…" : activeLabel;
             toolClientPicker.ToolTipText = activeLabel;
             EmbedFitWorkspace(client);
+            EnsureFitDayHeader();
+            UpdateFitDayHeader();
             BuildRecentClientMenus();
+        }
+
+        private void EnsureFitDayHeader()
+        {
+            if (fitDayHeader != null && !fitDayHeader.IsDisposed)
+                return;
+
+            fitDayHeader = new Panel();
+            fitDayHeader.Name = "CassetteMotionPersistentFitDayHeader";
+            fitDayHeader.Dock = DockStyle.Top;
+            fitDayHeader.Height = 58;
+            fitDayHeader.Padding = new Padding(10, 6, 10, 6);
+            fitDayHeader.BackColor = CassetteMotionTheme.Header;
+
+            TableLayoutPanel layout = new TableLayoutPanel();
+            layout.Dock = DockStyle.Fill;
+            layout.RowCount = 1;
+            layout.ColumnCount = 6;
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 17F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 17F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 26F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 106F));
+
+            fitDayHeaderClient = CreateFitDayHeaderLabel();
+            fitDayHeaderSession = CreateFitDayHeaderLabel();
+            fitDayHeaderMedia = CreateFitDayHeaderLabel();
+            fitDayHeaderAutosave = CreateFitDayHeaderLabel();
+            fitDayHeaderNext = CreateFitDayHeaderLabel();
+
+            fitDayHeaderAction = new Button();
+            fitDayHeaderAction.Dock = DockStyle.Fill;
+            fitDayHeaderAction.Text = "DO NEXT";
+            fitDayHeaderAction.FlatStyle = FlatStyle.Flat;
+            fitDayHeaderAction.FlatAppearance.BorderSize = 0;
+            fitDayHeaderAction.BackColor = CassetteMotionTheme.Accent;
+            fitDayHeaderAction.ForeColor = CassetteMotionTheme.Header;
+            fitDayHeaderAction.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold);
+            fitDayHeaderAction.Click += delegate
+            {
+                if (fitWorkspace == null || fitWorkspace.IsDisposed)
+                    return;
+                SetFitWorkspacePanelVisible(true);
+                fitWorkspace.RunFitDayNextAction();
+                UpdateFitDayHeader();
+            };
+
+            layout.Controls.Add(fitDayHeaderClient, 0, 0);
+            layout.Controls.Add(fitDayHeaderSession, 1, 0);
+            layout.Controls.Add(fitDayHeaderMedia, 2, 0);
+            layout.Controls.Add(fitDayHeaderAutosave, 3, 0);
+            layout.Controls.Add(fitDayHeaderNext, 4, 0);
+            layout.Controls.Add(fitDayHeaderAction, 5, 0);
+            fitDayHeader.Controls.Add(layout);
+            mainWindow.Controls.Add(fitDayHeader);
+            fitDayHeader.BringToFront();
+        }
+
+        private static Label CreateFitDayHeaderLabel()
+        {
+            Label label = new Label();
+            label.Dock = DockStyle.Fill;
+            label.AutoEllipsis = true;
+            label.TextAlign = ContentAlignment.MiddleLeft;
+            label.Padding = new Padding(6, 0, 6, 0);
+            label.Font = new Font("Segoe UI", 8F, FontStyle.Regular);
+            label.ForeColor = Color.White;
+            return label;
+        }
+
+        private void UpdateFitDayHeader()
+        {
+            if (fitWorkspace == null || fitWorkspace.IsDisposed)
+                return;
+            EnsureFitDayHeader();
+            fitDayHeaderClient.Text = "CLIENT\n" + fitWorkspace.ActiveClientDisplayName;
+            fitDayHeaderSession.Text = "SESSION\n" + (string.IsNullOrWhiteSpace(fitWorkspace.ActiveSessionDisplayName) ? "Choose session" : fitWorkspace.ActiveSessionDisplayName);
+            fitDayHeaderMedia.Text = "MEDIA\nBefore " + (fitWorkspace.HasBeforeVideo ? "✓" : "—") + "  After " + (fitWorkspace.HasAfterVideo ? "✓" : "—");
+            fitDayHeaderAutosave.Text = "AUTOSAVE\n" + fitWorkspace.FitDayAutosaveSummary;
+            string next = fitWorkspace.FitDayNextActionSummary;
+            const string prefix = "Next best step: ";
+            if (next.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                next = next.Substring(prefix.Length);
+            fitDayHeaderNext.Text = "NEXT\n" + next;
+            fitDayHeaderAction.Enabled = true;
+            fitDayHeader.Visible = true;
+            fitDayHeader.BringToFront();
+            mainWindow.PerformLayout();
+        }
+
+        private void ClearFitDayHeader()
+        {
+            if (fitDayHeader != null && !fitDayHeader.IsDisposed)
+            {
+                mainWindow.Controls.Remove(fitDayHeader);
+                fitDayHeader.Dispose();
+            }
+            fitDayHeader = null;
+            fitDayHeaderClient = null;
+            fitDayHeaderSession = null;
+            fitDayHeaderMedia = null;
+            fitDayHeaderAutosave = null;
+            fitDayHeaderNext = null;
+            fitDayHeaderAction = null;
         }
 
         private void EmbedFitWorkspace(ClientRecord client)
