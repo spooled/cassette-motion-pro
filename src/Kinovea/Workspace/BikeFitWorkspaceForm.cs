@@ -92,6 +92,10 @@ namespace CassetteMotionPro.Workspace
         private readonly TextBox finalizationChecklist = new TextBox();
         private readonly Label combinedMeasurementReviewStatus = new Label();
         private readonly TextBox combinedMeasurementReview = new TextBox();
+        private readonly Label integratedReviewStatus = new Label();
+        private readonly Label integratedMeasurementSummary = new Label();
+        private readonly Label integratedEvidenceSummary = new Label();
+        private readonly Label integratedApprovalSummary = new Label();
         private readonly Label captureActionsLabel = new Label();
         private readonly Label analysisActionsLabel = new Label();
         private readonly Button nextRecommendedStepAction = new Button();
@@ -151,6 +155,12 @@ namespace CassetteMotionPro.Workspace
         public void RunFitDayNextAction()
         {
             RunNextBestFitDayStep();
+        }
+
+        public void OpenIntegratedReview()
+        {
+            SelectWorkspaceTab("Integrated Review");
+            RefreshIntegratedReview();
         }
 
         private void RaiseFitDayHeaderChanged()
@@ -602,6 +612,7 @@ namespace CassetteMotionPro.Workspace
             {
                 UpdateWorkflowChecklist();
                 UpdateEmbeddedActionBar();
+                RefreshIntegratedReview();
             };
             editorTabs.TabPages.Add(BuildFitDayDashboardTab());
             editorTabs.TabPages.Add(BuildOverviewTab());
@@ -609,6 +620,7 @@ namespace CassetteMotionPro.Workspace
             editorTabs.TabPages.Add(BuildClientHistoryTab());
             editorTabs.TabPages.Add(BuildMediaTab());
             editorTabs.TabPages.Add(BuildMeasurementsWorkspaceTab());
+            editorTabs.TabPages.Add(BuildIntegratedReviewTab());
             editorTabs.TabPages.Add(BuildReportWorkspaceTab());
 
             editorActionPanel = new Panel();
@@ -1108,6 +1120,149 @@ namespace CassetteMotionPro.Workspace
         private TabPage BuildMeasurementsWorkspaceTab()
         {
             return BuildGroupedWorkspaceTab("Measurements", BuildGuidedMeasurementsTab(), BuildBikeMetricsTab(), BuildBodyAnglesTab(), BuildCombinedMeasurementReviewTab());
+        }
+
+        private TabPage BuildIntegratedReviewTab()
+        {
+            TabPage page = NewTab("Integrated Review");
+            TableLayoutPanel layout = new TableLayoutPanel();
+            layout.Dock = DockStyle.Fill;
+            layout.AutoScroll = true;
+            layout.Padding = new Padding(24, 20, 24, 18);
+            layout.ColumnCount = 2;
+            layout.RowCount = 5;
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 62));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 62));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 112));
+
+            Label title = new Label();
+            title.Text = "Measurements + Evidence Review";
+            title.Dock = DockStyle.Fill;
+            title.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
+            title.ForeColor = Color.FromArgb(24, 31, 29);
+
+            integratedReviewStatus.Dock = DockStyle.Fill;
+            integratedReviewStatus.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            integratedReviewStatus.ForeColor = Color.FromArgb(74, 87, 81);
+            integratedReviewStatus.BackColor = Color.FromArgb(248, 252, 238);
+            integratedReviewStatus.Padding = new Padding(12, 10, 12, 8);
+
+            ConfigureIntegratedReviewCard(integratedMeasurementSummary, "MEASUREMENTS");
+            ConfigureIntegratedReviewCard(integratedEvidenceSummary, "FAVORITE FRAMES + SAVED IMAGES");
+            ConfigureIntegratedReviewCard(integratedApprovalSummary, "FITTER APPROVAL");
+
+            FlowLayoutPanel actions = new FlowLayoutPanel();
+            actions.Dock = DockStyle.Fill;
+            actions.FlowDirection = FlowDirection.LeftToRight;
+            actions.WrapContents = true;
+            actions.Padding = new Padding(0, 8, 0, 4);
+            Button refresh = CreateButton("Refresh Review", true);
+            refresh.Size = new Size(135, 40);
+            refresh.Click += delegate { RefreshIntegratedReview(); };
+            Button measurements = CreateButton("Combined Measurements", false);
+            measurements.Size = new Size(185, 40);
+            measurements.Click += delegate { SelectWorkspaceTab("Combined Review"); };
+            Button favorites = CreateButton("Favorite Frames", false);
+            favorites.Size = new Size(145, 40);
+            favorites.Click += delegate { ReviewFavoriteFrames(); RefreshIntegratedReview(); };
+            Button compare = CreateButton("Compare + Approve", true);
+            compare.Size = new Size(160, 40);
+            compare.Click += delegate { CompareAndApproveFavoriteFrames(); RefreshIntegratedReview(); };
+            Button media = CreateButton("Saved Media", false);
+            media.Size = new Size(120, 40);
+            media.Click += delegate { OpenSessionMediaLibrary(); RefreshIntegratedReview(); };
+            Button approve = CreateButton("Review + Approve Report", true);
+            approve.Size = new Size(190, 40);
+            approve.Click += delegate { ShowReportReviewApproval(this, EventArgs.Empty); RefreshIntegratedReview(); };
+            actions.Controls.Add(refresh);
+            actions.Controls.Add(measurements);
+            actions.Controls.Add(favorites);
+            actions.Controls.Add(compare);
+            actions.Controls.Add(media);
+            actions.Controls.Add(approve);
+
+            layout.Controls.Add(title, 0, 0);
+            layout.SetColumnSpan(title, 2);
+            layout.Controls.Add(integratedReviewStatus, 0, 1);
+            layout.SetColumnSpan(integratedReviewStatus, 2);
+            layout.Controls.Add(integratedMeasurementSummary, 0, 2);
+            layout.Controls.Add(integratedEvidenceSummary, 1, 2);
+            layout.Controls.Add(integratedApprovalSummary, 0, 3);
+            layout.SetColumnSpan(integratedApprovalSummary, 2);
+            layout.Controls.Add(actions, 0, 4);
+            layout.SetColumnSpan(actions, 2);
+            page.Controls.Add(layout);
+            return page;
+        }
+
+        private static void ConfigureIntegratedReviewCard(Label label, string title)
+        {
+            label.Dock = DockStyle.Fill;
+            label.AutoEllipsis = true;
+            label.Font = new Font("Segoe UI", 10F);
+            label.ForeColor = Color.FromArgb(24, 31, 29);
+            label.BackColor = Color.White;
+            label.BorderStyle = BorderStyle.FixedSingle;
+            label.Padding = new Padding(14, 12, 14, 12);
+            label.Margin = new Padding(4, 5, 8, 5);
+            label.Text = title + Environment.NewLine + "Open a fit session to review this section.";
+        }
+
+        private void RefreshIntegratedReview()
+        {
+            if (integratedReviewStatus == null)
+                return;
+
+            if (currentSession == null)
+            {
+                integratedReviewStatus.Text = "Open or create a fit session to review measurements, favorite frames, saved images, and approvals.";
+                integratedMeasurementSummary.Text = "MEASUREMENTS\nNo active session.";
+                integratedEvidenceSummary.Text = "FAVORITE FRAMES + SAVED IMAGES\nNo active session.";
+                integratedApprovalSummary.Text = "FITTER APPROVAL\nNo active session.";
+                return;
+            }
+
+            int completedMeasurements = 0;
+            foreach (TextBox box in measurementBoxes.Values)
+            {
+                if (box != null && !string.IsNullOrWhiteSpace(box.Text))
+                    completedMeasurements++;
+            }
+
+            int selectedImages = 0;
+            string selectedNames = string.Empty;
+            foreach (KeyValuePair<string, TextBox> entry in imageBoxes)
+            {
+                if (entry.Value == null || string.IsNullOrWhiteSpace(entry.Value.Text))
+                    continue;
+                selectedImages++;
+                string name = Path.GetFileName(entry.Value.Text);
+                if (!string.IsNullOrWhiteSpace(name))
+                    selectedNames += (selectedNames.Length == 0 ? string.Empty : ", ") + name;
+            }
+
+            bool favoriteBefore = !string.IsNullOrWhiteSpace(currentSession.FavoriteFrameBeforeNotes);
+            bool favoriteAfter = !string.IsNullOrWhiteSpace(currentSession.FavoriteFrameAfterNotes);
+            bool favoriteApproved = currentSession.FavoriteFrameComparisonApprovedUtc != DateTime.MinValue;
+            bool reportApproved = IsCurrentReportApprovalValid();
+
+            integratedReviewStatus.Text = client.DisplayName + " · " + currentSession.DisplayName + "  |  " + GetFitDayReadinessText();
+            integratedMeasurementSummary.Text =
+                "MEASUREMENTS" + Environment.NewLine +
+                completedMeasurements + " of " + measurementBoxes.Count + " measurement fields completed." + Environment.NewLine +
+                (HasCompleteMeasurementWorkflow() ? "✓ Measurement workflow ready" : "□ More measurements or quality review needed");
+            integratedEvidenceSummary.Text =
+                "FAVORITE FRAMES + SAVED IMAGES" + Environment.NewLine +
+                (favoriteBefore ? "✓" : "□") + " Before favorite   " + (favoriteAfter ? "✓" : "□") + " After favorite   " + (favoriteApproved ? "✓ Approved" : "□ Comparison pending") + Environment.NewLine +
+                selectedImages + " report image selection(s)" + (string.IsNullOrWhiteSpace(selectedNames) ? string.Empty : ": " + selectedNames);
+            integratedApprovalSummary.Text =
+                "FITTER APPROVAL" + Environment.NewLine +
+                (reportApproved ? "✓ Current report content is approved." : "□ Report approval is pending or needs renewal.") + Environment.NewLine +
+                (HasSavedSessionEvidence() || HasAnalysisCaptureEvidence() ? "✓ Saved session evidence is available." : "□ Save useful Before, After, or Dual evidence.");
         }
 
         private TabPage BuildCombinedMeasurementReviewTab()
@@ -7869,6 +8024,7 @@ namespace CassetteMotionPro.Workspace
                 VideoSaveTarget.Clear();
                 activeSessionStatus.Text = "Active session\nChoose or create a fit session";
                 UpdateFitCommandCenterStatus();
+                RefreshIntegratedReview();
                 RaiseFitDayHeaderChanged();
                 return;
             }
@@ -7884,6 +8040,7 @@ namespace CassetteMotionPro.Workspace
             if (ActiveSessionChanged != null)
                 ActiveSessionChanged(currentSession.DisplayName);
             UpdateFitCommandCenterStatus();
+            RefreshIntegratedReview();
             RaiseFitDayHeaderChanged();
         }
 

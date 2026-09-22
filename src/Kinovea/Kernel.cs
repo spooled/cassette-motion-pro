@@ -79,6 +79,7 @@ namespace Kinovea.Root
         private Label fitDayHeaderMedia;
         private Label fitDayHeaderAutosave;
         private Label fitDayHeaderNext;
+        private Button fitDayHeaderReview;
         private Button fitDayHeaderAction;
         private readonly ToolStripDropDownButton toolClientPicker = new ToolStripDropDownButton();
         private ToolStripTextBox toolClientSearch;
@@ -895,12 +896,13 @@ namespace Kinovea.Root
             TableLayoutPanel layout = new TableLayoutPanel();
             layout.Dock = DockStyle.Fill;
             layout.RowCount = 1;
-            layout.ColumnCount = 6;
+            layout.ColumnCount = 7;
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 17F));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 17F));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16F));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16F));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 26F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 92F));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 106F));
 
             fitDayHeaderClient = CreateFitDayHeaderLabel();
@@ -926,12 +928,30 @@ namespace Kinovea.Root
                 UpdateFitDayHeader();
             };
 
+            fitDayHeaderReview = new Button();
+            fitDayHeaderReview.Dock = DockStyle.Fill;
+            fitDayHeaderReview.Text = "REVIEW";
+            fitDayHeaderReview.FlatStyle = FlatStyle.Flat;
+            fitDayHeaderReview.FlatAppearance.BorderSize = 1;
+            fitDayHeaderReview.FlatAppearance.BorderColor = CassetteMotionTheme.Accent;
+            fitDayHeaderReview.BackColor = CassetteMotionTheme.Header;
+            fitDayHeaderReview.ForeColor = Color.White;
+            fitDayHeaderReview.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold);
+            fitDayHeaderReview.Click += delegate
+            {
+                if (fitWorkspace == null || fitWorkspace.IsDisposed)
+                    return;
+                SetFitWorkspacePanelVisible(true);
+                fitWorkspace.OpenIntegratedReview();
+            };
+
             layout.Controls.Add(fitDayHeaderClient, 0, 0);
             layout.Controls.Add(fitDayHeaderSession, 1, 0);
             layout.Controls.Add(fitDayHeaderMedia, 2, 0);
             layout.Controls.Add(fitDayHeaderAutosave, 3, 0);
             layout.Controls.Add(fitDayHeaderNext, 4, 0);
-            layout.Controls.Add(fitDayHeaderAction, 5, 0);
+            layout.Controls.Add(fitDayHeaderReview, 5, 0);
+            layout.Controls.Add(fitDayHeaderAction, 6, 0);
             fitDayHeader.Controls.Add(layout);
             mainWindow.Controls.Add(fitDayHeader);
             fitDayHeader.BringToFront();
@@ -982,6 +1002,7 @@ namespace Kinovea.Root
             fitDayHeaderMedia = null;
             fitDayHeaderAutosave = null;
             fitDayHeaderNext = null;
+            fitDayHeaderReview = null;
             fitDayHeaderAction = null;
         }
 
