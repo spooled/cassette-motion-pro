@@ -6,7 +6,7 @@
 !include "MUI2.nsh"
 
 !ifndef VERSION
-!define VERSION "0.18.1"
+!define VERSION "1.0.0"
 !endif
 !define BUILDDIR "..\Kinovea\Bin\x64\Release"
     

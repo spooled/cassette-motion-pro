@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  VERSION: 0.96.0
+  VERSION: 1.0.0
   KINOVEA_UPSTREAM_REF: 7e7c9dcf55b6e6f0d6a7080e191a7ae9485ff3e9
 
 jobs:
@@ -409,8 +409,13 @@ jobs:
           $toolFiles | Select-Object -First 20 FullName, Length
 
       - name: Create portable settings folder
-        shell: cmd
-        run: mkdir src\Kinovea\bin\x64\Release\AppData
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force "src\Kinovea\bin\x64\Release\AppData" | Out-Null
+          @(
+            "Cassette Motion Pro portable mode"
+            "Keep this AppData folder beside CassetteMotionPro.exe."
+          ) | Set-Content "src\Kinovea\bin\x64\Release\AppData\PORTABLE-MODE.txt"
 
       - name: Create portable zip for Windows bundle
         shell: pwsh
@@ -434,8 +439,8 @@ jobs:
           path: src/Kinovea/bin/x64/Release/
 
       - name: Remove portable settings folder
-        shell: cmd
-        run: rmdir src\Kinovea\bin\x64\Release\AppData
+        shell: pwsh
+        run: Remove-Item "src\Kinovea\bin\x64\Release\AppData" -Recurse -Force
 
       - name: Install NSIS
         continue-on-error: true
@@ -579,6 +584,38 @@ jobs:
             Get-ChildItem -Path . -Filter "*.exe" -Recurse | Select-Object FullName
             throw
           }
+
+      - name: Verify stable release artifacts
+        shell: pwsh
+        run: |
+          $portableZip = "dist\windows\CassetteMotionPro-Portable-$env:VERSION.zip"
+          $installer = Get-ChildItem "dist\installer" -Filter "CassetteMotionPro-Installer-$env:VERSION.exe" -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          $installerPath = if ($installer) { $installer.FullName } else { "" }
+          if ($installer) {
+            .\build\test-v1-release-readiness.ps1 -Version $env:VERSION -PortableZip $portableZip -InstallerPath $installerPath -SmokeTestInstaller
+          } else {
+            .\build\test-v1-release-readiness.ps1 -Version $env:VERSION -PortableZip $portableZip
+          }
+
+          $artifacts = @(Get-Item $portableZip)
+          if ($installer) { $artifacts += $installer }
+          $checksums = $artifacts | ForEach-Object {
+            $hash = Get-FileHash $_.FullName -Algorithm SHA256
+            "$($hash.Hash.ToLowerInvariant())  $($_.Name)"
+          }
+          $checksums | Set-Content "dist\windows\RELEASE-CHECKSUMS.sha256"
+
+          $installerStatus = Get-Content "dist\windows\INSTALLER-BUILD-STATUS.txt" -Raw
+          if ($installerStatus -match "Installer build status: FAILED") {
+            throw "Installer build status reports FAILED."
+          }
+          @(
+            "Cassette Motion Pro v$env:VERSION release verification: PASS"
+            "Portable ZIP: verified"
+            "Installer: $(if ($installer) { 'verified' } else { 'not produced; see INSTALLER-BUILD-STATUS.txt' })"
+            "Session upgrade and recovery probe: passed earlier in this workflow"
+            "SHA-256 checksums: RELEASE-CHECKSUMS.sha256"
+          ) | Set-Content "dist\windows\RELEASE-VERIFICATION.txt"
 
       - name: Upload installer
         if: hashFiles('dist/installer/*.exe') != ''
