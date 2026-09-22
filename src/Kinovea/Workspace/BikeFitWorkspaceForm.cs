@@ -96,6 +96,7 @@ namespace CassetteMotionPro.Workspace
         private readonly Label integratedMeasurementSummary = new Label();
         private readonly Label integratedEvidenceSummary = new Label();
         private readonly Label integratedApprovalSummary = new Label();
+        private readonly TextBox integratedRecommendationsEditor = new TextBox();
         private readonly Label captureActionsLabel = new Label();
         private readonly Label analysisActionsLabel = new Label();
         private readonly Button nextRecommendedStepAction = new Button();
@@ -159,7 +160,7 @@ namespace CassetteMotionPro.Workspace
 
         public void OpenIntegratedReview()
         {
-            SelectWorkspaceTab("Integrated Review");
+            SelectWorkspaceTab("Report Center");
             RefreshIntegratedReview();
         }
 
@@ -1124,23 +1125,27 @@ namespace CassetteMotionPro.Workspace
 
         private TabPage BuildIntegratedReviewTab()
         {
-            TabPage page = NewTab("Integrated Review");
+            TabPage page = NewTab("Report Center");
             TableLayoutPanel layout = new TableLayoutPanel();
-            layout.Dock = DockStyle.Fill;
+            layout.Dock = DockStyle.Top;
+            layout.AutoSize = true;
             layout.AutoScroll = true;
             layout.Padding = new Padding(24, 20, 24, 18);
             layout.ColumnCount = 2;
-            layout.RowCount = 5;
+            layout.RowCount = 8;
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 62));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 62));
-            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
-            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 112));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 188));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 94));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 126));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 104));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 96));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 102));
 
             Label title = new Label();
-            title.Text = "Measurements + Evidence Review";
+            title.Text = "Integrated Report Center";
             title.Dock = DockStyle.Fill;
             title.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
             title.ForeColor = Color.FromArgb(24, 31, 29);
@@ -1154,6 +1159,56 @@ namespace CassetteMotionPro.Workspace
             ConfigureIntegratedReviewCard(integratedMeasurementSummary, "MEASUREMENTS");
             ConfigureIntegratedReviewCard(integratedEvidenceSummary, "FAVORITE FRAMES + SAVED IMAGES");
             ConfigureIntegratedReviewCard(integratedApprovalSummary, "FITTER APPROVAL");
+
+            GroupBox recommendations = new GroupBox();
+            recommendations.Text = "Client recommendations — edit here";
+            recommendations.Dock = DockStyle.Fill;
+            recommendations.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            recommendations.ForeColor = Color.FromArgb(37, 48, 43);
+            recommendations.Padding = new Padding(12, 10, 12, 10);
+            integratedRecommendationsEditor.Dock = DockStyle.Fill;
+            integratedRecommendationsEditor.Multiline = true;
+            integratedRecommendationsEditor.ScrollBars = ScrollBars.Vertical;
+            integratedRecommendationsEditor.Font = new Font("Segoe UI", 10F);
+            integratedRecommendationsEditor.BackColor = Color.White;
+            integratedRecommendationsEditor.TextChanged += delegate
+            {
+                if (!string.Equals(txtFitSummaryRecommendations.Text, integratedRecommendationsEditor.Text, StringComparison.Ordinal))
+                    txtFitSummaryRecommendations.Text = integratedRecommendationsEditor.Text;
+            };
+            recommendations.Controls.Add(integratedRecommendationsEditor);
+
+            GroupBox reportImages = new GroupBox();
+            reportImages.Text = "Choose report images";
+            reportImages.Dock = DockStyle.Fill;
+            reportImages.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            reportImages.ForeColor = Color.FromArgb(37, 48, 43);
+            reportImages.Padding = new Padding(12, 8, 12, 8);
+            FlowLayoutPanel imageActions = new FlowLayoutPanel();
+            imageActions.Dock = DockStyle.Fill;
+            imageActions.FlowDirection = FlowDirection.LeftToRight;
+            imageActions.WrapContents = true;
+            Button beforeImage = CreateButton("Choose Before", false);
+            beforeImage.Size = new Size(125, 38);
+            beforeImage.Click += delegate { BrowseReportImage("BeforeReportImagePath"); RefreshIntegratedReview(); };
+            Button afterImage = CreateButton("Choose After", false);
+            afterImage.Size = new Size(120, 38);
+            afterImage.Click += delegate { BrowseReportImage("AfterReportImagePath"); RefreshIntegratedReview(); };
+            Button dualImage = CreateButton("Choose Side-by-side", true);
+            dualImage.Size = new Size(165, 38);
+            dualImage.Click += delegate { BrowseReportImage("SideBySideReportImagePath"); RefreshIntegratedReview(); };
+            Button latestImage = CreateButton("Latest Side-by-side", false);
+            latestImage.Size = new Size(155, 38);
+            latestImage.Click += delegate { UseLatestReportImage("SideBySideReportImagePath"); RefreshIntegratedReview(); };
+            Button imageFolder = CreateButton("Open Image Folder", false);
+            imageFolder.Size = new Size(145, 38);
+            imageFolder.Click += delegate { OpenReportImagesFolderForSaving(); };
+            imageActions.Controls.Add(beforeImage);
+            imageActions.Controls.Add(afterImage);
+            imageActions.Controls.Add(dualImage);
+            imageActions.Controls.Add(latestImage);
+            imageActions.Controls.Add(imageFolder);
+            reportImages.Controls.Add(imageActions);
 
             FlowLayoutPanel actions = new FlowLayoutPanel();
             actions.Dock = DockStyle.Fill;
@@ -1185,16 +1240,53 @@ namespace CassetteMotionPro.Workspace
             actions.Controls.Add(media);
             actions.Controls.Add(approve);
 
+            FlowLayoutPanel outputActions = new FlowLayoutPanel();
+            outputActions.Dock = DockStyle.Fill;
+            outputActions.FlowDirection = FlowDirection.LeftToRight;
+            outputActions.WrapContents = true;
+            outputActions.Padding = new Padding(0, 8, 0, 4);
+            Button save = CreateButton("Save Report Draft", false);
+            save.Size = new Size(145, 40);
+            save.Click += delegate { Save_Click(this, EventArgs.Empty); RefreshIntegratedReview(); };
+            Button preview = CreateButton("Preview / Save PDF", true);
+            preview.Size = new Size(165, 40);
+            preview.Click += delegate { PreviewReport_Click(this, EventArgs.Empty); RefreshIntegratedReview(); };
+            Button package = CreateButton("Prepare Package", false);
+            package.Size = new Size(145, 40);
+            package.Click += delegate { ReportPackage_Click(this, EventArgs.Empty); RefreshIntegratedReview(); };
+            Button zip = CreateButton("Prepare ZIP", false);
+            zip.Size = new Size(120, 40);
+            zip.Click += delegate { ZipReportPackage_Click(this, EventArgs.Empty); RefreshIntegratedReview(); };
+            Button portal = CreateButton("Portal Package", true);
+            portal.Size = new Size(135, 40);
+            portal.Click += delegate { ClientPortalPackage_Click(this, EventArgs.Empty); RefreshIntegratedReview(); };
+            Button openReports = CreateButton("Open Reports", false);
+            openReports.Size = new Size(120, 40);
+            openReports.Click += delegate { OpenReports_Click(this, EventArgs.Empty); };
+            outputActions.Controls.Add(save);
+            outputActions.Controls.Add(preview);
+            outputActions.Controls.Add(package);
+            outputActions.Controls.Add(zip);
+            outputActions.Controls.Add(portal);
+            outputActions.Controls.Add(openReports);
+
             layout.Controls.Add(title, 0, 0);
             layout.SetColumnSpan(title, 2);
             layout.Controls.Add(integratedReviewStatus, 0, 1);
             layout.SetColumnSpan(integratedReviewStatus, 2);
-            layout.Controls.Add(integratedMeasurementSummary, 0, 2);
-            layout.Controls.Add(integratedEvidenceSummary, 1, 2);
-            layout.Controls.Add(integratedApprovalSummary, 0, 3);
+            layout.Controls.Add(recommendations, 0, 2);
+            layout.SetColumnSpan(recommendations, 2);
+            layout.Controls.Add(reportImages, 0, 3);
+            layout.SetColumnSpan(reportImages, 2);
+            layout.Controls.Add(integratedMeasurementSummary, 0, 4);
+            layout.Controls.Add(integratedEvidenceSummary, 1, 4);
+            layout.Controls.Add(integratedApprovalSummary, 0, 5);
             layout.SetColumnSpan(integratedApprovalSummary, 2);
-            layout.Controls.Add(actions, 0, 4);
+            layout.Controls.Add(actions, 0, 6);
             layout.SetColumnSpan(actions, 2);
+            layout.Controls.Add(outputActions, 0, 7);
+            layout.SetColumnSpan(outputActions, 2);
+            page.AutoScroll = true;
             page.Controls.Add(layout);
             return page;
         }
@@ -1223,8 +1315,14 @@ namespace CassetteMotionPro.Workspace
                 integratedMeasurementSummary.Text = "MEASUREMENTS\nNo active session.";
                 integratedEvidenceSummary.Text = "FAVORITE FRAMES + SAVED IMAGES\nNo active session.";
                 integratedApprovalSummary.Text = "FITTER APPROVAL\nNo active session.";
+                if (!integratedRecommendationsEditor.Focused)
+                    integratedRecommendationsEditor.Clear();
                 return;
             }
+
+            if (!integratedRecommendationsEditor.Focused &&
+                !string.Equals(integratedRecommendationsEditor.Text, txtFitSummaryRecommendations.Text, StringComparison.Ordinal))
+                integratedRecommendationsEditor.Text = txtFitSummaryRecommendations.Text;
 
             int completedMeasurements = 0;
             foreach (TextBox box in measurementBoxes.Values)

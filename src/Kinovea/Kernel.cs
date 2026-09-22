@@ -930,7 +930,7 @@ namespace Kinovea.Root
 
             fitDayHeaderReview = new Button();
             fitDayHeaderReview.Dock = DockStyle.Fill;
-            fitDayHeaderReview.Text = "REVIEW";
+            fitDayHeaderReview.Text = "REPORT";
             fitDayHeaderReview.FlatStyle = FlatStyle.Flat;
             fitDayHeaderReview.FlatAppearance.BorderSize = 1;
             fitDayHeaderReview.FlatAppearance.BorderColor = CassetteMotionTheme.Accent;
