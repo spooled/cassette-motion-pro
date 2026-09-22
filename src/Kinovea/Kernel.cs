@@ -84,6 +84,8 @@ namespace Kinovea.Root
         private readonly ToolStripDropDownButton toolClientPicker = new ToolStripDropDownButton();
         private ToolStripTextBox toolClientSearch;
         private readonly ToolStripButton toolFitWorkspace = new ToolStripButton();
+        private readonly ToolStripButton toolFitDayHeader = new ToolStripButton();
+        private bool fitDayHeaderVisible = true;
         
         #region Menus
 
@@ -681,6 +683,15 @@ namespace Kinovea.Root
                     toolClientPicker.ShowDropDown();
             };
 
+            toolFitDayHeader.Text = "Hide Fit Header";
+            toolFitDayHeader.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            toolFitDayHeader.ToolTipText = "Show or hide the persistent fit-day header without closing the active session";
+            toolFitDayHeader.Click += delegate
+            {
+                fitDayHeaderVisible = !fitDayHeaderVisible;
+                ApplyFitDayHeaderVisibility();
+            };
+
             // Open.
             toolOpenFile.DisplayStyle = ToolStripItemDisplayStyle.Image;
             toolOpenFile.Image = Properties.Resources.folder;
@@ -689,6 +700,7 @@ namespace Kinovea.Root
             
             toolbar.Items.Add(toolClientPicker);
             toolbar.Items.Add(toolFitWorkspace);
+            toolbar.Items.Add(toolFitDayHeader);
             toolbar.Items.Add(new ToolStripSeparator());
             toolbar.Items.Add(toolOpenFile);
         }
@@ -954,7 +966,19 @@ namespace Kinovea.Root
             layout.Controls.Add(fitDayHeaderAction, 6, 0);
             fitDayHeader.Controls.Add(layout);
             mainWindow.Controls.Add(fitDayHeader);
-            fitDayHeader.BringToFront();
+            ApplyFitDayHeaderVisibility();
+        }
+
+        private void ApplyFitDayHeaderVisibility()
+        {
+            toolFitDayHeader.Text = fitDayHeaderVisible ? "Hide Fit Header" : "Show Fit Header";
+            if (fitDayHeader != null && !fitDayHeader.IsDisposed)
+            {
+                fitDayHeader.Visible = fitDayHeaderVisible;
+                if (fitDayHeaderVisible)
+                    fitDayHeader.BringToFront();
+            }
+            mainWindow.PerformLayout();
         }
 
         private static Label CreateFitDayHeaderLabel()
@@ -984,8 +1008,9 @@ namespace Kinovea.Root
                 next = next.Substring(prefix.Length);
             fitDayHeaderNext.Text = "NEXT\n" + next;
             fitDayHeaderAction.Enabled = true;
-            fitDayHeader.Visible = true;
-            fitDayHeader.BringToFront();
+            fitDayHeader.Visible = fitDayHeaderVisible;
+            if (fitDayHeaderVisible)
+                fitDayHeader.BringToFront();
             mainWindow.PerformLayout();
         }
 

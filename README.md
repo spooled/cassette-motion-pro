@@ -9,6 +9,8 @@ can be incorporated with minimal changes to the playback and annotation engine.
 
 The persistent header’s **Report** button now opens one embedded report center where the fitter can edit client recommendations, choose Before/After/side-by-side images, review measurements and evidence, approve the report, preview it for Print / Save PDF, and prepare client delivery packages.
 
+Use **Hide Fit Header** / **Show Fit Header** on the main toolbar whenever you want more room for video analysis. Toggling the header does not close the active client session or Fit Panel.
+
 ### Previous milestone: 0.95.0 Integrated Measurements and Evidence
 
 The embedded fit workspace now includes a single integrated review page for completed measurements, favorite Before/After frames, selected report images, saved evidence, and fitter approval. The persistent fit-day header includes a **Review** button that opens this page without leaving the main Kinovea window.
