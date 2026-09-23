@@ -901,8 +901,8 @@ namespace Kinovea.Root
             fitDayHeader = new Panel();
             fitDayHeader.Name = "CassetteMotionPersistentFitDayHeader";
             fitDayHeader.Dock = DockStyle.Top;
-            fitDayHeader.Height = 58;
-            fitDayHeader.Padding = new Padding(10, 6, 10, 6);
+            fitDayHeader.Height = 62;
+            fitDayHeader.Padding = new Padding(12, 7, 12, 7);
             fitDayHeader.BackColor = CassetteMotionTheme.Header;
 
             TableLayoutPanel layout = new TableLayoutPanel();
@@ -942,7 +942,7 @@ namespace Kinovea.Root
 
             fitDayHeaderReview = new Button();
             fitDayHeaderReview.Dock = DockStyle.Fill;
-            fitDayHeaderReview.Text = "REPORT";
+            fitDayHeaderReview.Text = "REVIEW";
             fitDayHeaderReview.FlatStyle = FlatStyle.Flat;
             fitDayHeaderReview.FlatAppearance.BorderSize = 1;
             fitDayHeaderReview.FlatAppearance.BorderColor = CassetteMotionTheme.Accent;
@@ -987,9 +987,11 @@ namespace Kinovea.Root
             label.Dock = DockStyle.Fill;
             label.AutoEllipsis = true;
             label.TextAlign = ContentAlignment.MiddleLeft;
-            label.Padding = new Padding(6, 0, 6, 0);
-            label.Font = new Font("Segoe UI", 8F, FontStyle.Regular);
+            label.Padding = new Padding(9, 0, 9, 0);
+            label.Margin = new Padding(0, 0, 4, 0);
+            label.Font = new Font("Segoe UI Semibold", 8.25F, FontStyle.Regular);
             label.ForeColor = Color.White;
+            label.BackColor = CassetteMotionTheme.HeaderSoft;
             return label;
         }
 
