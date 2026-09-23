@@ -116,6 +116,7 @@ namespace CassetteMotionPro.Workspace
         private readonly List<FitDayFlowStep> fitDayFlowSteps = new List<FitDayFlowStep>();
         private TabControl editorTabs;
         private FlowLayoutPanel workflowStageBar;
+        private FlowLayoutPanel workflowSectionBar;
         private readonly List<Button> workflowStageButtons = new List<Button>();
         private TableLayoutPanel workspaceRoot;
         private SplitContainer workspaceSplit;
@@ -181,7 +182,7 @@ namespace CassetteMotionPro.Workspace
             {
                 workspaceSplit.Panel1MinSize = 190;
                 workspaceSplit.Panel2MinSize = 360;
-                workspaceSplit.SplitterDistance = Math.Min(230, Math.Max(190, workspaceSplit.Width / 4));
+                workspaceSplit.SplitterDistance = Math.Min(210, Math.Max(190, workspaceSplit.Width / 4));
             }
             if (editorActionPanel != null)
             {
@@ -555,8 +556,8 @@ namespace CassetteMotionPro.Workspace
         {
             Panel heading = new Panel();
             heading.Dock = DockStyle.Top;
-            heading.Height = 68;
-            heading.Padding = new Padding(16, 14, 16, 10);
+            heading.Height = 62;
+            heading.Padding = new Padding(14, 12, 14, 8);
 
             TableLayoutPanel sessionActions = new TableLayoutPanel();
             sessionActions.Dock = DockStyle.Fill;
@@ -596,8 +597,9 @@ namespace CassetteMotionPro.Workspace
             Label hint = new Label();
             hint.Text = "Sessions are saved inside the client’s Measurements folder.";
             hint.Dock = DockStyle.Bottom;
-            hint.Height = 58;
-            hint.Padding = new Padding(16, 8, 12, 8);
+            hint.Height = 42;
+            hint.Padding = new Padding(14, 6, 10, 6);
+            hint.Font = new Font("Segoe UI", 8F);
             hint.ForeColor = Color.FromArgb(92, 104, 98);
 
             parent.Controls.Add(sessionList);
@@ -609,14 +611,21 @@ namespace CassetteMotionPro.Workspace
         {
             editorTabs = new TabControl();
             editorTabs.Dock = DockStyle.Fill;
-            editorTabs.Padding = new Point(18, 8);
             CassetteMotionTheme.StyleTabs(editorTabs);
+            // The five-stage bar is the primary navigation. Keep the underlying
+            // tab pages for their proven behavior without showing a second,
+            // competing row of navigation.
+            editorTabs.Appearance = TabAppearance.FlatButtons;
+            editorTabs.SizeMode = TabSizeMode.Fixed;
+            editorTabs.ItemSize = new Size(0, 1);
+            editorTabs.Padding = new Point(0, 0);
             editorTabs.SelectedIndexChanged += delegate
             {
                 UpdateWorkflowChecklist();
                 UpdateEmbeddedActionBar();
                 RefreshIntegratedReview();
                 UpdateWorkflowStageBar();
+                UpdateWorkflowSectionBar();
             };
             editorTabs.TabPages.Add(BuildFitDayDashboardTab());
             editorTabs.TabPages.Add(BuildOverviewTab());
@@ -628,6 +637,7 @@ namespace CassetteMotionPro.Workspace
             editorTabs.TabPages.Add(BuildReportWorkspaceTab());
 
             workflowStageBar = BuildWorkflowStageBar();
+            workflowSectionBar = BuildWorkflowSectionBar();
 
             editorActionPanel = new Panel();
             editorActionPanel.Dock = DockStyle.Bottom;
@@ -691,16 +701,19 @@ namespace CassetteMotionPro.Workspace
             editorActionPanel.Controls.Add(saveHint);
             parent.Controls.Add(editorTabs);
             parent.Controls.Add(editorActionPanel);
+            parent.Controls.Add(workflowSectionBar);
             parent.Controls.Add(workflowStageBar);
-            workflowStageBar.BringToFront();
+            parent.Controls.SetChildIndex(workflowStageBar, 0);
+            parent.Controls.SetChildIndex(workflowSectionBar, 1);
             UpdateWorkflowStageBar();
+            UpdateWorkflowSectionBar();
         }
 
         private FlowLayoutPanel BuildWorkflowStageBar()
         {
             FlowLayoutPanel bar = new FlowLayoutPanel();
             bar.Dock = DockStyle.Top;
-            bar.Height = 54;
+            bar.Height = 64;
             bar.Padding = new Padding(18, 9, 12, 7);
             bar.WrapContents = false;
             bar.AutoScroll = true;
@@ -711,6 +724,18 @@ namespace CassetteMotionPro.Workspace
             AddWorkflowStageButton(bar, "VIDEO", KinoveaVideoTabName);
             AddWorkflowStageButton(bar, "MEASUREMENTS", "Guided Measurements");
             AddWorkflowStageButton(bar, "REPORT", "Report Center");
+            return bar;
+        }
+
+        private FlowLayoutPanel BuildWorkflowSectionBar()
+        {
+            FlowLayoutPanel bar = new FlowLayoutPanel();
+            bar.Dock = DockStyle.Top;
+            bar.Height = 44;
+            bar.Padding = new Padding(18, 5, 12, 5);
+            bar.WrapContents = false;
+            bar.AutoScroll = true;
+            bar.BackColor = CassetteMotionTheme.SurfaceSoft;
             return bar;
         }
 
@@ -731,19 +756,7 @@ namespace CassetteMotionPro.Workspace
             if (editorTabs == null || editorTabs.SelectedTab == null)
                 return;
 
-            string selected = editorTabs.SelectedTab.Text;
-            string active = FitDayHomeTabName;
-            if (string.Equals(selected, SessionSetupTabName, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(selected, "Client Files", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(selected, "Client History", StringComparison.OrdinalIgnoreCase))
-                active = SessionSetupTabName;
-            else if (string.Equals(selected, KinoveaVideoTabName, StringComparison.OrdinalIgnoreCase))
-                active = KinoveaVideoTabName;
-            else if (string.Equals(selected, "Measurements", StringComparison.OrdinalIgnoreCase))
-                active = "Guided Measurements";
-            else if (string.Equals(selected, "Report Center", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(selected, "Report", StringComparison.OrdinalIgnoreCase))
-                active = "Report Center";
+            string active = GetActiveWorkspaceStage();
 
             foreach (Button button in workflowStageButtons)
             {
@@ -752,6 +765,80 @@ namespace CassetteMotionPro.Workspace
                 button.ForeColor = isActive ? Color.White : CassetteMotionTheme.Muted;
                 button.FlatAppearance.BorderColor = isActive ? CassetteMotionTheme.Header : CassetteMotionTheme.Border;
             }
+        }
+
+        private string GetActiveWorkspaceStage()
+        {
+            string selected = editorTabs == null || editorTabs.SelectedTab == null ? string.Empty : editorTabs.SelectedTab.Text;
+            if (string.Equals(selected, SessionSetupTabName, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(selected, "Client Files", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(selected, "Client History", StringComparison.OrdinalIgnoreCase))
+                return SessionSetupTabName;
+            if (string.Equals(selected, KinoveaVideoTabName, StringComparison.OrdinalIgnoreCase))
+                return KinoveaVideoTabName;
+            if (string.Equals(selected, "Measurements", StringComparison.OrdinalIgnoreCase))
+                return "Guided Measurements";
+            if (string.Equals(selected, "Report Center", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(selected, "Report", StringComparison.OrdinalIgnoreCase))
+                return "Report Center";
+            return FitDayHomeTabName;
+        }
+
+        private void UpdateWorkflowSectionBar()
+        {
+            if (workflowSectionBar == null || editorTabs == null || editorTabs.SelectedTab == null)
+                return;
+
+            workflowSectionBar.SuspendLayout();
+            while (workflowSectionBar.Controls.Count > 0)
+            {
+                Control oldControl = workflowSectionBar.Controls[0];
+                workflowSectionBar.Controls.RemoveAt(0);
+                oldControl.Dispose();
+            }
+            string stage = GetActiveWorkspaceStage();
+            if (string.Equals(stage, SessionSetupTabName, StringComparison.OrdinalIgnoreCase))
+            {
+                AddWorkspaceSectionLabel("CLIENT");
+                AddWorkspaceSectionButton("Setup", SessionSetupTabName);
+                AddWorkspaceSectionButton("Files", "Client Files");
+                AddWorkspaceSectionButton("History", "Client History");
+            }
+            else if (string.Equals(stage, "Report Center", StringComparison.OrdinalIgnoreCase))
+            {
+                AddWorkspaceSectionLabel("REPORT");
+                AddWorkspaceSectionButton("Review", "Report Center");
+                AddWorkspaceSectionButton("Builder", "Report");
+            }
+
+            workflowSectionBar.Visible = workflowSectionBar.Controls.Count > 0;
+            workflowSectionBar.ResumeLayout();
+        }
+
+        private void AddWorkspaceSectionLabel(string text)
+        {
+            Label label = new Label();
+            label.Text = text;
+            label.AutoSize = false;
+            label.Size = new Size(76, 32);
+            label.TextAlign = ContentAlignment.MiddleLeft;
+            label.Font = new Font("Segoe UI Semibold", 8F, FontStyle.Bold);
+            label.ForeColor = CassetteMotionTheme.Muted;
+            workflowSectionBar.Controls.Add(label);
+        }
+
+        private void AddWorkspaceSectionButton(string text, string tabName)
+        {
+            Button button = CreateButton(text, false);
+            bool selected = string.Equals(editorTabs.SelectedTab.Text, tabName, StringComparison.OrdinalIgnoreCase);
+            button.Height = 32;
+            button.Width = 88;
+            button.Margin = new Padding(0, 0, 6, 0);
+            button.BackColor = selected ? CassetteMotionTheme.HeaderSoft : CassetteMotionTheme.Surface;
+            button.ForeColor = selected ? Color.White : CassetteMotionTheme.Muted;
+            button.FlatAppearance.BorderColor = selected ? CassetteMotionTheme.HeaderSoft : CassetteMotionTheme.Border;
+            button.Click += delegate { SelectWorkspaceTab(tabName); };
+            workflowSectionBar.Controls.Add(button);
         }
 
         private TabPage BuildOverviewTab()
