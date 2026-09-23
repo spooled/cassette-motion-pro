@@ -144,6 +144,7 @@
 	VIAddVersionKey /LANG=${LANG_ENGLISH} "LegalCopyright" "Copyright © 2026 Cassette Fit Studio; based on Kinovea"
 	VIAddVersionKey /LANG=${LANG_ENGLISH} "FileDescription" "Cassette Motion Pro Installer"
 	VIAddVersionKey /LANG=${LANG_ENGLISH} "FileVersion" "${VERSION}"
+	VIAddVersionKey /LANG=${LANG_ENGLISH} "ProductVersion" "${VERSION}"
 	VIProductVersion "${VERSION}.0"
 	CRCCheck on
 

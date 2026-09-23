@@ -71,7 +71,8 @@ if (![string]::IsNullOrWhiteSpace($InstallerPath)) {
     $installer = Get-Item $InstallerPath
     Assert-True ($installer.Length -gt 1MB) "Installer is unexpectedly small: $($installer.Length) bytes."
     $installerVersion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($installer.FullName)
-    Assert-True ($installerVersion.ProductVersion -like "$Version*") "Installer product version was '$($installerVersion.ProductVersion)', expected '$Version'."
+    Assert-True ($installerVersion.FileVersion -like "$Version*") "Installer file version was '$($installerVersion.FileVersion)', expected '$Version'."
+    Assert-True ($installerVersion.ProductVersion -like "$Version*") "Installer product version was '$($installerVersion.ProductVersion)' and file version was '$($installerVersion.FileVersion)', expected '$Version'."
 
     if ($SmokeTestInstaller) {
         $smokeRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("CassetteMotionPro-Install-Smoke-" + [guid]::NewGuid().ToString('N'))
