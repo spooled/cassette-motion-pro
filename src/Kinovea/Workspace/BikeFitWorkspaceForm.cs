@@ -110,6 +110,10 @@ namespace CassetteMotionPro.Workspace
         private readonly ComboBox cmbReportLogoStyle = new ComboBox();
         private readonly Dictionary<string, TextBox> mediaBoxes = new Dictionary<string, TextBox>();
         private readonly Dictionary<string, Label> mediaStatusLabels = new Dictionary<string, Label>();
+        private readonly Label videoWorkspaceStatus = new Label();
+        private readonly Label videoBeforeStatus = new Label();
+        private readonly Label videoAfterStatus = new Label();
+        private readonly Label videoFavoriteStatus = new Label();
         private readonly Dictionary<string, TextBox> imageBoxes = new Dictionary<string, TextBox>();
         private readonly Dictionary<string, TextBox> measurementBoxes = new Dictionary<string, TextBox>();
         private readonly List<WorkflowChecklistItem> workflowChecklistItems = new List<WorkflowChecklistItem>();
@@ -3789,15 +3793,20 @@ namespace CassetteMotionPro.Workspace
             analysisHint.Dock = DockStyle.Fill;
             analysisHint.ForeColor = Color.FromArgb(92, 104, 98);
             int analysisHintRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 62));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
             table.Controls.Add(analysisHint, 1, analysisHintRow);
             table.SetColumnSpan(analysisHint, 5);
 
-            Control cameraProfiles = BuildCameraProfilePanel();
-            int cameraProfilesRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 278));
-            table.Controls.Add(cameraProfiles, 1, cameraProfilesRow);
-            table.SetColumnSpan(cameraProfiles, 5);
+            Control commandCenter = BuildVideoWorkspaceCommandCenter();
+            int commandCenterRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 226));
+            table.Controls.Add(commandCenter, 1, commandCenterRow);
+            table.SetColumnSpan(commandCenter, 5);
+
+            AddMediaRow(table, "Before", "BeforeVideoPath");
+            AddMediaRow(table, "After", "AfterVideoPath");
+
+            AddSavedEvidenceReview(table);
 
             Control fitDayPath = BuildFitDayPathGuide();
             int fitDayPathRow = table.RowCount++;
@@ -3820,36 +3829,32 @@ namespace CassetteMotionPro.Workspace
             table.Controls.Add(folderShortcuts, 1, folderShortcutsRow);
             table.SetColumnSpan(folderShortcuts, 5);
 
-            AddMediaRow(table, "Before", "BeforeVideoPath");
-            AddMediaRow(table, "After", "AfterVideoPath");
-
-            AddSavedEvidenceReview(table);
-
             FlowLayoutPanel comparisons = new FlowLayoutPanel();
             comparisons.Dock = DockStyle.Fill;
             comparisons.FlowDirection = FlowDirection.LeftToRight;
             comparisons.WrapContents = true;
             comparisons.Padding = new Padding(0, 18, 0, 0);
 
-            Button dualLive = CreateButton("Dual Live Capture", true);
-            dualLive.Size = new Size(190, 38);
-            dualLive.Click += delegate { OpenDualLiveCapture(); };
-            comparisons.Controls.Add(dualLive);
-
-            Button latestBoth = CreateButton("Analyze Latest Before + After", true);
-            latestBoth.Size = new Size(270, 38);
-            latestBoth.Click += delegate { UseLatestBothVideos(); };
-            comparisons.Controls.Add(latestBoth);
-
             Button synchronize = CreateButton("Sync + Compare Two Cameras", false);
             synchronize.Size = new Size(235, 38);
             synchronize.Click += ShowDualCameraSynchronization;
             comparisons.Controls.Add(synchronize);
 
+            Button savedMedia = CreateButton("Open Saved Media", false);
+            savedMedia.Size = new Size(170, 38);
+            savedMedia.Click += delegate { OpenSessionMediaLibrary(); };
+            comparisons.Controls.Add(savedMedia);
+
             int comparisonRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 88));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 68));
             table.Controls.Add(comparisons, 1, comparisonRow);
             table.SetColumnSpan(comparisons, 5);
+
+            Control cameraProfiles = BuildCameraProfilePanel();
+            int cameraProfilesRow = table.RowCount++;
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 278));
+            table.Controls.Add(cameraProfiles, 1, cameraProfilesRow);
+            table.SetColumnSpan(cameraProfiles, 5);
 
             Label toolsTitle = new Label();
             toolsTitle.Text = "Cassette Motion Pro analysis + saved evidence";
@@ -3879,22 +3884,12 @@ namespace CassetteMotionPro.Workspace
             checkCaptures.Size = new Size(190, 38);
             checkCaptures.Click += delegate { CheckSavedAnalysisEvidence(); };
 
-            Button favoriteFrames = CreateButton("Review Favorite Frames", true);
-            favoriteFrames.Size = new Size(205, 38);
-            favoriteFrames.Click += delegate { ReviewFavoriteFrames(); };
-
-            Button compareFrames = CreateButton("Compare + Approve Frames", false);
-            compareFrames.Size = new Size(220, 38);
-            compareFrames.Click += delegate { CompareAndApproveFavoriteFrames(); };
-
             analysisActions.Controls.Add(prepare);
             analysisActions.Controls.Add(captures);
             analysisActions.Controls.Add(checkCaptures);
-            analysisActions.Controls.Add(favoriteFrames);
-            analysisActions.Controls.Add(compareFrames);
 
             int analysisActionsRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 105));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 62));
             table.Controls.Add(analysisActions, 1, analysisActionsRow);
             table.SetColumnSpan(analysisActions, 4);
 
@@ -3923,7 +3918,112 @@ namespace CassetteMotionPro.Workspace
 
             page.AutoScroll = true;
             page.Controls.Add(table);
+            RefreshVideoWorkspaceSummary();
             return page;
+        }
+
+        private Control BuildVideoWorkspaceCommandCenter()
+        {
+            Panel card = new Panel();
+            card.Dock = DockStyle.Fill;
+            card.Margin = new Padding(0, 0, 0, 10);
+            card.Padding = new Padding(14, 12, 14, 10);
+            card.BackColor = CassetteMotionTheme.Surface;
+            card.BorderStyle = BorderStyle.FixedSingle;
+
+            TableLayoutPanel layout = new TableLayoutPanel();
+            layout.Dock = DockStyle.Fill;
+            layout.ColumnCount = 3;
+            layout.RowCount = 4;
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
+
+            Label heading = new Label();
+            heading.Text = "Video Fit Desk";
+            heading.Dock = DockStyle.Fill;
+            heading.Font = new Font("Segoe UI Semibold", 15F, FontStyle.Bold);
+            heading.ForeColor = CassetteMotionTheme.Ink;
+            heading.TextAlign = ContentAlignment.MiddleLeft;
+
+            videoWorkspaceStatus.Dock = DockStyle.Fill;
+            videoWorkspaceStatus.AutoEllipsis = true;
+            videoWorkspaceStatus.TextAlign = ContentAlignment.MiddleRight;
+            videoWorkspaceStatus.Font = new Font("Segoe UI", 9F);
+            videoWorkspaceStatus.ForeColor = CassetteMotionTheme.Muted;
+
+            ConfigureVideoStatusCard(videoBeforeStatus);
+            ConfigureVideoStatusCard(videoAfterStatus);
+            ConfigureVideoStatusCard(videoFavoriteStatus);
+
+            FlowLayoutPanel primary = NewVideoActionRow();
+            Button recordBefore = CreateButton("Record Before", true);
+            recordBefore.Size = new Size(145, 40);
+            recordBefore.Click += delegate { ApplyCameraProfileAndOpenCapture("Before"); };
+            Button recordAfter = CreateButton("Record After", true);
+            recordAfter.Size = new Size(140, 40);
+            recordAfter.Click += delegate { ApplyCameraProfileAndOpenCapture("After"); };
+            Button playback = CreateButton("Play Latest Before + After", true);
+            playback.Size = new Size(220, 40);
+            playback.Click += delegate { UseLatestBothVideos(); };
+            primary.Controls.Add(recordBefore);
+            primary.Controls.Add(recordAfter);
+            primary.Controls.Add(playback);
+
+            FlowLayoutPanel favorites = NewVideoActionRow();
+            Button beforeFrame = CreateButton("Choose Before Frame", false);
+            beforeFrame.Size = new Size(175, 38);
+            beforeFrame.Click += delegate { ReviewFavoriteFrames("Before"); };
+            Button afterFrame = CreateButton("Choose After Frame", false);
+            afterFrame.Size = new Size(170, 38);
+            afterFrame.Click += delegate { ReviewFavoriteFrames("After"); };
+            Button compare = CreateButton("Compare Favorites", false);
+            compare.Size = new Size(165, 38);
+            compare.Click += delegate { CompareAndApproveFavoriteFrames(); };
+            favorites.Controls.Add(beforeFrame);
+            favorites.Controls.Add(afterFrame);
+            favorites.Controls.Add(compare);
+
+            layout.Controls.Add(heading, 0, 0);
+            layout.SetColumnSpan(heading, 1);
+            layout.Controls.Add(videoWorkspaceStatus, 1, 0);
+            layout.SetColumnSpan(videoWorkspaceStatus, 2);
+            layout.Controls.Add(videoBeforeStatus, 0, 1);
+            layout.Controls.Add(videoAfterStatus, 1, 1);
+            layout.Controls.Add(videoFavoriteStatus, 2, 1);
+            layout.Controls.Add(primary, 0, 2);
+            layout.SetColumnSpan(primary, 3);
+            layout.Controls.Add(favorites, 0, 3);
+            layout.SetColumnSpan(favorites, 3);
+            card.Controls.Add(layout);
+            return card;
+        }
+
+        private static FlowLayoutPanel NewVideoActionRow()
+        {
+            FlowLayoutPanel row = new FlowLayoutPanel();
+            row.Dock = DockStyle.Fill;
+            row.FlowDirection = FlowDirection.LeftToRight;
+            row.WrapContents = false;
+            row.AutoScroll = true;
+            row.Padding = new Padding(0, 5, 0, 3);
+            return row;
+        }
+
+        private static void ConfigureVideoStatusCard(Label label)
+        {
+            label.Dock = DockStyle.Fill;
+            label.Margin = new Padding(0, 2, 8, 4);
+            label.Padding = new Padding(10, 7, 10, 6);
+            label.Font = new Font("Segoe UI Semibold", 8.5F, FontStyle.Bold);
+            label.TextAlign = ContentAlignment.MiddleLeft;
+            label.AutoEllipsis = true;
+            label.BackColor = CassetteMotionTheme.SurfaceSoft;
+            label.ForeColor = CassetteMotionTheme.Muted;
         }
 
         private void ShowDualCameraSynchronization(object sender, EventArgs e)
@@ -4107,7 +4207,10 @@ namespace CassetteMotionPro.Workspace
             }
             CameraSetupProfile profile = cmbCameraProfile.SelectedItem as CameraSetupProfile;
             if (profile == null)
+            {
+                MessageBox.Show(this, "Choose a camera setup profile first. The built-in Side + Front profile is a good starting point.", "Camera Setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
+            }
             currentSession.CameraSetupProfileName = profile.Name;
             currentSession.CameraSetupLeftRole = txtCameraLeftRole.Text.Trim();
             currentSession.CameraSetupRightRole = txtCameraRightRole.Text.Trim();
@@ -7423,6 +7526,7 @@ namespace CassetteMotionPro.Workspace
             UpdateWorkflowChecklist();
             RefreshAnalysisCapturesStatus();
             RefreshRecordingFolderGuide();
+            RefreshVideoWorkspaceSummary();
             UpdateReportImageSaveTarget();
             UpdateVideoSaveTarget();
             lastSavedFingerprint = BuildAutosaveFingerprint();
@@ -7434,11 +7538,13 @@ namespace CassetteMotionPro.Workspace
         {
             mediaBoxes[key].Text = value ?? string.Empty;
             RefreshMediaStatus(key);
+            RefreshVideoWorkspaceSummary();
         }
 
         private void SetImage(string key, string value)
         {
             imageBoxes[key].Text = value ?? string.Empty;
+            RefreshVideoWorkspaceSummary();
         }
 
         private void SetMeasurement(string key, string value)
@@ -8050,6 +8156,7 @@ namespace CassetteMotionPro.Workspace
 
             imageBoxes[key].Text = path;
             SaveCurrentSession();
+            RefreshVideoWorkspaceSummary();
             UpdateWorkflowChecklist();
             UpdateFitCommandCenterStatus();
             UpdateSaveHint(slot + " report image saved to this client fit session: " + Path.GetFileName(path));
@@ -8080,6 +8187,7 @@ namespace CassetteMotionPro.Workspace
             mediaBoxes[key].Text = path;
             SaveCurrentSession();
             RefreshMediaStatus(key);
+            RefreshVideoWorkspaceSummary();
             UpdateWorkflowChecklist();
             UpdateFitCommandCenterStatus();
             UpdateSaveHint(slot + " video saved to this client fit session: " + Path.GetFileName(path));
@@ -8797,6 +8905,60 @@ namespace CassetteMotionPro.Workspace
             status.Text = viewName + " selected: " + FormatLatestVideoSelection(path);
         }
 
+        private void RefreshVideoWorkspaceSummary()
+        {
+            if (videoWorkspaceStatus == null)
+                return;
+
+            if (currentSession == null)
+            {
+                videoWorkspaceStatus.Text = "Open or create a fit session first";
+                SetVideoStatusCard(videoBeforeStatus, "BEFORE", false, "No active session");
+                SetVideoStatusCard(videoAfterStatus, "AFTER", false, "No active session");
+                SetVideoStatusCard(videoFavoriteStatus, "FAVORITES", false, "No active session");
+                return;
+            }
+
+            string beforeVideo = mediaBoxes.ContainsKey("BeforeVideoPath") ? mediaBoxes["BeforeVideoPath"].Text : string.Empty;
+            string afterVideo = mediaBoxes.ContainsKey("AfterVideoPath") ? mediaBoxes["AfterVideoPath"].Text : string.Empty;
+            string beforeFrame = imageBoxes.ContainsKey("BeforeReportImagePath") ? imageBoxes["BeforeReportImagePath"].Text : string.Empty;
+            string afterFrame = imageBoxes.ContainsKey("AfterReportImagePath") ? imageBoxes["AfterReportImagePath"].Text : string.Empty;
+            bool beforeReady = File.Exists(beforeVideo);
+            bool afterReady = File.Exists(afterVideo);
+            bool beforeFavorite = File.Exists(beforeFrame);
+            bool afterFavorite = File.Exists(afterFrame);
+            bool favoritesReady = beforeFavorite && afterFavorite;
+
+            SetVideoStatusCard(videoBeforeStatus, "BEFORE", beforeReady,
+                beforeReady ? Path.GetFileName(beforeVideo) : "Record or choose a clip");
+            SetVideoStatusCard(videoAfterStatus, "AFTER", afterReady,
+                afterReady ? Path.GetFileName(afterVideo) : "Record or choose a clip");
+            string favoriteDetail = "Before " + (beforeFavorite ? "✓" : "—") + "   After " + (afterFavorite ? "✓" : "—");
+            if (currentSession.FavoriteFrameComparisonApprovedUtc != DateTime.MinValue)
+                favoriteDetail += "   Approved ✓";
+            SetVideoStatusCard(videoFavoriteStatus, "FAVORITES", favoritesReady, favoriteDetail);
+
+            if (!beforeReady)
+                videoWorkspaceStatus.Text = "Next: record the Before clip";
+            else if (!afterReady)
+                videoWorkspaceStatus.Text = "Next: record the After clip";
+            else if (!beforeFavorite)
+                videoWorkspaceStatus.Text = "Next: choose the Before favorite frame";
+            else if (!afterFavorite)
+                videoWorkspaceStatus.Text = "Next: choose the After favorite frame";
+            else if (currentSession.FavoriteFrameComparisonApprovedUtc == DateTime.MinValue)
+                videoWorkspaceStatus.Text = "Next: compare and approve the favorite pair";
+            else
+                videoWorkspaceStatus.Text = "Video evidence is ready for measurements and report";
+        }
+
+        private static void SetVideoStatusCard(Label label, string title, bool ready, string detail)
+        {
+            label.Text = title + "  " + (ready ? "READY" : "NEEDED") + Environment.NewLine + detail;
+            label.BackColor = ready ? Color.FromArgb(235, 250, 238) : Color.FromArgb(255, 248, 226);
+            label.ForeColor = ready ? CassetteMotionTheme.Success : CassetteMotionTheme.Warning;
+        }
+
         private static void WriteCaptureFolderHint(string folder, string viewName)
         {
             string hintPath = Path.Combine(folder, "README - Record Live Here.txt");
@@ -8858,6 +9020,7 @@ namespace CassetteMotionPro.Workspace
                         if (key == "SideBySideReportImagePath" && imageBoxes.ContainsKey("MeasurementReferenceImagePath"))
                             imageBoxes["MeasurementReferenceImagePath"].Text = imageBoxes[key].Text;
                         SaveCurrentSession();
+                        RefreshVideoWorkspaceSummary();
                         if (key == "SideBySideReportImagePath")
                             UpdateSaveHint("Side-by-side image saved and set as the Bike Metrics measurement image.");
                         else
@@ -8959,6 +9122,7 @@ namespace CassetteMotionPro.Workspace
                     imageBoxes["MeasurementReferenceImagePath"].Text = latestImagePath;
 
                 SaveCurrentSession();
+                RefreshVideoWorkspaceSummary();
 
                 string viewName = GetReportImageViewName(key);
                 if (key == "SideBySideReportImagePath")
@@ -9311,6 +9475,7 @@ namespace CassetteMotionPro.Workspace
             imageBoxes[key].Text = destinationPath;
             SaveCurrentSession();
             RefreshSavedEvidenceReview();
+            RefreshVideoWorkspaceSummary();
             UpdateWorkflowChecklist();
             UpdateSaveHint("Media library image assigned as " + role + " report evidence.");
         }
@@ -9330,6 +9495,18 @@ namespace CassetteMotionPro.Workspace
             if (sideChoice == DialogResult.Cancel)
                 return;
             string side = sideChoice == DialogResult.Yes ? "Before" : "After";
+
+            ReviewFavoriteFrames(side);
+        }
+
+        private void ReviewFavoriteFrames(string side)
+        {
+            if (!HasActiveFitSession())
+            {
+                MessageBox.Show(this, "Create or open a client fit session first so favorite frames can be saved to the correct report.",
+                    "Favorite Frame Review", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
 
             try
             {
@@ -9362,6 +9539,7 @@ namespace CassetteMotionPro.Workspace
                     else chkShowAfterImageInReport.Checked = true;
                     SaveCurrentSession();
                     RefreshSavedEvidenceReview();
+                    RefreshVideoWorkspaceSummary();
                     UpdateWorkflowChecklist();
                     UpdateSaveHint("Favorite " + side.ToLowerInvariant() + " frame selected and added to this fit session’s report.");
                 }
@@ -9418,6 +9596,7 @@ namespace CassetteMotionPro.Workspace
                     chkShowSideBySideImageInReport.Checked = true;
                     SaveCurrentSession();
                     RefreshSavedEvidenceReview();
+                    RefreshVideoWorkspaceSummary();
                     UpdateWorkflowChecklist();
                     UpdateSaveHint("Favorite Before/After pair approved and a new Dual report image was created.");
                 }
