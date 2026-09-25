@@ -5062,12 +5062,12 @@ namespace CassetteMotionPro.Workspace
 
         private void ShowGuidedRiderMeasurements(string imageKey, string defaultSide)
         {
-            string path = imageBoxes.ContainsKey(imageKey) ? imageBoxes[imageKey].Text : string.Empty;
+            string path = ResolveSessionReportImage(imageKey);
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
             {
                 MessageBox.Show(this,
-                    "Choose a " + defaultSide + " report image first.\n\n" +
-                    "Use Report → Report Images to select or save a clear side-view rider image, then return to Body Angles.",
+                    "No saved " + defaultSide + " image was found for this fit session.\n\n" +
+                    "Open the client’s video, pause on a clear side-view frame, click Save Image, and choose " + defaultSide + ". Then return here and try again.",
                     "Guided Rider Measurements", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -5097,12 +5097,13 @@ namespace CassetteMotionPro.Workspace
 
         private void ShowRiderTrackingComparison(object sender, EventArgs e)
         {
-            string beforePath = imageBoxes.ContainsKey("BeforeReportImagePath") ? imageBoxes["BeforeReportImagePath"].Text : string.Empty;
-            string afterPath = imageBoxes.ContainsKey("AfterReportImagePath") ? imageBoxes["AfterReportImagePath"].Text : string.Empty;
+            string beforePath = ResolveSessionReportImage("BeforeReportImagePath");
+            string afterPath = ResolveSessionReportImage("AfterReportImagePath");
             if (!File.Exists(beforePath) || !File.Exists(afterPath))
             {
                 MessageBox.Show(this,
-                    "Choose both a Before and an After report image first.\n\nUse Report → Report Images to select matching paused side-view frames, then return to Body Angles.",
+                    "Saved Before and After images are both needed for this comparison.\n\n" +
+                    "For either missing side, pause its client video on a clear side-view frame, click Save Image, and choose Before or After. Then return here and try again.",
                     "Before / After Rider Tracking", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -8579,15 +8580,66 @@ namespace CassetteMotionPro.Workspace
 
         private void UseMeasurementReferenceImage(string sourceKey, string label)
         {
-            if (!imageBoxes.ContainsKey(sourceKey) || string.IsNullOrEmpty(imageBoxes[sourceKey].Text))
+            string path = ResolveSessionReportImage(sourceKey);
+            if (string.IsNullOrEmpty(path) || !File.Exists(path))
             {
-                MessageBox.Show(this, "Choose a " + label.ToLowerInvariant() + " first.", "Measurement image", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                string slot = sourceKey == "AfterReportImagePath" ? "After" : sourceKey == "SideBySideReportImagePath" ? "Dual" : "Before";
+                MessageBox.Show(this,
+                    "No saved " + label.ToLowerInvariant() + " was found for this fit session.\n\n" +
+                    "Open the client’s video, pause on the frame you want, click Save Image, and choose " + slot + ". Then click Use " + label + " again.",
+                    "Measurement image", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            imageBoxes["MeasurementReferenceImagePath"].Text = imageBoxes[sourceKey].Text;
+            imageBoxes["MeasurementReferenceImagePath"].Text = path;
             SaveCurrentSession();
-            UpdateSaveHint("Measurement image set from " + label + ".");
+            UpdateSaveHint("Measurement image loaded from this session’s " + label.ToLowerInvariant() + " folder: " + Path.GetFileName(path));
+        }
+
+        private string ResolveSessionReportImage(string key)
+        {
+            if (currentSession == null || client == null || !imageBoxes.ContainsKey(key))
+                return string.Empty;
+
+            string latestPath = string.Empty;
+            DateTime latestWriteTime = DateTime.MinValue;
+            ConsiderLatestImage(imageBoxes[key].Text, ref latestPath, ref latestWriteTime);
+
+            string reportImagesFolder = GetSessionReportImagesFolderPath();
+            if (key == "BeforeReportImagePath")
+            {
+                ConsiderLatestImage(FindLatestImageFile(Path.Combine(reportImagesFolder, "Before")), ref latestPath, ref latestWriteTime);
+                ConsiderLatestImage(FindLatestImageFile(reportImagesFolder, "Before-ReportImage-"), ref latestPath, ref latestWriteTime);
+            }
+            else if (key == "AfterReportImagePath")
+            {
+                ConsiderLatestImage(FindLatestImageFile(Path.Combine(reportImagesFolder, "After")), ref latestPath, ref latestWriteTime);
+                ConsiderLatestImage(FindLatestImageFile(reportImagesFolder, "After-ReportImage-"), ref latestPath, ref latestWriteTime);
+            }
+            else if (key == "SideBySideReportImagePath")
+            {
+                ConsiderLatestImage(FindLatestImageFile(Path.Combine(reportImagesFolder, "Dual")), ref latestPath, ref latestWriteTime);
+                ConsiderLatestImage(FindLatestImageFile(GetSessionSideBySideFolderPath()), ref latestPath, ref latestWriteTime);
+                ConsiderLatestImage(FindLatestImageFile(reportImagesFolder, "Dual-ReportImage-"), ref latestPath, ref latestWriteTime);
+            }
+
+            if (!string.IsNullOrEmpty(latestPath))
+                imageBoxes[key].Text = latestPath;
+
+            return latestPath;
+        }
+
+        private static void ConsiderLatestImage(string path, ref string latestPath, ref DateTime latestWriteTime)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+                return;
+
+            DateTime writeTime = File.GetLastWriteTime(path);
+            if (writeTime <= latestWriteTime)
+                return;
+
+            latestPath = path;
+            latestWriteTime = writeTime;
         }
 
         private void CombineBeforeAfterImages(bool useAsMeasurementReference)
