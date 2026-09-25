@@ -92,6 +92,10 @@ namespace CassetteMotionPro.Workspace
         private readonly TextBox finalizationChecklist = new TextBox();
         private readonly Label combinedMeasurementReviewStatus = new Label();
         private readonly TextBox combinedMeasurementReview = new TextBox();
+        private readonly Label measurementTrackingReviewStatus = new Label();
+        private readonly Label measurementAssistedReviewStatus = new Label();
+        private readonly Label measurementCorrectionReviewStatus = new Label();
+        private readonly Label measurementConfidenceReviewStatus = new Label();
         private readonly Label integratedReviewStatus = new Label();
         private readonly Label integratedMeasurementSummary = new Label();
         private readonly Label integratedEvidenceSummary = new Label();
@@ -347,8 +351,20 @@ namespace CassetteMotionPro.Workspace
         {
             if (loadingSession || outputInProgress)
                 return;
+            TextBox editedMeasurement = sender as TextBox;
+            if (editedMeasurement != null && measurementBoxes.ContainsValue(editedMeasurement))
+                InvalidateMeasurementAccuracyApproval("A measurement changed after the accuracy review.");
             hasUnsavedChanges = true;
             SetAutosaveStatus("Unsaved changes", true);
+        }
+
+        private void InvalidateMeasurementAccuracyApproval(string reason)
+        {
+            if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.AssistedMeasurementAccuracyApprovedUtc))
+                return;
+
+            currentSession.AssistedMeasurementAccuracyApprovedUtc = string.Empty;
+            AddTimelineEvent("Measurements", reason + " Fitter approval must be renewed.");
         }
 
         private void AutosaveTimer_Tick(object sender, EventArgs e)
@@ -726,7 +742,7 @@ namespace CassetteMotionPro.Workspace
             AddWorkflowStageButton(bar, "FIT DAY", FitDayHomeTabName);
             AddWorkflowStageButton(bar, "CLIENT", SessionSetupTabName);
             AddWorkflowStageButton(bar, "VIDEO", KinoveaVideoTabName);
-            AddWorkflowStageButton(bar, "MEASUREMENTS", "Guided Measurements");
+            AddWorkflowStageButton(bar, "MEASUREMENTS", "Measurement Review");
             AddWorkflowStageButton(bar, "REPORT", "Report Center");
             return bar;
         }
@@ -781,7 +797,7 @@ namespace CassetteMotionPro.Workspace
             if (string.Equals(selected, KinoveaVideoTabName, StringComparison.OrdinalIgnoreCase))
                 return KinoveaVideoTabName;
             if (string.Equals(selected, "Measurements", StringComparison.OrdinalIgnoreCase))
-                return "Guided Measurements";
+                return "Measurement Review";
             if (string.Equals(selected, "Report Center", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(selected, "Report", StringComparison.OrdinalIgnoreCase))
                 return "Report Center";
@@ -1277,7 +1293,7 @@ namespace CassetteMotionPro.Workspace
 
         private TabPage BuildMeasurementsWorkspaceTab()
         {
-            return BuildGroupedWorkspaceTab("Measurements", BuildGuidedMeasurementsTab(), BuildBikeMetricsTab(), BuildBodyAnglesTab(), BuildCombinedMeasurementReviewTab());
+            return BuildGroupedWorkspaceTab("Measurements", BuildCombinedMeasurementReviewTab(), BuildGuidedMeasurementsTab(), BuildBikeMetricsTab(), BuildBodyAnglesTab());
         }
 
         private TabPage BuildIntegratedReviewTab()
@@ -1375,9 +1391,9 @@ namespace CassetteMotionPro.Workspace
             Button refresh = CreateButton("Refresh Review", true);
             refresh.Size = new Size(135, 40);
             refresh.Click += delegate { RefreshIntegratedReview(); };
-            Button measurements = CreateButton("Combined Measurements", false);
+            Button measurements = CreateButton("Measurement Review", false);
             measurements.Size = new Size(185, 40);
-            measurements.Click += delegate { SelectWorkspaceTab("Combined Review"); };
+            measurements.Click += delegate { SelectWorkspaceTab("Measurement Review"); };
             Button favorites = CreateButton("Favorite Frames", false);
             favorites.Size = new Size(145, 40);
             favorites.Click += delegate { ReviewFavoriteFrames(); RefreshIntegratedReview(); };
@@ -1522,26 +1538,31 @@ namespace CassetteMotionPro.Workspace
 
         private TabPage BuildCombinedMeasurementReviewTab()
         {
-            TabPage page = NewTab("Combined Review");
+            TabPage page = NewTab("Measurement Review");
             TableLayoutPanel layout = new TableLayoutPanel();
-            layout.Dock = DockStyle.Fill;
+            layout.Dock = DockStyle.Top;
+            layout.AutoSize = true;
             layout.Padding = new Padding(24, 22, 24, 18);
-            layout.ColumnCount = 1;
-            layout.RowCount = 5;
+            layout.ColumnCount = 2;
+            layout.RowCount = 7;
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 72));
-            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 106));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 148));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 148));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 330));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 70));
 
             Label eyebrow = new Label();
-            eyebrow.Text = "BIKE + RIDER MEASUREMENT REVIEW";
+            eyebrow.Text = "V1.4 MEASUREMENT REVIEW CENTER";
             eyebrow.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             eyebrow.ForeColor = Color.FromArgb(85, 122, 18);
             eyebrow.Dock = DockStyle.Fill;
 
             Label title = new Label();
-            title.Text = "Review the complete fit in one place";
+            title.Text = "Track, correct, verify, and approve in one place";
             title.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
             title.ForeColor = Color.FromArgb(24, 31, 29);
             title.Dock = DockStyle.Fill;
@@ -1552,11 +1573,31 @@ namespace CassetteMotionPro.Workspace
             combinedMeasurementReviewStatus.BackColor = Color.FromArgb(248, 252, 238);
             combinedMeasurementReviewStatus.Padding = new Padding(12, 10, 12, 8);
 
+            GroupBox tracking = CreateMeasurementReviewGroup("1. Tracking", measurementTrackingReviewStatus);
+            AddMeasurementReviewButton(tracking, "Track Before Clip", false, delegate { ShowShortClipTracking("Before"); RefreshCombinedMeasurementReview(); });
+            AddMeasurementReviewButton(tracking, "Track After Clip", false, delegate { ShowShortClipTracking("After"); RefreshCombinedMeasurementReview(); });
+            AddMeasurementReviewButton(tracking, "Compare Before + After", true, delegate { ShowRiderTrackingComparison(this, EventArgs.Empty); RefreshCombinedMeasurementReview(); });
+
+            GroupBox assisted = CreateMeasurementReviewGroup("2. Assisted measurements", measurementAssistedReviewStatus);
+            AddMeasurementReviewButton(assisted, "Measure Before Rider", true, delegate { ShowGuidedRiderMeasurements("BeforeReportImagePath", "Before"); RefreshCombinedMeasurementReview(); });
+            AddMeasurementReviewButton(assisted, "Measure After Rider", true, delegate { ShowGuidedRiderMeasurements("AfterReportImagePath", "After"); RefreshCombinedMeasurementReview(); });
+            AddMeasurementReviewButton(assisted, "Guided Bike Measurements", false, delegate { ShowGuidedBikeMetricCapture(); RefreshCombinedMeasurementReview(); });
+
+            GroupBox corrections = CreateMeasurementReviewGroup("3. Corrections + consistency", measurementCorrectionReviewStatus);
+            AddMeasurementReviewButton(corrections, "Correct Before Tracking", false, delegate { ShowShortClipTracking("Before"); RefreshCombinedMeasurementReview(); });
+            AddMeasurementReviewButton(corrections, "Correct After Tracking", false, delegate { ShowShortClipTracking("After"); RefreshCombinedMeasurementReview(); });
+            AddMeasurementReviewButton(corrections, "Repeatability Lab", true, delegate { ShowMeasurementRepeatabilityLab(this, EventArgs.Empty); RefreshCombinedMeasurementReview(); });
+
+            GroupBox confidence = CreateMeasurementReviewGroup("4. Confidence + approval", measurementConfidenceReviewStatus);
+            AddMeasurementReviewButton(confidence, "Camera + Tracking Quality", false, delegate { ShowTrackingQualityReview(this, EventArgs.Empty); RefreshCombinedMeasurementReview(); });
+            AddMeasurementReviewButton(confidence, "Calibration Test", false, delegate { ShowTrackingCalibrationAccuracy(this, EventArgs.Empty); RefreshCombinedMeasurementReview(); });
+            AddMeasurementReviewButton(confidence, "Review + Approve", true, delegate { ShowAssistedMeasurementAccuracyReview(this, EventArgs.Empty); RefreshCombinedMeasurementReview(); });
+
             combinedMeasurementReview.Dock = DockStyle.Fill;
             combinedMeasurementReview.Multiline = true;
             combinedMeasurementReview.ReadOnly = true;
-            combinedMeasurementReview.ScrollBars = ScrollBars.Both;
-            combinedMeasurementReview.WordWrap = false;
+            combinedMeasurementReview.ScrollBars = ScrollBars.Vertical;
+            combinedMeasurementReview.WordWrap = true;
             combinedMeasurementReview.BackColor = Color.White;
             combinedMeasurementReview.ForeColor = Color.FromArgb(24, 31, 29);
             combinedMeasurementReview.Font = new Font("Consolas", 10F);
@@ -1567,18 +1608,12 @@ namespace CassetteMotionPro.Workspace
             actions.WrapContents = true;
             actions.Padding = new Padding(0, 8, 0, 4);
 
-            Button refresh = CreateButton("Refresh Combined Review", true);
-            refresh.Size = new Size(200, 38);
+            Button refresh = CreateButton("Refresh Review", true);
+            refresh.Size = new Size(150, 38);
             refresh.Click += delegate { RefreshCombinedMeasurementReview(); };
             Button quality = CreateButton("Run Quality Check", false);
             quality.Size = new Size(160, 38);
             quality.Click += ReviewMetrics_Click;
-            Button accuracy = CreateButton("Assisted Accuracy Review", true);
-            accuracy.Size = new Size(195, 38);
-            accuracy.Click += ShowAssistedMeasurementAccuracyReview;
-            Button repeatability = CreateButton("Repeatability Lab", false);
-            repeatability.Size = new Size(165, 38);
-            repeatability.Click += ShowMeasurementRepeatabilityLab;
             Button bike = CreateButton("Edit Bike Metrics", false);
             bike.Size = new Size(145, 38);
             bike.Click += delegate { SelectWorkspaceTab("Bike Metrics"); };
@@ -1590,19 +1625,91 @@ namespace CassetteMotionPro.Workspace
             report.Click += delegate { SelectWorkspaceTab("Report Builder"); };
             actions.Controls.Add(refresh);
             actions.Controls.Add(quality);
-            actions.Controls.Add(accuracy);
-            actions.Controls.Add(repeatability);
             actions.Controls.Add(bike);
             actions.Controls.Add(rider);
             actions.Controls.Add(report);
 
             layout.Controls.Add(eyebrow, 0, 0);
+            layout.SetColumnSpan(eyebrow, 2);
             layout.Controls.Add(title, 0, 1);
+            layout.SetColumnSpan(title, 2);
             layout.Controls.Add(combinedMeasurementReviewStatus, 0, 2);
-            layout.Controls.Add(combinedMeasurementReview, 0, 3);
-            layout.Controls.Add(actions, 0, 4);
+            layout.SetColumnSpan(combinedMeasurementReviewStatus, 2);
+            layout.Controls.Add(tracking, 0, 3);
+            layout.Controls.Add(assisted, 1, 3);
+            layout.Controls.Add(corrections, 0, 4);
+            layout.Controls.Add(confidence, 1, 4);
+            layout.Controls.Add(combinedMeasurementReview, 0, 5);
+            layout.SetColumnSpan(combinedMeasurementReview, 2);
+            layout.Controls.Add(actions, 0, 6);
+            layout.SetColumnSpan(actions, 2);
+            page.AutoScroll = true;
             page.Controls.Add(layout);
             return page;
+        }
+
+        private GroupBox CreateMeasurementReviewGroup(string title, Label status)
+        {
+            GroupBox group = new GroupBox();
+            group.Text = title;
+            group.Dock = DockStyle.Fill;
+            group.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            group.ForeColor = Color.FromArgb(37, 48, 43);
+            group.Padding = new Padding(12, 8, 12, 10);
+
+            TableLayoutPanel contents = new TableLayoutPanel();
+            contents.Dock = DockStyle.Fill;
+            contents.ColumnCount = 1;
+            contents.RowCount = 2;
+            contents.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+            contents.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+            status.AutoSize = false;
+            status.Dock = DockStyle.Fill;
+            status.Font = new Font("Segoe UI", 9F, FontStyle.Regular);
+            status.ForeColor = Color.FromArgb(74, 87, 81);
+            status.Padding = new Padding(2, 2, 2, 2);
+
+            FlowLayoutPanel actions = new FlowLayoutPanel();
+            actions.Name = "MeasurementReviewActions";
+            actions.Dock = DockStyle.Fill;
+            actions.FlowDirection = FlowDirection.LeftToRight;
+            actions.WrapContents = true;
+            actions.Padding = new Padding(0, 2, 0, 0);
+
+            contents.Controls.Add(status, 0, 0);
+            contents.Controls.Add(actions, 0, 1);
+            group.Controls.Add(contents);
+            return group;
+        }
+
+        private void AddMeasurementReviewButton(GroupBox group, string text, bool primary, EventHandler click)
+        {
+            FlowLayoutPanel actions = FindControl(group, "MeasurementReviewActions") as FlowLayoutPanel;
+            if (actions == null)
+                return;
+
+            Button button = CreateButton(text, primary);
+            button.AutoSize = true;
+            button.MinimumSize = new Size(145, 36);
+            button.Click += click;
+            actions.Controls.Add(button);
+        }
+
+        private static Control FindControl(Control parent, string name)
+        {
+            if (parent == null)
+                return null;
+
+            foreach (Control child in parent.Controls)
+            {
+                if (string.Equals(child.Name, name, StringComparison.Ordinal))
+                    return child;
+                Control match = FindControl(child, name);
+                if (match != null)
+                    return match;
+            }
+            return null;
         }
 
         private TabPage BuildGuidedMeasurementsTab()
@@ -1903,9 +2010,9 @@ namespace CassetteMotionPro.Workspace
             Button refresh = CreateButton("Refresh Final Check", true);
             refresh.Size = new Size(170, 38);
             refresh.Click += delegate { RefreshFitSessionFinalization(); };
-            Button measurements = CreateButton("Combined Measurements", false);
+            Button measurements = CreateButton("Measurement Review", false);
             measurements.Size = new Size(185, 38);
-            measurements.Click += delegate { SelectWorkspaceTab("Combined Review"); };
+            measurements.Click += delegate { SelectWorkspaceTab("Measurement Review"); };
             Button recommendations = CreateButton("Smart Recommendations", false);
             recommendations.Size = new Size(180, 38);
             recommendations.Click += delegate { SelectWorkspaceTab("Report Builder"); };
@@ -6285,6 +6392,42 @@ namespace CassetteMotionPro.Workspace
             combinedMeasurementReviewStatus.Text = sessionName + "   ·   Complete Before/After pairs: " + completePairs.ToString() + "   ·   Partial: " + partialPairs.ToString() + "   ·   Not recorded: " + missingPairs.ToString() + Environment.NewLine +
                 (reviewReady ? "COMBINED VIEW READY — blank optional measurements are okay" : hasMeasurements ? "REVIEW THE NOTES BELOW BEFORE FINALIZING THE REPORT" : "ADD BIKE OR RIDER MEASUREMENTS TO BEGIN THE COMBINED REVIEW");
             combinedMeasurementReviewStatus.ForeColor = reviewReady ? Color.FromArgb(60, 145, 76) : Color.FromArgb(181, 118, 35);
+
+            if (currentSession == null)
+            {
+                measurementTrackingReviewStatus.Text = "Open or create a client fit session to begin.";
+                measurementAssistedReviewStatus.Text = "Saved Before and After images will appear here.";
+                measurementCorrectionReviewStatus.Text = "Corrections and repeatability checks are session-specific.";
+                measurementConfidenceReviewStatus.Text = "Confidence and fitter approval require an active session.";
+                return;
+            }
+
+            bool hasBeforeTracking = !string.IsNullOrWhiteSpace(currentSession.ShortClipTrackingBeforeSummary);
+            bool hasAfterTracking = !string.IsNullOrWhiteSpace(currentSession.ShortClipTrackingAfterSummary);
+            bool hasTrackingQuality = !string.IsNullOrWhiteSpace(currentSession.TrackingQualityReviewSummary);
+            int completedValues = 0;
+            foreach (TextBox box in measurementBoxes.Values)
+            {
+                if (!string.IsNullOrWhiteSpace(box.Text))
+                    completedValues++;
+            }
+            int repeatabilityCount = currentSession.MeasurementRepeatabilityChecks == null ? 0 : currentSession.MeasurementRepeatabilityChecks.Count;
+            bool calibrated = !string.IsNullOrWhiteSpace(currentSession.TrackingCalibrationAccuracySummary);
+            bool approved = !string.IsNullOrWhiteSpace(currentSession.AssistedMeasurementAccuracyApprovedUtc);
+            int confidenceScore;
+            string confidenceText;
+            BuildAssistedMeasurementAccuracySummary(out confidenceScore, out confidenceText);
+
+            measurementTrackingReviewStatus.Text =
+                (hasBeforeTracking ? "✓" : "□") + " Before   " +
+                (hasAfterTracking ? "✓" : "□") + " After   " +
+                (hasTrackingQuality ? "✓ Quality reviewed" : "□ Quality review");
+            measurementAssistedReviewStatus.Text = completedValues.ToString() + " measurement values saved · use the session’s Before/After images directly.";
+            measurementCorrectionReviewStatus.Text = repeatabilityCount == 0
+                ? "Correct drifting points, then add a repeatability check when needed."
+                : repeatabilityCount.ToString() + " repeatability check(s) saved · corrections remain fitter-controlled.";
+            measurementConfidenceReviewStatus.Text =
+                confidenceText + "   " + (calibrated ? "✓ Calibrated" : "□ Calibration") + "   " + (approved ? "✓ Approved" : "□ Fitter approval");
         }
 
         private void AppendCombinedMeasurementSection(System.Text.StringBuilder text, string[] labels, string[] keys, ref int completePairs, ref int partialPairs, ref int missingPairs)

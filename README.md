@@ -5,7 +5,11 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 1.3.0 Video Workspace Polish
+## Current milestone: 1.4.0 Measurement Review Redesign
+
+The Measurements stage now opens directly into a single **Measurement Review Center**. Four clear cards keep rider tracking, assisted bike/rider measurements, corrections and repeatability, confidence checks, and fitter approval together. A live Before/After table stays visible below the workflow cards, while the detailed Bike Metrics, Body Angles, and Report Builder editors remain one click away. Saved client-session images are selected automatically for Before and After measurement actions. Changing a measurement after approval clears that approval so the fitter knows a fresh review is required. Use [the v1.4.0 test plan](docs/v1.4.0-test-plan.md) for the focused measurement checks.
+
+### Previous milestone: 1.3.0 Video Workspace Polish
 
 The Video workspace now opens with a compact **Video Fit Desk** showing live readiness for the Before clip, After clip, and favorite-frame pair. Dual-camera Before capture, dual-camera After capture, and latest Before/After playback are the primary actions. Before and After favorite frames can be chosen directly without answering an extra side-selection prompt, and comparison approval remains one click away. Measurement actions now find the newest Before, After, or Dual image in the active fit session automatically, so a fitter does not need to browse back through the client folders. Camera profiles, folders, synchronization, evidence review, and native Kinovea capture/playback/drawing tools remain available lower in the workspace. Use [the v1.3.0 test plan](docs/v1.3.0-test-plan.md) for the focused video checks.
 
@@ -85,7 +89,7 @@ The main Kinovea window now keeps the active client, fit session, Before/After v
 
 ## Previous milestone: 0.84.0 Measurement Repeatability Lab
 
-- In Measurements → Combined Review, use Repeatability Lab to enter three independent placements of the same bike or rider landmark for Before or After.
+- In Measurements → Measurement Review, use Repeatability Lab to enter three independent placements of the same bike or rider landmark for Before or After.
 - The lab keeps the raw readings, mean, spread, and fitter-selected tolerance in the client session. It flags checks outside that tolerance for review, without changing the final measured value.
 - Only checks explicitly approved by the fitter appear in the report. Repeatability describes consistency, not absolute accuracy.
 
