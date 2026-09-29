@@ -21,7 +21,7 @@ namespace CassetteMotionPro.Workspace
     public static class FitSessionReportGenerator
     {
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "1.4.0";
+        private const string ReportVersion = "1.5.0";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
 
         private static StudioSettings ReportSettings { get { return StudioSettingsRepository.Current; } }
@@ -702,6 +702,7 @@ namespace CassetteMotionPro.Workspace
             html.AppendLine(".contact-grid{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;}");
             html.AppendLine(".contact-grid .contact-label{font-weight:900;color:var(--brand);text-transform:uppercase;font-size:10px;letter-spacing:.1em;}");
             html.AppendLine(".review-strip{background:#f4ffe8;border-bottom:1px solid #d2e6b6;color:#24302b;padding:17px 50px;}");
+            html.AppendLine(".preview-guide{background:#fff8d9;border-bottom:1px solid #eadb9a;color:#4b4430;padding:13px 50px;font-size:13px;font-weight:750;}");
             html.AppendLine(".review-title{font-weight:900;font-size:12px;text-transform:uppercase;letter-spacing:.13em;margin-bottom:9px;}");
             html.AppendLine(".review-list{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0;padding:0;list-style:none;font-size:13px;}");
             html.AppendLine(".review-list li{background:rgba(255,255,255,.7);border:1px solid rgba(36,48,43,.1);border-radius:999px;padding:8px 12px;font-weight:650;}");
@@ -744,7 +745,7 @@ namespace CassetteMotionPro.Workspace
             html.AppendLine(".confidential{margin-top:12px;background:#f6f8f6;border:1px solid #e5ebe7;border-radius:14px;padding:12px 14px;font-size:12px;color:#607169;}");
             html.AppendLine(".footer{margin-top:18px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between;gap:20px;}");
             html.AppendLine("@page{size:Letter portrait;margin:11mm;}");
-            html.AppendLine("@media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{background:white;font-size:10.5pt}.page{box-shadow:none;margin:0;max-width:none;border-radius:0;overflow:visible}.hero{padding:25px 28px 22px;border-radius:0}.hero:after{left:28px;right:28px}.content{padding:20px 28px 18px}.print-button,.review-strip{display:none}.hero-grid{margin-top:20px}.hero-card{padding:11px 12px}.prepared-card{padding:11px 13px;margin-top:13px}.media-card{min-height:100px}.media-card img{height:235px}.media-card.full img{height:330px}.hero-grid,.summary,.fit-summary,.final-snapshot,.media-grid,.section-card,.prepared-footer,.table-wrap,.panel,.media-card{break-inside:avoid;page-break-inside:avoid}h2,h3{break-after:avoid;page-break-after:avoid}h2{margin-top:28px}.section-card{padding:17px;margin-top:11px;box-shadow:none}.table-wrap{box-shadow:none}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}.footer{padding-bottom:2mm}}");
+            html.AppendLine("@media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{background:white;font-size:10.5pt}.page{box-shadow:none;margin:0;max-width:none;border-radius:0;overflow:visible}.hero{padding:25px 28px 22px;border-radius:0}.hero:after{left:28px;right:28px}.content{padding:20px 28px 18px}.print-button,.review-strip,.preview-guide{display:none}.hero-grid{margin-top:20px}.hero-card{padding:11px 12px}.prepared-card{padding:11px 13px;margin-top:13px}.media-card{min-height:100px}.media-card img{height:235px}.media-card.full img{height:330px}.hero-grid,.summary,.fit-summary,.final-snapshot,.media-grid,.section-card,.prepared-footer,.table-wrap,.panel,.media-card{break-inside:avoid;page-break-inside:avoid}h2,h3{break-after:avoid;page-break-after:avoid}h2{margin-top:28px}.section-card{padding:17px;margin-top:11px;box-shadow:none}.table-wrap{box-shadow:none}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}.footer{padding-bottom:2mm}}");
             html.AppendLine("@media(max-width:760px){.hero-grid,.summary,.fit-summary,.media-grid,.review-list,.prepared-footer,.final-snapshot{grid-template-columns:1fr}.fit-summary .wide{grid-column:auto}.prepared-card{display:block}.prepared-card .contact{text-align:left;margin-top:10px}}");
             html.AppendLine("</style>");
             html.AppendLine("</head>");
@@ -782,6 +783,7 @@ namespace CassetteMotionPro.Workspace
             html.AppendLine("</div>");
             html.AppendLine("</div>");
             html.AppendLine("</div>");
+            html.AppendLine("<div class=\"preview-guide\">Client preview: confirm the recommendations, measurements, branding, and selected images below. When everything looks right, choose Print / Save PDF.</div>");
             html.AppendLine("<div class=\"content\">");
             html.AppendLine("<div class=\"summary\">");
             if (!string.IsNullOrWhiteSpace(session.Goals))
