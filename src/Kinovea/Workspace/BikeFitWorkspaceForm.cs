@@ -2602,20 +2602,25 @@ namespace CassetteMotionPro.Workspace
             timeline.Size = new Size(155, 42);
             timeline.Margin = new Padding(8, 9, 0, 9);
             timeline.Click += ShowFitSessionTimeline;
+            Button fieldTest = CreateButton("Run Field Test", true);
+            fieldTest.Size = new Size(150, 42);
+            fieldTest.Margin = new Padding(8, 9, 0, 9);
+            fieldTest.Click += ShowFitDayFieldTest;
             primaryActions.Controls.Add(resume);
             primaryActions.Controls.Add(recovery);
 
             FlowLayoutPanel secondaryActions = new FlowLayoutPanel();
             secondaryActions.Dock = DockStyle.Top;
-            secondaryActions.Height = 58;
+            secondaryActions.Height = 108;
             secondaryActions.FlowDirection = FlowDirection.LeftToRight;
-            secondaryActions.WrapContents = false;
+            secondaryActions.WrapContents = true;
             secondaryActions.AutoScroll = true;
             secondaryActions.Padding = new Padding(0, 5, 0, 5);
             secondaryActions.Controls.Add(diagnostics);
             secondaryActions.Controls.Add(practice);
             secondaryActions.Controls.Add(gettingStarted);
             secondaryActions.Controls.Add(timeline);
+            secondaryActions.Controls.Add(fieldTest);
 
             Button moreOptions = CreateButton("More Options + Folders", false);
             moreOptions.Dock = DockStyle.Left;
@@ -2654,6 +2659,30 @@ namespace CassetteMotionPro.Workspace
             string saveFolder = HasActiveFitSession() ? GetSessionReportsFolderPath() : client.ReportsPath;
             using (FitDayDiagnosticsForm form = new FitDayDiagnosticsForm(BuildFitDayDiagnosticResults, saveFolder))
                 form.ShowDialog(this);
+        }
+
+        private void ShowFitDayFieldTest(object sender, EventArgs e)
+        {
+            if (!HasActiveFitSession())
+            {
+                MessageBox.Show(this, "Open or create the client fit session you are testing first.", "Real Fit-Day Field Test", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            string saveFolder = GetSessionReportsFolderPath();
+            using (FitDayFieldTestForm form = new FitDayFieldTestForm(currentSession.FitDayFieldTestSummary, saveFolder))
+            {
+                if (form.ShowDialog(this) != DialogResult.OK)
+                    return;
+                currentSession.FitDayFieldTestSummary = form.FieldTestSummary;
+                currentSession.FitDayFieldTestCompletedUtc = DateTime.UtcNow;
+                currentSession.FitDayFieldTestHasFriction = form.HasBlockingFriction;
+                currentSession.FitDayFieldTestComplete = form.IsComplete;
+                AddTimelineEvent("Reliability", form.HasBlockingFriction ? "Field test saved with friction to review" : form.IsComplete ? "Full fit-day field test completed" : "Partial field-test progress saved");
+                SaveCurrentSession();
+                UpdateSaveHint(form.HasBlockingFriction ? "Field-test friction saved in this session's Reports folder." : form.IsComplete ? "Field test completed and saved with this session." : "Field-test progress saved. Reopen it after the next fit stage.");
+                UpdateFitDayHomeStatus();
+            }
         }
 
         private void ShowFitDayPracticeMode(object sender, EventArgs e)
@@ -2767,6 +2796,16 @@ namespace CassetteMotionPro.Workspace
             AddSavedFileDiagnostic(results, "After video selection", currentSession.AfterVideoPath, "An After clip is normally added after fit changes.");
             AddDiagnostic(results, HasReportImage() ? "PASS" : "WARN", "Report evidence", HasReportImage() ? "At least one selected report image exists." : "No report image is selected yet; this is normal early in a fit.");
             AddDiagnostic(results, IsCurrentReportApprovalValid() ? "PASS" : "WARN", "Report approval", IsCurrentReportApprovalValid() ? "Current client-facing report content is approved." : "Report approval is pending or stale; approve it only after final review.");
+            AddDiagnostic(results,
+                currentSession.FitDayFieldTestCompletedUtc == DateTime.MinValue || currentSession.FitDayFieldTestHasFriction || !currentSession.FitDayFieldTestComplete ? "WARN" : "PASS",
+                "Real fit-day field test",
+                currentSession.FitDayFieldTestCompletedUtc == DateTime.MinValue
+                    ? "No field-test record is saved for this session yet."
+                    : currentSession.FitDayFieldTestHasFriction
+                        ? "A field-test record was saved with friction to review."
+                        : !currentSession.FitDayFieldTestComplete
+                            ? "Partial field-test progress was saved. Reopen Run Field Test after the next stage."
+                            : "Full field testing passed " + currentSession.FitDayFieldTestCompletedUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt") + ".");
             CheckDiskSpace(results, client.FolderPath);
             return results;
         }

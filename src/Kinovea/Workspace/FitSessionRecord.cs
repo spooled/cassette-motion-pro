@@ -44,6 +44,10 @@ namespace CassetteMotionPro.Workspace
         public string AssistedWorkflowRecoverySummary { get; set; }
         public DateTime AssistedWorkflowLastSavedUtc { get; set; }
         public DateTime AssistedWorkflowReportGeneratedUtc { get; set; }
+        public string FitDayFieldTestSummary { get; set; }
+        public DateTime FitDayFieldTestCompletedUtc { get; set; }
+        public bool FitDayFieldTestHasFriction { get; set; }
+        public bool FitDayFieldTestComplete { get; set; }
         public string HandoffWhatToSend { get; set; }
         public string HandoffClientMessage { get; set; }
         public string HandoffHomework { get; set; }

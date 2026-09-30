@@ -5,7 +5,11 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 1.5.0 Client Report Experience
+## Current milestone: 1.6.0 Fit-Day Field Testing Pass
+
+The Fit Day dashboard now includes **Run Field Test**, a session-linked real-world checklist covering client setup, dual capture, playback, measurements, fit changes, report images, PDF/branding, delivery, and autosave/recovery. Each stage can be marked Pass, Friction, or Not Tested, with reproducible fitter observations saved inside the active client's Reports folder and on the session timeline. Use [the v1.6.0 test plan](docs/v1.6.0-test-plan.md) during a complete fitting.
+
+### Previous milestone: 1.5.0 Client Report Experience
 
 The Report stage now opens into one polished **Client Report Center**. Before, After, and side-by-side images are visible while they are selected; editable recommendation guidance, studio branding, fitter approval, PDF preview, and delivery choices follow the same top-to-bottom workflow. The generated client preview now explains exactly what to verify before using Print / Save PDF. Use [the v1.5.0 test plan](docs/v1.5.0-test-plan.md) for the focused client-report checks.
 
