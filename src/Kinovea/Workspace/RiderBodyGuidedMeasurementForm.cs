@@ -43,6 +43,8 @@ namespace CassetteMotionPro.Workspace
         private readonly Button saveBefore = new Button();
         private readonly Button saveAfter = new Button();
         private readonly string imagePath;
+        private readonly string outputDirectory;
+        private readonly bool lockSaveSide;
         private Image image;
         private int dragIndex = -1;
         private bool automaticSuggestion;
@@ -56,12 +58,19 @@ namespace CassetteMotionPro.Workspace
         public string AnnotatedImagePath { get; private set; }
 
         public RiderBodyGuidedMeasurementForm(string imagePath, string defaultSide)
+            : this(imagePath, defaultSide, null)
+        {
+        }
+
+        public RiderBodyGuidedMeasurementForm(string imagePath, string defaultSide, string outputDirectory)
         {
             if (string.IsNullOrEmpty(imagePath) || !File.Exists(imagePath))
                 throw new FileNotFoundException("The rider reference image could not be found.", imagePath);
 
             this.defaultSide = string.Equals(defaultSide, "Before", StringComparison.OrdinalIgnoreCase) ? "Before" : "After";
             this.imagePath = imagePath;
+            lockSaveSide = !string.IsNullOrWhiteSpace(outputDirectory);
+            this.outputDirectory = lockSaveSide ? outputDirectory : Path.GetDirectoryName(imagePath);
             image = Image.FromFile(imagePath);
             Text = "Cassette Motion Pro - Automatic Rider Tracking Assistant";
             Font = new Font("Segoe UI", 9F);
@@ -145,6 +154,16 @@ namespace CassetteMotionPro.Workspace
             ConfigureButton(flipDirection, "Flip Rider Direction", false);
             ConfigureButton(saveBefore, "Save to Before", string.Equals(defaultSide, "Before", StringComparison.OrdinalIgnoreCase));
             ConfigureButton(saveAfter, "Save to After", string.Equals(defaultSide, "After", StringComparison.OrdinalIgnoreCase));
+            if (lockSaveSide && string.Equals(defaultSide, "Before", StringComparison.OrdinalIgnoreCase))
+            {
+                saveBefore.Text = "Save Before Rider Measurements";
+                saveAfter.Visible = false;
+            }
+            else if (lockSaveSide)
+            {
+                saveAfter.Text = "Save After Rider Measurements";
+                saveBefore.Visible = false;
+            }
             undo.Click += Undo_Click;
             clear.Click += Clear_Click;
             autoSuggest.Click += delegate { SuggestLandmarks(); UpdateGuide(); picture.Invalidate(); };
@@ -550,7 +569,8 @@ namespace CassetteMotionPro.Workspace
 
         private string SaveAnnotatedImage(string side)
         {
-            string directory = Path.GetDirectoryName(imagePath);
+            string directory = outputDirectory;
+            Directory.CreateDirectory(directory);
             string path = Path.Combine(directory, side + "-Tracked-Rider-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + ".png");
             using (Bitmap output = new Bitmap(image.Width, image.Height))
             using (Graphics graphics = Graphics.FromImage(output))

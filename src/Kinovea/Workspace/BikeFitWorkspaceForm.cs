@@ -1746,19 +1746,20 @@ namespace CassetteMotionPro.Workspace
             layout.AutoSize = true;
             layout.Padding = new Padding(24, 22, 24, 18);
             layout.ColumnCount = 2;
-            layout.RowCount = 7;
+            layout.RowCount = 8;
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 72));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 154));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 148));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 148));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 330));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 70));
 
             Label eyebrow = new Label();
-            eyebrow.Text = "V1.4 MEASUREMENT REVIEW CENTER";
+            eyebrow.Text = "V1.7 MEASUREMENT QUICK START";
             eyebrow.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             eyebrow.ForeColor = Color.FromArgb(85, 122, 18);
             eyebrow.Dock = DockStyle.Fill;
@@ -1774,6 +1775,36 @@ namespace CassetteMotionPro.Workspace
             combinedMeasurementReviewStatus.ForeColor = Color.FromArgb(74, 87, 81);
             combinedMeasurementReviewStatus.BackColor = Color.FromArgb(248, 252, 238);
             combinedMeasurementReviewStatus.Padding = new Padding(12, 10, 12, 8);
+
+            GroupBox quickStart = new GroupBox();
+            quickStart.Text = "START HERE — choose exactly what you are measuring";
+            quickStart.Dock = DockStyle.Fill;
+            quickStart.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            quickStart.ForeColor = Color.FromArgb(37, 48, 43);
+            quickStart.Padding = new Padding(12, 8, 12, 10);
+            FlowLayoutPanel quickActions = new FlowLayoutPanel();
+            quickActions.Dock = DockStyle.Fill;
+            quickActions.FlowDirection = FlowDirection.LeftToRight;
+            quickActions.WrapContents = true;
+            quickActions.AutoScroll = true;
+            AddMeasurementQuickStartButton(quickActions, "BEFORE BIKE\nmeasurements", true, delegate { ShowGuidedBikeMetricCapture("Before"); RefreshCombinedMeasurementReview(); });
+            AddMeasurementQuickStartButton(quickActions, "AFTER BIKE\nmeasurements", true, delegate { ShowGuidedBikeMetricCapture("After"); RefreshCombinedMeasurementReview(); });
+            AddMeasurementQuickStartButton(quickActions, "BEFORE RIDER\nmeasurements", false, delegate { ShowGuidedRiderMeasurements("BeforeReportImagePath", "Before"); RefreshCombinedMeasurementReview(); });
+            AddMeasurementQuickStartButton(quickActions, "AFTER RIDER\nmeasurements", false, delegate { ShowGuidedRiderMeasurements("AfterReportImagePath", "After"); RefreshCombinedMeasurementReview(); });
+            Button openFolders = CreateButton("Open Measurement Folders", false);
+            openFolders.Size = new Size(190, 58);
+            openFolders.Margin = new Padding(6, 8, 6, 5);
+            openFolders.Click += delegate
+            {
+                if (!HasActiveFitSession())
+                {
+                    MessageBox.Show(this, "Open or create a client fit session first.", "Measurement Folders", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+                OpenClientFolder(GetSessionMeasurementEvidenceRootPath(), "Measurement evidence");
+            };
+            quickActions.Controls.Add(openFolders);
+            quickStart.Controls.Add(quickActions);
 
             GroupBox tracking = CreateMeasurementReviewGroup("1. Tracking", measurementTrackingReviewStatus);
             AddMeasurementReviewButton(tracking, "Track Before Clip", false, delegate { ShowShortClipTracking("Before"); RefreshCombinedMeasurementReview(); });
@@ -1837,17 +1868,29 @@ namespace CassetteMotionPro.Workspace
             layout.SetColumnSpan(title, 2);
             layout.Controls.Add(combinedMeasurementReviewStatus, 0, 2);
             layout.SetColumnSpan(combinedMeasurementReviewStatus, 2);
-            layout.Controls.Add(tracking, 0, 3);
-            layout.Controls.Add(assisted, 1, 3);
-            layout.Controls.Add(corrections, 0, 4);
-            layout.Controls.Add(confidence, 1, 4);
-            layout.Controls.Add(combinedMeasurementReview, 0, 5);
+            layout.Controls.Add(quickStart, 0, 3);
+            layout.SetColumnSpan(quickStart, 2);
+            layout.Controls.Add(tracking, 0, 4);
+            layout.Controls.Add(assisted, 1, 4);
+            layout.Controls.Add(corrections, 0, 5);
+            layout.Controls.Add(confidence, 1, 5);
+            layout.Controls.Add(combinedMeasurementReview, 0, 6);
             layout.SetColumnSpan(combinedMeasurementReview, 2);
-            layout.Controls.Add(actions, 0, 6);
+            layout.Controls.Add(actions, 0, 7);
             layout.SetColumnSpan(actions, 2);
             page.AutoScroll = true;
             page.Controls.Add(layout);
             return page;
+        }
+
+        private void AddMeasurementQuickStartButton(FlowLayoutPanel actions, string text, bool bike, EventHandler click)
+        {
+            Button button = CreateButton(text, bike);
+            button.Size = new Size(175, 58);
+            button.Margin = new Padding(6, 8, 6, 5);
+            button.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+            button.Click += click;
+            actions.Controls.Add(button);
         }
 
         private GroupBox CreateMeasurementReviewGroup(string title, Label status)
@@ -4073,6 +4116,16 @@ namespace CassetteMotionPro.Workspace
             return Path.Combine(GetSessionPhotosFolderPath(), "Report Images");
         }
 
+        private string GetSessionMeasurementEvidenceRootPath()
+        {
+            return Path.Combine(GetSessionPhotosFolderPath(), "Measurements");
+        }
+
+        private string GetSessionMeasurementEvidenceFolderPath(string category, string side)
+        {
+            return Path.Combine(GetSessionMeasurementEvidenceRootPath(), category, side);
+        }
+
         private string GetSessionSideBySideFolderPath()
         {
             return Path.Combine(client.SideBySidePath, "Fit Sessions", currentSession.StorageFolderName);
@@ -5420,7 +5473,8 @@ namespace CassetteMotionPro.Workspace
                 return;
             }
 
-            using (RiderBodyGuidedMeasurementForm form = new RiderBodyGuidedMeasurementForm(path, defaultSide))
+            string outputFolder = GetSessionMeasurementEvidenceFolderPath("Rider", defaultSide);
+            using (RiderBodyGuidedMeasurementForm form = new RiderBodyGuidedMeasurementForm(path, defaultSide, outputFolder))
             {
                 if (form.ShowDialog(this) != DialogResult.OK)
                     return;
@@ -8885,19 +8939,36 @@ namespace CassetteMotionPro.Workspace
 
         private void ShowGuidedBikeMetricCapture()
         {
-            string referencePath = imageBoxes.ContainsKey("MeasurementReferenceImagePath") ? imageBoxes["MeasurementReferenceImagePath"].Text : string.Empty;
+            ShowGuidedBikeMetricCapture(null);
+        }
+
+        private void ShowGuidedBikeMetricCapture(string preferredSide)
+        {
+            string referencePath;
+            if (string.Equals(preferredSide, "Before", StringComparison.OrdinalIgnoreCase))
+                referencePath = ResolveSessionReportImage("BeforeReportImagePath");
+            else if (string.Equals(preferredSide, "After", StringComparison.OrdinalIgnoreCase))
+                referencePath = ResolveSessionReportImage("AfterReportImagePath");
+            else
+                referencePath = imageBoxes.ContainsKey("MeasurementReferenceImagePath") ? imageBoxes["MeasurementReferenceImagePath"].Text : string.Empty;
             if (string.IsNullOrEmpty(referencePath) || !File.Exists(referencePath))
             {
                 MessageBox.Show(this,
-                    "Choose a Measurement image first.\n\n" +
-                    "Use Browse, Use Before, Use After, Use Side-by-side, or Combine B+A at the top of Bike Metrics.",
+                    string.IsNullOrWhiteSpace(preferredSide)
+                        ? "Choose a Measurement image first.\n\nUse Browse, Use Before, Use After, Use Side-by-side, or Combine B+A at the top of Bike Metrics."
+                        : "No saved " + preferredSide + " image was found for this fit session.\n\nOpen the client's video, pause on a clear side-view frame, click Save Image, and choose " + preferredSide + ". Then return here and try again.",
                     "Guided Bike Metric Capture",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
                 return;
             }
 
-            using (BikeMetricGuidedCaptureForm form = new BikeMetricGuidedCaptureForm(referencePath, GetSessionReportImagesFolderPath()))
+            if (!string.IsNullOrWhiteSpace(preferredSide) && imageBoxes.ContainsKey("MeasurementReferenceImagePath"))
+                imageBoxes["MeasurementReferenceImagePath"].Text = referencePath;
+            string outputFolder = string.IsNullOrWhiteSpace(preferredSide)
+                ? GetSessionReportImagesFolderPath()
+                : GetSessionMeasurementEvidenceFolderPath("Bike", preferredSide);
+            using (BikeMetricGuidedCaptureForm form = new BikeMetricGuidedCaptureForm(referencePath, outputFolder, preferredSide))
             {
                 if (form.ShowDialog(this) != DialogResult.OK)
                     return;

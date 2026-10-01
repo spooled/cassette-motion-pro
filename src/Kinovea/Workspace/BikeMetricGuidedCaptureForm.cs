@@ -27,6 +27,7 @@ namespace CassetteMotionPro.Workspace
 
         private readonly string imagePath;
         private readonly string outputDirectory;
+        private readonly string preferredSide;
         private readonly List<PointF> calibrationPoints = new List<PointF>();
         private readonly List<PointF> levelReferencePoints = new List<PointF>();
         private readonly List<PointF> landmarkPoints = new List<PointF>();
@@ -102,6 +103,11 @@ namespace CassetteMotionPro.Workspace
         }
 
         public BikeMetricGuidedCaptureForm(string imagePath, string outputDirectory)
+            : this(imagePath, outputDirectory, null)
+        {
+        }
+
+        public BikeMetricGuidedCaptureForm(string imagePath, string outputDirectory, string preferredSide)
         {
             if (string.IsNullOrEmpty(imagePath))
                 throw new ArgumentNullException("imagePath");
@@ -110,6 +116,7 @@ namespace CassetteMotionPro.Workspace
 
             this.imagePath = imagePath;
             this.outputDirectory = string.IsNullOrWhiteSpace(outputDirectory) ? Path.GetDirectoryName(imagePath) : outputDirectory;
+            this.preferredSide = string.Equals(preferredSide, "Before", StringComparison.OrdinalIgnoreCase) ? "Before" : string.Equals(preferredSide, "After", StringComparison.OrdinalIgnoreCase) ? "After" : string.Empty;
             CameraSetupStatus = "Not confirmed";
 
             Text = "Cassette Motion Pro - Guided Measurements";
@@ -292,8 +299,18 @@ namespace CassetteMotionPro.Workspace
             Button clear = CreateButton("Clear Points", false);
             recalculate = CreateButton("Recalculate Values", false);
             flipSetbackSign = CreateButton("Flip Setback Sign", false);
-            saveBefore = CreateButton("Save to Before", false);
-            saveAfter = CreateButton("Save to After", true);
+            saveBefore = CreateButton("Save to Before", string.Equals(preferredSide, "Before", StringComparison.OrdinalIgnoreCase));
+            saveAfter = CreateButton("Save to After", string.IsNullOrEmpty(preferredSide) || string.Equals(preferredSide, "After", StringComparison.OrdinalIgnoreCase));
+            if (string.Equals(preferredSide, "Before", StringComparison.OrdinalIgnoreCase))
+            {
+                saveBefore.Text = "Save Before Bike Measurements";
+                saveAfter.Visible = false;
+            }
+            else if (string.Equals(preferredSide, "After", StringComparison.OrdinalIgnoreCase))
+            {
+                saveAfter.Text = "Save After Bike Measurements";
+                saveBefore.Visible = false;
+            }
             cameraSetup.Dock = DockStyle.Top;
             primaryAction.Dock = DockStyle.Top;
             calibrate.Dock = DockStyle.Top;
