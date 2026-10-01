@@ -19,6 +19,10 @@ namespace CassetteMotionPro.Workspace
         private static string beforeFolderPath;
         private static string afterFolderPath;
         private static string dualFolderPath;
+        private static string bikeBeforeFolderPath;
+        private static string bikeAfterFolderPath;
+        private static string riderBeforeFolderPath;
+        private static string riderAfterFolderPath;
 
         public static event Action<string, string> VideoSaved;
 
@@ -34,6 +38,14 @@ namespace CassetteMotionPro.Workspace
             beforeFolderPath = string.IsNullOrWhiteSpace(root) ? beforeFolder : Path.Combine(root, "Before");
             afterFolderPath = string.IsNullOrWhiteSpace(root) ? afterFolder : Path.Combine(root, "After");
             dualFolderPath = string.IsNullOrWhiteSpace(root) ? dualFolder : Path.Combine(root, "Dual");
+            if (!string.IsNullOrWhiteSpace(root))
+            {
+                string measurementsFolder = Path.Combine(root, "Measurements");
+                bikeBeforeFolderPath = Path.Combine(measurementsFolder, "Bike", "Before");
+                bikeAfterFolderPath = Path.Combine(measurementsFolder, "Bike", "After");
+                riderBeforeFolderPath = Path.Combine(measurementsFolder, "Rider", "Before");
+                riderAfterFolderPath = Path.Combine(measurementsFolder, "Rider", "After");
+            }
         }
 
         public static void Clear()
@@ -41,6 +53,10 @@ namespace CassetteMotionPro.Workspace
             beforeFolderPath = null;
             afterFolderPath = null;
             dualFolderPath = null;
+            bikeBeforeFolderPath = null;
+            bikeAfterFolderPath = null;
+            riderBeforeFolderPath = null;
+            riderAfterFolderPath = null;
         }
 
         public static string ChooseSavePath(IWin32Window owner, string suggestedFileName, string preferredFormat)
@@ -57,7 +73,7 @@ namespace CassetteMotionPro.Workspace
                 return CancelSaveToken;
             }
 
-            using (BeforeAfterVideoSaveDialog dialog = new BeforeAfterVideoSaveDialog(beforeFolderPath, afterFolderPath, dualFolderPath))
+            using (BeforeAfterVideoSaveDialog dialog = new BeforeAfterVideoSaveDialog(GetSessionVideosRoot(beforeFolderPath)))
             {
                 dialog.StartPosition = owner == null ? FormStartPosition.CenterScreen : FormStartPosition.CenterParent;
 
@@ -77,6 +93,15 @@ namespace CassetteMotionPro.Workspace
                 if (string.Equals(dialog.SelectedSlot, "Dual", StringComparison.OrdinalIgnoreCase))
                     return BuildPath("Dual", dualFolderPath, suggestedFileName, preferredFormat);
 
+                if (string.Equals(dialog.SelectedSlot, "BikeBefore", StringComparison.OrdinalIgnoreCase))
+                    return BuildPath("BikeBefore", bikeBeforeFolderPath, suggestedFileName, preferredFormat);
+                if (string.Equals(dialog.SelectedSlot, "BikeAfter", StringComparison.OrdinalIgnoreCase))
+                    return BuildPath("BikeAfter", bikeAfterFolderPath, suggestedFileName, preferredFormat);
+                if (string.Equals(dialog.SelectedSlot, "RiderBefore", StringComparison.OrdinalIgnoreCase))
+                    return BuildPath("RiderBefore", riderBeforeFolderPath, suggestedFileName, preferredFormat);
+                if (string.Equals(dialog.SelectedSlot, "RiderAfter", StringComparison.OrdinalIgnoreCase))
+                    return BuildPath("RiderAfter", riderAfterFolderPath, suggestedFileName, preferredFormat);
+
                 return CancelSaveToken;
             }
         }
@@ -93,6 +118,14 @@ namespace CassetteMotionPro.Workspace
                 slot = "After";
             else if (IsInside(path, dualFolderPath))
                 slot = "Dual";
+            else if (IsInside(path, bikeBeforeFolderPath))
+                slot = "BikeBefore";
+            else if (IsInside(path, bikeAfterFolderPath))
+                slot = "BikeAfter";
+            else if (IsInside(path, riderBeforeFolderPath))
+                slot = "RiderBefore";
+            else if (IsInside(path, riderAfterFolderPath))
+                slot = "RiderAfter";
 
             if (slot == null)
                 return;
@@ -112,7 +145,7 @@ namespace CassetteMotionPro.Workspace
             }
 
             MessageBox.Show(
-                slot + " video saved to this fit session:\n\n" + path,
+                GetSlotDisplayName(slot) + " video saved to this fit session:\n\n" + path,
                 "Cassette Motion Pro — Save Video",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
@@ -128,8 +161,23 @@ namespace CassetteMotionPro.Workspace
 
             string extension = GetExtension(preferredFormat);
             string stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
-            string fileName = slot + "-ExportVideo-" + stamp + "-" + SanitizeFileName(name) + extension;
+            string fileName = slot + (slot.IndexOf("Bike", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                slot.IndexOf("Rider", StringComparison.OrdinalIgnoreCase) >= 0 ? "-MeasurementVideo-" : "-ExportVideo-") +
+                stamp + "-" + SanitizeFileName(name) + extension;
             return Path.Combine(folderPath, fileName);
+        }
+
+        private static string GetSlotDisplayName(string slot)
+        {
+            if (string.Equals(slot, "BikeBefore", StringComparison.OrdinalIgnoreCase))
+                return "Bike measurement · Before";
+            if (string.Equals(slot, "BikeAfter", StringComparison.OrdinalIgnoreCase))
+                return "Bike measurement · After";
+            if (string.Equals(slot, "RiderBefore", StringComparison.OrdinalIgnoreCase))
+                return "Rider measurement · Before";
+            if (string.Equals(slot, "RiderAfter", StringComparison.OrdinalIgnoreCase))
+                return "Rider measurement · After";
+            return slot;
         }
 
         private static string GetExtension(string preferredFormat)
@@ -200,41 +248,48 @@ namespace CassetteMotionPro.Workspace
 
             public string SelectedSlot { get; private set; }
 
-            public BeforeAfterVideoSaveDialog(string beforeFolder, string afterFolder, string dualFolder)
+            public BeforeAfterVideoSaveDialog(string sessionVideosFolder)
             {
                 Text = "Cassette Motion Pro — Save Video";
                 FormBorderStyle = FormBorderStyle.FixedDialog;
                 MaximizeBox = false;
                 MinimizeBox = false;
                 ShowInTaskbar = false;
-                ClientSize = new Size(620, 250);
+                ClientSize = new Size(700, 330);
 
                 Label titleLabel = new Label();
                 titleLabel.AutoSize = false;
                 titleLabel.Text = "Save this Video Studio video into the client fit session:";
                 titleLabel.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
                 titleLabel.Location = new Point(18, 18);
-                titleLabel.Size = new Size(580, 22);
+                titleLabel.Size = new Size(660, 22);
 
                 Label folderLabel = new Label();
                 folderLabel.AutoSize = false;
-                folderLabel.Text = "Choose where this video belongs:\nBefore: " + beforeFolder + "\nAfter: " + afterFolder + "\nDual: " + dualFolder;
+                folderLabel.Text = "Choose where this video belongs in the active client session.\n" + sessionVideosFolder;
                 folderLabel.ForeColor = SystemColors.GrayText;
                 folderLabel.Location = new Point(18, 54);
-                folderLabel.Size = new Size(580, 76);
+                folderLabel.Size = new Size(660, 44);
 
                 Label hintLabel = new Label();
                 hintLabel.AutoSize = false;
                 hintLabel.Text = "Regular Save opens the standard save dialog when you do not want to attach this video to the client.";
                 hintLabel.ForeColor = SystemColors.GrayText;
-                hintLabel.Location = new Point(18, 134);
-                hintLabel.Size = new Size(580, 18);
+                hintLabel.Location = new Point(18, 286);
+                hintLabel.Size = new Size(410, 30);
 
-                beforeButton = CreateButton("&Before", 18, 178, 110);
-                afterButton = CreateButton("&After", 138, 178, 110);
-                dualButton = CreateButton("&Dual", 258, 178, 110);
-                regularButton = CreateButton("&Regular Save", 378, 178, 110);
-                cancelButton = CreateButton("&Cancel", 498, 178, 110);
+                Label reportLabel = CreateSectionLabel("Fit videos", 104);
+                Label measurementLabel = CreateSectionLabel("Measurement evidence", 188);
+
+                beforeButton = CreateButton("&Before", 18, 128, 118);
+                afterButton = CreateButton("&After", 146, 128, 118);
+                dualButton = CreateButton("&Dual", 274, 128, 118);
+                Button bikeBeforeButton = CreateButton("Bike · Before", 18, 214, 150);
+                Button bikeAfterButton = CreateButton("Bike · After", 178, 214, 150);
+                Button riderBeforeButton = CreateButton("Rider · Before", 338, 214, 150);
+                Button riderAfterButton = CreateButton("Rider · After", 498, 214, 150);
+                regularButton = CreateButton("&Regular Save", 442, 280, 110);
+                cancelButton = CreateButton("&Cancel", 562, 280, 86);
 
                 beforeButton.Click += delegate
                 {
@@ -254,6 +309,11 @@ namespace CassetteMotionPro.Workspace
                     DialogResult = DialogResult.OK;
                 };
 
+                bikeBeforeButton.Click += delegate { SelectedSlot = "BikeBefore"; DialogResult = DialogResult.OK; };
+                bikeAfterButton.Click += delegate { SelectedSlot = "BikeAfter"; DialogResult = DialogResult.OK; };
+                riderBeforeButton.Click += delegate { SelectedSlot = "RiderBefore"; DialogResult = DialogResult.OK; };
+                riderAfterButton.Click += delegate { SelectedSlot = "RiderAfter"; DialogResult = DialogResult.OK; };
+
                 regularButton.Click += delegate
                 {
                     DialogResult = DialogResult.Ignore;
@@ -267,9 +327,15 @@ namespace CassetteMotionPro.Workspace
                 Controls.Add(titleLabel);
                 Controls.Add(folderLabel);
                 Controls.Add(hintLabel);
+                Controls.Add(reportLabel);
+                Controls.Add(measurementLabel);
                 Controls.Add(beforeButton);
                 Controls.Add(afterButton);
                 Controls.Add(dualButton);
+                Controls.Add(bikeBeforeButton);
+                Controls.Add(bikeAfterButton);
+                Controls.Add(riderBeforeButton);
+                Controls.Add(riderAfterButton);
                 Controls.Add(regularButton);
                 Controls.Add(cancelButton);
 
@@ -285,6 +351,16 @@ namespace CassetteMotionPro.Workspace
                 button.Size = new Size(width, 48);
                 button.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
                 return button;
+            }
+
+            private static Label CreateSectionLabel(string text, int top)
+            {
+                Label label = new Label();
+                label.Text = text;
+                label.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+                label.Location = new Point(18, top);
+                label.Size = new Size(300, 20);
+                return label;
             }
         }
     }

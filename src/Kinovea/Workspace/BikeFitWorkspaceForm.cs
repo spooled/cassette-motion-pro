@@ -5463,7 +5463,7 @@ namespace CassetteMotionPro.Workspace
 
         private void ShowGuidedRiderMeasurements(string imageKey, string defaultSide)
         {
-            string path = ResolveSessionReportImage(imageKey);
+            string path = ResolveMeasurementSourceImage("Rider", defaultSide, imageKey);
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
             {
                 MessageBox.Show(this,
@@ -8582,6 +8582,15 @@ namespace CassetteMotionPro.Workspace
                 return;
             }
 
+            if (slot.StartsWith("Bike", StringComparison.OrdinalIgnoreCase) ||
+                slot.StartsWith("Rider", StringComparison.OrdinalIgnoreCase))
+            {
+                AddTimelineEvent("Evidence", GetMeasurementSlotDisplayName(slot) + " image saved: " + Path.GetFileName(path));
+                SaveCurrentSession();
+                UpdateSaveHint(GetMeasurementSlotDisplayName(slot) + " image saved to this client fit session.");
+                return;
+            }
+
             string key;
             if (string.Equals(slot, "After", StringComparison.OrdinalIgnoreCase))
                 key = "AfterReportImagePath";
@@ -8619,6 +8628,15 @@ namespace CassetteMotionPro.Workspace
                 return;
             }
 
+            if (slot.StartsWith("Bike", StringComparison.OrdinalIgnoreCase) ||
+                slot.StartsWith("Rider", StringComparison.OrdinalIgnoreCase))
+            {
+                AddTimelineEvent("Evidence", GetMeasurementSlotDisplayName(slot) + " video saved: " + Path.GetFileName(path));
+                SaveCurrentSession();
+                UpdateSaveHint(GetMeasurementSlotDisplayName(slot) + " video saved to this client fit session.");
+                return;
+            }
+
             string key = string.Equals(slot, "After", StringComparison.OrdinalIgnoreCase) ? "AfterVideoPath" : "BeforeVideoPath";
             if (!mediaBoxes.ContainsKey(key))
                 return;
@@ -8630,6 +8648,13 @@ namespace CassetteMotionPro.Workspace
             UpdateWorkflowChecklist();
             UpdateFitCommandCenterStatus();
             UpdateSaveHint(slot + " video saved to this client fit session: " + Path.GetFileName(path));
+        }
+
+        private static string GetMeasurementSlotDisplayName(string slot)
+        {
+            string subject = slot.StartsWith("Bike", StringComparison.OrdinalIgnoreCase) ? "Bike measurement" : "Rider measurement";
+            string side = slot.EndsWith("After", StringComparison.OrdinalIgnoreCase) ? "After" : "Before";
+            return subject + " · " + side;
         }
 
         private void SaveCurrentSession()
@@ -8946,9 +8971,9 @@ namespace CassetteMotionPro.Workspace
         {
             string referencePath;
             if (string.Equals(preferredSide, "Before", StringComparison.OrdinalIgnoreCase))
-                referencePath = ResolveSessionReportImage("BeforeReportImagePath");
+                referencePath = ResolveMeasurementSourceImage("Bike", "Before", "BeforeReportImagePath");
             else if (string.Equals(preferredSide, "After", StringComparison.OrdinalIgnoreCase))
-                referencePath = ResolveSessionReportImage("AfterReportImagePath");
+                referencePath = ResolveMeasurementSourceImage("Bike", "After", "AfterReportImagePath");
             else
                 referencePath = imageBoxes.ContainsKey("MeasurementReferenceImagePath") ? imageBoxes["MeasurementReferenceImagePath"].Text : string.Empty;
             if (string.IsNullOrEmpty(referencePath) || !File.Exists(referencePath))
@@ -9082,6 +9107,18 @@ namespace CassetteMotionPro.Workspace
                 imageBoxes[key].Text = latestPath;
 
             return latestPath;
+        }
+
+        private string ResolveMeasurementSourceImage(string category, string side, string fallbackImageKey)
+        {
+            if (currentSession == null || client == null)
+                return string.Empty;
+
+            string measurementPath = FindLatestImageFile(GetSessionMeasurementEvidenceFolderPath(category, side));
+            if (!string.IsNullOrWhiteSpace(measurementPath) && File.Exists(measurementPath))
+                return measurementPath;
+
+            return ResolveSessionReportImage(fallbackImageKey);
         }
 
         private static void ConsiderLatestImage(string path, ref string latestPath, ref DateTime latestWriteTime)

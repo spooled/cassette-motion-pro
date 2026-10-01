@@ -5,7 +5,11 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 1.7.0 Measurement Quick Start
+## Current milestone: 1.8.0 Measurement Media Save Choices
+
+Kinovea's **Save Image** and **Save Video** actions now offer dedicated **Bike Before**, **Bike After**, **Rider Before**, and **Rider After** measurement destinations alongside the normal report Before, After, Dual, and Regular Save choices. Measurement media remains separated inside the active client session and never replaces the main report media. Guided bike and rider measurement actions automatically use the newest image saved to their matching measurement folder. Use [the v1.8.0 test plan](docs/v1.8.0-test-plan.md) for the focused checks.
+
+### Previous milestone: 1.7.0 Measurement Quick Start
 
 The Measurements page now begins with four unmistakable actions: **Before Bike**, **After Bike**, **Before Rider**, and **After Rider**. Each action automatically finds the matching saved client image, opens the correct guided tool, highlights the intended save side, and stores annotated evidence in separate Bike/Before, Bike/After, Rider/Before, and Rider/After session folders. Use [the v1.7.0 test plan](docs/v1.7.0-test-plan.md) for the focused checks.
 
