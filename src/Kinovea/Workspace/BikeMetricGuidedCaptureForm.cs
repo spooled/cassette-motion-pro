@@ -70,6 +70,8 @@ namespace CassetteMotionPro.Workspace
         private Button saveBefore;
         private Button saveAfter;
         private CheckBox advancedLandmarks;
+        private ComboBox handlebarReferenceMode;
+        private NumericUpDown handlebarDiameter;
         private Image loadedImage;
         private ClickMode mode;
         private float zoomFactor = 1F;
@@ -209,6 +211,7 @@ namespace CassetteMotionPro.Workspace
                 "   • Saddle top\n" +
                 "   • Saddle tip\n" +
                 "   • Grip / hood contact point\n" +
+                "   • Advanced: click bar center or an edge using its diameter\n" +
                 "5. Confirm and drag every orange point to fine-tune it.\n" +
                 "6. Review confidence, then save to Before or After.";
             guide.Dock = DockStyle.Top;
@@ -304,6 +307,42 @@ namespace CassetteMotionPro.Workspace
             advancedLandmarks.ForeColor = Color.FromArgb(24, 31, 29);
             advancedLandmarks.BackColor = Color.White;
             advancedLandmarks.CheckedChanged += AdvancedLandmarks_CheckedChanged;
+
+            FlowLayoutPanel handlebarReferencePanel = new FlowLayoutPanel();
+            handlebarReferencePanel.Dock = DockStyle.Top;
+            handlebarReferencePanel.Height = 64;
+            handlebarReferencePanel.FlowDirection = FlowDirection.LeftToRight;
+            handlebarReferencePanel.WrapContents = true;
+            handlebarReferencePanel.BackColor = Color.FromArgb(247, 250, 244);
+            handlebarReferencePanel.Padding = new Padding(4);
+            Label handlebarModeLabel = new Label();
+            handlebarModeLabel.Text = "Handlebar point:";
+            handlebarModeLabel.AutoSize = true;
+            handlebarModeLabel.Margin = new Padding(2, 7, 4, 0);
+            handlebarReferenceMode = new ComboBox();
+            handlebarReferenceMode.DropDownStyle = ComboBoxStyle.DropDownList;
+            handlebarReferenceMode.Items.AddRange(new object[] { "Bar center", "Rear edge → calculate center", "Front edge → calculate center" });
+            handlebarReferenceMode.SelectedIndex = 1;
+            handlebarReferenceMode.Width = 210;
+            handlebarReferenceMode.Enabled = false;
+            handlebarReferenceMode.SelectedIndexChanged += HandlebarReferenceChanged;
+            Label diameterLabel = new Label();
+            diameterLabel.Text = "Bar diameter (mm):";
+            diameterLabel.AutoSize = true;
+            diameterLabel.Margin = new Padding(2, 7, 4, 0);
+            handlebarDiameter = new NumericUpDown();
+            handlebarDiameter.DecimalPlaces = 1;
+            handlebarDiameter.Minimum = 20;
+            handlebarDiameter.Maximum = 60;
+            handlebarDiameter.Increment = 0.1M;
+            handlebarDiameter.Value = 31.8M;
+            handlebarDiameter.Width = 72;
+            handlebarDiameter.Enabled = false;
+            handlebarDiameter.ValueChanged += HandlebarReferenceChanged;
+            handlebarReferencePanel.Controls.Add(handlebarModeLabel);
+            handlebarReferencePanel.Controls.Add(handlebarReferenceMode);
+            handlebarReferencePanel.Controls.Add(diameterLabel);
+            handlebarReferencePanel.Controls.Add(handlebarDiameter);
 
             Button cameraSetup = CreateButton("1. Camera Setup", false);
             Button calibrate = CreateButton("2. Calibrate Scale", false);
@@ -407,6 +446,7 @@ namespace CassetteMotionPro.Workspace
             sideScroll.Controls.Add(cameraSetup);
             sideScroll.Controls.Add(primaryAction);
             sideScroll.Controls.Add(advancedLandmarks);
+            sideScroll.Controls.Add(handlebarReferencePanel);
             sideScroll.Controls.Add(zoomPanel);
             sideScroll.Controls.Add(resultsLabel);
             sideScroll.Controls.Add(referenceLabel);
@@ -690,6 +730,8 @@ namespace CassetteMotionPro.Workspace
 
         private void AdvancedLandmarks_CheckedChanged(object sender, EventArgs e)
         {
+            handlebarReferenceMode.Enabled = advancedLandmarks.Checked;
+            handlebarDiameter.Enabled = advancedLandmarks.Checked;
             landmarkPoints.Clear();
             calculatedValues.Clear();
             mode = ClickMode.None;
@@ -978,7 +1020,7 @@ namespace CassetteMotionPro.Workspace
             undoLast.Enabled = true;
             if (landmarkPoints.Count < ActiveLandmarkNames.Length)
             {
-                status.Text = "Click landmark " + (landmarkPoints.Count + 1).ToString(CultureInfo.InvariantCulture) + " of " + ActiveLandmarkNames.Length.ToString(CultureInfo.InvariantCulture) + ": " + ActiveLandmarkNames[landmarkPoints.Count] + ".";
+                status.Text = "Click landmark " + (landmarkPoints.Count + 1).ToString(CultureInfo.InvariantCulture) + " of " + ActiveLandmarkNames.Length.ToString(CultureInfo.InvariantCulture) + ": " + GetLandmarkDisplayName(landmarkPoints.Count) + ".";
                 UpdateCurrentLandmarkInstruction();
                 picture.Invalidate();
                 UpdateWizardProgress();
@@ -1016,6 +1058,18 @@ namespace CassetteMotionPro.Workspace
             {
                 handlebarReference = landmarkPoints[5];
                 correctedHandlebarReference = CorrectForLevel(handlebarReference);
+
+                if (landmarkPoints.Count >= advancedLandmarkNames.Length && handlebarReferenceMode.SelectedIndex > 0)
+                {
+                    PointF correctedFrontAxleForDirection = CorrectForLevel(landmarkPoints[6]);
+                    PointF correctedRearAxleForDirection = CorrectForLevel(landmarkPoints[7]);
+                    double forwardDirection = correctedFrontAxleForDirection.X >= correctedRearAxleForDirection.X ? 1.0 : -1.0;
+                    double radiusPixels = Decimal.ToDouble(handlebarDiameter.Value) / 2.0 / millimetersPerPixel;
+                    double edgeDirection = handlebarReferenceMode.SelectedIndex == 1 ? forwardDirection : -forwardDirection;
+                    correctedHandlebarReference = new PointF(
+                        (float)(correctedHandlebarReference.X + edgeDirection * radiusPixels),
+                        correctedHandlebarReference.Y);
+                }
             }
 
             double saddleHeight = Distance(bottomBracket, saddleTop) * millimetersPerPixel;
@@ -1058,6 +1112,7 @@ namespace CassetteMotionPro.Workspace
             calculatedValues["CameraSetup"] = CameraSetupStatus;
             calculatedValues["CalibrationReference"] = knownCalibrationMillimeters > 0 ? knownCalibrationMillimeters.ToString("0.0", CultureInfo.InvariantCulture) + " mm" : "Not set";
             calculatedValues["CalibrationVerification"] = calibrationVerificationStatus;
+            calculatedValues["HandlebarReference"] = GetHandlebarReferenceSummary();
 
             UpdateResultsLabel();
         }
@@ -1087,6 +1142,7 @@ namespace CassetteMotionPro.Workspace
                 ? "Eight suggested bike landmarks reviewed for bottom bracket, saddle top/tip, grip, pedal spindle, handlebar center, and wheel axles; starting confidence " + landmarkSuggestionConfidence.ToString("0", CultureInfo.InvariantCulture) + "%"
                 : "Bike landmarks placed manually by fitter";
             AssistedLandmarkSummary += "; camera profile " + cameraProfileName + "; calibration " + calibrationVerificationStatus;
+            AssistedLandmarkSummary += "; handlebar reference " + GetHandlebarReferenceSummary();
             AnnotatedImagePath = SaveAnnotatedLandmarkImage(side);
             DialogResult = DialogResult.OK;
             Close();
@@ -1122,7 +1178,7 @@ namespace CassetteMotionPro.Workspace
                 {
                     PointF point = landmarkPoints[i];
                     graphics.FillEllipse(pointBrush, point.X - radius, point.Y - radius, radius * 2, radius * 2);
-                    string label = i < ActiveLandmarkNames.Length ? ActiveLandmarkNames[i] : "Landmark";
+                    string label = GetLandmarkDisplayName(i);
                     SizeF size = graphics.MeasureString(label, font);
                     RectangleF box = new RectangleF(point.X + radius, point.Y - size.Height / 2, size.Width + 12, size.Height + 4);
                     graphics.FillRectangle(labelBrush, box);
@@ -1181,7 +1237,7 @@ namespace CassetteMotionPro.Workspace
                 return;
             }
 
-            currentLandmarkLabel.Text = "Current point " + (nextIndex + 1).ToString(CultureInfo.InvariantCulture) + " of " + ActiveLandmarkNames.Length.ToString(CultureInfo.InvariantCulture) + ": " + ActiveLandmarkNames[nextIndex];
+            currentLandmarkLabel.Text = "Current point " + (nextIndex + 1).ToString(CultureInfo.InvariantCulture) + " of " + ActiveLandmarkNames.Length.ToString(CultureInfo.InvariantCulture) + ": " + GetLandmarkDisplayName(nextIndex);
             nextPointHintLabel.Text = GetLandmarkHint(nextIndex);
         }
 
@@ -1203,7 +1259,11 @@ namespace CassetteMotionPro.Workspace
                 return "Click the center of the pedal spindle to calculate crank length.";
 
             if (index == 5)
-                return "Click the handlebar center for bar X/Y, reach, and drop.";
+                return handlebarReferenceMode.SelectedIndex == 0
+                    ? "Click the handlebar clamp center for bar X/Y, reach, and drop."
+                    : handlebarReferenceMode.SelectedIndex == 1
+                        ? "Click the rear edge of the round bar at the clamp. The entered diameter shifts this point forward to calculate center."
+                        : "Click the front edge of the round bar at the clamp. The entered diameter shifts this point rearward to calculate center.";
 
             if (index == 6)
                 return "Click the front axle center. This starts the wheelbase reference.";
@@ -1212,6 +1272,40 @@ namespace CassetteMotionPro.Workspace
                 return "Click the rear axle center to complete the advanced landmark set.";
 
             return "Zoom in if needed, then click the landmark.";
+        }
+
+        private string GetLandmarkDisplayName(int index)
+        {
+            if (advancedLandmarks.Checked && index == 5 && handlebarReferenceMode != null)
+            {
+                if (handlebarReferenceMode.SelectedIndex == 1)
+                    return "Handlebar rear edge";
+                if (handlebarReferenceMode.SelectedIndex == 2)
+                    return "Handlebar front edge";
+            }
+
+            return index >= 0 && index < ActiveLandmarkNames.Length ? ActiveLandmarkNames[index] : "Landmark";
+        }
+
+        private string GetHandlebarReferenceSummary()
+        {
+            if (!advancedLandmarks.Checked || handlebarReferenceMode == null)
+                return "Grip / hood contact point";
+            if (handlebarReferenceMode.SelectedIndex == 0)
+                return "Bar center clicked directly";
+
+            string edge = handlebarReferenceMode.SelectedIndex == 1 ? "rear edge" : "front edge";
+            return edge + " clicked; center calculated using " + handlebarDiameter.Value.ToString("0.0", CultureInfo.InvariantCulture) + " mm diameter";
+        }
+
+        private void HandlebarReferenceChanged(object sender, EventArgs e)
+        {
+            if (landmarkPoints.Count >= ActiveLandmarkNames.Length && millimetersPerPixel > 0)
+            {
+                CalculateMetrics();
+                status.Text = "Handlebar center reference updated. Review the recalculated values.";
+            }
+            picture.Invalidate();
         }
 
         private void UpdateResultsLabel()
@@ -1231,6 +1325,7 @@ namespace CassetteMotionPro.Workspace
                 "Level reference: " + GetCalculatedValue("LevelReference") + "\n" +
                 "Camera setup: " + GetCalculatedValue("CameraSetup") + "\n" +
                 "Calibration: " + GetCalculatedValue("CalibrationReference") + " · " + GetCalculatedValue("CalibrationVerification") + "\n" +
+                "Handlebar reference: " + GetCalculatedValue("HandlebarReference") + "\n" +
                 "Setback convention: " + GetCalculatedValue("SaddleSetbackConvention");
         }
 
@@ -1250,6 +1345,7 @@ namespace CassetteMotionPro.Workspace
                 "Level reference: " + GetCalculatedValue("LevelReference") + "\n" +
                 "Camera setup: " + GetCalculatedValue("CameraSetup") + "\n" +
                 "Calibration verification: " + GetCalculatedValue("CalibrationVerification") + "\n" +
+                "Handlebar reference: " + GetCalculatedValue("HandlebarReference") + "\n" +
                 "Saddle setback convention: " + GetCalculatedValue("SaddleSetbackConvention");
         }
 
@@ -1273,7 +1369,7 @@ namespace CassetteMotionPro.Workspace
                     draggedLandmarkIndex = landmarkIndex;
                     suppressNextClick = true;
                     picture.Cursor = Cursors.Hand;
-                    status.Text = "Adjusting landmark " + (landmarkIndex + 1).ToString(CultureInfo.InvariantCulture) + ": " + ActiveLandmarkNames[landmarkIndex] + ".";
+                    status.Text = "Adjusting landmark " + (landmarkIndex + 1).ToString(CultureInfo.InvariantCulture) + ": " + GetLandmarkDisplayName(landmarkIndex) + ".";
                     nextPointHintLabel.Text = "Drag to fine-tune this point. Release to keep the new position.";
                     picture.Invalidate();
                     return;
@@ -1440,7 +1536,7 @@ namespace CassetteMotionPro.Workspace
                         using (Pen selectedPen = new Pen(Color.FromArgb(184, 243, 74), 4F))
                             graphics.DrawEllipse(selectedPen, point.X - 17, point.Y - 17, 34, 34);
                     }
-                    string label = (i + 1).ToString(CultureInfo.InvariantCulture) + ". " + ActiveLandmarkNames[i];
+                    string label = (i + 1).ToString(CultureInfo.InvariantCulture) + ". " + GetLandmarkDisplayName(i);
                     SizeF labelSize = graphics.MeasureString(label, font);
                     RectangleF labelRectangle = new RectangleF(point.X + 14, point.Y - 16, labelSize.Width + 12, labelSize.Height + 6);
                     graphics.FillRectangle(labelBrush, labelRectangle);
@@ -1554,7 +1650,7 @@ namespace CassetteMotionPro.Workspace
             {
                 int nextIndex = landmarkPoints.Count;
                 if (nextIndex < ActiveLandmarkNames.Length)
-                    return "Click landmark " + (nextIndex + 1).ToString(CultureInfo.InvariantCulture) + " of " + ActiveLandmarkNames.Length.ToString(CultureInfo.InvariantCulture) + ": " + ActiveLandmarkNames[nextIndex];
+                    return "Click landmark " + (nextIndex + 1).ToString(CultureInfo.InvariantCulture) + " of " + ActiveLandmarkNames.Length.ToString(CultureInfo.InvariantCulture) + ": " + GetLandmarkDisplayName(nextIndex);
             }
 
             return string.Empty;
