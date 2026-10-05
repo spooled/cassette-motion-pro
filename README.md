@@ -5,7 +5,11 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 1.9.2 Handlebar Center From Bar Edge
+## Current milestone: 1.9.3 Visible Handlebar Diameter Control
+
+The handlebar reference and diameter controls now use a stable two-row layout, keeping the editable diameter visible on narrow laptop screens and at larger Windows display scaling.
+
+### Previous milestone: 1.9.2 Handlebar Center From Bar Edge
 
 Advanced Bike Measurements can now use a directly clicked bar center, rear edge, or front edge. When an edge is selected, enter the handlebar clamp diameter—31.8 mm by default—and Cassette Motion Pro uses the front/rear wheel direction plus half the diameter to calculate the true bar center. The saved measurement trace records which reference and diameter were used.
 
