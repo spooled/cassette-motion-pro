@@ -21,7 +21,7 @@ namespace CassetteMotionPro.Workspace
     public static class FitSessionReportGenerator
     {
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "1.9.0";
+        private const string ReportVersion = "1.9.1";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
 
         private static StudioSettings ReportSettings { get { return StudioSettingsRepository.Current; } }
@@ -288,7 +288,7 @@ namespace CassetteMotionPro.Workspace
 
             ReviewRequiredMetric(issues, "Saddle height", session.SaddleHeightBefore, session.SaddleHeightAfter, "Use Guided Capture or Distance from BB center to saddle top. Confirm the value is entered in mm.");
             ReviewRequiredMetric(issues, "Saddle setback", session.SaddleSetbackBefore, session.SaddleSetbackAfter, "Use horizontal distance from BB vertical line to saddle tip. Negative is OK when the saddle tip is behind the BB.");
-            ReviewRequiredMetric(issues, "Saddle tip to grip reach", session.SaddleTipToGripReachBefore, session.SaddleTipToGripReachAfter, "Use Distance or horizontal assist from saddle tip to grip/hood contact point.");
+            ReviewRequiredMetric(issues, "Saddle tip to grip reach", session.SaddleTipToGripReachBefore, session.SaddleTipToGripReachAfter, "Use the straight-line distance from saddle tip to grip/hood contact point.");
             ReviewRequiredMetric(issues, "Handlebar X", session.HandlebarXBefore, session.HandlebarXAfter, "Use horizontal distance from BB center to grip/hood contact point.");
             ReviewRequiredMetric(issues, "Handlebar Y", session.HandlebarYBefore, session.HandlebarYAfter, "Use vertical distance from BB center to grip/hood contact point. Recheck image level/calibration if this looks strange.");
 

@@ -1020,7 +1020,9 @@ namespace CassetteMotionPro.Workspace
 
             double saddleHeight = Distance(bottomBracket, saddleTop) * millimetersPerPixel;
             double saddleSetback = (correctedSaddleTip.X - correctedBottomBracket.X) * millimetersPerPixel;
-            double saddleTipToGripReach = (correctedGrip.X - correctedSaddleTip.X) * millimetersPerPixel;
+            // Match the physical tape measurement. Handlebar reach remains the
+            // separate horizontal measurement calculated below.
+            double saddleTipToGripReach = Distance(saddleTip, grip) * millimetersPerPixel;
             double handlebarX = (correctedHandlebarReference.X - correctedBottomBracket.X) * millimetersPerPixel;
             double handlebarY = (correctedBottomBracket.Y - correctedHandlebarReference.Y) * millimetersPerPixel;
 
@@ -1219,7 +1221,7 @@ namespace CassetteMotionPro.Workspace
                 "Mode: " + GetCalculatedValue("LandmarkMode") + "\n" +
                 "Saddle height: " + GetCalculatedValue("SaddleHeight") + "\n" +
                 "Saddle setback: " + GetCalculatedValue("SaddleSetback") + "\n" +
-                "Saddle tip to grip: " + GetCalculatedValue("SaddleTipToGripReach") + "\n" +
+                "Saddle tip to grip (straight line): " + GetCalculatedValue("SaddleTipToGripReach") + "\n" +
                 "Handlebar X: " + GetCalculatedValue("HandlebarX") + "\n" +
                 "Handlebar Y: " + GetCalculatedValue("HandlebarY") + "\n" +
                 "Crank length: " + GetCalculatedValue("CrankLength") + "\n" +
@@ -1237,7 +1239,7 @@ namespace CassetteMotionPro.Workspace
             return
                 "Saddle height: " + GetCalculatedValue("SaddleHeight") + "\n" +
                 "Saddle setback: " + GetCalculatedValue("SaddleSetback") + "\n" +
-                "Saddle tip to grip: " + GetCalculatedValue("SaddleTipToGripReach") + "\n" +
+                "Saddle tip to grip (straight line): " + GetCalculatedValue("SaddleTipToGripReach") + "\n" +
                 "Handlebar X: " + GetCalculatedValue("HandlebarX") + "\n" +
                 "Handlebar Y: " + GetCalculatedValue("HandlebarY") + "\n\n" +
                 "Crank length: " + GetCalculatedValue("CrankLength") + "\n" +

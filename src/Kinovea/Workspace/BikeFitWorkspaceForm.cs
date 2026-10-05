@@ -4868,7 +4868,7 @@ namespace CassetteMotionPro.Workspace
             AddBikeMetricHeader(table);
             AddBikeMetricRow(table, "Saddle height", "Use Distance: BB center → saddle top along the seat tube / saddle-height line.", "SaddleHeight");
             AddBikeMetricRow(table, "Saddle setback", "BB vertical line → saddle nose, measured horizontally.", "SaddleSetback");
-            AddBikeMetricRow(table, "Saddle tip to grip reach", "Saddle tip → grip/hood contact point.", "SaddleTipToGripReach");
+            AddBikeMetricRow(table, "Saddle tip to grip reach", "Straight-line saddle tip → grip/hood contact point.", "SaddleTipToGripReach");
             AddBikeMetricRow(table, "Handlebar X", "BB center → handlebar/hood contact point, horizontal coordinate.", "HandlebarX");
             AddBikeMetricRow(table, "Handlebar Y", "BB center → handlebar/hood contact point, vertical coordinate.", "HandlebarY");
             AddBikeMetricRow(table, "Handlebar reach", "Reference point → handlebar/hood contact point, horizontal reach.", "HandlebarReach");
@@ -8012,7 +8012,7 @@ namespace CassetteMotionPro.Workspace
 
             ReviewRequiredMetric(issues, "Saddle height", "SaddleHeight", "Use Guided Capture or Distance from BB center to saddle top. Confirm the value is entered in mm.");
             ReviewRequiredMetric(issues, "Saddle setback", "SaddleSetback", "Use horizontal distance from BB vertical line to saddle tip. Negative is OK when the saddle tip is behind the BB.");
-            ReviewRequiredMetric(issues, "Saddle tip to grip reach", "SaddleTipToGripReach", "Use Distance or horizontal assist from saddle tip to grip/hood contact point.");
+            ReviewRequiredMetric(issues, "Saddle tip to grip reach", "SaddleTipToGripReach", "Use the straight-line distance from saddle tip to grip/hood contact point.");
             ReviewRequiredMetric(issues, "Handlebar X", "HandlebarX", "Use horizontal distance from BB center to grip/hood contact point.");
             ReviewRequiredMetric(issues, "Handlebar Y", "HandlebarY", "Use vertical distance from BB center to grip/hood contact point. Recheck image level/calibration if this looks strange.");
 

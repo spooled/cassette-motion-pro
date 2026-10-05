@@ -5,7 +5,11 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 1.9.0 Calibrated Bike Measurement Workspace
+## Current milestone: 1.9.1 Calibrated Bike Measurement Correction
+
+Saddle Tip to Grip now uses the physical straight-line distance between the saddle nose and the grip/hood contact point. It no longer uses only the horizontal difference, which read short whenever the handlebar was lower than the saddle. Horizontal Handlebar Reach remains available as its own separate measurement.
+
+### Previous milestone: 1.9.0 Calibrated Bike Measurement Workspace
 
 Guided Bike Measurements now use a five-step calibrated workflow: confirm a named camera profile, calibrate a known distance in the bike plane, verify that calibration against a second known distance, place bottom-bracket-centered bike landmarks, and review confidence before saving to Before or After. The workspace reports verification error as High, Moderate, or Review, warns when an ultra-wide N980P profile is selected, and carries the camera/calibration trace into the saved session evidence. Use [the v1.9.0 test plan](docs/v1.9.0-test-plan.md) for the focused checks.
 
