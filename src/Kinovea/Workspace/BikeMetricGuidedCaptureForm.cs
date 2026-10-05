@@ -21,6 +21,7 @@ namespace CassetteMotionPro.Workspace
         {
             None,
             Calibration,
+            Verification,
             LevelReference,
             Landmarks
         }
@@ -29,6 +30,7 @@ namespace CassetteMotionPro.Workspace
         private readonly string outputDirectory;
         private readonly string preferredSide;
         private readonly List<PointF> calibrationPoints = new List<PointF>();
+        private readonly List<PointF> verificationPoints = new List<PointF>();
         private readonly List<PointF> levelReferencePoints = new List<PointF>();
         private readonly List<PointF> landmarkPoints = new List<PointF>();
         private readonly string[] basicLandmarkNames = new string[]
@@ -55,11 +57,13 @@ namespace CassetteMotionPro.Workspace
         private Label currentLandmarkLabel;
         private Label nextPointHintLabel;
         private Label scaleLabel;
+        private Label verificationLabel;
         private Label referenceLabel;
         private Label resultsLabel;
         private Label progressLabel;
         private Button primaryAction;
         private Button levelReference;
+        private Button verifyCalibration;
         private Button undoLast;
         private Button recalculate;
         private Button flipSetbackSign;
@@ -79,6 +83,10 @@ namespace CassetteMotionPro.Workspace
         private Point mousePosition;
         private PointF panStartOffset;
         private double millimetersPerPixel;
+        private double knownCalibrationMillimeters;
+        private double verificationErrorPercent = double.NaN;
+        private string calibrationVerificationStatus = "Not verified";
+        private string cameraProfileName = "Standard camera · 70–90°";
         private Dictionary<string, string> calculatedValues = new Dictionary<string, string>();
         private bool landmarksSuggested;
         private double landmarkSuggestionConfidence;
@@ -192,22 +200,23 @@ namespace CassetteMotionPro.Workspace
 
             Label guide = new Label();
             guide.Text =
-                "1. Review Camera Setup.\n" +
-                "2. Calibrate scale using a known bike length.\n" +
-                "3. Optional: click Level Reference using floor/axle line.\n" +
-                "4. Click Suggest Bike Landmarks, or place them manually.\n" +
+                "1. Confirm the camera profile and setup.\n" +
+                "2. Calibrate with a known length in the bike plane.\n" +
+                "3. Verify with a second known length.\n" +
+                "4. Optional: set a floor or axle level reference.\n" +
+                "5. Suggest Bike Landmarks, or place them manually.\n" +
                 "   • Bottom bracket center\n" +
                 "   • Saddle top\n" +
                 "   • Saddle tip\n" +
                 "   • Grip / hood contact point\n" +
                 "5. Confirm and drag every orange point to fine-tune it.\n" +
-                "6. Review values, then save to Before or After.";
+                "6. Review confidence, then save to Before or After.";
             guide.Dock = DockStyle.Top;
-            guide.Height = 160;
+            guide.Height = 190;
             guide.ForeColor = Color.FromArgb(74, 87, 81);
 
             progressLabel = new Label();
-            progressLabel.Text = "STEP 1 OF 4 · Confirm camera setup";
+            progressLabel.Text = "STEP 1 OF 5 · Confirm camera setup";
             progressLabel.Dock = DockStyle.Top;
             progressLabel.Height = 36;
             progressLabel.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
@@ -245,6 +254,13 @@ namespace CassetteMotionPro.Workspace
             scaleLabel.Height = 30;
             scaleLabel.ForeColor = Color.FromArgb(92, 104, 98);
 
+            verificationLabel = new Label();
+            verificationLabel.Text = "Verification: not completed";
+            verificationLabel.Dock = DockStyle.Top;
+            verificationLabel.Height = 34;
+            verificationLabel.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            verificationLabel.ForeColor = Color.FromArgb(166, 92, 34);
+
             referenceLabel = new Label();
             referenceLabel.Text = "Level reference: not set";
             referenceLabel.Dock = DockStyle.Top;
@@ -254,7 +270,7 @@ namespace CassetteMotionPro.Workspace
             resultsLabel = new Label();
             resultsLabel.Text = "Calculated metrics:\n--";
             resultsLabel.Dock = DockStyle.Top;
-            resultsLabel.Height = 238;
+            resultsLabel.Height = 260;
             resultsLabel.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             resultsLabel.ForeColor = Color.FromArgb(24, 31, 29);
 
@@ -291,8 +307,9 @@ namespace CassetteMotionPro.Workspace
 
             Button cameraSetup = CreateButton("1. Camera Setup", false);
             Button calibrate = CreateButton("2. Calibrate Scale", false);
-            levelReference = CreateButton("3. Level Reference", false);
-            Button capture = CreateButton("4. Start Guided Capture", false);
+            verifyCalibration = CreateButton("3. Verify Calibration", true);
+            levelReference = CreateButton("4. Level Reference (optional)", false);
+            Button capture = CreateButton("5. Start Guided Capture", false);
             Button suggest = CreateButton("Suggest Bike Landmarks", true);
             primaryAction = CreateButton("Continue: Camera Setup", true);
             undoLast = CreateButton("Undo Last Point", false);
@@ -314,6 +331,7 @@ namespace CassetteMotionPro.Workspace
             cameraSetup.Dock = DockStyle.Top;
             primaryAction.Dock = DockStyle.Top;
             calibrate.Dock = DockStyle.Top;
+            verifyCalibration.Dock = DockStyle.Top;
             levelReference.Dock = DockStyle.Top;
             capture.Dock = DockStyle.Top;
             suggest.Dock = DockStyle.Top;
@@ -326,6 +344,7 @@ namespace CassetteMotionPro.Workspace
             cameraSetup.Height = 34;
             primaryAction.Height = 42;
             calibrate.Height = 34;
+            verifyCalibration.Height = 38;
             levelReference.Height = 34;
             capture.Height = 34;
             suggest.Height = 42;
@@ -338,6 +357,7 @@ namespace CassetteMotionPro.Workspace
             cameraSetup.Margin = new Padding(0, 6, 0, 0);
             primaryAction.Margin = new Padding(0, 8, 0, 4);
             calibrate.Margin = new Padding(0, 6, 0, 0);
+            verifyCalibration.Margin = new Padding(0, 6, 0, 0);
             levelReference.Margin = new Padding(0, 6, 0, 0);
             capture.Margin = new Padding(0, 6, 0, 0);
             suggest.Margin = new Padding(0, 6, 0, 0);
@@ -350,6 +370,7 @@ namespace CassetteMotionPro.Workspace
             cameraSetup.Click += CameraSetup_Click;
             primaryAction.Click += PrimaryAction_Click;
             calibrate.Click += Calibrate_Click;
+            verifyCalibration.Click += VerifyCalibration_Click;
             levelReference.Click += LevelReference_Click;
             capture.Click += Capture_Click;
             suggest.Click += SuggestLandmarks_Click;
@@ -360,6 +381,7 @@ namespace CassetteMotionPro.Workspace
             saveBefore.Click += delegate { SaveResult("Before"); };
             saveAfter.Click += delegate { SaveResult("After"); };
             levelReference.Enabled = false;
+            verifyCalibration.Enabled = false;
             undoLast.Enabled = false;
             recalculate.Enabled = false;
             flipSetbackSign.Enabled = false;
@@ -380,6 +402,7 @@ namespace CassetteMotionPro.Workspace
             sideScroll.Controls.Add(capture);
             sideScroll.Controls.Add(suggest);
             sideScroll.Controls.Add(levelReference);
+            sideScroll.Controls.Add(verifyCalibration);
             sideScroll.Controls.Add(calibrate);
             sideScroll.Controls.Add(cameraSetup);
             sideScroll.Controls.Add(primaryAction);
@@ -387,6 +410,7 @@ namespace CassetteMotionPro.Workspace
             sideScroll.Controls.Add(zoomPanel);
             sideScroll.Controls.Add(resultsLabel);
             sideScroll.Controls.Add(referenceLabel);
+            sideScroll.Controls.Add(verificationLabel);
             sideScroll.Controls.Add(scaleLabel);
             sideScroll.Controls.Add(nextPointHintLabel);
             sideScroll.Controls.Add(currentLandmarkLabel);
@@ -407,7 +431,7 @@ namespace CassetteMotionPro.Workspace
 
         private void PrimaryAction_Click(object sender, EventArgs e)
         {
-            if (!string.Equals(CameraSetupStatus, "Confirmed", StringComparison.OrdinalIgnoreCase))
+            if (!IsCameraSetupConfirmed())
             {
                 CameraSetup_Click(sender, e);
                 return;
@@ -416,6 +440,12 @@ namespace CassetteMotionPro.Workspace
             if (millimetersPerPixel <= 0)
             {
                 Calibrate_Click(sender, e);
+                return;
+            }
+
+            if (double.IsNaN(verificationErrorPercent))
+            {
+                VerifyCalibration_Click(sender, e);
                 return;
             }
 
@@ -434,33 +464,41 @@ namespace CassetteMotionPro.Workspace
             if (progressLabel == null || primaryAction == null)
                 return;
 
-            if (!string.Equals(CameraSetupStatus, "Confirmed", StringComparison.OrdinalIgnoreCase))
+            if (!IsCameraSetupConfirmed())
             {
-                progressLabel.Text = "STEP 1 OF 4 · Confirm camera setup";
+                progressLabel.Text = "STEP 1 OF 5 · Confirm camera setup";
                 primaryAction.Text = "Continue: Camera Setup";
                 return;
             }
 
             if (millimetersPerPixel <= 0)
             {
-                progressLabel.Text = "STEP 2 OF 4 · Calibrate one known distance";
+                progressLabel.Text = "STEP 2 OF 5 · Calibrate one known distance";
                 primaryAction.Text = "Continue: Calibrate Scale";
+                return;
+            }
+
+            if (double.IsNaN(verificationErrorPercent))
+            {
+                progressLabel.Text = "STEP 3 OF 5 · Verify with a second known distance";
+                primaryAction.Text = "Continue: Verify Calibration";
                 return;
             }
 
             if (landmarkPoints.Count < ActiveLandmarkNames.Length)
             {
-                progressLabel.Text = "STEP 3 OF 4 · Place landmarks (" + landmarkPoints.Count.ToString(CultureInfo.InvariantCulture) + "/" + ActiveLandmarkNames.Length.ToString(CultureInfo.InvariantCulture) + ")";
+                progressLabel.Text = "STEP 4 OF 5 · Place landmarks (" + landmarkPoints.Count.ToString(CultureInfo.InvariantCulture) + "/" + ActiveLandmarkNames.Length.ToString(CultureInfo.InvariantCulture) + ")";
                 primaryAction.Text = mode == ClickMode.Landmarks ? "Follow the highlighted point" : "Continue: Start Landmarks";
                 return;
             }
 
-            progressLabel.Text = "STEP 4 OF 4 · Review and save Before or After";
+            progressLabel.Text = "STEP 5 OF 5 · Review confidence and save";
             primaryAction.Text = "Recalculate Measurements";
         }
 
         private void CameraSetup_Click(object sender, EventArgs e)
         {
+            cameraProfileName = PromptForCameraProfile(this, cameraProfileName);
             string checklist =
                 "For the most accurate bike measurements:\n\n" +
                 "✓ Camera is straight side-on to the bike.\n" +
@@ -470,6 +508,9 @@ namespace CassetteMotionPro.Workspace
                 "✓ Avoid ultra-wide lens distortion.\n" +
                 "✓ The calibration length is in the same plane as the bike.\n" +
                 "✓ Use Level Reference if the image is slightly tilted.\n\n" +
+                "Selected profile: " + cameraProfileName + "\n" +
+                (cameraProfileName.IndexOf("120°", StringComparison.OrdinalIgnoreCase) >= 0 ? "⚠ Ultra-wide lens: keep the entire bike near the image center.\n" : string.Empty) +
+                "\n" +
                 "Confirm camera setup for this Guided Capture?";
 
             DialogResult result = MessageBox.Show(this,
@@ -478,7 +519,7 @@ namespace CassetteMotionPro.Workspace
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Information);
 
-            CameraSetupStatus = result == DialogResult.Yes ? "Confirmed" : "Not confirmed";
+            CameraSetupStatus = (result == DialogResult.Yes ? "Confirmed · " : "Not confirmed · ") + cameraProfileName;
             status.Text = "Camera setup: " + CameraSetupStatus + ".";
             nextPointHintLabel.Text = result == DialogResult.Yes ?
                 "Good. Next: calibrate scale using a known real length." :
@@ -498,10 +539,18 @@ namespace CassetteMotionPro.Workspace
         {
             mode = ClickMode.Calibration;
             calibrationPoints.Clear();
+            verificationPoints.Clear();
             levelReferencePoints.Clear();
             landmarkPoints.Clear();
             calculatedValues.Clear();
+            millimetersPerPixel = 0;
+            knownCalibrationMillimeters = 0;
+            verificationErrorPercent = double.NaN;
+            calibrationVerificationStatus = "Not verified";
+            verificationLabel.Text = "Verification: not completed";
+            verificationLabel.ForeColor = Color.FromArgb(166, 92, 34);
             levelReference.Enabled = false;
+            verifyCalibration.Enabled = false;
             undoLast.Enabled = false;
             recalculate.Enabled = false;
             flipSetbackSign.Enabled = false;
@@ -512,6 +561,28 @@ namespace CassetteMotionPro.Workspace
             status.Text = "Calibration: click the first point of a known length.";
             currentLandmarkLabel.Text = "Current point: calibration point 1";
             nextPointHintLabel.Text = "Click point 1 of 2 on a known distance, like crank length or wheelbase.";
+            picture.Invalidate();
+            UpdateWizardProgress();
+        }
+
+        private void VerifyCalibration_Click(object sender, EventArgs e)
+        {
+            if (millimetersPerPixel <= 0)
+            {
+                MessageBox.Show(this, "Calibrate the scale first.", "Calibration required", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            mode = ClickMode.Verification;
+            verificationPoints.Clear();
+            verificationErrorPercent = double.NaN;
+            calibrationVerificationStatus = "Not verified";
+            verificationLabel.Text = "Verification: click a second known length";
+            verificationLabel.ForeColor = Color.FromArgb(166, 92, 34);
+            status.Text = "Verification: click the first point of a different known length in the bike plane.";
+            currentLandmarkLabel.Text = "Current point: verification point 1";
+            nextPointHintLabel.Text = "Use a long reference away from the original calibration when possible.";
+            undoLast.Enabled = false;
             picture.Invalidate();
             UpdateWizardProgress();
         }
@@ -547,6 +618,25 @@ namespace CassetteMotionPro.Workspace
                 return;
             }
 
+            if (double.IsNaN(verificationErrorPercent))
+            {
+                DialogResult continueWithoutVerification = MessageBox.Show(this,
+                    "Calibration has not been checked against a second known length.\n\nContinue to landmarks anyway? The saved result will be marked for review.",
+                    "Verify calibration",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning);
+                if (continueWithoutVerification != DialogResult.Yes)
+                {
+                    VerifyCalibration_Click(sender, e);
+                    return;
+                }
+
+                verificationErrorPercent = -1;
+                calibrationVerificationStatus = "Skipped · review required";
+                verificationLabel.Text = "Verification: skipped · review required";
+                verificationLabel.ForeColor = Color.FromArgb(176, 52, 52);
+            }
+
             mode = ClickMode.Landmarks;
             landmarkPoints.Clear();
             calculatedValues.Clear();
@@ -566,6 +656,13 @@ namespace CassetteMotionPro.Workspace
             if (millimetersPerPixel <= 0)
             {
                 MessageBox.Show(this, "Calibrate the scale first. The assisted landmarks use that same calibrated image for the measurements.", "Scale required", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            if (double.IsNaN(verificationErrorPercent))
+            {
+                MessageBox.Show(this, "Verify the calibration with a second known length before using assisted bike landmarks.", "Verify calibration", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                VerifyCalibration_Click(sender, e);
                 return;
             }
 
@@ -665,6 +762,16 @@ namespace CassetteMotionPro.Workspace
                 return;
             }
 
+            if (mode == ClickMode.Verification && verificationPoints.Count > 0)
+            {
+                verificationPoints.RemoveAt(verificationPoints.Count - 1);
+                status.Text = verificationPoints.Count == 0 ? "Verification: click the first point of a second known length." : "Verification: click the second point.";
+                currentLandmarkLabel.Text = verificationPoints.Count == 0 ? "Current point: verification point 1" : "Current point: verification point 2";
+                undoLast.Enabled = verificationPoints.Count > 0;
+                picture.Invalidate();
+                return;
+            }
+
             if (mode == ClickMode.Calibration && calibrationPoints.Count > 0)
             {
                 calibrationPoints.RemoveAt(calibrationPoints.Count - 1);
@@ -725,6 +832,8 @@ namespace CassetteMotionPro.Workspace
 
             if (mode == ClickMode.Calibration)
                 AddCalibrationPoint(imagePoint);
+            else if (mode == ClickMode.Verification)
+                AddVerificationPoint(imagePoint);
             else if (mode == ClickMode.LevelReference)
                 AddLevelReferencePoint(imagePoint);
             else if (mode == ClickMode.Landmarks)
@@ -765,16 +874,56 @@ namespace CassetteMotionPro.Workspace
                 }
 
                 millimetersPerPixel = knownMillimeters / pixelDistance;
+                knownCalibrationMillimeters = knownMillimeters;
                 scaleLabel.Text = "Scale: " + millimetersPerPixel.ToString("0.0000", CultureInfo.InvariantCulture) + " mm/pixel";
                 status.Text = "Scale calibrated. Optional: click Level Reference, or start Guided Capture.";
                 currentLandmarkLabel.Text = "Current point: ready for level reference or guided capture";
                 nextPointHintLabel.Text = "Next: use Level Reference if the image is tilted, or Start Guided Capture.";
                 levelReference.Enabled = true;
+                verifyCalibration.Enabled = true;
                 undoLast.Enabled = false;
                 mode = ClickMode.None;
                 picture.Invalidate();
                 UpdateWizardProgress();
             }
+        }
+
+        private void AddVerificationPoint(PointF imagePoint)
+        {
+            verificationPoints.Add(imagePoint);
+            undoLast.Enabled = true;
+            if (verificationPoints.Count == 1)
+            {
+                status.Text = "Verification: click the second point of that known length.";
+                currentLandmarkLabel.Text = "Current point: verification point 2";
+                nextPointHintLabel.Text = "Click the opposite end of the second reference.";
+                picture.Invalidate();
+                return;
+            }
+
+            double pixelDistance = Distance(verificationPoints[0], verificationPoints[1]);
+            double knownMillimeters;
+            if (pixelDistance <= 0 || !PromptForMillimeters(this, "Verify calibration", "Enter the real length of this second reference in millimeters:", out knownMillimeters))
+            {
+                verificationPoints.Clear();
+                status.Text = "Verification cancelled. Click Verify Calibration to try again.";
+                picture.Invalidate();
+                return;
+            }
+
+            double measuredMillimeters = pixelDistance * millimetersPerPixel;
+            verificationErrorPercent = Math.Abs(measuredMillimeters - knownMillimeters) / knownMillimeters * 100.0;
+            string grade = verificationErrorPercent <= 1.0 ? "HIGH" : verificationErrorPercent <= 2.0 ? "MODERATE" : "REVIEW";
+            calibrationVerificationStatus = grade + " · " + verificationErrorPercent.ToString("0.0", CultureInfo.InvariantCulture) + "% error";
+            verificationLabel.Text = "Verification: " + calibrationVerificationStatus + " · expected " + knownMillimeters.ToString("0.0", CultureInfo.InvariantCulture) + " mm, measured " + measuredMillimeters.ToString("0.0", CultureInfo.InvariantCulture) + " mm";
+            verificationLabel.ForeColor = verificationErrorPercent <= 1.0 ? Color.FromArgb(60, 145, 76) : verificationErrorPercent <= 2.0 ? Color.FromArgb(166, 92, 34) : Color.FromArgb(176, 52, 52);
+            status.Text = verificationErrorPercent <= 2.0 ? "Calibration verified. Continue to landmarks." : "Calibration needs review. Recheck the reference plane, camera angle, and lens distortion.";
+            currentLandmarkLabel.Text = "Current point: calibration verification complete";
+            nextPointHintLabel.Text = verificationErrorPercent <= 2.0 ? "Next: set Level Reference if needed, then place bike landmarks." : "For an ultra-wide camera, move references and bike toward the image center, then recalibrate.";
+            mode = ClickMode.None;
+            undoLast.Enabled = false;
+            picture.Invalidate();
+            UpdateWizardProgress();
         }
 
         private void AddLevelReferencePoint(PointF imagePoint)
@@ -905,6 +1054,8 @@ namespace CassetteMotionPro.Workspace
             calculatedValues["SaddleSetbackConvention"] = "Behind BB = negative";
             calculatedValues["LandmarkMode"] = advancedLandmarks.Checked ? "Advanced 8-point" : "Basic 4-point";
             calculatedValues["CameraSetup"] = CameraSetupStatus;
+            calculatedValues["CalibrationReference"] = knownCalibrationMillimeters > 0 ? knownCalibrationMillimeters.ToString("0.0", CultureInfo.InvariantCulture) + " mm" : "Not set";
+            calculatedValues["CalibrationVerification"] = calibrationVerificationStatus;
 
             UpdateResultsLabel();
         }
@@ -933,6 +1084,7 @@ namespace CassetteMotionPro.Workspace
             AssistedLandmarkSummary = landmarksSuggested
                 ? "Eight suggested bike landmarks reviewed for bottom bracket, saddle top/tip, grip, pedal spindle, handlebar center, and wheel axles; starting confidence " + landmarkSuggestionConfidence.ToString("0", CultureInfo.InvariantCulture) + "%"
                 : "Bike landmarks placed manually by fitter";
+            AssistedLandmarkSummary += "; camera profile " + cameraProfileName + "; calibration " + calibrationVerificationStatus;
             AnnotatedImagePath = SaveAnnotatedLandmarkImage(side);
             DialogResult = DialogResult.OK;
             Close();
@@ -982,10 +1134,18 @@ namespace CassetteMotionPro.Workspace
         private string BuildQualitySummary()
         {
             List<string> warnings = new List<string>();
-            if (!string.Equals(CameraSetupStatus, "Confirmed", StringComparison.OrdinalIgnoreCase))
+            if (!IsCameraSetupConfirmed())
                 warnings.Add("Camera setup checklist was not confirmed");
             if (levelReferencePoints.Count != 2)
                 warnings.Add("No level reference is set; confirm the image is truly level");
+            if (double.IsNaN(verificationErrorPercent))
+                warnings.Add("Calibration was not verified with a second known length");
+            else if (verificationErrorPercent < 0)
+                warnings.Add("Calibration verification was skipped");
+            else if (verificationErrorPercent > 2.0)
+                warnings.Add("Calibration verification error is " + verificationErrorPercent.ToString("0.0", CultureInfo.InvariantCulture) + "% — recheck camera alignment, reference plane, and wide-angle distortion");
+            if (cameraProfileName.IndexOf("120°", StringComparison.OrdinalIgnoreCase) >= 0)
+                warnings.Add("Ultra-wide camera profile selected; keep every landmark near the image center");
             AddBikeMetricQualityWarning(warnings, "Saddle height", "SaddleHeight", 500, 900);
             AddBikeMetricQualityWarning(warnings, "Saddle setback", "SaddleSetback", -120, 60);
             AddBikeMetricQualityWarning(warnings, "Saddle tip to grip", "SaddleTipToGripReach", 350, 750);
@@ -1068,6 +1228,7 @@ namespace CassetteMotionPro.Workspace
                 "Wheelbase: " + GetCalculatedValue("Wheelbase") + "\n" +
                 "Level reference: " + GetCalculatedValue("LevelReference") + "\n" +
                 "Camera setup: " + GetCalculatedValue("CameraSetup") + "\n" +
+                "Calibration: " + GetCalculatedValue("CalibrationReference") + " · " + GetCalculatedValue("CalibrationVerification") + "\n" +
                 "Setback convention: " + GetCalculatedValue("SaddleSetbackConvention");
         }
 
@@ -1086,6 +1247,7 @@ namespace CassetteMotionPro.Workspace
                 "Landmark mode: " + GetCalculatedValue("LandmarkMode") + "\n" +
                 "Level reference: " + GetCalculatedValue("LevelReference") + "\n" +
                 "Camera setup: " + GetCalculatedValue("CameraSetup") + "\n" +
+                "Calibration verification: " + GetCalculatedValue("CalibrationVerification") + "\n" +
                 "Saddle setback convention: " + GetCalculatedValue("SaddleSetbackConvention");
         }
 
@@ -1220,6 +1382,7 @@ namespace CassetteMotionPro.Workspace
                 e.Graphics.DrawImage(loadedImage, imageRectangle);
 
             DrawLine(e.Graphics, calibrationPoints, Color.FromArgb(184, 243, 74), "C");
+            DrawLine(e.Graphics, verificationPoints, Color.FromArgb(255, 176, 74), "V");
             DrawLine(e.Graphics, levelReferencePoints, Color.FromArgb(74, 145, 255), "L");
             DrawLandmarks(e.Graphics);
             DrawActiveClickCue(e.Graphics);
@@ -1378,6 +1541,9 @@ namespace CassetteMotionPro.Workspace
         {
             if (mode == ClickMode.Calibration)
                 return "Click calibration point " + (calibrationPoints.Count + 1).ToString(CultureInfo.InvariantCulture) + " of 2";
+
+            if (mode == ClickMode.Verification)
+                return "Click verification point " + (verificationPoints.Count + 1).ToString(CultureInfo.InvariantCulture) + " of 2";
 
             if (mode == ClickMode.LevelReference)
                 return "Click level reference point " + (levelReferencePoints.Count + 1).ToString(CultureInfo.InvariantCulture) + " of 2";
@@ -1623,6 +1789,60 @@ namespace CassetteMotionPro.Workspace
             }
 
             return false;
+        }
+
+        private bool IsCameraSetupConfirmed()
+        {
+            return !string.IsNullOrWhiteSpace(CameraSetupStatus) &&
+                CameraSetupStatus.StartsWith("Confirmed", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string PromptForCameraProfile(IWin32Window owner, string currentProfile)
+        {
+            using (Form form = new Form())
+            using (Label label = new Label())
+            using (ComboBox profiles = new ComboBox())
+            using (Label hint = new Label())
+            using (Button ok = new Button())
+            {
+                form.Text = "Camera profile";
+                form.Font = new Font("Segoe UI", 9F);
+                form.ClientSize = new Size(440, 190);
+                form.FormBorderStyle = FormBorderStyle.FixedDialog;
+                form.StartPosition = FormStartPosition.CenterParent;
+                form.MinimizeBox = false;
+                form.MaximizeBox = false;
+                form.ShowInTaskbar = false;
+
+                label.Text = "Choose the camera/lens used for this bike image:";
+                label.SetBounds(16, 16, 400, 24);
+                profiles.DropDownStyle = ComboBoxStyle.DropDownList;
+                profiles.Items.AddRange(new object[]
+                {
+                    "NexiGo N980P · 120° ultra-wide",
+                    "NexiGo N680P · 80°",
+                    "Standard camera · 70–90°",
+                    "Custom / unknown camera"
+                });
+                profiles.SetBounds(16, 46, 408, 28);
+                int selectedIndex = profiles.Items.IndexOf(currentProfile);
+                profiles.SelectedIndex = selectedIndex >= 0 ? selectedIndex : 2;
+
+                hint.Text = "Ultra-wide profiles receive an accuracy warning. Calibration and the bike must be in the same physical plane.";
+                hint.ForeColor = SystemColors.GrayText;
+                hint.SetBounds(16, 84, 408, 42);
+                ok.Text = "Continue";
+                ok.DialogResult = DialogResult.OK;
+                ok.SetBounds(320, 140, 104, 32);
+                form.Controls.Add(label);
+                form.Controls.Add(profiles);
+                form.Controls.Add(hint);
+                form.Controls.Add(ok);
+                form.AcceptButton = ok;
+
+                form.ShowDialog(owner);
+                return profiles.SelectedItem == null ? currentProfile : profiles.SelectedItem.ToString();
+            }
         }
 
         private static Button CreateButton(string text, bool primary)
