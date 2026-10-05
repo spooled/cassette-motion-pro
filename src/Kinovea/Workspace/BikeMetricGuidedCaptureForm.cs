@@ -38,14 +38,14 @@ namespace CassetteMotionPro.Workspace
             "Bottom bracket center",
             "Saddle top",
             "Saddle tip",
-            "Grip / hood contact point"
+            "Hood hand-contact point"
         };
         private readonly string[] advancedLandmarkNames = new string[]
         {
             "Bottom bracket center",
             "Saddle top",
             "Saddle tip",
-            "Grip / hood contact point",
+            "Hood hand-contact point",
             "Pedal spindle",
             "Handlebar center",
             "Front axle",
@@ -72,6 +72,8 @@ namespace CassetteMotionPro.Workspace
         private CheckBox advancedLandmarks;
         private ComboBox handlebarReferenceMode;
         private NumericUpDown handlebarDiameter;
+        private CheckBox useTapeSaddleTipToGrip;
+        private NumericUpDown tapeSaddleTipToGrip;
         private Image loadedImage;
         private ClickMode mode;
         private float zoomFactor = 1F;
@@ -210,7 +212,7 @@ namespace CassetteMotionPro.Workspace
                 "   • Bottom bracket center\n" +
                 "   • Saddle top\n" +
                 "   • Saddle tip\n" +
-                "   • Grip / hood contact point\n" +
+                "   • Hood hand-contact point (top of rubber hood where the palm rests)\n" +
                 "   • Advanced: click bar center or an edge using its diameter\n" +
                 "5. Confirm and drag every orange point to fine-tune it.\n" +
                 "6. Review confidence, then save to Before or After.";
@@ -273,7 +275,7 @@ namespace CassetteMotionPro.Workspace
             resultsLabel = new Label();
             resultsLabel.Text = "Calculated metrics:\n--";
             resultsLabel.Dock = DockStyle.Top;
-            resultsLabel.Height = 260;
+            resultsLabel.Height = 286;
             resultsLabel.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             resultsLabel.ForeColor = Color.FromArgb(24, 31, 29);
 
@@ -349,6 +351,40 @@ namespace CassetteMotionPro.Workspace
             handlebarReferencePanel.Controls.Add(handlebarReferenceMode, 1, 0);
             handlebarReferencePanel.Controls.Add(diameterLabel, 0, 1);
             handlebarReferencePanel.Controls.Add(handlebarDiameter, 1, 1);
+
+            TableLayoutPanel reachOverridePanel = new TableLayoutPanel();
+            reachOverridePanel.Dock = DockStyle.Top;
+            reachOverridePanel.Height = 76;
+            reachOverridePanel.ColumnCount = 2;
+            reachOverridePanel.RowCount = 2;
+            reachOverridePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            reachOverridePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110F));
+            reachOverridePanel.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            reachOverridePanel.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            reachOverridePanel.BackColor = Color.FromArgb(248, 252, 238);
+            reachOverridePanel.Padding = new Padding(4);
+            useTapeSaddleTipToGrip = new CheckBox();
+            useTapeSaddleTipToGrip.Text = "Use tape value when camera view is angled";
+            useTapeSaddleTipToGrip.Dock = DockStyle.Fill;
+            useTapeSaddleTipToGrip.CheckedChanged += SaddleTipToGripOverrideChanged;
+            Label tapeReachLabel = new Label();
+            tapeReachLabel.Text = "Saddle tip → hood (mm):";
+            tapeReachLabel.Dock = DockStyle.Fill;
+            tapeReachLabel.TextAlign = ContentAlignment.MiddleLeft;
+            tapeSaddleTipToGrip = new NumericUpDown();
+            tapeSaddleTipToGrip.DecimalPlaces = 1;
+            tapeSaddleTipToGrip.Minimum = 200;
+            tapeSaddleTipToGrip.Maximum = 1000;
+            tapeSaddleTipToGrip.Increment = 1;
+            tapeSaddleTipToGrip.Value = 600;
+            tapeSaddleTipToGrip.Width = 94;
+            tapeSaddleTipToGrip.Anchor = AnchorStyles.Left;
+            tapeSaddleTipToGrip.Enabled = false;
+            tapeSaddleTipToGrip.ValueChanged += SaddleTipToGripOverrideChanged;
+            reachOverridePanel.Controls.Add(useTapeSaddleTipToGrip, 0, 0);
+            reachOverridePanel.SetColumnSpan(useTapeSaddleTipToGrip, 2);
+            reachOverridePanel.Controls.Add(tapeReachLabel, 0, 1);
+            reachOverridePanel.Controls.Add(tapeSaddleTipToGrip, 1, 1);
 
             Button cameraSetup = CreateButton("1. Camera Setup", false);
             Button calibrate = CreateButton("2. Calibrate Scale", false);
@@ -453,6 +489,7 @@ namespace CassetteMotionPro.Workspace
             sideScroll.Controls.Add(primaryAction);
             sideScroll.Controls.Add(advancedLandmarks);
             sideScroll.Controls.Add(handlebarReferencePanel);
+            sideScroll.Controls.Add(reachOverridePanel);
             sideScroll.Controls.Add(zoomPanel);
             sideScroll.Controls.Add(resultsLabel);
             sideScroll.Controls.Add(referenceLabel);
@@ -1082,7 +1119,10 @@ namespace CassetteMotionPro.Workspace
             double saddleSetback = (correctedSaddleTip.X - correctedBottomBracket.X) * millimetersPerPixel;
             // Match the physical tape measurement. Handlebar reach remains the
             // separate horizontal measurement calculated below.
-            double saddleTipToGripReach = Distance(saddleTip, grip) * millimetersPerPixel;
+            double imageSaddleTipToGripReach = Distance(saddleTip, grip) * millimetersPerPixel;
+            double saddleTipToGripReach = useTapeSaddleTipToGrip.Checked
+                ? Decimal.ToDouble(tapeSaddleTipToGrip.Value)
+                : imageSaddleTipToGripReach;
             double handlebarX = (correctedHandlebarReference.X - correctedBottomBracket.X) * millimetersPerPixel;
             double handlebarY = (correctedBottomBracket.Y - correctedHandlebarReference.Y) * millimetersPerPixel;
 
@@ -1119,6 +1159,9 @@ namespace CassetteMotionPro.Workspace
             calculatedValues["CalibrationReference"] = knownCalibrationMillimeters > 0 ? knownCalibrationMillimeters.ToString("0.0", CultureInfo.InvariantCulture) + " mm" : "Not set";
             calculatedValues["CalibrationVerification"] = calibrationVerificationStatus;
             calculatedValues["HandlebarReference"] = GetHandlebarReferenceSummary();
+            calculatedValues["SaddleTipToGripSource"] = useTapeSaddleTipToGrip.Checked
+                ? "Tape value (camera-skew override)"
+                : "Image points";
 
             UpdateResultsLabel();
         }
@@ -1149,6 +1192,7 @@ namespace CassetteMotionPro.Workspace
                 : "Bike landmarks placed manually by fitter";
             AssistedLandmarkSummary += "; camera profile " + cameraProfileName + "; calibration " + calibrationVerificationStatus;
             AssistedLandmarkSummary += "; handlebar reference " + GetHandlebarReferenceSummary();
+            AssistedLandmarkSummary += "; saddle-to-hood source " + GetCalculatedValue("SaddleTipToGripSource");
             AnnotatedImagePath = SaveAnnotatedLandmarkImage(side);
             DialogResult = DialogResult.OK;
             Close();
@@ -1259,7 +1303,7 @@ namespace CassetteMotionPro.Workspace
                 return "Click the front tip/nose of the saddle. Behind BB will calculate as negative.";
 
             if (index == 3)
-                return "Click the hand contact point on the grip or hood.";
+                return "Click the TOP of the rubber hood where the rider's palm rests—not the brake lever blade. If the camera is angled, use the optional tape value.";
 
             if (index == 4)
                 return "Click the center of the pedal spindle to calculate crank length.";
@@ -1314,6 +1358,18 @@ namespace CassetteMotionPro.Workspace
             picture.Invalidate();
         }
 
+        private void SaddleTipToGripOverrideChanged(object sender, EventArgs e)
+        {
+            tapeSaddleTipToGrip.Enabled = useTapeSaddleTipToGrip.Checked;
+            if (landmarkPoints.Count >= ActiveLandmarkNames.Length && millimetersPerPixel > 0)
+            {
+                CalculateMetrics();
+                status.Text = useTapeSaddleTipToGrip.Checked
+                    ? "Tape saddle-to-hood value applied to the saved measurement."
+                    : "Image-point saddle-to-hood value restored.";
+            }
+        }
+
         private void UpdateResultsLabel()
         {
             resultsLabel.Text =
@@ -1322,6 +1378,7 @@ namespace CassetteMotionPro.Workspace
                 "Saddle height: " + GetCalculatedValue("SaddleHeight") + "\n" +
                 "Saddle setback: " + GetCalculatedValue("SaddleSetback") + "\n" +
                 "Saddle tip to grip (straight line): " + GetCalculatedValue("SaddleTipToGripReach") + "\n" +
+                "Saddle-to-hood source: " + GetCalculatedValue("SaddleTipToGripSource") + "\n" +
                 "Handlebar X: " + GetCalculatedValue("HandlebarX") + "\n" +
                 "Handlebar Y: " + GetCalculatedValue("HandlebarY") + "\n" +
                 "Crank length: " + GetCalculatedValue("CrankLength") + "\n" +
@@ -1341,6 +1398,7 @@ namespace CassetteMotionPro.Workspace
                 "Saddle height: " + GetCalculatedValue("SaddleHeight") + "\n" +
                 "Saddle setback: " + GetCalculatedValue("SaddleSetback") + "\n" +
                 "Saddle tip to grip (straight line): " + GetCalculatedValue("SaddleTipToGripReach") + "\n" +
+                "Saddle-to-hood source: " + GetCalculatedValue("SaddleTipToGripSource") + "\n" +
                 "Handlebar X: " + GetCalculatedValue("HandlebarX") + "\n" +
                 "Handlebar Y: " + GetCalculatedValue("HandlebarY") + "\n\n" +
                 "Crank length: " + GetCalculatedValue("CrankLength") + "\n" +

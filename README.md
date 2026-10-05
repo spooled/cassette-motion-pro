@@ -5,7 +5,11 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 1.9.3 Visible Handlebar Diameter Control
+## Current milestone: 1.9.4 Saddle-to-Hood Reach and Simpler Review
+
+Guided Bike Measurements now identifies the correct saddle-to-hood endpoint as the top of the rubber hood where the rider's palm rests, not the brake lever. For angled camera views, an optional physical tape value can override the image calculation and its source is recorded with the saved evidence. Measurement Review has also been simplified by removing the four numbered tracking/assistance/correction/approval panels; the Before/After measurement summary and essential actions remain.
+
+### Previous milestone: 1.9.3 Visible Handlebar Diameter Control
 
 The handlebar reference and diameter controls now use a stable two-row layout, keeping the editable diameter visible on narrow laptop screens and at larger Windows display scaling.
 

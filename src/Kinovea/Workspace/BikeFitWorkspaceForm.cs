@@ -1746,26 +1746,24 @@ namespace CassetteMotionPro.Workspace
             layout.AutoSize = true;
             layout.Padding = new Padding(24, 22, 24, 18);
             layout.ColumnCount = 2;
-            layout.RowCount = 8;
+            layout.RowCount = 6;
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 72));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 154));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 148));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 148));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 330));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 390));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 70));
 
             Label eyebrow = new Label();
-            eyebrow.Text = "V1.7 MEASUREMENT QUICK START";
+            eyebrow.Text = "MEASUREMENT REVIEW";
             eyebrow.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             eyebrow.ForeColor = Color.FromArgb(85, 122, 18);
             eyebrow.Dock = DockStyle.Fill;
 
             Label title = new Label();
-            title.Text = "Track, correct, verify, and approve in one place";
+            title.Text = "Review Before and After measurements in one place";
             title.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
             title.ForeColor = Color.FromArgb(24, 31, 29);
             title.Dock = DockStyle.Fill;
@@ -1805,26 +1803,6 @@ namespace CassetteMotionPro.Workspace
             };
             quickActions.Controls.Add(openFolders);
             quickStart.Controls.Add(quickActions);
-
-            GroupBox tracking = CreateMeasurementReviewGroup("1. Tracking", measurementTrackingReviewStatus);
-            AddMeasurementReviewButton(tracking, "Track Before Clip", false, delegate { ShowShortClipTracking("Before"); RefreshCombinedMeasurementReview(); });
-            AddMeasurementReviewButton(tracking, "Track After Clip", false, delegate { ShowShortClipTracking("After"); RefreshCombinedMeasurementReview(); });
-            AddMeasurementReviewButton(tracking, "Compare Before + After", true, delegate { ShowRiderTrackingComparison(this, EventArgs.Empty); RefreshCombinedMeasurementReview(); });
-
-            GroupBox assisted = CreateMeasurementReviewGroup("2. Assisted measurements", measurementAssistedReviewStatus);
-            AddMeasurementReviewButton(assisted, "Measure Before Rider", true, delegate { ShowGuidedRiderMeasurements("BeforeReportImagePath", "Before"); RefreshCombinedMeasurementReview(); });
-            AddMeasurementReviewButton(assisted, "Measure After Rider", true, delegate { ShowGuidedRiderMeasurements("AfterReportImagePath", "After"); RefreshCombinedMeasurementReview(); });
-            AddMeasurementReviewButton(assisted, "Guided Bike Measurements", false, delegate { ShowGuidedBikeMetricCapture(); RefreshCombinedMeasurementReview(); });
-
-            GroupBox corrections = CreateMeasurementReviewGroup("3. Corrections + consistency", measurementCorrectionReviewStatus);
-            AddMeasurementReviewButton(corrections, "Correct Before Tracking", false, delegate { ShowShortClipTracking("Before"); RefreshCombinedMeasurementReview(); });
-            AddMeasurementReviewButton(corrections, "Correct After Tracking", false, delegate { ShowShortClipTracking("After"); RefreshCombinedMeasurementReview(); });
-            AddMeasurementReviewButton(corrections, "Repeatability Lab", true, delegate { ShowMeasurementRepeatabilityLab(this, EventArgs.Empty); RefreshCombinedMeasurementReview(); });
-
-            GroupBox confidence = CreateMeasurementReviewGroup("4. Confidence + approval", measurementConfidenceReviewStatus);
-            AddMeasurementReviewButton(confidence, "Camera + Tracking Quality", false, delegate { ShowTrackingQualityReview(this, EventArgs.Empty); RefreshCombinedMeasurementReview(); });
-            AddMeasurementReviewButton(confidence, "Calibration Test", false, delegate { ShowTrackingCalibrationAccuracy(this, EventArgs.Empty); RefreshCombinedMeasurementReview(); });
-            AddMeasurementReviewButton(confidence, "Review + Approve", true, delegate { ShowAssistedMeasurementAccuracyReview(this, EventArgs.Empty); RefreshCombinedMeasurementReview(); });
 
             combinedMeasurementReview.Dock = DockStyle.Fill;
             combinedMeasurementReview.Multiline = true;
@@ -1870,13 +1848,9 @@ namespace CassetteMotionPro.Workspace
             layout.SetColumnSpan(combinedMeasurementReviewStatus, 2);
             layout.Controls.Add(quickStart, 0, 3);
             layout.SetColumnSpan(quickStart, 2);
-            layout.Controls.Add(tracking, 0, 4);
-            layout.Controls.Add(assisted, 1, 4);
-            layout.Controls.Add(corrections, 0, 5);
-            layout.Controls.Add(confidence, 1, 5);
-            layout.Controls.Add(combinedMeasurementReview, 0, 6);
+            layout.Controls.Add(combinedMeasurementReview, 0, 4);
             layout.SetColumnSpan(combinedMeasurementReview, 2);
-            layout.Controls.Add(actions, 0, 7);
+            layout.Controls.Add(actions, 0, 5);
             layout.SetColumnSpan(actions, 2);
             page.AutoScroll = true;
             page.Controls.Add(layout);
@@ -4868,7 +4842,7 @@ namespace CassetteMotionPro.Workspace
             AddBikeMetricHeader(table);
             AddBikeMetricRow(table, "Saddle height", "Use Distance: BB center → saddle top along the seat tube / saddle-height line.", "SaddleHeight");
             AddBikeMetricRow(table, "Saddle setback", "BB vertical line → saddle nose, measured horizontally.", "SaddleSetback");
-            AddBikeMetricRow(table, "Saddle tip to grip reach", "Straight-line saddle tip → grip/hood contact point.", "SaddleTipToGripReach");
+            AddBikeMetricRow(table, "Saddle tip to hood reach", "Straight-line saddle tip → top of rubber hood where the rider's palm rests. Use a tape value when the camera is angled.", "SaddleTipToGripReach");
             AddBikeMetricRow(table, "Handlebar X", "BB center → handlebar/hood contact point, horizontal coordinate.", "HandlebarX");
             AddBikeMetricRow(table, "Handlebar Y", "BB center → handlebar/hood contact point, vertical coordinate.", "HandlebarY");
             AddBikeMetricRow(table, "Handlebar reach", "Reference point → handlebar/hood contact point, horizontal reach.", "HandlebarReach");
