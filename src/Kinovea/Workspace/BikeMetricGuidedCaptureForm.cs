@@ -22,6 +22,7 @@ namespace CassetteMotionPro.Workspace
             None,
             Calibration,
             BikeCalibration,
+            WheelPerspectiveCalibration,
             Verification,
             LevelReference,
             Landmarks
@@ -32,6 +33,7 @@ namespace CassetteMotionPro.Workspace
         private readonly string preferredSide;
         private readonly List<PointF> calibrationPoints = new List<PointF>();
         private readonly List<PointF> bikeCalibrationPoints = new List<PointF>();
+        private readonly List<PointF> wheelPerspectivePoints = new List<PointF>();
         private readonly List<PointF> verificationPoints = new List<PointF>();
         private readonly List<PointF> levelReferencePoints = new List<PointF>();
         private readonly List<PointF> landmarkPoints = new List<PointF>();
@@ -95,6 +97,8 @@ namespace CassetteMotionPro.Workspace
         private double millimetersPerPixel;
         private double horizontalMillimetersPerPixel;
         private double verticalMillimetersPerPixel;
+        private double[] perspectiveTransform;
+        private double perspectiveResidualMillimeters = double.NaN;
         private double knownCalibrationMillimeters;
         private double verificationErrorPercent = double.NaN;
         private string calibrationVerificationStatus = "Not verified";
@@ -213,8 +217,8 @@ namespace CassetteMotionPro.Workspace
             Label guide = new Label();
             guide.Text =
                 "1. Confirm the camera profile and setup.\n" +
-                "2. Choose Bike Reference (no board) or Known Reference / Board.\n" +
-                "3. Bike Reference: enter wheelbase + tire diameter, then click four points.\n" +
+                "2. Choose Dual-wheel Perspective, Quick Bike Reference, or Known Reference.\n" +
+                "3. Dual-wheel: enter wheelbase + tire diameter, then click eight wheel points.\n" +
                 "4. Optional: set a floor or axle level reference.\n" +
                 "5. Suggest Bike Landmarks, or place them manually.\n" +
                 "   • Bottom bracket center\n" +
@@ -238,7 +242,7 @@ namespace CassetteMotionPro.Workspace
             progressLabel.Padding = new Padding(10, 8, 10, 6);
 
             status = new Label();
-            status.Text = "Start with Bike Reference calibration, or choose Known Reference / Board.";
+            status.Text = "Start with Dual-wheel Perspective calibration.";
             status.Dock = DockStyle.Top;
             status.Height = 44;
             status.ForeColor = Color.FromArgb(24, 31, 29);
@@ -412,7 +416,12 @@ namespace CassetteMotionPro.Workspace
             calibrationMethodLabel.TextAlign = ContentAlignment.MiddleLeft;
             calibrationMethod = new ComboBox();
             calibrationMethod.DropDownStyle = ComboBoxStyle.DropDownList;
-            calibrationMethod.Items.AddRange(new object[] { "Bike reference (recommended)", "Known reference / board" });
+            calibrationMethod.Items.AddRange(new object[]
+            {
+                "Dual-wheel perspective",
+                "Quick bike reference",
+                "Known reference / board"
+            });
             calibrationMethod.SelectedIndex = 0;
             calibrationMethod.Dock = DockStyle.Fill;
             calibrationMethod.Margin = new Padding(3, 5, 3, 3);
@@ -427,6 +436,8 @@ namespace CassetteMotionPro.Workspace
             tireDiameterLabel.Dock = DockStyle.Fill;
             tireDiameterLabel.TextAlign = ContentAlignment.MiddleLeft;
             knownTireDiameter = CreateCalibrationNumber(400, 900, 700);
+            knownWheelbase.ValueChanged += BikeCalibrationDimensionChanged;
+            knownTireDiameter.ValueChanged += BikeCalibrationDimensionChanged;
             calibrationOptions.Controls.Add(calibrationMethodLabel, 0, 0);
             calibrationOptions.Controls.Add(calibrationMethod, 1, 0);
             calibrationOptions.Controls.Add(wheelbaseLabel, 0, 1);
@@ -435,7 +446,7 @@ namespace CassetteMotionPro.Workspace
             calibrationOptions.Controls.Add(knownTireDiameter, 1, 2);
 
             Button cameraSetup = CreateButton("1. Camera Setup", false);
-            calibrateButton = CreateButton("2. Calibrate From Bike", false);
+            calibrateButton = CreateButton("2. Calibrate From Both Wheels", false);
             verifyCalibration = CreateButton("3. Verify Calibration", true);
             levelReference = CreateButton("4. Level Reference (optional)", false);
             Button capture = CreateButton("5. Start Guided Capture", false);
@@ -593,17 +604,22 @@ namespace CassetteMotionPro.Workspace
 
         private void CalibrationMethodChanged(object sender, EventArgs e)
         {
-            bool bikeReference = calibrationMethod.SelectedIndex == 0;
-            knownWheelbase.Enabled = bikeReference;
-            knownTireDiameter.Enabled = bikeReference;
-            calibrateButton.Text = bikeReference ? "2. Calibrate From Bike" : "2. Calibrate Known Reference";
-            verifyCalibration.Text = bikeReference ? "3. Bike Scale Check" : "3. Verify Calibration";
+            bool usesBikeDimensions = calibrationMethod.SelectedIndex <= 1;
+            bool wheelPerspective = calibrationMethod.SelectedIndex == 0;
+            knownWheelbase.Enabled = usesBikeDimensions;
+            knownTireDiameter.Enabled = usesBikeDimensions;
+            calibrateButton.Text = wheelPerspective ? "2. Calibrate From Both Wheels" : calibrationMethod.SelectedIndex == 1 ? "2. Quick Bike Calibration" : "2. Calibrate Known Reference";
+            verifyCalibration.Text = usesBikeDimensions ? "3. Bike Scale Check" : "3. Verify Calibration";
             millimetersPerPixel = 0;
             horizontalMillimetersPerPixel = 0;
             verticalMillimetersPerPixel = 0;
+            perspectiveTransform = null;
+            perspectiveResidualMillimeters = double.NaN;
             verificationErrorPercent = double.NaN;
+            mode = ClickMode.None;
             calibrationPoints.Clear();
             bikeCalibrationPoints.Clear();
+            wheelPerspectivePoints.Clear();
             verificationPoints.Clear();
             levelReferencePoints.Clear();
             landmarkPoints.Clear();
@@ -619,11 +635,26 @@ namespace CassetteMotionPro.Workspace
             flipSetbackSign.Enabled = false;
             saveBefore.Enabled = false;
             saveAfter.Enabled = false;
-            status.Text = bikeReference
-                ? "Bike reference selected. Enter measured wheelbase and outside tire diameter."
-                : "Known reference selected. Use a measured line or calibration board in the bike plane.";
+            status.Text = wheelPerspective
+                ? "Dual-wheel perspective selected. Enter wheelbase and outside tire diameter."
+                : calibrationMethod.SelectedIndex == 1
+                    ? "Quick bike reference selected. Enter wheelbase and outside tire diameter."
+                    : "Known reference selected. Use a measured line or calibration board in the bike plane.";
+            currentLandmarkLabel.Text = "Current point: --";
+            nextPointHintLabel.Text = "Confirm the entered reference dimensions, then start calibration.";
             UpdateWizardProgress();
             picture.Invalidate();
+        }
+
+        private void BikeCalibrationDimensionChanged(object sender, EventArgs e)
+        {
+            if (calibrationMethod == null || calibrationMethod.SelectedIndex > 1)
+                return;
+            if (millimetersPerPixel <= 0 && bikeCalibrationPoints.Count == 0 && wheelPerspectivePoints.Count == 0)
+                return;
+
+            CalibrationMethodChanged(sender, e);
+            status.Text = "Bike dimensions changed. Run calibration again so saved measurements use the new values.";
         }
 
         private void UpdateWizardProgress()
@@ -640,9 +671,9 @@ namespace CassetteMotionPro.Workspace
 
             if (millimetersPerPixel <= 0)
             {
-                bool bikeReference = calibrationMethod != null && calibrationMethod.SelectedIndex == 0;
-                progressLabel.Text = bikeReference ? "STEP 2 OF 5 · Calibrate from wheelbase + tire" : "STEP 2 OF 5 · Calibrate one known distance";
-                primaryAction.Text = bikeReference ? "Continue: Bike Calibration" : "Continue: Calibrate Scale";
+                int calibrationIndex = calibrationMethod == null ? 0 : calibrationMethod.SelectedIndex;
+                progressLabel.Text = calibrationIndex == 0 ? "STEP 2 OF 5 · Correct perspective from both wheels" : calibrationIndex == 1 ? "STEP 2 OF 5 · Quick wheelbase + tire calibration" : "STEP 2 OF 5 · Calibrate one known distance";
+                primaryAction.Text = calibrationIndex == 0 ? "Continue: Dual-wheel Calibration" : calibrationIndex == 1 ? "Continue: Quick Calibration" : "Continue: Calibrate Scale";
                 return;
             }
 
@@ -707,6 +738,12 @@ namespace CassetteMotionPro.Workspace
         {
             if (calibrationMethod.SelectedIndex == 0)
             {
+                StartWheelPerspectiveCalibration();
+                return;
+            }
+
+            if (calibrationMethod.SelectedIndex == 1)
+            {
                 StartBikeCalibration();
                 return;
             }
@@ -714,6 +751,7 @@ namespace CassetteMotionPro.Workspace
             mode = ClickMode.Calibration;
             calibrationPoints.Clear();
             bikeCalibrationPoints.Clear();
+            wheelPerspectivePoints.Clear();
             verificationPoints.Clear();
             levelReferencePoints.Clear();
             landmarkPoints.Clear();
@@ -721,6 +759,8 @@ namespace CassetteMotionPro.Workspace
             millimetersPerPixel = 0;
             horizontalMillimetersPerPixel = 0;
             verticalMillimetersPerPixel = 0;
+            perspectiveTransform = null;
+            perspectiveResidualMillimeters = double.NaN;
             knownCalibrationMillimeters = 0;
             verificationErrorPercent = double.NaN;
             calibrationVerificationStatus = "Not verified";
@@ -746,6 +786,7 @@ namespace CassetteMotionPro.Workspace
         {
             mode = ClickMode.BikeCalibration;
             bikeCalibrationPoints.Clear();
+            wheelPerspectivePoints.Clear();
             calibrationPoints.Clear();
             verificationPoints.Clear();
             levelReferencePoints.Clear();
@@ -754,6 +795,8 @@ namespace CassetteMotionPro.Workspace
             millimetersPerPixel = 0;
             horizontalMillimetersPerPixel = 0;
             verticalMillimetersPerPixel = 0;
+            perspectiveTransform = null;
+            perspectiveResidualMillimeters = double.NaN;
             knownCalibrationMillimeters = Decimal.ToDouble(knownWheelbase.Value);
             verificationErrorPercent = double.NaN;
             calibrationVerificationStatus = "Not verified";
@@ -771,6 +814,108 @@ namespace CassetteMotionPro.Workspace
             status.Text = "Bike calibration: click the REAR axle center.";
             currentLandmarkLabel.Text = "Bike calibration point 1 of 4: rear axle center";
             nextPointHintLabel.Text = "Use the exact center of the rear wheel axle.";
+            picture.Invalidate();
+            UpdateWizardProgress();
+        }
+
+        private void StartWheelPerspectiveCalibration()
+        {
+            mode = ClickMode.WheelPerspectiveCalibration;
+            wheelPerspectivePoints.Clear();
+            bikeCalibrationPoints.Clear();
+            calibrationPoints.Clear();
+            verificationPoints.Clear();
+            levelReferencePoints.Clear();
+            landmarkPoints.Clear();
+            calculatedValues.Clear();
+            millimetersPerPixel = 0;
+            horizontalMillimetersPerPixel = 0;
+            verticalMillimetersPerPixel = 0;
+            perspectiveTransform = null;
+            perspectiveResidualMillimeters = double.NaN;
+            knownCalibrationMillimeters = Decimal.ToDouble(knownWheelbase.Value);
+            verificationErrorPercent = double.NaN;
+            calibrationVerificationStatus = "Not verified";
+            verificationLabel.Text = "Perspective check: waiting for eight wheel points";
+            verificationLabel.ForeColor = Color.FromArgb(166, 92, 34);
+            levelReference.Enabled = false;
+            verifyCalibration.Enabled = false;
+            undoLast.Enabled = false;
+            recalculate.Enabled = false;
+            flipSetbackSign.Enabled = false;
+            saveBefore.Enabled = false;
+            saveAfter.Enabled = false;
+            resultsLabel.Text = "Calculated metrics:\n--";
+            referenceLabel.Text = "Level reference: supplied by both axle centers";
+            status.Text = "Perspective calibration: click the REAR axle center.";
+            currentLandmarkLabel.Text = "Wheel point 1 of 8: rear axle center";
+            nextPointHintLabel.Text = "Zoom in and click the exact center of the rear axle.";
+            picture.Invalidate();
+            UpdateWizardProgress();
+        }
+
+        private void AddWheelPerspectivePoint(PointF imagePoint)
+        {
+            wheelPerspectivePoints.Add(imagePoint);
+            undoLast.Enabled = true;
+            string[] names = GetWheelPerspectivePointNames();
+            if (wheelPerspectivePoints.Count < names.Length)
+            {
+                int next = wheelPerspectivePoints.Count;
+                status.Text = "Perspective calibration: click the " + names[next] + ".";
+                currentLandmarkLabel.Text = "Wheel point " + (next + 1).ToString(CultureInfo.InvariantCulture) + " of 8: " + names[next];
+                nextPointHintLabel.Text = next == 1 || next == 5
+                    ? "Click the outer tread directly above the axle center."
+                    : "Click the outer tire edge on the horizontal line through that axle. Use the magnifier for exact placement.";
+                picture.Invalidate();
+                return;
+            }
+
+            double wheelbase = Decimal.ToDouble(knownWheelbase.Value);
+            double diameter = Decimal.ToDouble(knownTireDiameter.Value);
+            List<PointF> idealPoints = BuildIdealWheelPoints(wheelbase, diameter);
+            double[] transform;
+            double residual;
+            if (!TryBuildPerspectiveTransform(wheelPerspectivePoints, idealPoints, out transform, out residual))
+            {
+                MessageBox.Show(this, "The wheel points could not produce a stable perspective correction. Recheck the axle centers and tire edges.", "Perspective calibration", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                StartWheelPerspectiveCalibration();
+                return;
+            }
+
+            perspectiveTransform = transform;
+            perspectiveResidualMillimeters = residual;
+            PointF imageCenter = new PointF(loadedImage.Width / 2F, loadedImage.Height / 2F);
+            PointF centerMillimeters = ApplyPerspectiveTransform(imageCenter);
+            PointF onePixelRight = ApplyPerspectiveTransform(new PointF(imageCenter.X + 1F, imageCenter.Y));
+            PointF onePixelDown = ApplyPerspectiveTransform(new PointF(imageCenter.X, imageCenter.Y + 1F));
+            horizontalMillimetersPerPixel = Distance(centerMillimeters, onePixelRight);
+            verticalMillimetersPerPixel = Distance(centerMillimeters, onePixelDown);
+            if (horizontalMillimetersPerPixel < 0.01 || horizontalMillimetersPerPixel > 20 || verticalMillimetersPerPixel < 0.01 || verticalMillimetersPerPixel > 20)
+            {
+                MessageBox.Show(this, "The perspective correction produced an unrealistic scale. Confirm the point order and run the eight wheel points again.", "Perspective calibration", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                StartWheelPerspectiveCalibration();
+                return;
+            }
+            millimetersPerPixel = (horizontalMillimetersPerPixel + verticalMillimetersPerPixel) / 2.0;
+            verificationErrorPercent = residual / Math.Max(1.0, diameter) * 100.0;
+            string grade = residual <= 3.0 ? "HIGH" : residual <= 7.0 ? "MODERATE" : "REVIEW";
+            calibrationVerificationStatus = "DUAL-WHEEL · " + grade + " · fit residual " + residual.ToString("0.0", CultureInfo.InvariantCulture) + " mm";
+            scaleLabel.Text = "Perspective scale near image center: X " + horizontalMillimetersPerPixel.ToString("0.0000", CultureInfo.InvariantCulture) + " · Y " + verticalMillimetersPerPixel.ToString("0.0000", CultureInfo.InvariantCulture) + " mm/pixel";
+            verificationLabel.Text = "Perspective check: " + calibrationVerificationStatus;
+            verificationLabel.ForeColor = residual <= 3.0 ? Color.FromArgb(60, 145, 76) : residual <= 7.0 ? Color.FromArgb(166, 92, 34) : Color.FromArgb(176, 52, 52);
+            status.Text = residual <= 7.0
+                ? "Perspective correction complete. Calibration is now locked; continue to landmarks."
+                : "Perspective fit needs review. Recheck the camera angle and all eight wheel points.";
+            currentLandmarkLabel.Text = "Dual-wheel calibration complete";
+            nextPointHintLabel.Text = "Measurements will use the corrected bike-plane coordinates. Expected precision is shown in the perspective check.";
+            levelReferencePoints.Add(wheelPerspectivePoints[0]);
+            levelReferencePoints.Add(wheelPerspectivePoints[4]);
+            referenceLabel.Text = "Level reference: rear-to-front axle line locked";
+            levelReference.Enabled = false;
+            verifyCalibration.Enabled = false;
+            undoLast.Enabled = false;
+            mode = ClickMode.None;
             picture.Invalidate();
             UpdateWizardProgress();
         }
@@ -981,6 +1126,11 @@ namespace CassetteMotionPro.Workspace
         private void Clear_Click(object sender, EventArgs e)
         {
             levelReferencePoints.Clear();
+            if (perspectiveTransform != null && wheelPerspectivePoints.Count >= 5)
+            {
+                levelReferencePoints.Add(wheelPerspectivePoints[0]);
+                levelReferencePoints.Add(wheelPerspectivePoints[4]);
+            }
             landmarkPoints.Clear();
             calculatedValues.Clear();
             undoLast.Enabled = false;
@@ -989,7 +1139,7 @@ namespace CassetteMotionPro.Workspace
             saveBefore.Enabled = false;
             saveAfter.Enabled = false;
             resultsLabel.Text = "Calculated metrics:\n--";
-            referenceLabel.Text = "Level reference: not set";
+            referenceLabel.Text = perspectiveTransform != null ? "Level reference: rear-to-front axle line locked" : "Level reference: not set";
             status.Text = millimetersPerPixel > 0 ? "Points cleared. Click Start Guided Capture." : "Points cleared. Start with Calibrate Scale.";
             currentLandmarkLabel.Text = "Current point: --";
             nextPointHintLabel.Text = millimetersPerPixel > 0 ? "Scale is still set. Start Guided Capture when ready." : "Tip: calibrate scale first, then set level reference if the camera is tilted.";
@@ -1063,6 +1213,18 @@ namespace CassetteMotionPro.Workspace
                 picture.Invalidate();
                 UpdateWizardProgress();
             }
+
+            if (mode == ClickMode.WheelPerspectiveCalibration && wheelPerspectivePoints.Count > 0)
+            {
+                wheelPerspectivePoints.RemoveAt(wheelPerspectivePoints.Count - 1);
+                string[] names = GetWheelPerspectivePointNames();
+                int next = wheelPerspectivePoints.Count;
+                status.Text = "Perspective calibration: click the " + names[next] + ".";
+                currentLandmarkLabel.Text = "Wheel point " + (next + 1).ToString(CultureInfo.InvariantCulture) + " of 8: " + names[next];
+                undoLast.Enabled = wheelPerspectivePoints.Count > 0;
+                picture.Invalidate();
+                UpdateWizardProgress();
+            }
         }
 
         private void Recalculate_Click(object sender, EventArgs e)
@@ -1115,6 +1277,8 @@ namespace CassetteMotionPro.Workspace
                 AddCalibrationPoint(imagePoint);
             else if (mode == ClickMode.BikeCalibration)
                 AddBikeCalibrationPoint(imagePoint);
+            else if (mode == ClickMode.WheelPerspectiveCalibration)
+                AddWheelPerspectivePoint(imagePoint);
             else if (mode == ClickMode.Verification)
                 AddVerificationPoint(imagePoint);
             else if (mode == ClickMode.LevelReference)
@@ -1290,24 +1454,24 @@ namespace CassetteMotionPro.Workspace
             PointF saddleTip = landmarkPoints[2];
             PointF grip = landmarkPoints[3];
 
-            PointF correctedBottomBracket = CorrectForLevel(bottomBracket);
-            PointF correctedSaddleTop = CorrectForLevel(saddleTop);
-            PointF correctedSaddleTip = CorrectForLevel(saddleTip);
-            PointF correctedGrip = CorrectForLevel(grip);
+            PointF correctedBottomBracket = GetMeasurementPoint(bottomBracket);
+            PointF correctedSaddleTop = GetMeasurementPoint(saddleTop);
+            PointF correctedSaddleTip = GetMeasurementPoint(saddleTip);
+            PointF correctedGrip = GetMeasurementPoint(grip);
             PointF handlebarReference = grip;
             PointF correctedHandlebarReference = correctedGrip;
 
             if (advancedLandmarks.Checked && landmarkPoints.Count >= 6)
             {
                 handlebarReference = landmarkPoints[5];
-                correctedHandlebarReference = CorrectForLevel(handlebarReference);
+                correctedHandlebarReference = GetMeasurementPoint(handlebarReference);
 
                 if (landmarkPoints.Count >= advancedLandmarkNames.Length && handlebarReferenceMode.SelectedIndex > 0)
                 {
-                    PointF correctedFrontAxleForDirection = CorrectForLevel(landmarkPoints[6]);
-                    PointF correctedRearAxleForDirection = CorrectForLevel(landmarkPoints[7]);
+                    PointF correctedFrontAxleForDirection = GetMeasurementPoint(landmarkPoints[6]);
+                    PointF correctedRearAxleForDirection = GetMeasurementPoint(landmarkPoints[7]);
                     double forwardDirection = correctedFrontAxleForDirection.X >= correctedRearAxleForDirection.X ? 1.0 : -1.0;
-                    double radiusPixels = Decimal.ToDouble(handlebarDiameter.Value) / 2.0 / GetHorizontalScale();
+                    double radiusPixels = GetHorizontalUnitsForMillimeters(Decimal.ToDouble(handlebarDiameter.Value) / 2.0);
                     double edgeDirection = handlebarReferenceMode.SelectedIndex == 1 ? forwardDirection : -forwardDirection;
                     correctedHandlebarReference = new PointF(
                         (float)(correctedHandlebarReference.X + edgeDirection * radiusPixels),
@@ -1315,16 +1479,16 @@ namespace CassetteMotionPro.Workspace
                 }
             }
 
-            double saddleHeight = ScaledDistance(correctedBottomBracket, correctedSaddleTop);
-            double saddleSetback = (correctedSaddleTip.X - correctedBottomBracket.X) * GetHorizontalScale();
+            double saddleHeight = MeasurementDistance(correctedBottomBracket, correctedSaddleTop);
+            double saddleSetback = MeasurementHorizontalDifference(correctedSaddleTip, correctedBottomBracket);
             // Match the physical tape measurement. Handlebar reach remains the
             // separate horizontal measurement calculated below.
-            double imageSaddleTipToGripReach = ScaledDistance(correctedSaddleTip, correctedGrip);
+            double imageSaddleTipToGripReach = MeasurementDistance(correctedSaddleTip, correctedGrip);
             double saddleTipToGripReach = useTapeSaddleTipToGrip.Checked
                 ? Decimal.ToDouble(tapeSaddleTipToGrip.Value)
                 : imageSaddleTipToGripReach;
-            double handlebarX = (correctedHandlebarReference.X - correctedBottomBracket.X) * GetHorizontalScale();
-            double handlebarY = (correctedBottomBracket.Y - correctedHandlebarReference.Y) * GetVerticalScale();
+            double handlebarX = MeasurementHorizontalDifference(correctedHandlebarReference, correctedBottomBracket);
+            double handlebarY = MeasurementVerticalDifference(correctedBottomBracket, correctedHandlebarReference);
 
             calculatedValues = new Dictionary<string, string>();
             calculatedValues["SaddleHeight"] = FormatMillimeters(saddleHeight);
@@ -1338,14 +1502,14 @@ namespace CassetteMotionPro.Workspace
                 PointF pedalSpindle = landmarkPoints[4];
                 PointF frontAxle = landmarkPoints[6];
                 PointF rearAxle = landmarkPoints[7];
-                PointF correctedFrontAxle = CorrectForLevel(frontAxle);
-                PointF correctedRearAxle = CorrectForLevel(rearAxle);
+                PointF correctedFrontAxle = GetMeasurementPoint(frontAxle);
+                PointF correctedRearAxle = GetMeasurementPoint(rearAxle);
 
-                PointF correctedPedalSpindle = CorrectForLevel(pedalSpindle);
-                double crankLength = ScaledDistance(correctedBottomBracket, correctedPedalSpindle);
-                double handlebarReach = (correctedHandlebarReference.X - correctedSaddleTip.X) * GetHorizontalScale();
-                double handlebarDrop = (correctedHandlebarReference.Y - correctedSaddleTop.Y) * GetVerticalScale();
-                double wheelbase = Math.Abs(correctedFrontAxle.X - correctedRearAxle.X) * GetHorizontalScale();
+                PointF correctedPedalSpindle = GetMeasurementPoint(pedalSpindle);
+                double crankLength = MeasurementDistance(correctedBottomBracket, correctedPedalSpindle);
+                double handlebarReach = MeasurementHorizontalDifference(correctedHandlebarReference, correctedSaddleTip);
+                double handlebarDrop = MeasurementVerticalDifference(correctedHandlebarReference, correctedSaddleTop);
+                double wheelbase = Math.Abs(MeasurementHorizontalDifference(correctedFrontAxle, correctedRearAxle));
 
                 calculatedValues["CrankLength"] = FormatMillimeters(crankLength);
                 calculatedValues["HandlebarReach"] = FormatMillimeters(handlebarReach);
@@ -1358,9 +1522,15 @@ namespace CassetteMotionPro.Workspace
             calculatedValues["LandmarkMode"] = advancedLandmarks.Checked ? "Advanced 8-point" : "Basic 4-point";
             calculatedValues["CameraSetup"] = CameraSetupStatus;
             calculatedValues["CalibrationReference"] = calibrationMethod.SelectedIndex == 0
-                ? "Bike reference · wheelbase " + knownWheelbase.Value.ToString("0.0", CultureInfo.InvariantCulture) + " mm · tire " + knownTireDiameter.Value.ToString("0.0", CultureInfo.InvariantCulture) + " mm"
+                ? "Dual-wheel perspective · wheelbase " + knownWheelbase.Value.ToString("0.0", CultureInfo.InvariantCulture) + " mm · tire " + knownTireDiameter.Value.ToString("0.0", CultureInfo.InvariantCulture) + " mm"
+                : calibrationMethod.SelectedIndex == 1
+                ? "Quick bike reference · wheelbase " + knownWheelbase.Value.ToString("0.0", CultureInfo.InvariantCulture) + " mm · tire " + knownTireDiameter.Value.ToString("0.0", CultureInfo.InvariantCulture) + " mm"
                 : knownCalibrationMillimeters > 0 ? knownCalibrationMillimeters.ToString("0.0", CultureInfo.InvariantCulture) + " mm" : "Not set";
             calculatedValues["CalibrationVerification"] = calibrationVerificationStatus;
+            double estimatedTolerance = perspectiveTransform != null
+                ? Math.Max(3.0, Math.Ceiling(perspectiveResidualMillimeters))
+                : 5.0;
+            calculatedValues["MeasurementTolerance"] = "approximately ±" + estimatedTolerance.ToString("0", CultureInfo.InvariantCulture) + " mm; point placement and out-of-plane parts may add error";
             calculatedValues["HandlebarReference"] = GetHandlebarReferenceSummary();
             calculatedValues["SaddleTipToGripSource"] = useTapeSaddleTipToGrip.Checked
                 ? "Tape value (camera-skew override)"
@@ -1447,7 +1617,7 @@ namespace CassetteMotionPro.Workspace
             List<string> warnings = new List<string>();
             if (!IsCameraSetupConfirmed())
                 warnings.Add("Camera setup checklist was not confirmed");
-            if (levelReferencePoints.Count != 2)
+            if (levelReferencePoints.Count != 2 && perspectiveTransform == null)
                 warnings.Add("No level reference is set; confirm the image is truly level");
             if (double.IsNaN(verificationErrorPercent))
                 warnings.Add("Calibration was not verified with a second known length");
@@ -1455,6 +1625,8 @@ namespace CassetteMotionPro.Workspace
                 warnings.Add("Calibration verification was skipped");
             else if (verificationErrorPercent > 2.0)
                 warnings.Add("Calibration verification error is " + verificationErrorPercent.ToString("0.0", CultureInfo.InvariantCulture) + "% — recheck camera alignment, reference plane, and wide-angle distortion");
+            if (perspectiveTransform != null && perspectiveResidualMillimeters > 7.0)
+                warnings.Add("Dual-wheel perspective fit residual is " + perspectiveResidualMillimeters.ToString("0.0", CultureInfo.InvariantCulture) + " mm — recheck all wheel points");
             if (cameraProfileName.IndexOf("120°", StringComparison.OrdinalIgnoreCase) >= 0)
                 warnings.Add("Ultra-wide camera profile selected; keep every landmark near the image center");
             AddBikeMetricQualityWarning(warnings, "Saddle height", "SaddleHeight", 500, 900);
@@ -1591,6 +1763,7 @@ namespace CassetteMotionPro.Workspace
                 "Level reference: " + GetCalculatedValue("LevelReference") + "\n" +
                 "Camera setup: " + GetCalculatedValue("CameraSetup") + "\n" +
                 "Calibration: " + GetCalculatedValue("CalibrationReference") + " · " + GetCalculatedValue("CalibrationVerification") + "\n" +
+                "Expected precision: " + GetCalculatedValue("MeasurementTolerance") + "\n" +
                 "Handlebar reference: " + GetCalculatedValue("HandlebarReference") + "\n" +
                 "Setback convention: " + GetCalculatedValue("SaddleSetbackConvention");
         }
@@ -1612,6 +1785,7 @@ namespace CassetteMotionPro.Workspace
                 "Level reference: " + GetCalculatedValue("LevelReference") + "\n" +
                 "Camera setup: " + GetCalculatedValue("CameraSetup") + "\n" +
                 "Calibration verification: " + GetCalculatedValue("CalibrationVerification") + "\n" +
+                "Expected precision: " + GetCalculatedValue("MeasurementTolerance") + "\n" +
                 "Handlebar reference: " + GetCalculatedValue("HandlebarReference") + "\n" +
                 "Saddle setback convention: " + GetCalculatedValue("SaddleSetbackConvention");
         }
@@ -1748,10 +1922,43 @@ namespace CassetteMotionPro.Workspace
 
             DrawLine(e.Graphics, calibrationPoints, Color.FromArgb(184, 243, 74), "C");
             DrawLine(e.Graphics, bikeCalibrationPoints, Color.FromArgb(90, 205, 120), "B");
+            DrawWheelPerspectiveCalibration(e.Graphics);
             DrawLine(e.Graphics, verificationPoints, Color.FromArgb(255, 176, 74), "V");
             DrawLine(e.Graphics, levelReferencePoints, Color.FromArgb(74, 145, 255), "L");
             DrawLandmarks(e.Graphics);
             DrawActiveClickCue(e.Graphics);
+            DrawPlacementMagnifier(e.Graphics);
+        }
+
+        private void DrawPlacementMagnifier(Graphics graphics)
+        {
+            if (!hasMousePosition || loadedImage == null || mode == ClickMode.None)
+                return;
+
+            PointF imagePoint;
+            if (!TryConvertControlPointToImagePoint(mousePosition, out imagePoint))
+                return;
+
+            const int sourceSize = 80;
+            const int insetSize = 184;
+            int sourceWidth = Math.Min(sourceSize, loadedImage.Width);
+            int sourceHeight = Math.Min(sourceSize, loadedImage.Height);
+            int sourceX = Math.Max(0, Math.Min(loadedImage.Width - sourceWidth, (int)imagePoint.X - sourceWidth / 2));
+            int sourceY = Math.Max(0, Math.Min(loadedImage.Height - sourceHeight, (int)imagePoint.Y - sourceHeight / 2));
+            Rectangle source = new Rectangle(sourceX, sourceY, sourceWidth, sourceHeight);
+            Rectangle inset = new Rectangle(Math.Max(12, picture.ClientSize.Width - insetSize - 18), 92, insetSize, insetSize);
+            using (Brush background = new SolidBrush(Color.FromArgb(230, 13, 19, 17)))
+            using (Pen border = new Pen(Color.FromArgb(184, 243, 74), 3F))
+            using (Pen crosshair = new Pen(Color.FromArgb(255, 176, 74), 2F))
+            {
+                graphics.FillRectangle(background, inset);
+                graphics.DrawImage(loadedImage, inset, source, GraphicsUnit.Pixel);
+                graphics.DrawRectangle(border, inset);
+                int centerX = inset.Left + inset.Width / 2;
+                int centerY = inset.Top + inset.Height / 2;
+                graphics.DrawLine(crosshair, centerX - 18, centerY, centerX + 18, centerY);
+                graphics.DrawLine(crosshair, centerX, centerY - 18, centerX, centerY + 18);
+            }
         }
 
         private void DrawLine(Graphics graphics, IList<PointF> imagePoints, Color color, string label)
@@ -1785,6 +1992,42 @@ namespace CassetteMotionPro.Workspace
                     graphics.DrawString(label + (i + 1).ToString(CultureInfo.InvariantCulture), font, textBrush, point.X + 10, point.Y - 12);
                 }
             }
+        }
+
+        private void DrawWheelPerspectiveCalibration(Graphics graphics)
+        {
+            if (wheelPerspectivePoints.Count == 0)
+                return;
+
+            List<PointF> points = new List<PointF>();
+            foreach (PointF imagePoint in wheelPerspectivePoints)
+                points.Add(ConvertImagePointToControlPoint(imagePoint));
+
+            using (Pen pen = new Pen(Color.FromArgb(74, 196, 214), 3F))
+            using (Brush brush = new SolidBrush(Color.FromArgb(74, 196, 214)))
+            using (Brush textBrush = new SolidBrush(Color.FromArgb(13, 19, 17)))
+            using (Font font = new Font("Segoe UI", 9F, FontStyle.Bold))
+            {
+                if (points.Count >= 5)
+                    graphics.DrawLine(pen, points[0], points[4]);
+                DrawWheelCross(graphics, pen, points, 0);
+                DrawWheelCross(graphics, pen, points, 4);
+
+                for (int i = 0; i < points.Count; i++)
+                {
+                    PointF point = points[i];
+                    graphics.FillEllipse(brush, point.X - 9, point.Y - 9, 18, 18);
+                    graphics.DrawString("W" + (i + 1).ToString(CultureInfo.InvariantCulture), font, textBrush, point.X + 9, point.Y - 10);
+                }
+            }
+        }
+
+        private static void DrawWheelCross(Graphics graphics, Pen pen, IList<PointF> points, int start)
+        {
+            if (points.Count > start + 1)
+                graphics.DrawLine(pen, points[start], points[start + 1]);
+            if (points.Count > start + 3)
+                graphics.DrawLine(pen, points[start + 2], points[start + 3]);
         }
 
         private void DrawLandmarks(Graphics graphics)
@@ -1919,6 +2162,13 @@ namespace CassetteMotionPro.Workspace
                 string[] names = new string[] { "rear axle", "front axle", "top of tire", "bottom of tire" };
                 int next = Math.Min(bikeCalibrationPoints.Count, names.Length - 1);
                 return "Bike calibration " + (next + 1).ToString(CultureInfo.InvariantCulture) + " of 4 · click " + names[next];
+            }
+
+            if (mode == ClickMode.WheelPerspectiveCalibration)
+            {
+                string[] names = GetWheelPerspectivePointNames();
+                int next = Math.Min(wheelPerspectivePoints.Count, names.Length - 1);
+                return "Perspective calibration " + (next + 1).ToString(CultureInfo.InvariantCulture) + " of 8 · click " + names[next];
             }
 
             if (mode == ClickMode.Verification)
@@ -2097,6 +2347,195 @@ namespace CassetteMotionPro.Workspace
             double dx = first.X - second.X;
             double dy = first.Y - second.Y;
             return Math.Sqrt((dx * dx) + (dy * dy));
+        }
+
+        private static string[] GetWheelPerspectivePointNames()
+        {
+            return new string[]
+            {
+                "rear axle center",
+                "rear tire top edge",
+                "rear tire left edge at axle height",
+                "rear tire right edge at axle height",
+                "front axle center",
+                "front tire top edge",
+                "front tire left edge at axle height",
+                "front tire right edge at axle height"
+            };
+        }
+
+        private static List<PointF> BuildIdealWheelPoints(double wheelbase, double diameter)
+        {
+            float wheelbaseValue = (float)wheelbase;
+            float radius = (float)(diameter / 2.0);
+            return new List<PointF>
+            {
+                new PointF(0, 0),
+                new PointF(0, -radius),
+                new PointF(-radius, 0),
+                new PointF(radius, 0),
+                new PointF(wheelbaseValue, 0),
+                new PointF(wheelbaseValue, -radius),
+                new PointF(wheelbaseValue - radius, 0),
+                new PointF(wheelbaseValue + radius, 0)
+            };
+        }
+
+        private static bool TryBuildPerspectiveTransform(IList<PointF> imagePoints, IList<PointF> idealPoints, out double[] transform, out double residualMillimeters)
+        {
+            transform = null;
+            residualMillimeters = double.NaN;
+            if (imagePoints == null || idealPoints == null || imagePoints.Count != idealPoints.Count || imagePoints.Count < 4)
+                return false;
+
+            double[,] normal = new double[8, 8];
+            double[] right = new double[8];
+            for (int i = 0; i < imagePoints.Count; i++)
+            {
+                double x = imagePoints[i].X;
+                double y = imagePoints[i].Y;
+                double destinationX = idealPoints[i].X;
+                double destinationY = idealPoints[i].Y;
+                double[] xRow = new double[] { x, y, 1, 0, 0, 0, -destinationX * x, -destinationX * y };
+                double[] yRow = new double[] { 0, 0, 0, x, y, 1, -destinationY * x, -destinationY * y };
+                AddNormalEquation(normal, right, xRow, destinationX);
+                AddNormalEquation(normal, right, yRow, destinationY);
+            }
+
+            double[] solution;
+            if (!TrySolveLinearSystem(normal, right, out solution))
+                return false;
+
+            double squaredError = 0;
+            for (int i = 0; i < imagePoints.Count; i++)
+            {
+                PointF projected;
+                if (!TryApplyPerspectiveTransform(solution, imagePoints[i], out projected))
+                    return false;
+                double error = Distance(projected, idealPoints[i]);
+                squaredError += error * error;
+            }
+
+            transform = solution;
+            residualMillimeters = Math.Sqrt(squaredError / imagePoints.Count);
+            return !double.IsNaN(residualMillimeters) && !double.IsInfinity(residualMillimeters);
+        }
+
+        private static void AddNormalEquation(double[,] normal, double[] right, double[] row, double target)
+        {
+            for (int column = 0; column < 8; column++)
+            {
+                right[column] += row[column] * target;
+                for (int other = 0; other < 8; other++)
+                    normal[column, other] += row[column] * row[other];
+            }
+        }
+
+        private static bool TrySolveLinearSystem(double[,] matrix, double[] right, out double[] solution)
+        {
+            const int size = 8;
+            solution = new double[size];
+            double[,] augmented = new double[size, size + 1];
+            for (int row = 0; row < size; row++)
+            {
+                for (int column = 0; column < size; column++)
+                    augmented[row, column] = matrix[row, column];
+                augmented[row, size] = right[row];
+            }
+
+            for (int pivot = 0; pivot < size; pivot++)
+            {
+                int bestRow = pivot;
+                double bestValue = Math.Abs(augmented[pivot, pivot]);
+                for (int row = pivot + 1; row < size; row++)
+                {
+                    double value = Math.Abs(augmented[row, pivot]);
+                    if (value > bestValue)
+                    {
+                        bestValue = value;
+                        bestRow = row;
+                    }
+                }
+
+                if (bestValue < 0.0000000001)
+                    return false;
+
+                if (bestRow != pivot)
+                {
+                    for (int column = pivot; column <= size; column++)
+                    {
+                        double temporary = augmented[pivot, column];
+                        augmented[pivot, column] = augmented[bestRow, column];
+                        augmented[bestRow, column] = temporary;
+                    }
+                }
+
+                double divisor = augmented[pivot, pivot];
+                for (int column = pivot; column <= size; column++)
+                    augmented[pivot, column] /= divisor;
+
+                for (int row = 0; row < size; row++)
+                {
+                    if (row == pivot)
+                        continue;
+                    double factor = augmented[row, pivot];
+                    for (int column = pivot; column <= size; column++)
+                        augmented[row, column] -= factor * augmented[pivot, column];
+                }
+            }
+
+            for (int row = 0; row < size; row++)
+                solution[row] = augmented[row, size];
+            return true;
+        }
+
+        private static bool TryApplyPerspectiveTransform(double[] transform, PointF point, out PointF result)
+        {
+            result = PointF.Empty;
+            if (transform == null || transform.Length != 8)
+                return false;
+            double denominator = transform[6] * point.X + transform[7] * point.Y + 1.0;
+            if (Math.Abs(denominator) < 0.0000001)
+                return false;
+            double x = (transform[0] * point.X + transform[1] * point.Y + transform[2]) / denominator;
+            double y = (transform[3] * point.X + transform[4] * point.Y + transform[5]) / denominator;
+            if (double.IsNaN(x) || double.IsInfinity(x) || double.IsNaN(y) || double.IsInfinity(y))
+                return false;
+            result = new PointF((float)x, (float)y);
+            return true;
+        }
+
+        private PointF ApplyPerspectiveTransform(PointF point)
+        {
+            PointF result;
+            return TryApplyPerspectiveTransform(perspectiveTransform, point, out result) ? result : point;
+        }
+
+        private PointF GetMeasurementPoint(PointF point)
+        {
+            return perspectiveTransform != null ? ApplyPerspectiveTransform(point) : CorrectForLevel(point);
+        }
+
+        private double MeasurementDistance(PointF first, PointF second)
+        {
+            return perspectiveTransform != null ? Distance(first, second) : ScaledDistance(first, second);
+        }
+
+        private double MeasurementHorizontalDifference(PointF first, PointF second)
+        {
+            double difference = first.X - second.X;
+            return perspectiveTransform != null ? difference : difference * GetHorizontalScale();
+        }
+
+        private double MeasurementVerticalDifference(PointF first, PointF second)
+        {
+            double difference = first.Y - second.Y;
+            return perspectiveTransform != null ? difference : difference * GetVerticalScale();
+        }
+
+        private double GetHorizontalUnitsForMillimeters(double millimeters)
+        {
+            return perspectiveTransform != null ? millimeters : millimeters / GetHorizontalScale();
         }
 
         private double GetHorizontalScale()
