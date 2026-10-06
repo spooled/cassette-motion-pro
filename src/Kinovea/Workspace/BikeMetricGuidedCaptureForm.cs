@@ -883,6 +883,33 @@ namespace CassetteMotionPro.Workspace
                 return;
             }
 
+            PointF rearUpperImage = new PointF(
+                wheelPerspectivePoints[0].X + 2F * (wheelPerspectivePoints[1].X - wheelPerspectivePoints[0].X),
+                wheelPerspectivePoints[0].Y + 2F * (wheelPerspectivePoints[1].Y - wheelPerspectivePoints[0].Y));
+            PointF frontUpperImage = new PointF(
+                wheelPerspectivePoints[4].X + 2F * (wheelPerspectivePoints[5].X - wheelPerspectivePoints[4].X),
+                wheelPerspectivePoints[4].Y + 2F * (wheelPerspectivePoints[5].Y - wheelPerspectivePoints[4].Y));
+            PointF rearUpper = PointF.Empty;
+            PointF frontUpper = PointF.Empty;
+            PointF transformedRearAxle = PointF.Empty;
+            PointF transformedFrontAxle = PointF.Empty;
+            bool stableAboveWheels = TryApplyPerspectiveTransform(transform, rearUpperImage, out rearUpper) &&
+                TryApplyPerspectiveTransform(transform, frontUpperImage, out frontUpper) &&
+                TryApplyPerspectiveTransform(transform, wheelPerspectivePoints[0], out transformedRearAxle) &&
+                TryApplyPerspectiveTransform(transform, wheelPerspectivePoints[4], out transformedFrontAxle);
+            if (!stableAboveWheels ||
+                Distance(rearUpper, transformedRearAxle) < diameter * 0.5 ||
+                Distance(rearUpper, transformedRearAxle) > diameter * 1.5 ||
+                Distance(frontUpper, transformedFrontAxle) < diameter * 0.5 ||
+                Distance(frontUpper, transformedFrontAxle) > diameter * 1.5 ||
+                Math.Abs(frontUpper.X - rearUpper.X) < wheelbase * 0.5 ||
+                Math.Abs(frontUpper.X - rearUpper.X) > wheelbase * 1.5)
+            {
+                MessageBox.Show(this, "The perspective correction is unstable above the wheels and would make saddle measurements inaccurate. Recheck the axle and tire-top points, or use Quick Bike Reference.", "Perspective calibration", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                StartWheelPerspectiveCalibration();
+                return;
+            }
+
             perspectiveTransform = transform;
             perspectiveResidualMillimeters = residual;
             PointF imageCenter = new PointF(loadedImage.Width / 2F, loadedImage.Height / 2F);
@@ -2388,22 +2415,35 @@ namespace CassetteMotionPro.Workspace
             if (imagePoints == null || idealPoints == null || imagePoints.Count != idealPoints.Count || imagePoints.Count < 4)
                 return false;
 
-            double[,] normal = new double[8, 8];
+            // Use the two axle centers and the two tire-top points as four
+            // stable anchors. Fitting all eight points through normal equations
+            // can become ill-conditioned because six points share the axle
+            // line, producing extreme values when landmarks are above it.
+            int[] anchorIndices = new int[] { 0, 1, 4, 5 };
+            double[,] system = new double[8, 8];
             double[] right = new double[8];
-            for (int i = 0; i < imagePoints.Count; i++)
+            int equation = 0;
+            for (int anchor = 0; anchor < anchorIndices.Length; anchor++)
             {
+                int i = anchorIndices[anchor];
                 double x = imagePoints[i].X;
                 double y = imagePoints[i].Y;
                 double destinationX = idealPoints[i].X;
                 double destinationY = idealPoints[i].Y;
                 double[] xRow = new double[] { x, y, 1, 0, 0, 0, -destinationX * x, -destinationX * y };
                 double[] yRow = new double[] { 0, 0, 0, x, y, 1, -destinationY * x, -destinationY * y };
-                AddNormalEquation(normal, right, xRow, destinationX);
-                AddNormalEquation(normal, right, yRow, destinationY);
+                for (int column = 0; column < 8; column++)
+                {
+                    system[equation, column] = xRow[column];
+                    system[equation + 1, column] = yRow[column];
+                }
+                right[equation] = destinationX;
+                right[equation + 1] = destinationY;
+                equation += 2;
             }
 
             double[] solution;
-            if (!TrySolveLinearSystem(normal, right, out solution))
+            if (!TrySolveLinearSystem(system, right, out solution))
                 return false;
 
             double squaredError = 0;
@@ -2419,16 +2459,6 @@ namespace CassetteMotionPro.Workspace
             transform = solution;
             residualMillimeters = Math.Sqrt(squaredError / imagePoints.Count);
             return !double.IsNaN(residualMillimeters) && !double.IsInfinity(residualMillimeters);
-        }
-
-        private static void AddNormalEquation(double[,] normal, double[] right, double[] row, double target)
-        {
-            for (int column = 0; column < 8; column++)
-            {
-                right[column] += row[column] * target;
-                for (int other = 0; other < 8; other++)
-                    normal[column, other] += row[column] * row[other];
-            }
         }
 
         private static bool TrySolveLinearSystem(double[,] matrix, double[] right, out double[] solution)
