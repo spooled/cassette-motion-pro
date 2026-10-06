@@ -873,12 +873,23 @@ namespace CassetteMotionPro.Workspace
 
             double wheelbase = Decimal.ToDouble(knownWheelbase.Value);
             double diameter = Decimal.ToDouble(knownTireDiameter.Value);
-            List<PointF> idealPoints = BuildIdealWheelPoints(wheelbase, diameter);
+            bool frontWheelIsRightOfRear = wheelPerspectivePoints[4].X >= wheelPerspectivePoints[0].X;
+            List<PointF> idealPoints = BuildIdealWheelPoints(wheelbase, diameter, frontWheelIsRightOfRear);
             double[] transform;
             double residual;
             if (!TryBuildPerspectiveTransform(wheelPerspectivePoints, idealPoints, out transform, out residual))
             {
                 MessageBox.Show(this, "The wheel points could not produce a stable perspective correction. Recheck the axle centers and tire edges.", "Perspective calibration", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                StartWheelPerspectiveCalibration();
+                return;
+            }
+            if (residual > 25.0)
+            {
+                MessageBox.Show(this,
+                    "The wheel reference points disagree by " + residual.ToString("0.0", CultureInfo.InvariantCulture) + " mm. Measurements would not be reliable, so calibration cannot continue.\n\nConfirm that each left/right tire point is on the axle-height guide and measure the actual outside tire diameter before trying again.",
+                    "Wheel calibration needs review",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
                 StartWheelPerspectiveCalibration();
                 return;
             }
@@ -2419,20 +2430,22 @@ namespace CassetteMotionPro.Workspace
             };
         }
 
-        private static List<PointF> BuildIdealWheelPoints(double wheelbase, double diameter)
+        private static List<PointF> BuildIdealWheelPoints(double wheelbase, double diameter, bool frontWheelIsRightOfRear)
         {
             float wheelbaseValue = (float)wheelbase;
             float radius = (float)(diameter / 2.0);
+            float screenLeftOffset = frontWheelIsRightOfRear ? -radius : radius;
+            float screenRightOffset = -screenLeftOffset;
             return new List<PointF>
             {
                 new PointF(0, 0),
                 new PointF(0, -radius),
-                new PointF(-radius, 0),
-                new PointF(radius, 0),
+                new PointF(screenLeftOffset, 0),
+                new PointF(screenRightOffset, 0),
                 new PointF(wheelbaseValue, 0),
                 new PointF(wheelbaseValue, -radius),
-                new PointF(wheelbaseValue - radius, 0),
-                new PointF(wheelbaseValue + radius, 0)
+                new PointF(wheelbaseValue + screenLeftOffset, 0),
+                new PointF(wheelbaseValue + screenRightOffset, 0)
             };
         }
 

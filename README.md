@@ -5,9 +5,9 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 1.11.2 Wheel Calibration Axle Guides
+## Current milestone: 1.11.3 Direction-Aware Wheel Calibration
 
-Guided Bike Measurements can now correct a slightly off-axis camera using both wheels. Enter the measured wheelbase and outside tire diameter, then place eight guided points across the two wheels. After each axle is clicked, Cassette Motion Pro draws a vertical guide for the tire-top point and a horizontal axle-height guide for the left/right tire points. Completed reference points remain connected directly to the axle so placement is easy to verify. The stable v1.11.1 transform safeguards, live magnifier, locked calibration, residual, and realistic expected precision remain included.
+Guided Bike Measurements now interprets screen-left and screen-right tire edges correctly whether the bicycle faces left or right. A wheel-fit residual above 25 mm blocks calibration instead of allowing unreliable measurements to continue. The axle-centered guides, stable transform safeguards, live magnifier, locked calibration, and realistic expected precision remain included.
 
 Use [the v1.11.0 test plan](docs/v1.11.0-test-plan.md) for the focused checks.
 
