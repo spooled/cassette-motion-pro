@@ -21,6 +21,7 @@ namespace CassetteMotionPro.Workspace
         {
             None,
             Calibration,
+            BikeCalibration,
             Verification,
             LevelReference,
             Landmarks
@@ -30,6 +31,7 @@ namespace CassetteMotionPro.Workspace
         private readonly string outputDirectory;
         private readonly string preferredSide;
         private readonly List<PointF> calibrationPoints = new List<PointF>();
+        private readonly List<PointF> bikeCalibrationPoints = new List<PointF>();
         private readonly List<PointF> verificationPoints = new List<PointF>();
         private readonly List<PointF> levelReferencePoints = new List<PointF>();
         private readonly List<PointF> landmarkPoints = new List<PointF>();
@@ -74,6 +76,10 @@ namespace CassetteMotionPro.Workspace
         private NumericUpDown handlebarDiameter;
         private CheckBox useTapeSaddleTipToGrip;
         private NumericUpDown tapeSaddleTipToGrip;
+        private ComboBox calibrationMethod;
+        private NumericUpDown knownWheelbase;
+        private NumericUpDown knownTireDiameter;
+        private Button calibrateButton;
         private Image loadedImage;
         private ClickMode mode;
         private float zoomFactor = 1F;
@@ -87,6 +93,8 @@ namespace CassetteMotionPro.Workspace
         private Point mousePosition;
         private PointF panStartOffset;
         private double millimetersPerPixel;
+        private double horizontalMillimetersPerPixel;
+        private double verticalMillimetersPerPixel;
         private double knownCalibrationMillimeters;
         private double verificationErrorPercent = double.NaN;
         private string calibrationVerificationStatus = "Not verified";
@@ -205,8 +213,8 @@ namespace CassetteMotionPro.Workspace
             Label guide = new Label();
             guide.Text =
                 "1. Confirm the camera profile and setup.\n" +
-                "2. Calibrate with a known length in the bike plane.\n" +
-                "3. Verify with a second known length.\n" +
+                "2. Choose Bike Reference (no board) or Known Reference / Board.\n" +
+                "3. Bike Reference: enter wheelbase + tire diameter, then click four points.\n" +
                 "4. Optional: set a floor or axle level reference.\n" +
                 "5. Suggest Bike Landmarks, or place them manually.\n" +
                 "   • Bottom bracket center\n" +
@@ -230,7 +238,7 @@ namespace CassetteMotionPro.Workspace
             progressLabel.Padding = new Padding(10, 8, 10, 6);
 
             status = new Label();
-            status.Text = "Start with Calibrate Scale.";
+            status.Text = "Start with Bike Reference calibration, or choose Known Reference / Board.";
             status.Dock = DockStyle.Top;
             status.Height = 44;
             status.ForeColor = Color.FromArgb(24, 31, 29);
@@ -386,8 +394,48 @@ namespace CassetteMotionPro.Workspace
             reachOverridePanel.Controls.Add(tapeReachLabel, 0, 1);
             reachOverridePanel.Controls.Add(tapeSaddleTipToGrip, 1, 1);
 
+            TableLayoutPanel calibrationOptions = new TableLayoutPanel();
+            calibrationOptions.Dock = DockStyle.Top;
+            calibrationOptions.Height = 116;
+            calibrationOptions.ColumnCount = 2;
+            calibrationOptions.RowCount = 3;
+            calibrationOptions.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150F));
+            calibrationOptions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            calibrationOptions.RowStyles.Add(new RowStyle(SizeType.Percent, 34F));
+            calibrationOptions.RowStyles.Add(new RowStyle(SizeType.Percent, 33F));
+            calibrationOptions.RowStyles.Add(new RowStyle(SizeType.Percent, 33F));
+            calibrationOptions.BackColor = Color.FromArgb(238, 247, 219);
+            calibrationOptions.Padding = new Padding(4);
+            Label calibrationMethodLabel = new Label();
+            calibrationMethodLabel.Text = "Calibration:";
+            calibrationMethodLabel.Dock = DockStyle.Fill;
+            calibrationMethodLabel.TextAlign = ContentAlignment.MiddleLeft;
+            calibrationMethod = new ComboBox();
+            calibrationMethod.DropDownStyle = ComboBoxStyle.DropDownList;
+            calibrationMethod.Items.AddRange(new object[] { "Bike reference (recommended)", "Known reference / board" });
+            calibrationMethod.SelectedIndex = 0;
+            calibrationMethod.Dock = DockStyle.Fill;
+            calibrationMethod.Margin = new Padding(3, 5, 3, 3);
+            calibrationMethod.SelectedIndexChanged += CalibrationMethodChanged;
+            Label wheelbaseLabel = new Label();
+            wheelbaseLabel.Text = "Wheelbase (mm):";
+            wheelbaseLabel.Dock = DockStyle.Fill;
+            wheelbaseLabel.TextAlign = ContentAlignment.MiddleLeft;
+            knownWheelbase = CreateCalibrationNumber(700, 1400, 1050);
+            Label tireDiameterLabel = new Label();
+            tireDiameterLabel.Text = "Tire diameter (mm):";
+            tireDiameterLabel.Dock = DockStyle.Fill;
+            tireDiameterLabel.TextAlign = ContentAlignment.MiddleLeft;
+            knownTireDiameter = CreateCalibrationNumber(400, 900, 700);
+            calibrationOptions.Controls.Add(calibrationMethodLabel, 0, 0);
+            calibrationOptions.Controls.Add(calibrationMethod, 1, 0);
+            calibrationOptions.Controls.Add(wheelbaseLabel, 0, 1);
+            calibrationOptions.Controls.Add(knownWheelbase, 1, 1);
+            calibrationOptions.Controls.Add(tireDiameterLabel, 0, 2);
+            calibrationOptions.Controls.Add(knownTireDiameter, 1, 2);
+
             Button cameraSetup = CreateButton("1. Camera Setup", false);
-            Button calibrate = CreateButton("2. Calibrate Scale", false);
+            calibrateButton = CreateButton("2. Calibrate From Bike", false);
             verifyCalibration = CreateButton("3. Verify Calibration", true);
             levelReference = CreateButton("4. Level Reference (optional)", false);
             Button capture = CreateButton("5. Start Guided Capture", false);
@@ -411,7 +459,7 @@ namespace CassetteMotionPro.Workspace
             }
             cameraSetup.Dock = DockStyle.Top;
             primaryAction.Dock = DockStyle.Top;
-            calibrate.Dock = DockStyle.Top;
+            calibrateButton.Dock = DockStyle.Top;
             verifyCalibration.Dock = DockStyle.Top;
             levelReference.Dock = DockStyle.Top;
             capture.Dock = DockStyle.Top;
@@ -424,7 +472,7 @@ namespace CassetteMotionPro.Workspace
             saveAfter.Dock = DockStyle.Top;
             cameraSetup.Height = 34;
             primaryAction.Height = 42;
-            calibrate.Height = 34;
+            calibrateButton.Height = 34;
             verifyCalibration.Height = 38;
             levelReference.Height = 34;
             capture.Height = 34;
@@ -437,7 +485,7 @@ namespace CassetteMotionPro.Workspace
             saveAfter.Height = 34;
             cameraSetup.Margin = new Padding(0, 6, 0, 0);
             primaryAction.Margin = new Padding(0, 8, 0, 4);
-            calibrate.Margin = new Padding(0, 6, 0, 0);
+            calibrateButton.Margin = new Padding(0, 6, 0, 0);
             verifyCalibration.Margin = new Padding(0, 6, 0, 0);
             levelReference.Margin = new Padding(0, 6, 0, 0);
             capture.Margin = new Padding(0, 6, 0, 0);
@@ -450,7 +498,7 @@ namespace CassetteMotionPro.Workspace
             saveAfter.Margin = new Padding(0, 6, 0, 0);
             cameraSetup.Click += CameraSetup_Click;
             primaryAction.Click += PrimaryAction_Click;
-            calibrate.Click += Calibrate_Click;
+            calibrateButton.Click += Calibrate_Click;
             verifyCalibration.Click += VerifyCalibration_Click;
             levelReference.Click += LevelReference_Click;
             capture.Click += Capture_Click;
@@ -484,7 +532,8 @@ namespace CassetteMotionPro.Workspace
             sideScroll.Controls.Add(suggest);
             sideScroll.Controls.Add(levelReference);
             sideScroll.Controls.Add(verifyCalibration);
-            sideScroll.Controls.Add(calibrate);
+            sideScroll.Controls.Add(calibrateButton);
+            sideScroll.Controls.Add(calibrationOptions);
             sideScroll.Controls.Add(cameraSetup);
             sideScroll.Controls.Add(primaryAction);
             sideScroll.Controls.Add(advancedLandmarks);
@@ -542,6 +591,41 @@ namespace CassetteMotionPro.Workspace
             Recalculate_Click(sender, e);
         }
 
+        private void CalibrationMethodChanged(object sender, EventArgs e)
+        {
+            bool bikeReference = calibrationMethod.SelectedIndex == 0;
+            knownWheelbase.Enabled = bikeReference;
+            knownTireDiameter.Enabled = bikeReference;
+            calibrateButton.Text = bikeReference ? "2. Calibrate From Bike" : "2. Calibrate Known Reference";
+            verifyCalibration.Text = bikeReference ? "3. Bike Scale Check" : "3. Verify Calibration";
+            millimetersPerPixel = 0;
+            horizontalMillimetersPerPixel = 0;
+            verticalMillimetersPerPixel = 0;
+            verificationErrorPercent = double.NaN;
+            calibrationPoints.Clear();
+            bikeCalibrationPoints.Clear();
+            verificationPoints.Clear();
+            levelReferencePoints.Clear();
+            landmarkPoints.Clear();
+            calculatedValues.Clear();
+            scaleLabel.Text = "Scale: not calibrated";
+            verificationLabel.Text = "Verification: not completed";
+            referenceLabel.Text = "Level reference: not set";
+            resultsLabel.Text = "Calculated metrics:\n--";
+            levelReference.Enabled = false;
+            verifyCalibration.Enabled = false;
+            undoLast.Enabled = false;
+            recalculate.Enabled = false;
+            flipSetbackSign.Enabled = false;
+            saveBefore.Enabled = false;
+            saveAfter.Enabled = false;
+            status.Text = bikeReference
+                ? "Bike reference selected. Enter measured wheelbase and outside tire diameter."
+                : "Known reference selected. Use a measured line or calibration board in the bike plane.";
+            UpdateWizardProgress();
+            picture.Invalidate();
+        }
+
         private void UpdateWizardProgress()
         {
             if (progressLabel == null || primaryAction == null)
@@ -556,8 +640,9 @@ namespace CassetteMotionPro.Workspace
 
             if (millimetersPerPixel <= 0)
             {
-                progressLabel.Text = "STEP 2 OF 5 · Calibrate one known distance";
-                primaryAction.Text = "Continue: Calibrate Scale";
+                bool bikeReference = calibrationMethod != null && calibrationMethod.SelectedIndex == 0;
+                progressLabel.Text = bikeReference ? "STEP 2 OF 5 · Calibrate from wheelbase + tire" : "STEP 2 OF 5 · Calibrate one known distance";
+                primaryAction.Text = bikeReference ? "Continue: Bike Calibration" : "Continue: Calibrate Scale";
                 return;
             }
 
@@ -620,13 +705,22 @@ namespace CassetteMotionPro.Workspace
 
         private void Calibrate_Click(object sender, EventArgs e)
         {
+            if (calibrationMethod.SelectedIndex == 0)
+            {
+                StartBikeCalibration();
+                return;
+            }
+
             mode = ClickMode.Calibration;
             calibrationPoints.Clear();
+            bikeCalibrationPoints.Clear();
             verificationPoints.Clear();
             levelReferencePoints.Clear();
             landmarkPoints.Clear();
             calculatedValues.Clear();
             millimetersPerPixel = 0;
+            horizontalMillimetersPerPixel = 0;
+            verticalMillimetersPerPixel = 0;
             knownCalibrationMillimeters = 0;
             verificationErrorPercent = double.NaN;
             calibrationVerificationStatus = "Not verified";
@@ -644,6 +738,96 @@ namespace CassetteMotionPro.Workspace
             status.Text = "Calibration: click the first point of a known length.";
             currentLandmarkLabel.Text = "Current point: calibration point 1";
             nextPointHintLabel.Text = "Click point 1 of 2 on a known distance, like crank length or wheelbase.";
+            picture.Invalidate();
+            UpdateWizardProgress();
+        }
+
+        private void StartBikeCalibration()
+        {
+            mode = ClickMode.BikeCalibration;
+            bikeCalibrationPoints.Clear();
+            calibrationPoints.Clear();
+            verificationPoints.Clear();
+            levelReferencePoints.Clear();
+            landmarkPoints.Clear();
+            calculatedValues.Clear();
+            millimetersPerPixel = 0;
+            horizontalMillimetersPerPixel = 0;
+            verticalMillimetersPerPixel = 0;
+            knownCalibrationMillimeters = Decimal.ToDouble(knownWheelbase.Value);
+            verificationErrorPercent = double.NaN;
+            calibrationVerificationStatus = "Not verified";
+            verificationLabel.Text = "Bike scale check: waiting for four points";
+            verificationLabel.ForeColor = Color.FromArgb(166, 92, 34);
+            levelReference.Enabled = false;
+            verifyCalibration.Enabled = false;
+            undoLast.Enabled = false;
+            recalculate.Enabled = false;
+            flipSetbackSign.Enabled = false;
+            saveBefore.Enabled = false;
+            saveAfter.Enabled = false;
+            resultsLabel.Text = "Calculated metrics:\n--";
+            referenceLabel.Text = "Level reference: axle line supplied by bike calibration";
+            status.Text = "Bike calibration: click the REAR axle center.";
+            currentLandmarkLabel.Text = "Bike calibration point 1 of 4: rear axle center";
+            nextPointHintLabel.Text = "Use the exact center of the rear wheel axle.";
+            picture.Invalidate();
+            UpdateWizardProgress();
+        }
+
+        private void AddBikeCalibrationPoint(PointF imagePoint)
+        {
+            bikeCalibrationPoints.Add(imagePoint);
+            undoLast.Enabled = true;
+            string[] names = new string[] { "rear axle center", "front axle center", "top of tire", "bottom of tire" };
+            if (bikeCalibrationPoints.Count < 4)
+            {
+                int next = bikeCalibrationPoints.Count;
+                status.Text = "Bike calibration: click the " + names[next] + ".";
+                currentLandmarkLabel.Text = "Bike calibration point " + (next + 1).ToString(CultureInfo.InvariantCulture) + " of 4: " + names[next];
+                nextPointHintLabel.Text = next == 1
+                    ? "The two axle centers set the horizontal scale from the measured wheelbase."
+                    : "Use the same wheel for the top and bottom tire points; click the outside tread edges.";
+                picture.Invalidate();
+                return;
+            }
+
+            PointF rearAxle = bikeCalibrationPoints[0];
+            PointF frontAxle = bikeCalibrationPoints[1];
+            PointF tireTop = bikeCalibrationPoints[2];
+            PointF tireBottom = bikeCalibrationPoints[3];
+            double wheelbasePixels = Distance(rearAxle, frontAxle);
+            double tirePixels = Distance(tireTop, tireBottom);
+            if (wheelbasePixels < 20 || tirePixels < 20)
+            {
+                MessageBox.Show(this, "The bike calibration points are too close together. Recheck both axle centers and the outside top/bottom tire edges.", "Bike calibration", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                StartBikeCalibration();
+                return;
+            }
+
+            horizontalMillimetersPerPixel = Decimal.ToDouble(knownWheelbase.Value) / wheelbasePixels;
+            verticalMillimetersPerPixel = Decimal.ToDouble(knownTireDiameter.Value) / tirePixels;
+            millimetersPerPixel = (horizontalMillimetersPerPixel + verticalMillimetersPerPixel) / 2.0;
+            double scaleDifference = Math.Abs(horizontalMillimetersPerPixel - verticalMillimetersPerPixel) / millimetersPerPixel * 100.0;
+            verificationErrorPercent = scaleDifference;
+            string grade = scaleDifference <= 1.5 ? "HIGH" : scaleDifference <= 3.0 ? "MODERATE" : "REVIEW";
+            calibrationVerificationStatus = "BIKE REFERENCE · " + grade + " · X/Y difference " + scaleDifference.ToString("0.0", CultureInfo.InvariantCulture) + "%";
+            scaleLabel.Text = "Scale: horizontal " + horizontalMillimetersPerPixel.ToString("0.0000", CultureInfo.InvariantCulture) + " · vertical " + verticalMillimetersPerPixel.ToString("0.0000", CultureInfo.InvariantCulture) + " mm/pixel";
+            verificationLabel.Text = "Bike scale check: " + calibrationVerificationStatus;
+            verificationLabel.ForeColor = scaleDifference <= 1.5 ? Color.FromArgb(60, 145, 76) : scaleDifference <= 3.0 ? Color.FromArgb(166, 92, 34) : Color.FromArgb(176, 52, 52);
+            status.Text = scaleDifference <= 3.0
+                ? "Bike calibration complete. Continue to landmarks."
+                : "Bike calibration needs review. Recheck the camera position and the four calibration points.";
+            currentLandmarkLabel.Text = "Bike calibration complete";
+            nextPointHintLabel.Text = "Horizontal scale uses wheelbase; vertical scale uses outside tire diameter.";
+            levelReferencePoints.Clear();
+            levelReferencePoints.Add(rearAxle);
+            levelReferencePoints.Add(frontAxle);
+            referenceLabel.Text = "Level reference: rear-to-front axle line applied";
+            levelReference.Enabled = true;
+            verifyCalibration.Enabled = false;
+            undoLast.Enabled = false;
+            mode = ClickMode.None;
             picture.Invalidate();
             UpdateWizardProgress();
         }
@@ -867,6 +1051,18 @@ namespace CassetteMotionPro.Workspace
                 picture.Invalidate();
                 UpdateWizardProgress();
             }
+
+            if (mode == ClickMode.BikeCalibration && bikeCalibrationPoints.Count > 0)
+            {
+                bikeCalibrationPoints.RemoveAt(bikeCalibrationPoints.Count - 1);
+                string[] names = new string[] { "rear axle center", "front axle center", "top of tire", "bottom of tire" };
+                int next = bikeCalibrationPoints.Count;
+                status.Text = "Bike calibration: click the " + names[next] + ".";
+                currentLandmarkLabel.Text = "Bike calibration point " + (next + 1).ToString(CultureInfo.InvariantCulture) + " of 4: " + names[next];
+                undoLast.Enabled = bikeCalibrationPoints.Count > 0;
+                picture.Invalidate();
+                UpdateWizardProgress();
+            }
         }
 
         private void Recalculate_Click(object sender, EventArgs e)
@@ -917,6 +1113,8 @@ namespace CassetteMotionPro.Workspace
 
             if (mode == ClickMode.Calibration)
                 AddCalibrationPoint(imagePoint);
+            else if (mode == ClickMode.BikeCalibration)
+                AddBikeCalibrationPoint(imagePoint);
             else if (mode == ClickMode.Verification)
                 AddVerificationPoint(imagePoint);
             else if (mode == ClickMode.LevelReference)
@@ -959,6 +1157,8 @@ namespace CassetteMotionPro.Workspace
                 }
 
                 millimetersPerPixel = knownMillimeters / pixelDistance;
+                horizontalMillimetersPerPixel = millimetersPerPixel;
+                verticalMillimetersPerPixel = millimetersPerPixel;
                 knownCalibrationMillimeters = knownMillimeters;
                 scaleLabel.Text = "Scale: " + millimetersPerPixel.ToString("0.0000", CultureInfo.InvariantCulture) + " mm/pixel";
                 status.Text = "Scale calibrated. Optional: click Level Reference, or start Guided Capture.";
@@ -996,7 +1196,7 @@ namespace CassetteMotionPro.Workspace
                 return;
             }
 
-            double measuredMillimeters = pixelDistance * millimetersPerPixel;
+            double measuredMillimeters = ScaledDistance(verificationPoints[0], verificationPoints[1]);
             verificationErrorPercent = Math.Abs(measuredMillimeters - knownMillimeters) / knownMillimeters * 100.0;
             string grade = verificationErrorPercent <= 1.0 ? "HIGH" : verificationErrorPercent <= 2.0 ? "MODERATE" : "REVIEW";
             calibrationVerificationStatus = grade + " · " + verificationErrorPercent.ToString("0.0", CultureInfo.InvariantCulture) + "% error";
@@ -1107,7 +1307,7 @@ namespace CassetteMotionPro.Workspace
                     PointF correctedFrontAxleForDirection = CorrectForLevel(landmarkPoints[6]);
                     PointF correctedRearAxleForDirection = CorrectForLevel(landmarkPoints[7]);
                     double forwardDirection = correctedFrontAxleForDirection.X >= correctedRearAxleForDirection.X ? 1.0 : -1.0;
-                    double radiusPixels = Decimal.ToDouble(handlebarDiameter.Value) / 2.0 / millimetersPerPixel;
+                    double radiusPixels = Decimal.ToDouble(handlebarDiameter.Value) / 2.0 / GetHorizontalScale();
                     double edgeDirection = handlebarReferenceMode.SelectedIndex == 1 ? forwardDirection : -forwardDirection;
                     correctedHandlebarReference = new PointF(
                         (float)(correctedHandlebarReference.X + edgeDirection * radiusPixels),
@@ -1115,16 +1315,16 @@ namespace CassetteMotionPro.Workspace
                 }
             }
 
-            double saddleHeight = Distance(bottomBracket, saddleTop) * millimetersPerPixel;
-            double saddleSetback = (correctedSaddleTip.X - correctedBottomBracket.X) * millimetersPerPixel;
+            double saddleHeight = ScaledDistance(correctedBottomBracket, correctedSaddleTop);
+            double saddleSetback = (correctedSaddleTip.X - correctedBottomBracket.X) * GetHorizontalScale();
             // Match the physical tape measurement. Handlebar reach remains the
             // separate horizontal measurement calculated below.
-            double imageSaddleTipToGripReach = Distance(saddleTip, grip) * millimetersPerPixel;
+            double imageSaddleTipToGripReach = ScaledDistance(correctedSaddleTip, correctedGrip);
             double saddleTipToGripReach = useTapeSaddleTipToGrip.Checked
                 ? Decimal.ToDouble(tapeSaddleTipToGrip.Value)
                 : imageSaddleTipToGripReach;
-            double handlebarX = (correctedHandlebarReference.X - correctedBottomBracket.X) * millimetersPerPixel;
-            double handlebarY = (correctedBottomBracket.Y - correctedHandlebarReference.Y) * millimetersPerPixel;
+            double handlebarX = (correctedHandlebarReference.X - correctedBottomBracket.X) * GetHorizontalScale();
+            double handlebarY = (correctedBottomBracket.Y - correctedHandlebarReference.Y) * GetVerticalScale();
 
             calculatedValues = new Dictionary<string, string>();
             calculatedValues["SaddleHeight"] = FormatMillimeters(saddleHeight);
@@ -1141,10 +1341,11 @@ namespace CassetteMotionPro.Workspace
                 PointF correctedFrontAxle = CorrectForLevel(frontAxle);
                 PointF correctedRearAxle = CorrectForLevel(rearAxle);
 
-                double crankLength = Distance(bottomBracket, pedalSpindle) * millimetersPerPixel;
-                double handlebarReach = (correctedHandlebarReference.X - correctedSaddleTip.X) * millimetersPerPixel;
-                double handlebarDrop = (correctedHandlebarReference.Y - correctedSaddleTop.Y) * millimetersPerPixel;
-                double wheelbase = Math.Abs(correctedFrontAxle.X - correctedRearAxle.X) * millimetersPerPixel;
+                PointF correctedPedalSpindle = CorrectForLevel(pedalSpindle);
+                double crankLength = ScaledDistance(correctedBottomBracket, correctedPedalSpindle);
+                double handlebarReach = (correctedHandlebarReference.X - correctedSaddleTip.X) * GetHorizontalScale();
+                double handlebarDrop = (correctedHandlebarReference.Y - correctedSaddleTop.Y) * GetVerticalScale();
+                double wheelbase = Math.Abs(correctedFrontAxle.X - correctedRearAxle.X) * GetHorizontalScale();
 
                 calculatedValues["CrankLength"] = FormatMillimeters(crankLength);
                 calculatedValues["HandlebarReach"] = FormatMillimeters(handlebarReach);
@@ -1156,7 +1357,9 @@ namespace CassetteMotionPro.Workspace
             calculatedValues["SaddleSetbackConvention"] = "Behind BB = negative";
             calculatedValues["LandmarkMode"] = advancedLandmarks.Checked ? "Advanced 8-point" : "Basic 4-point";
             calculatedValues["CameraSetup"] = CameraSetupStatus;
-            calculatedValues["CalibrationReference"] = knownCalibrationMillimeters > 0 ? knownCalibrationMillimeters.ToString("0.0", CultureInfo.InvariantCulture) + " mm" : "Not set";
+            calculatedValues["CalibrationReference"] = calibrationMethod.SelectedIndex == 0
+                ? "Bike reference · wheelbase " + knownWheelbase.Value.ToString("0.0", CultureInfo.InvariantCulture) + " mm · tire " + knownTireDiameter.Value.ToString("0.0", CultureInfo.InvariantCulture) + " mm"
+                : knownCalibrationMillimeters > 0 ? knownCalibrationMillimeters.ToString("0.0", CultureInfo.InvariantCulture) + " mm" : "Not set";
             calculatedValues["CalibrationVerification"] = calibrationVerificationStatus;
             calculatedValues["HandlebarReference"] = GetHandlebarReferenceSummary();
             calculatedValues["SaddleTipToGripSource"] = useTapeSaddleTipToGrip.Checked
@@ -1544,6 +1747,7 @@ namespace CassetteMotionPro.Workspace
                 e.Graphics.DrawImage(loadedImage, imageRectangle);
 
             DrawLine(e.Graphics, calibrationPoints, Color.FromArgb(184, 243, 74), "C");
+            DrawLine(e.Graphics, bikeCalibrationPoints, Color.FromArgb(90, 205, 120), "B");
             DrawLine(e.Graphics, verificationPoints, Color.FromArgb(255, 176, 74), "V");
             DrawLine(e.Graphics, levelReferencePoints, Color.FromArgb(74, 145, 255), "L");
             DrawLandmarks(e.Graphics);
@@ -1566,6 +1770,12 @@ namespace CassetteMotionPro.Workspace
             {
                 if (controlPoints.Count == 2)
                     graphics.DrawLine(pen, controlPoints[0], controlPoints[1]);
+                else if (label == "B" && controlPoints.Count >= 2)
+                {
+                    graphics.DrawLine(pen, controlPoints[0], controlPoints[1]);
+                    if (controlPoints.Count >= 4)
+                        graphics.DrawLine(pen, controlPoints[2], controlPoints[3]);
+                }
 
                 for (int i = 0; i < controlPoints.Count; i++)
                 {
@@ -1703,6 +1913,13 @@ namespace CassetteMotionPro.Workspace
         {
             if (mode == ClickMode.Calibration)
                 return "Click calibration point " + (calibrationPoints.Count + 1).ToString(CultureInfo.InvariantCulture) + " of 2";
+
+            if (mode == ClickMode.BikeCalibration)
+            {
+                string[] names = new string[] { "rear axle", "front axle", "top of tire", "bottom of tire" };
+                int next = Math.Min(bikeCalibrationPoints.Count, names.Length - 1);
+                return "Bike calibration " + (next + 1).ToString(CultureInfo.InvariantCulture) + " of 4 · click " + names[next];
+            }
 
             if (mode == ClickMode.Verification)
                 return "Click verification point " + (verificationPoints.Count + 1).ToString(CultureInfo.InvariantCulture) + " of 2";
@@ -1882,6 +2099,23 @@ namespace CassetteMotionPro.Workspace
             return Math.Sqrt((dx * dx) + (dy * dy));
         }
 
+        private double GetHorizontalScale()
+        {
+            return horizontalMillimetersPerPixel > 0 ? horizontalMillimetersPerPixel : millimetersPerPixel;
+        }
+
+        private double GetVerticalScale()
+        {
+            return verticalMillimetersPerPixel > 0 ? verticalMillimetersPerPixel : millimetersPerPixel;
+        }
+
+        private double ScaledDistance(PointF first, PointF second)
+        {
+            double dx = (first.X - second.X) * GetHorizontalScale();
+            double dy = (first.Y - second.Y) * GetVerticalScale();
+            return Math.Sqrt((dx * dx) + (dy * dy));
+        }
+
         private static string FormatMillimeters(double value)
         {
             return value.ToString("0.0", CultureInfo.InvariantCulture) + " mm";
@@ -2005,6 +2239,19 @@ namespace CassetteMotionPro.Workspace
                 form.ShowDialog(owner);
                 return profiles.SelectedItem == null ? currentProfile : profiles.SelectedItem.ToString();
             }
+        }
+
+        private static NumericUpDown CreateCalibrationNumber(decimal minimum, decimal maximum, decimal value)
+        {
+            NumericUpDown number = new NumericUpDown();
+            number.Minimum = minimum;
+            number.Maximum = maximum;
+            number.Value = value;
+            number.DecimalPlaces = 1;
+            number.Increment = 1;
+            number.Width = 100;
+            number.Anchor = AnchorStyles.Left;
+            return number;
         }
 
         private static Button CreateButton(string text, bool primary)

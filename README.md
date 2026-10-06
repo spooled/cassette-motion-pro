@@ -5,7 +5,13 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 1.9.4 Saddle-to-Hood Reach and Simpler Review
+## Current milestone: 1.10.0 Board-Free Bike Calibration
+
+Guided Bike Measurements now offers two calibration choices. The recommended Bike Reference method needs no board: enter the physically measured wheelbase and outside tire diameter, then click rear axle, front axle, tire top, and tire bottom. Cassette Motion Pro calculates separate horizontal and vertical scales, automatically levels the image from the axle line, and reports the X/Y scale disagreement as an alignment warning. The existing Known Reference / Board method remains available.
+
+Use [the v1.10.0 test plan](docs/v1.10.0-test-plan.md) for the focused checks.
+
+### Previous milestone: 1.9.4 Saddle-to-Hood Reach and Simpler Review
 
 Guided Bike Measurements now identifies the correct saddle-to-hood endpoint as the top of the rubber hood where the rider's palm rests, not the brake lever. For angled camera views, an optional physical tape value can override the image calculation and its source is recorded with the saved evidence. Measurement Review has also been simplified by removing the four numbered tracking/assistance/correction/approval panels; the Before/After measurement summary and essential actions remain.
 
