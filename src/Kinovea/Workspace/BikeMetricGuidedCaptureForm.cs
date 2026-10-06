@@ -2031,10 +2031,20 @@ namespace CassetteMotionPro.Workspace
                 points.Add(ConvertImagePointToControlPoint(imagePoint));
 
             using (Pen pen = new Pen(Color.FromArgb(74, 196, 214), 3F))
+            using (Pen axleGuide = new Pen(Color.FromArgb(210, 184, 243, 74), 2F))
             using (Brush brush = new SolidBrush(Color.FromArgb(74, 196, 214)))
+            using (Brush guideLabelBrush = new SolidBrush(Color.FromArgb(220, 13, 19, 17)))
+            using (Brush guideTextBrush = new SolidBrush(Color.White))
             using (Brush textBrush = new SolidBrush(Color.FromArgb(13, 19, 17)))
             using (Font font = new Font("Segoe UI", 9F, FontStyle.Bold))
             {
+                axleGuide.DashStyle = DashStyle.Dash;
+                Rectangle imageRectangle = GetZoomedImageRectangle();
+                if (mode == ClickMode.WheelPerspectiveCalibration)
+                {
+                    DrawAxleReferenceGuides(graphics, axleGuide, guideLabelBrush, guideTextBrush, font, imageRectangle, points, 0, "REAR AXLE HEIGHT");
+                    DrawAxleReferenceGuides(graphics, axleGuide, guideLabelBrush, guideTextBrush, font, imageRectangle, points, 4, "FRONT AXLE HEIGHT");
+                }
                 if (points.Count >= 5)
                     graphics.DrawLine(pen, points[0], points[4]);
                 DrawWheelCross(graphics, pen, points, 0);
@@ -2053,8 +2063,26 @@ namespace CassetteMotionPro.Workspace
         {
             if (points.Count > start + 1)
                 graphics.DrawLine(pen, points[start], points[start + 1]);
+            if (points.Count > start + 2)
+                graphics.DrawLine(pen, points[start], points[start + 2]);
             if (points.Count > start + 3)
-                graphics.DrawLine(pen, points[start + 2], points[start + 3]);
+                graphics.DrawLine(pen, points[start], points[start + 3]);
+        }
+
+        private static void DrawAxleReferenceGuides(Graphics graphics, Pen pen, Brush labelBrush, Brush textBrush, Font font, Rectangle imageRectangle, IList<PointF> points, int axleIndex, string label)
+        {
+            if (points.Count <= axleIndex)
+                return;
+
+            PointF axle = points[axleIndex];
+            graphics.DrawLine(pen, imageRectangle.Left, axle.Y, imageRectangle.Right, axle.Y);
+            graphics.DrawLine(pen, axle.X, imageRectangle.Top, axle.X, imageRectangle.Bottom);
+            SizeF labelSize = graphics.MeasureString(label, font);
+            float labelX = (float)Math.Max(imageRectangle.Left + 4, Math.Min(imageRectangle.Right - labelSize.Width - 16, axle.X + 12));
+            float labelY = (float)Math.Max(imageRectangle.Top + 4, axle.Y - labelSize.Height - 10);
+            RectangleF labelRectangle = new RectangleF(labelX, labelY, labelSize.Width + 12, labelSize.Height + 6);
+            graphics.FillRectangle(labelBrush, labelRectangle);
+            graphics.DrawString(label, font, textBrush, labelRectangle.Left + 6, labelRectangle.Top + 3);
         }
 
         private void DrawLandmarks(Graphics graphics)
