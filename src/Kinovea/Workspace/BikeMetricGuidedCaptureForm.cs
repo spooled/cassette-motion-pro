@@ -1517,7 +1517,10 @@ namespace CassetteMotionPro.Workspace
                 }
             }
 
-            double saddleHeight = MeasurementDistance(correctedBottomBracket, correctedSaddleTop);
+            double saddleHeight;
+            bool hybridSaddleHeight = TryCalculateHybridWheelDistance(bottomBracket, saddleTop, out saddleHeight);
+            if (!hybridSaddleHeight)
+                saddleHeight = MeasurementDistance(correctedBottomBracket, correctedSaddleTop);
             double saddleSetback = MeasurementHorizontalDifference(correctedSaddleTip, correctedBottomBracket);
             // Match the physical tape measurement. Handlebar reach remains the
             // separate horizontal measurement calculated below.
@@ -1530,6 +1533,9 @@ namespace CassetteMotionPro.Workspace
 
             calculatedValues = new Dictionary<string, string>();
             calculatedValues["SaddleHeight"] = FormatMillimeters(saddleHeight);
+            calculatedValues["SaddleHeightSource"] = hybridSaddleHeight
+                ? "Wheel-based vertical scale (perspective-safe)"
+                : "Calibrated image points";
             calculatedValues["SaddleSetback"] = FormatMillimeters(saddleSetback);
             calculatedValues["SaddleTipToGripReach"] = FormatMillimeters(saddleTipToGripReach);
             calculatedValues["HandlebarX"] = FormatMillimeters(handlebarX);
@@ -1571,8 +1577,8 @@ namespace CassetteMotionPro.Workspace
             calculatedValues["MeasurementTolerance"] = "approximately ±" + estimatedTolerance.ToString("0", CultureInfo.InvariantCulture) + " mm; point placement and out-of-plane parts may add error";
             calculatedValues["HandlebarReference"] = GetHandlebarReferenceSummary();
             calculatedValues["SaddleTipToGripSource"] = useTapeSaddleTipToGrip.Checked
-                ? "Tape value (camera-skew override)"
-                : "Image points";
+                ? "Tape verified (preferred report value)"
+                : "Camera estimate (use tape verification when view is angled)";
 
             UpdateResultsLabel();
         }
@@ -1789,6 +1795,7 @@ namespace CassetteMotionPro.Workspace
                 "Calculated metrics:\n" +
                 "Mode: " + GetCalculatedValue("LandmarkMode") + "\n" +
                 "Saddle height: " + GetCalculatedValue("SaddleHeight") + "\n" +
+                "Saddle-height source: " + GetCalculatedValue("SaddleHeightSource") + "\n" +
                 "Saddle setback: " + GetCalculatedValue("SaddleSetback") + "\n" +
                 "Saddle tip to grip (straight line): " + GetCalculatedValue("SaddleTipToGripReach") + "\n" +
                 "Saddle-to-hood source: " + GetCalculatedValue("SaddleTipToGripSource") + "\n" +
@@ -1810,6 +1817,7 @@ namespace CassetteMotionPro.Workspace
         {
             return
                 "Saddle height: " + GetCalculatedValue("SaddleHeight") + "\n" +
+                "Saddle-height source: " + GetCalculatedValue("SaddleHeightSource") + "\n" +
                 "Saddle setback: " + GetCalculatedValue("SaddleSetback") + "\n" +
                 "Saddle tip to grip (straight line): " + GetCalculatedValue("SaddleTipToGripReach") + "\n" +
                 "Saddle-to-hood source: " + GetCalculatedValue("SaddleTipToGripSource") + "\n" +
@@ -2585,6 +2593,41 @@ namespace CassetteMotionPro.Workspace
         private PointF GetMeasurementPoint(PointF point)
         {
             return perspectiveTransform != null ? ApplyPerspectiveTransform(point) : CorrectForLevel(point);
+        }
+
+        private bool TryCalculateHybridWheelDistance(PointF first, PointF second, out double millimeters)
+        {
+            millimeters = 0;
+            if (perspectiveTransform == null || wheelPerspectivePoints.Count < 6)
+                return false;
+
+            PointF rearAxle = CorrectForLevel(wheelPerspectivePoints[0]);
+            PointF rearTop = CorrectForLevel(wheelPerspectivePoints[1]);
+            PointF frontAxle = CorrectForLevel(wheelPerspectivePoints[4]);
+            PointF frontTop = CorrectForLevel(wheelPerspectivePoints[5]);
+            PointF leveledFirst = CorrectForLevel(first);
+            PointF leveledSecond = CorrectForLevel(second);
+
+            double axleSeparation = Math.Abs(frontAxle.X - rearAxle.X);
+            double rearRadiusPixels = Math.Abs(rearTop.Y - rearAxle.Y);
+            double frontRadiusPixels = Math.Abs(frontTop.Y - frontAxle.Y);
+            if (axleSeparation < 20 || rearRadiusPixels < 10 || frontRadiusPixels < 10)
+                return false;
+
+            double horizontalScale = Decimal.ToDouble(knownWheelbase.Value) / axleSeparation;
+            double radiusMillimeters = Decimal.ToDouble(knownTireDiameter.Value) / 2.0;
+            double rearVerticalScale = radiusMillimeters / rearRadiusPixels;
+            double frontVerticalScale = radiusMillimeters / frontRadiusPixels;
+            double midpointX = (leveledFirst.X + leveledSecond.X) / 2.0;
+            double direction = frontAxle.X - rearAxle.X;
+            double position = Math.Abs(direction) < 0.0001 ? 0.5 : (midpointX - rearAxle.X) / direction;
+            position = Math.Max(0, Math.Min(1, position));
+            double verticalScale = rearVerticalScale + ((frontVerticalScale - rearVerticalScale) * position);
+
+            double dx = (leveledFirst.X - leveledSecond.X) * horizontalScale;
+            double dy = (leveledFirst.Y - leveledSecond.Y) * verticalScale;
+            millimeters = Math.Sqrt((dx * dx) + (dy * dy));
+            return !double.IsNaN(millimeters) && !double.IsInfinity(millimeters) && millimeters > 0;
         }
 
         private double MeasurementDistance(PointF first, PointF second)
