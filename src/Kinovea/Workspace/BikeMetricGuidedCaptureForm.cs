@@ -218,7 +218,7 @@ namespace CassetteMotionPro.Workspace
             guide.Text =
                 "1. Confirm the camera profile and setup.\n" +
                 "2. Choose Dual-wheel Perspective, Quick Bike Reference, or Known Reference.\n" +
-                "3. Dual-wheel: enter wheelbase + tire diameter, then click eight wheel points.\n" +
+                "3. Dual-wheel: enter wheelbase, leave 700 for a 700c wheel, then click eight wheel points.\n" +
                 "4. Optional: set a floor or axle level reference.\n" +
                 "5. Suggest Bike Landmarks, or place them manually.\n" +
                 "   • Bottom bracket center\n" +
@@ -432,7 +432,7 @@ namespace CassetteMotionPro.Workspace
             wheelbaseLabel.TextAlign = ContentAlignment.MiddleLeft;
             knownWheelbase = CreateCalibrationNumber(700, 1400, 1050);
             Label tireDiameterLabel = new Label();
-            tireDiameterLabel.Text = "Tire diameter (mm):";
+            tireDiameterLabel.Text = "Wheel preset (700c = 700):";
             tireDiameterLabel.Dock = DockStyle.Fill;
             tireDiameterLabel.TextAlign = ContentAlignment.MiddleLeft;
             knownTireDiameter = CreateCalibrationNumber(400, 900, 700);
@@ -636,7 +636,7 @@ namespace CassetteMotionPro.Workspace
             saveBefore.Enabled = false;
             saveAfter.Enabled = false;
             status.Text = wheelPerspective
-                ? "Dual-wheel perspective selected. Enter wheelbase and outside tire diameter."
+                ? "Dual-wheel perspective selected. Enter wheelbase; leave the wheel preset at 700 for 700c."
                 : calibrationMethod.SelectedIndex == 1
                     ? "Quick bike reference selected. Enter wheelbase and outside tire diameter."
                     : "Known reference selected. Use a measured line or calibration board in the bike plane.";
@@ -886,7 +886,7 @@ namespace CassetteMotionPro.Workspace
             if (residual > 25.0)
             {
                 MessageBox.Show(this,
-                    "The wheel reference points disagree by " + residual.ToString("0.0", CultureInfo.InvariantCulture) + " mm. Measurements would not be reliable, so calibration cannot continue.\n\nConfirm that each left/right tire point is on the axle-height guide and measure the actual outside tire diameter before trying again.",
+                    "The wheel reference points disagree by " + residual.ToString("0.0", CultureInfo.InvariantCulture) + " mm. Measurements would not be reliable, so calibration cannot continue.\n\nConfirm that each left/right tire point is on the axle-height guide. For a 700c wheel, leave the wheel preset at 700.",
                     "Wheel calibration needs review",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
@@ -1518,7 +1518,7 @@ namespace CassetteMotionPro.Workspace
             }
 
             double saddleHeight;
-            bool hybridSaddleHeight = TryCalculateHybridWheelDistance(bottomBracket, saddleTop, out saddleHeight);
+            bool hybridSaddleHeight = TryCalculateWheelbaseScaledDistance(bottomBracket, saddleTop, out saddleHeight);
             if (!hybridSaddleHeight)
                 saddleHeight = MeasurementDistance(correctedBottomBracket, correctedSaddleTop);
             double saddleSetback = MeasurementHorizontalDifference(correctedSaddleTip, correctedBottomBracket);
@@ -1534,7 +1534,7 @@ namespace CassetteMotionPro.Workspace
             calculatedValues = new Dictionary<string, string>();
             calculatedValues["SaddleHeight"] = FormatMillimeters(saddleHeight);
             calculatedValues["SaddleHeightSource"] = hybridSaddleHeight
-                ? "Wheel-based vertical scale (perspective-safe)"
+                ? "Wheelbase-only scale (tire size not required)"
                 : "Calibrated image points";
             calculatedValues["SaddleSetback"] = FormatMillimeters(saddleSetback);
             calculatedValues["SaddleTipToGripReach"] = FormatMillimeters(saddleTipToGripReach);
@@ -2595,37 +2595,27 @@ namespace CassetteMotionPro.Workspace
             return perspectiveTransform != null ? ApplyPerspectiveTransform(point) : CorrectForLevel(point);
         }
 
-        private bool TryCalculateHybridWheelDistance(PointF first, PointF second, out double millimeters)
+        private bool TryCalculateWheelbaseScaledDistance(PointF first, PointF second, out double millimeters)
         {
             millimeters = 0;
-            if (perspectiveTransform == null || wheelPerspectivePoints.Count < 6)
+            if (perspectiveTransform == null || wheelPerspectivePoints.Count < 5)
                 return false;
 
             PointF rearAxle = CorrectForLevel(wheelPerspectivePoints[0]);
-            PointF rearTop = CorrectForLevel(wheelPerspectivePoints[1]);
             PointF frontAxle = CorrectForLevel(wheelPerspectivePoints[4]);
-            PointF frontTop = CorrectForLevel(wheelPerspectivePoints[5]);
             PointF leveledFirst = CorrectForLevel(first);
             PointF leveledSecond = CorrectForLevel(second);
 
             double axleSeparation = Math.Abs(frontAxle.X - rearAxle.X);
-            double rearRadiusPixels = Math.Abs(rearTop.Y - rearAxle.Y);
-            double frontRadiusPixels = Math.Abs(frontTop.Y - frontAxle.Y);
-            if (axleSeparation < 20 || rearRadiusPixels < 10 || frontRadiusPixels < 10)
+            if (axleSeparation < 20)
                 return false;
 
-            double horizontalScale = Decimal.ToDouble(knownWheelbase.Value) / axleSeparation;
-            double radiusMillimeters = Decimal.ToDouble(knownTireDiameter.Value) / 2.0;
-            double rearVerticalScale = radiusMillimeters / rearRadiusPixels;
-            double frontVerticalScale = radiusMillimeters / frontRadiusPixels;
-            double midpointX = (leveledFirst.X + leveledSecond.X) / 2.0;
-            double direction = frontAxle.X - rearAxle.X;
-            double position = Math.Abs(direction) < 0.0001 ? 0.5 : (midpointX - rearAxle.X) / direction;
-            position = Math.Max(0, Math.Min(1, position));
-            double verticalScale = rearVerticalScale + ((frontVerticalScale - rearVerticalScale) * position);
-
-            double dx = (leveledFirst.X - leveledSecond.X) * horizontalScale;
-            double dy = (leveledFirst.Y - leveledSecond.Y) * verticalScale;
+            // Pixels are square. Once the axle line is leveled, the known
+            // wheelbase supplies one stable scale for both axes. This avoids
+            // treating "700c" as a measurable 700 mm outside tire diameter.
+            double wheelbaseScale = Decimal.ToDouble(knownWheelbase.Value) / axleSeparation;
+            double dx = (leveledFirst.X - leveledSecond.X) * wheelbaseScale;
+            double dy = (leveledFirst.Y - leveledSecond.Y) * wheelbaseScale;
             millimeters = Math.Sqrt((dx * dx) + (dy * dy));
             return !double.IsNaN(millimeters) && !double.IsInfinity(millimeters) && millimeters > 0;
         }

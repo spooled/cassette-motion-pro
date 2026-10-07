@@ -5,7 +5,13 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 1.11.4 Hybrid Bike Measurement Correction
+## Current milestone: 1.11.5 Wheelbase-Only Saddle Height
+
+Saddle height no longer depends on outside tire diameter. After leveling the rear-to-front axle line, Guided Bike Measurements uses the tape-measured wheelbase as one uniform scale for both image axes. A 700c bike can leave the wheel preset at 700; different tire widths and pressures no longer change the saddle-height result.
+
+Use [the v1.11.5 test plan](docs/v1.11.5-test-plan.md) for the focused checks.
+
+### Previous milestone: 1.11.4 Hybrid Bike Measurement Correction
 
 Dual-wheel calibration now calculates saddle height with a stable wheel-based horizontal and vertical scale instead of extrapolating the perspective transform above the wheels. The vertical scale is interpolated between the measured rear and front tire radii at the saddle location. Saddle-to-hood reach now clearly identifies the camera result as an estimate and the optional tape entry as the preferred verified report value.
 
