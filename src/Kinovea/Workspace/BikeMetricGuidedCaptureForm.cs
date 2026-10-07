@@ -81,6 +81,9 @@ namespace CassetteMotionPro.Workspace
         private ComboBox calibrationMethod;
         private NumericUpDown knownWheelbase;
         private NumericUpDown knownTireDiameter;
+        private NumericUpDown verifiedSaddleHeight;
+        private Button calibrateVerticalScale;
+        private Label verticalCalibrationLabel;
         private Button calibrateButton;
         private Image loadedImage;
         private ClickMode mode;
@@ -101,6 +104,8 @@ namespace CassetteMotionPro.Workspace
         private double perspectiveResidualMillimeters = double.NaN;
         private double knownCalibrationMillimeters;
         private double verificationErrorPercent = double.NaN;
+        private double verticalScaleCorrection = 1.0;
+        private bool verticalScaleCalibrated;
         private string calibrationVerificationStatus = "Not verified";
         private string cameraProfileName = "Standard camera · 70–90°";
         private Dictionary<string, string> calculatedValues = new Dictionary<string, string>();
@@ -398,6 +403,46 @@ namespace CassetteMotionPro.Workspace
             reachOverridePanel.Controls.Add(tapeReachLabel, 0, 1);
             reachOverridePanel.Controls.Add(tapeSaddleTipToGrip, 1, 1);
 
+            TableLayoutPanel verticalCalibrationPanel = new TableLayoutPanel();
+            verticalCalibrationPanel.Dock = DockStyle.Top;
+            verticalCalibrationPanel.Height = 108;
+            verticalCalibrationPanel.ColumnCount = 2;
+            verticalCalibrationPanel.RowCount = 3;
+            verticalCalibrationPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            verticalCalibrationPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110F));
+            verticalCalibrationPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 34F));
+            verticalCalibrationPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 38F));
+            verticalCalibrationPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 32F));
+            verticalCalibrationPanel.BackColor = Color.FromArgb(238, 247, 219);
+            verticalCalibrationPanel.Padding = new Padding(4);
+            Label verifiedSaddleHeightLabel = new Label();
+            verifiedSaddleHeightLabel.Text = "Tape saddle height (mm):";
+            verifiedSaddleHeightLabel.Dock = DockStyle.Fill;
+            verifiedSaddleHeightLabel.TextAlign = ContentAlignment.MiddleLeft;
+            verifiedSaddleHeight = new NumericUpDown();
+            verifiedSaddleHeight.DecimalPlaces = 1;
+            verifiedSaddleHeight.Minimum = 400;
+            verifiedSaddleHeight.Maximum = 1000;
+            verifiedSaddleHeight.Increment = 1;
+            verifiedSaddleHeight.Value = 684;
+            verifiedSaddleHeight.Width = 94;
+            verifiedSaddleHeight.Anchor = AnchorStyles.Left;
+            calibrateVerticalScale = CreateButton("Calibrate Vertical Scale", true);
+            calibrateVerticalScale.Dock = DockStyle.Fill;
+            calibrateVerticalScale.Enabled = false;
+            calibrateVerticalScale.Click += CalibrateVerticalScale_Click;
+            verticalCalibrationLabel = new Label();
+            verticalCalibrationLabel.Text = "Vertical scale: not tape calibrated";
+            verticalCalibrationLabel.Dock = DockStyle.Fill;
+            verticalCalibrationLabel.TextAlign = ContentAlignment.MiddleLeft;
+            verticalCalibrationLabel.ForeColor = Color.FromArgb(92, 104, 98);
+            verticalCalibrationPanel.Controls.Add(verifiedSaddleHeightLabel, 0, 0);
+            verticalCalibrationPanel.Controls.Add(verifiedSaddleHeight, 1, 0);
+            verticalCalibrationPanel.Controls.Add(calibrateVerticalScale, 0, 1);
+            verticalCalibrationPanel.SetColumnSpan(calibrateVerticalScale, 2);
+            verticalCalibrationPanel.Controls.Add(verticalCalibrationLabel, 0, 2);
+            verticalCalibrationPanel.SetColumnSpan(verticalCalibrationLabel, 2);
+
             TableLayoutPanel calibrationOptions = new TableLayoutPanel();
             calibrationOptions.Dock = DockStyle.Top;
             calibrationOptions.Height = 116;
@@ -550,6 +595,7 @@ namespace CassetteMotionPro.Workspace
             sideScroll.Controls.Add(advancedLandmarks);
             sideScroll.Controls.Add(handlebarReferencePanel);
             sideScroll.Controls.Add(reachOverridePanel);
+            sideScroll.Controls.Add(verticalCalibrationPanel);
             sideScroll.Controls.Add(zoomPanel);
             sideScroll.Controls.Add(resultsLabel);
             sideScroll.Controls.Add(referenceLabel);
@@ -615,6 +661,7 @@ namespace CassetteMotionPro.Workspace
             verticalMillimetersPerPixel = 0;
             perspectiveTransform = null;
             perspectiveResidualMillimeters = double.NaN;
+            ResetVerticalScaleCalibration();
             verificationErrorPercent = double.NaN;
             mode = ClickMode.None;
             calibrationPoints.Clear();
@@ -784,6 +831,7 @@ namespace CassetteMotionPro.Workspace
 
         private void StartBikeCalibration()
         {
+            ResetVerticalScaleCalibration();
             mode = ClickMode.BikeCalibration;
             bikeCalibrationPoints.Clear();
             wheelPerspectivePoints.Clear();
@@ -820,6 +868,7 @@ namespace CassetteMotionPro.Workspace
 
         private void StartWheelPerspectiveCalibration()
         {
+            ResetVerticalScaleCalibration();
             mode = ClickMode.WheelPerspectiveCalibration;
             wheelPerspectivePoints.Clear();
             bikeCalibrationPoints.Clear();
@@ -1090,6 +1139,7 @@ namespace CassetteMotionPro.Workspace
             mode = ClickMode.Landmarks;
             landmarkPoints.Clear();
             calculatedValues.Clear();
+            ResetVerticalScaleCalibration();
             undoLast.Enabled = false;
             flipSetbackSign.Enabled = false;
             recalculate.Enabled = false;
@@ -1131,6 +1181,7 @@ namespace CassetteMotionPro.Workspace
             flipSetbackSign.Enabled = true;
             saveBefore.Enabled = true;
             saveAfter.Enabled = true;
+            calibrateVerticalScale.Enabled = perspectiveTransform != null;
             status.Text = "Eight bike landmarks suggested. Confirm every orange point before saving.";
             currentLandmarkLabel.Text = "Assisted landmarks · confidence " + landmarkSuggestionConfidence.ToString("0", CultureInfo.InvariantCulture) + "%";
             nextPointHintLabel.Text = "Drag BB, saddle, handlebar, pedal, and both axle points onto their exact centers. Suggestions are advisory.";
@@ -1144,6 +1195,7 @@ namespace CassetteMotionPro.Workspace
             handlebarDiameter.Enabled = advancedLandmarks.Checked;
             landmarkPoints.Clear();
             calculatedValues.Clear();
+            ResetVerticalScaleCalibration();
             mode = ClickMode.None;
             undoLast.Enabled = false;
             recalculate.Enabled = false;
@@ -1171,6 +1223,7 @@ namespace CassetteMotionPro.Workspace
             }
             landmarkPoints.Clear();
             calculatedValues.Clear();
+            ResetVerticalScaleCalibration();
             undoLast.Enabled = false;
             flipSetbackSign.Enabled = false;
             recalculate.Enabled = false;
@@ -1194,6 +1247,7 @@ namespace CassetteMotionPro.Workspace
 
                 landmarkPoints.RemoveAt(landmarkPoints.Count - 1);
                 calculatedValues.Clear();
+                ResetVerticalScaleCalibration();
                 flipSetbackSign.Enabled = false;
                 recalculate.Enabled = false;
                 saveBefore.Enabled = false;
@@ -1274,6 +1328,7 @@ namespace CassetteMotionPro.Workspace
             flipSetbackSign.Enabled = true;
             saveBefore.Enabled = true;
             saveAfter.Enabled = true;
+            calibrateVerticalScale.Enabled = perspectiveTransform != null;
             status.Text = "Values recalculated. Review values, then save to Before or After.";
             currentLandmarkLabel.Text = "Current point: complete";
             nextPointHintLabel.Text = "Review the numbers. Drag any orange point to fine-tune before saving.";
@@ -1478,6 +1533,7 @@ namespace CassetteMotionPro.Workspace
             recalculate.Enabled = true;
             saveBefore.Enabled = true;
             saveAfter.Enabled = true;
+            calibrateVerticalScale.Enabled = perspectiveTransform != null;
             status.Text = "Guided capture complete. Review values, then save to Before or After.";
             currentLandmarkLabel.Text = "Current point: complete";
             nextPointHintLabel.Text = "Drag any orange point to fine-tune. Values update before saving.";
@@ -1534,7 +1590,9 @@ namespace CassetteMotionPro.Workspace
             calculatedValues = new Dictionary<string, string>();
             calculatedValues["SaddleHeight"] = FormatMillimeters(saddleHeight);
             calculatedValues["SaddleHeightSource"] = hybridSaddleHeight
-                ? "Wheelbase-only scale (tire size not required)"
+                ? verticalScaleCalibrated
+                    ? "Tape-calibrated vertical scale (" + verticalScaleCorrection.ToString("0.000", CultureInfo.InvariantCulture) + "×)"
+                    : "Wheelbase-only estimate (vertical calibration recommended)"
                 : "Calibrated image points";
             calculatedValues["SaddleSetback"] = FormatMillimeters(saddleSetback);
             calculatedValues["SaddleTipToGripReach"] = FormatMillimeters(saddleTipToGripReach);
@@ -1787,6 +1845,59 @@ namespace CassetteMotionPro.Workspace
                     ? "Tape saddle-to-hood value applied to the saved measurement."
                     : "Image-point saddle-to-hood value restored.";
             }
+        }
+
+        private void CalibrateVerticalScale_Click(object sender, EventArgs e)
+        {
+            if (landmarkPoints.Count < ActiveLandmarkNames.Length || perspectiveTransform == null || wheelPerspectivePoints.Count < 5)
+            {
+                MessageBox.Show(this, "Complete Dual-wheel calibration and place the bike landmarks first.", "Vertical calibration", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            double dx;
+            double dy;
+            if (!TryGetWheelbaseScaledComponents(landmarkPoints[0], landmarkPoints[1], out dx, out dy) || Math.Abs(dy) < 1.0)
+            {
+                MessageBox.Show(this, "The bottom-bracket and saddle points cannot produce a stable vertical correction. Recheck both points.", "Vertical calibration", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            double target = Decimal.ToDouble(verifiedSaddleHeight.Value);
+            double verticalSquared = (target * target) - (dx * dx);
+            if (verticalSquared <= 0)
+            {
+                MessageBox.Show(this, "The tape saddle height is shorter than the horizontal part of the selected points. Recheck the bottom bracket and saddle top.", "Vertical calibration", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            double correction = Math.Sqrt(verticalSquared) / Math.Abs(dy);
+            if (correction < 0.75 || correction > 1.35)
+            {
+                MessageBox.Show(this, "The required correction is " + correction.ToString("0.000", CultureInfo.InvariantCulture) + "×, which is too large to trust. Recheck the wheelbase, axle centers, bottom bracket, and saddle point.", "Vertical calibration", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            verticalScaleCorrection = correction;
+            verticalScaleCalibrated = true;
+            verticalCalibrationLabel.Text = "Vertical scale: tape calibrated · " + correction.ToString("0.000", CultureInfo.InvariantCulture) + "×";
+            verticalCalibrationLabel.ForeColor = Color.FromArgb(60, 145, 76);
+            CalculateMetrics();
+            status.Text = "Tape-calibrated vertical scale applied. Future point adjustments use this locked correction.";
+            picture.Invalidate();
+        }
+
+        private void ResetVerticalScaleCalibration()
+        {
+            verticalScaleCorrection = 1.0;
+            verticalScaleCalibrated = false;
+            if (verticalCalibrationLabel != null)
+            {
+                verticalCalibrationLabel.Text = "Vertical scale: not tape calibrated";
+                verticalCalibrationLabel.ForeColor = Color.FromArgb(92, 104, 98);
+            }
+            if (calibrateVerticalScale != null)
+                calibrateVerticalScale.Enabled = false;
         }
 
         private void UpdateResultsLabel()
@@ -2598,6 +2709,20 @@ namespace CassetteMotionPro.Workspace
         private bool TryCalculateWheelbaseScaledDistance(PointF first, PointF second, out double millimeters)
         {
             millimeters = 0;
+            double dx;
+            double dy;
+            if (!TryGetWheelbaseScaledComponents(first, second, out dx, out dy))
+                return false;
+
+            dy *= verticalScaleCorrection;
+            millimeters = Math.Sqrt((dx * dx) + (dy * dy));
+            return !double.IsNaN(millimeters) && !double.IsInfinity(millimeters) && millimeters > 0;
+        }
+
+        private bool TryGetWheelbaseScaledComponents(PointF first, PointF second, out double dx, out double dy)
+        {
+            dx = 0;
+            dy = 0;
             if (perspectiveTransform == null || wheelPerspectivePoints.Count < 5)
                 return false;
 
@@ -2614,10 +2739,9 @@ namespace CassetteMotionPro.Workspace
             // wheelbase supplies one stable scale for both axes. This avoids
             // treating "700c" as a measurable 700 mm outside tire diameter.
             double wheelbaseScale = Decimal.ToDouble(knownWheelbase.Value) / axleSeparation;
-            double dx = (leveledFirst.X - leveledSecond.X) * wheelbaseScale;
-            double dy = (leveledFirst.Y - leveledSecond.Y) * wheelbaseScale;
-            millimeters = Math.Sqrt((dx * dx) + (dy * dy));
-            return !double.IsNaN(millimeters) && !double.IsInfinity(millimeters) && millimeters > 0;
+            dx = (leveledFirst.X - leveledSecond.X) * wheelbaseScale;
+            dy = (leveledFirst.Y - leveledSecond.Y) * wheelbaseScale;
+            return !double.IsNaN(dx) && !double.IsInfinity(dx) && !double.IsNaN(dy) && !double.IsInfinity(dy);
         }
 
         private double MeasurementDistance(PointF first, PointF second)

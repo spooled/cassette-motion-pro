@@ -5,7 +5,13 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 1.11.5 Wheelbase-Only Saddle Height
+## Current milestone: 1.11.6 Tape-Calibrated Vertical Scale
+
+After placing the bottom-bracket and saddle-top landmarks, the fitter can enter one tape-verified saddle height and click **Calibrate Vertical Scale**. Cassette Motion Pro locks the resulting vertical correction to the current camera setup and continues using it while landmarks are adjusted. The saved measurement records the correction factor and distinguishes tape-calibrated results from uncorrected wheelbase-only estimates.
+
+Use [the v1.11.6 test plan](docs/v1.11.6-test-plan.md) for the focused checks.
+
+### Previous milestone: 1.11.5 Wheelbase-Only Saddle Height
 
 Saddle height no longer depends on outside tire diameter. After leveling the rear-to-front axle line, Guided Bike Measurements uses the tape-measured wheelbase as one uniform scale for both image axes. A 700c bike can leave the wheel preset at 700; different tire widths and pressures no longer change the saddle-height result.
 
