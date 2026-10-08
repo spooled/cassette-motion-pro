@@ -76,6 +76,8 @@ namespace CassetteMotionPro.Workspace
         private CheckBox advancedLandmarks;
         private ComboBox handlebarReferenceMode;
         private NumericUpDown handlebarDiameter;
+        private CheckBox useTapeSaddleTipToBarCenter;
+        private NumericUpDown tapeSaddleTipToBarCenter;
         private CheckBox useTapeSaddleTipToGrip;
         private NumericUpDown tapeSaddleTipToGrip;
         private ComboBox calibrationMethod;
@@ -369,6 +371,41 @@ namespace CassetteMotionPro.Workspace
             handlebarReferencePanel.Controls.Add(diameterLabel, 0, 1);
             handlebarReferencePanel.Controls.Add(handlebarDiameter, 1, 1);
 
+            TableLayoutPanel barCenterTapePanel = new TableLayoutPanel();
+            barCenterTapePanel.Dock = DockStyle.Top;
+            barCenterTapePanel.Height = 76;
+            barCenterTapePanel.ColumnCount = 2;
+            barCenterTapePanel.RowCount = 2;
+            barCenterTapePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            barCenterTapePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110F));
+            barCenterTapePanel.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            barCenterTapePanel.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            barCenterTapePanel.BackColor = Color.FromArgb(247, 250, 244);
+            barCenterTapePanel.Padding = new Padding(4);
+            useTapeSaddleTipToBarCenter = new CheckBox();
+            useTapeSaddleTipToBarCenter.Text = "Use tape saddle tip → bar center";
+            useTapeSaddleTipToBarCenter.Dock = DockStyle.Fill;
+            useTapeSaddleTipToBarCenter.Enabled = false;
+            useTapeSaddleTipToBarCenter.CheckedChanged += SaddleTipToBarCenterChanged;
+            Label tapeBarCenterLabel = new Label();
+            tapeBarCenterLabel.Text = "Straight-line distance (mm):";
+            tapeBarCenterLabel.Dock = DockStyle.Fill;
+            tapeBarCenterLabel.TextAlign = ContentAlignment.MiddleLeft;
+            tapeSaddleTipToBarCenter = new NumericUpDown();
+            tapeSaddleTipToBarCenter.DecimalPlaces = 1;
+            tapeSaddleTipToBarCenter.Minimum = 200;
+            tapeSaddleTipToBarCenter.Maximum = 1000;
+            tapeSaddleTipToBarCenter.Increment = 1;
+            tapeSaddleTipToBarCenter.Value = 600;
+            tapeSaddleTipToBarCenter.Width = 94;
+            tapeSaddleTipToBarCenter.Anchor = AnchorStyles.Left;
+            tapeSaddleTipToBarCenter.Enabled = false;
+            tapeSaddleTipToBarCenter.ValueChanged += SaddleTipToBarCenterChanged;
+            barCenterTapePanel.Controls.Add(useTapeSaddleTipToBarCenter, 0, 0);
+            barCenterTapePanel.SetColumnSpan(useTapeSaddleTipToBarCenter, 2);
+            barCenterTapePanel.Controls.Add(tapeBarCenterLabel, 0, 1);
+            barCenterTapePanel.Controls.Add(tapeSaddleTipToBarCenter, 1, 1);
+
             TableLayoutPanel reachOverridePanel = new TableLayoutPanel();
             reachOverridePanel.Dock = DockStyle.Top;
             reachOverridePanel.Height = 76;
@@ -594,6 +631,7 @@ namespace CassetteMotionPro.Workspace
             sideScroll.Controls.Add(primaryAction);
             sideScroll.Controls.Add(advancedLandmarks);
             sideScroll.Controls.Add(handlebarReferencePanel);
+            sideScroll.Controls.Add(barCenterTapePanel);
             sideScroll.Controls.Add(reachOverridePanel);
             sideScroll.Controls.Add(verticalCalibrationPanel);
             sideScroll.Controls.Add(zoomPanel);
@@ -1193,6 +1231,10 @@ namespace CassetteMotionPro.Workspace
         {
             handlebarReferenceMode.Enabled = advancedLandmarks.Checked;
             handlebarDiameter.Enabled = advancedLandmarks.Checked;
+            useTapeSaddleTipToBarCenter.Enabled = advancedLandmarks.Checked;
+            tapeSaddleTipToBarCenter.Enabled = advancedLandmarks.Checked && useTapeSaddleTipToBarCenter.Checked;
+            if (!advancedLandmarks.Checked)
+                useTapeSaddleTipToBarCenter.Checked = false;
             landmarkPoints.Clear();
             calculatedValues.Clear();
             ResetVerticalScaleCalibration();
@@ -1586,6 +1628,26 @@ namespace CassetteMotionPro.Workspace
                 : imageSaddleTipToGripReach;
             double handlebarX = MeasurementHorizontalDifference(correctedHandlebarReference, correctedBottomBracket);
             double handlebarY = MeasurementVerticalDifference(correctedBottomBracket, correctedHandlebarReference);
+            bool tapeAssistedHandlebarCoordinates = advancedLandmarks.Checked && landmarkPoints.Count >= 6 && useTapeSaddleTipToBarCenter.Checked;
+            if (tapeAssistedHandlebarCoordinates)
+            {
+                double saddleTipX = MeasurementHorizontalDifference(correctedSaddleTip, correctedBottomBracket);
+                double saddleTipY = MeasurementVerticalDifference(correctedBottomBracket, correctedSaddleTip);
+                double barVectorX = MeasurementHorizontalDifference(correctedHandlebarReference, correctedSaddleTip);
+                double barVectorY = MeasurementVerticalDifference(correctedSaddleTip, correctedHandlebarReference);
+                double imageVectorLength = Math.Sqrt((barVectorX * barVectorX) + (barVectorY * barVectorY));
+                if (imageVectorLength > 1.0)
+                {
+                    double tapeLength = Decimal.ToDouble(tapeSaddleTipToBarCenter.Value);
+                    double factor = tapeLength / imageVectorLength;
+                    handlebarX = saddleTipX + (barVectorX * factor);
+                    handlebarY = saddleTipY + (barVectorY * factor);
+                }
+                else
+                {
+                    tapeAssistedHandlebarCoordinates = false;
+                }
+            }
 
             calculatedValues = new Dictionary<string, string>();
             calculatedValues["SaddleHeight"] = FormatMillimeters(saddleHeight);
@@ -1598,6 +1660,9 @@ namespace CassetteMotionPro.Workspace
             calculatedValues["SaddleTipToGripReach"] = FormatMillimeters(saddleTipToGripReach);
             calculatedValues["HandlebarX"] = FormatMillimeters(handlebarX);
             calculatedValues["HandlebarY"] = FormatMillimeters(handlebarY);
+            calculatedValues["HandlebarCoordinateSource"] = tapeAssistedHandlebarCoordinates
+                ? "BB reference + tape saddle-tip-to-bar-center length + image direction"
+                : "BB reference + calibrated image position";
 
             if (advancedLandmarks.Checked && landmarkPoints.Count >= advancedLandmarkNames.Length)
             {
@@ -1835,6 +1900,19 @@ namespace CassetteMotionPro.Workspace
             picture.Invalidate();
         }
 
+        private void SaddleTipToBarCenterChanged(object sender, EventArgs e)
+        {
+            tapeSaddleTipToBarCenter.Enabled = advancedLandmarks.Checked && useTapeSaddleTipToBarCenter.Checked;
+            if (landmarkPoints.Count >= ActiveLandmarkNames.Length && millimetersPerPixel > 0)
+            {
+                CalculateMetrics();
+                status.Text = useTapeSaddleTipToBarCenter.Checked
+                    ? "Handlebar X/Y updated from the bottom bracket using tape length plus the image direction."
+                    : "Handlebar X/Y restored to the calibrated image position.";
+            }
+            picture.Invalidate();
+        }
+
         private void SaddleTipToGripOverrideChanged(object sender, EventArgs e)
         {
             tapeSaddleTipToGrip.Enabled = useTapeSaddleTipToGrip.Checked;
@@ -1912,6 +1990,7 @@ namespace CassetteMotionPro.Workspace
                 "Saddle-to-hood source: " + GetCalculatedValue("SaddleTipToGripSource") + "\n" +
                 "Handlebar X: " + GetCalculatedValue("HandlebarX") + "\n" +
                 "Handlebar Y: " + GetCalculatedValue("HandlebarY") + "\n" +
+                "Handlebar coordinate source: " + GetCalculatedValue("HandlebarCoordinateSource") + "\n" +
                 "Crank length: " + GetCalculatedValue("CrankLength") + "\n" +
                 "Handlebar reach: " + GetCalculatedValue("HandlebarReach") + "\n" +
                 "Handlebar drop: " + GetCalculatedValue("HandlebarDrop") + "\n" +
@@ -1934,6 +2013,7 @@ namespace CassetteMotionPro.Workspace
                 "Saddle-to-hood source: " + GetCalculatedValue("SaddleTipToGripSource") + "\n" +
                 "Handlebar X: " + GetCalculatedValue("HandlebarX") + "\n" +
                 "Handlebar Y: " + GetCalculatedValue("HandlebarY") + "\n\n" +
+                "Handlebar coordinate source: " + GetCalculatedValue("HandlebarCoordinateSource") + "\n\n" +
                 "Crank length: " + GetCalculatedValue("CrankLength") + "\n" +
                 "Handlebar reach: " + GetCalculatedValue("HandlebarReach") + "\n" +
                 "Handlebar drop: " + GetCalculatedValue("HandlebarDrop") + "\n" +
