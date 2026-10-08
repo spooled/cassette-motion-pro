@@ -1181,7 +1181,7 @@ namespace CassetteMotionPro.Workspace
             flipSetbackSign.Enabled = true;
             saveBefore.Enabled = true;
             saveAfter.Enabled = true;
-            calibrateVerticalScale.Enabled = perspectiveTransform != null;
+            calibrateVerticalScale.Enabled = CanUseWheelbaseVerticalCalibration();
             status.Text = "Eight bike landmarks suggested. Confirm every orange point before saving.";
             currentLandmarkLabel.Text = "Assisted landmarks · confidence " + landmarkSuggestionConfidence.ToString("0", CultureInfo.InvariantCulture) + "%";
             nextPointHintLabel.Text = "Drag BB, saddle, handlebar, pedal, and both axle points onto their exact centers. Suggestions are advisory.";
@@ -1328,7 +1328,7 @@ namespace CassetteMotionPro.Workspace
             flipSetbackSign.Enabled = true;
             saveBefore.Enabled = true;
             saveAfter.Enabled = true;
-            calibrateVerticalScale.Enabled = perspectiveTransform != null;
+            calibrateVerticalScale.Enabled = CanUseWheelbaseVerticalCalibration();
             status.Text = "Values recalculated. Review values, then save to Before or After.";
             currentLandmarkLabel.Text = "Current point: complete";
             nextPointHintLabel.Text = "Review the numbers. Drag any orange point to fine-tune before saving.";
@@ -1533,7 +1533,7 @@ namespace CassetteMotionPro.Workspace
             recalculate.Enabled = true;
             saveBefore.Enabled = true;
             saveAfter.Enabled = true;
-            calibrateVerticalScale.Enabled = perspectiveTransform != null;
+            calibrateVerticalScale.Enabled = CanUseWheelbaseVerticalCalibration();
             status.Text = "Guided capture complete. Review values, then save to Before or After.";
             currentLandmarkLabel.Text = "Current point: complete";
             nextPointHintLabel.Text = "Drag any orange point to fine-tune. Values update before saving.";
@@ -1849,9 +1849,9 @@ namespace CassetteMotionPro.Workspace
 
         private void CalibrateVerticalScale_Click(object sender, EventArgs e)
         {
-            if (landmarkPoints.Count < ActiveLandmarkNames.Length || perspectiveTransform == null || wheelPerspectivePoints.Count < 5)
+            if (landmarkPoints.Count < ActiveLandmarkNames.Length || !CanUseWheelbaseVerticalCalibration())
             {
-                MessageBox.Show(this, "Complete Dual-wheel calibration and place the bike landmarks first.", "Vertical calibration", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, "Complete Dual-wheel or Quick Bike calibration and place the bike landmarks first.", "Vertical calibration", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
@@ -2723,11 +2723,13 @@ namespace CassetteMotionPro.Workspace
         {
             dx = 0;
             dy = 0;
-            if (perspectiveTransform == null || wheelPerspectivePoints.Count < 5)
+            if (!CanUseWheelbaseVerticalCalibration())
                 return false;
 
-            PointF rearAxle = CorrectForLevel(wheelPerspectivePoints[0]);
-            PointF frontAxle = CorrectForLevel(wheelPerspectivePoints[4]);
+            PointF rearAxlePoint = wheelPerspectivePoints.Count >= 5 ? wheelPerspectivePoints[0] : bikeCalibrationPoints[0];
+            PointF frontAxlePoint = wheelPerspectivePoints.Count >= 5 ? wheelPerspectivePoints[4] : bikeCalibrationPoints[1];
+            PointF rearAxle = CorrectForLevel(rearAxlePoint);
+            PointF frontAxle = CorrectForLevel(frontAxlePoint);
             PointF leveledFirst = CorrectForLevel(first);
             PointF leveledSecond = CorrectForLevel(second);
 
@@ -2742,6 +2744,12 @@ namespace CassetteMotionPro.Workspace
             dx = (leveledFirst.X - leveledSecond.X) * wheelbaseScale;
             dy = (leveledFirst.Y - leveledSecond.Y) * wheelbaseScale;
             return !double.IsNaN(dx) && !double.IsInfinity(dx) && !double.IsNaN(dy) && !double.IsInfinity(dy);
+        }
+
+        private bool CanUseWheelbaseVerticalCalibration()
+        {
+            return knownWheelbase != null && knownWheelbase.Value > 0 &&
+                (wheelPerspectivePoints.Count >= 5 || bikeCalibrationPoints.Count >= 2);
         }
 
         private double MeasurementDistance(PointF first, PointF second)

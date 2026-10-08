@@ -5,7 +5,13 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 1.11.6 Tape-Calibrated Vertical Scale
+## Current milestone: 1.11.7 Reliable Vertical Calibration Action
+
+**Calibrate Vertical Scale** now works after either Dual-wheel Perspective or Quick Bike Reference calibration. The action becomes available as soon as a wheelbase-based calibration and all required bike landmarks are complete, with clearer instructions if either prerequisite is missing. Saddle-tip-to-handlebar-center tape distance remains a separate straight-line measurement; it is not misrepresented as independent Handlebar X and Y coordinates.
+
+Use [the v1.11.7 test plan](docs/v1.11.7-test-plan.md) for the focused checks.
+
+### Previous milestone: 1.11.6 Tape-Calibrated Vertical Scale
 
 After placing the bottom-bracket and saddle-top landmarks, the fitter can enter one tape-verified saddle height and click **Calibrate Vertical Scale**. Cassette Motion Pro locks the resulting vertical correction to the current camera setup and continues using it while landmarks are adjusted. The saved measurement records the correction factor and distinguishes tape-calibrated results from uncorrected wheelbase-only estimates.
 
