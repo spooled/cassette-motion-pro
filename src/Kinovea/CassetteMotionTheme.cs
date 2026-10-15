@@ -12,23 +12,26 @@ namespace CassetteMotionPro
 {
     internal static class CassetteMotionTheme
     {
-        public static readonly Color Canvas = Color.FromArgb(244, 247, 243);
-        public static readonly Color Surface = Color.White;
-        public static readonly Color SurfaceSoft = Color.FromArgb(235, 241, 235);
-        public static readonly Color SurfaceRaised = Color.FromArgb(249, 251, 248);
-        public static readonly Color Header = Color.FromArgb(12, 29, 24);
-        public static readonly Color HeaderSoft = Color.FromArgb(24, 48, 40);
-        public static readonly Color Ink = Color.FromArgb(18, 38, 31);
-        public static readonly Color Muted = Color.FromArgb(91, 108, 99);
-        public static readonly Color Border = Color.FromArgb(205, 218, 208);
-        public static readonly Color Accent = Color.FromArgb(190, 242, 82);
-        public static readonly Color AccentStrong = Color.FromArgb(137, 203, 28);
-        public static readonly Color Success = Color.FromArgb(50, 139, 78);
-        public static readonly Color Warning = Color.FromArgb(178, 111, 32);
+        public static readonly Color Canvas = Color.FromArgb(239, 243, 240);
+        public static readonly Color Surface = Color.FromArgb(252, 253, 252);
+        public static readonly Color SurfaceSoft = Color.FromArgb(228, 235, 230);
+        public static readonly Color SurfaceRaised = Color.White;
+        public static readonly Color Header = Color.FromArgb(13, 20, 18);
+        public static readonly Color HeaderSoft = Color.FromArgb(28, 40, 36);
+        public static readonly Color Rail = Color.FromArgb(17, 27, 24);
+        public static readonly Color RailSelected = Color.FromArgb(45, 62, 55);
+        public static readonly Color Ink = Color.FromArgb(19, 31, 27);
+        public static readonly Color Muted = Color.FromArgb(92, 105, 98);
+        public static readonly Color Border = Color.FromArgb(198, 210, 202);
+        public static readonly Color Accent = Color.FromArgb(191, 244, 74);
+        public static readonly Color AccentSoft = Color.FromArgb(224, 250, 169);
+        public static readonly Color AccentStrong = Color.FromArgb(126, 190, 23);
+        public static readonly Color Success = Color.FromArgb(42, 142, 78);
+        public static readonly Color Warning = Color.FromArgb(190, 119, 29);
 
         public static void ApplyForm(Form form)
         {
-            form.Font = new Font("Segoe UI", 9.5F);
+            form.Font = new Font("Segoe UI", 9.25F);
             form.BackColor = Canvas;
             form.ForeColor = Ink;
         }
@@ -42,8 +45,8 @@ namespace CassetteMotionPro
             button.FlatAppearance.MouseDownBackColor = primary ? AccentStrong : Color.FromArgb(221, 228, 222);
             button.BackColor = primary ? Accent : Surface;
             button.ForeColor = Ink;
-            button.Font = new Font("Segoe UI Semibold", 9.25F, FontStyle.Bold);
-            button.MinimumSize = new Size(82, 34);
+            button.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
+            button.MinimumSize = new Size(82, 38);
             button.Cursor = Cursors.Hand;
             button.UseVisualStyleBackColor = false;
         }

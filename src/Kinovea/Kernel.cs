@@ -901,19 +901,19 @@ namespace Kinovea.Root
             fitDayHeader = new Panel();
             fitDayHeader.Name = "CassetteMotionPersistentFitDayHeader";
             fitDayHeader.Dock = DockStyle.Top;
-            fitDayHeader.Height = 62;
-            fitDayHeader.Padding = new Padding(12, 7, 12, 7);
+            fitDayHeader.Height = 70;
+            fitDayHeader.Padding = new Padding(14, 9, 14, 9);
             fitDayHeader.BackColor = CassetteMotionTheme.Header;
 
             TableLayoutPanel layout = new TableLayoutPanel();
             layout.Dock = DockStyle.Fill;
             layout.RowCount = 1;
             layout.ColumnCount = 7;
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 17F));
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 17F));
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16F));
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 16F));
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 26F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 18F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 18F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 14F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 14F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 28F));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 92F));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 106F));
 
@@ -1058,7 +1058,7 @@ namespace Kinovea.Root
             fitWorkspacePanel.Dock = DockStyle.Right;
             fitWorkspacePanel.Width = GetFitWorkspacePanelWidth();
             fitWorkspacePanel.BackColor = CassetteMotionTheme.Canvas;
-            fitWorkspacePanel.BorderStyle = BorderStyle.FixedSingle;
+            fitWorkspacePanel.BorderStyle = BorderStyle.None;
 
             fitWorkspaceHost = new Panel();
             fitWorkspaceHost.Dock = DockStyle.Fill;
@@ -1066,20 +1066,20 @@ namespace Kinovea.Root
 
             Panel header = new Panel();
             header.Dock = DockStyle.Top;
-            header.Height = 42;
+            header.Height = 50;
             header.BackColor = CassetteMotionTheme.Header;
 
             fitWorkspacePanelTitle = new Label();
             fitWorkspacePanelTitle.Dock = DockStyle.Fill;
-            fitWorkspacePanelTitle.Padding = new Padding(12, 0, 8, 0);
+            fitWorkspacePanelTitle.Padding = new Padding(16, 0, 8, 0);
             fitWorkspacePanelTitle.TextAlign = ContentAlignment.MiddleLeft;
-            fitWorkspacePanelTitle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            fitWorkspacePanelTitle.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
             fitWorkspacePanelTitle.ForeColor = Color.White;
 
             Button collapse = new Button();
             collapse.Dock = DockStyle.Right;
-            collapse.Width = 92;
-            collapse.Text = "Video ›";
+            collapse.Width = 112;
+            collapse.Text = "←  VIDEO";
             collapse.FlatStyle = FlatStyle.Flat;
             collapse.FlatAppearance.BorderSize = 0;
             collapse.BackColor = CassetteMotionTheme.Accent;
@@ -1115,9 +1115,9 @@ namespace Kinovea.Root
         private int GetFitWorkspacePanelWidth()
         {
             int windowWidth = Math.Max(900, mainWindow.ClientSize.Width);
-            int preferredWidth = windowWidth * 72 / 100;
-            int maximumWithVideoVisible = Math.Max(620, windowWidth - 320);
-            return Math.Max(620, Math.Min(1080, Math.Min(preferredWidth, maximumWithVideoVisible)));
+            int preferredWidth = windowWidth * 68 / 100;
+            int maximumWithVideoVisible = Math.Max(650, windowWidth - 380);
+            return Math.Max(650, Math.Min(1120, Math.Min(preferredWidth, maximumWithVideoVisible)));
         }
 
         private void ClearFitWorkspacePanel()
