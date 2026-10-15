@@ -12,10 +12,14 @@ than a stack of traditional forms. A dark numbered stage rail keeps Fit Day,
 Client, Video, Measurements, and Report visible without consuming vertical
 video space. The active content uses a cleaner inspector layout, a more compact
 client/session header, a dark session library, stronger typography, clearer
-primary actions, and a persistent fit-day status strip. The embedded workspace
-leaves more of Kinovea's video canvas visible, while the collapse action is now
-an unmistakable **← VIDEO** control. Capture, playback, drawing, saving, and
-client-folder behavior remain unchanged.
+primary actions, and a persistent fit-day status strip. The complete application
+frame is now Cassette Motion Pro branded too: a dark menu, toolbar, and status
+bar; fit-day-first menu names; a CMP toolbar badge; and clearer product title.
+The embedded workspace leaves more of the video canvas visible, the collapse
+action is an unmistakable **← VIDEO** control, and toolbar overflow keeps actions
+reachable on a 1366-pixel laptop. Kinovea remains credited as the underlying
+video engine while capture, playback, drawing, saving, and client-folder behavior
+remain unchanged.
 
 Use [the v1.20.0 test plan](docs/v1.20.0-test-plan.md) for the focused checks.
 

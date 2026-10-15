@@ -75,6 +75,64 @@ namespace CassetteMotionPro
             tabs.DrawItem += DrawTab;
         }
 
+        public static void StyleApplicationMenu(MenuStrip menu)
+        {
+            if (menu == null)
+                return;
+            menu.BackColor = Header;
+            menu.ForeColor = Color.White;
+            menu.Renderer = new ToolStripProfessionalRenderer(new CassetteMotionColorTable());
+            menu.Padding = new Padding(8, 2, 4, 2);
+            menu.AutoSize = false;
+            menu.Height = 31;
+            StyleToolStripItems(menu.Items);
+        }
+
+        public static void StyleApplicationToolbar(ToolStrip toolbar)
+        {
+            if (toolbar == null)
+                return;
+            toolbar.CanOverflow = true;
+            toolbar.LayoutStyle = ToolStripLayoutStyle.HorizontalStackWithOverflow;
+            toolbar.BackColor = HeaderSoft;
+            toolbar.ForeColor = Color.White;
+            toolbar.Renderer = new ToolStripProfessionalRenderer(new CassetteMotionColorTable());
+            toolbar.GripStyle = ToolStripGripStyle.Hidden;
+            toolbar.Padding = new Padding(10, 4, 8, 4);
+            toolbar.AutoSize = false;
+            toolbar.Height = 43;
+            toolbar.ImageScalingSize = new Size(22, 22);
+            StyleToolStripItems(toolbar.Items);
+        }
+
+        public static void StyleApplicationStatus(ToolStrip status)
+        {
+            if (status == null)
+                return;
+            status.BackColor = Header;
+            status.ForeColor = Color.FromArgb(211, 222, 216);
+            status.Renderer = new ToolStripProfessionalRenderer(new CassetteMotionColorTable());
+            status.GripStyle = ToolStripGripStyle.Hidden;
+            StyleToolStripItems(status.Items);
+        }
+
+        private static void StyleToolStripItems(ToolStripItemCollection items)
+        {
+            foreach (ToolStripItem item in items)
+            {
+                if (!(item is ToolStripSeparator))
+                    item.ForeColor = Color.White;
+                ToolStripDropDownItem dropDown = item as ToolStripDropDownItem;
+                if (dropDown != null)
+                {
+                    dropDown.DropDown.BackColor = HeaderSoft;
+                    dropDown.DropDown.ForeColor = Color.White;
+                    dropDown.DropDown.Renderer = new ToolStripProfessionalRenderer(new CassetteMotionColorTable());
+                    StyleToolStripItems(dropDown.DropDownItems);
+                }
+            }
+        }
+
         private static void DrawTab(object sender, DrawItemEventArgs e)
         {
             TabControl tabs = sender as TabControl;
@@ -100,6 +158,35 @@ namespace CassetteMotionPro
                 format.LineAlignment = StringAlignment.Center;
                 e.Graphics.DrawString(tabs.TabPages[e.Index].Text, font, textBrush, bounds, format);
             }
+        }
+
+        private sealed class CassetteMotionColorTable : ProfessionalColorTable
+        {
+            public override Color MenuStripGradientBegin { get { return Header; } }
+            public override Color MenuStripGradientEnd { get { return Header; } }
+            public override Color ToolStripGradientBegin { get { return HeaderSoft; } }
+            public override Color ToolStripGradientMiddle { get { return HeaderSoft; } }
+            public override Color ToolStripGradientEnd { get { return HeaderSoft; } }
+            public override Color StatusStripGradientBegin { get { return Header; } }
+            public override Color StatusStripGradientEnd { get { return Header; } }
+            public override Color MenuItemSelected { get { return RailSelected; } }
+            public override Color MenuItemSelectedGradientBegin { get { return RailSelected; } }
+            public override Color MenuItemSelectedGradientEnd { get { return RailSelected; } }
+            public override Color MenuItemPressedGradientBegin { get { return HeaderSoft; } }
+            public override Color MenuItemPressedGradientMiddle { get { return HeaderSoft; } }
+            public override Color MenuItemPressedGradientEnd { get { return HeaderSoft; } }
+            public override Color ToolStripDropDownBackground { get { return HeaderSoft; } }
+            public override Color ImageMarginGradientBegin { get { return HeaderSoft; } }
+            public override Color ImageMarginGradientMiddle { get { return HeaderSoft; } }
+            public override Color ImageMarginGradientEnd { get { return HeaderSoft; } }
+            public override Color ButtonSelectedGradientBegin { get { return RailSelected; } }
+            public override Color ButtonSelectedGradientEnd { get { return RailSelected; } }
+            public override Color ButtonPressedGradientBegin { get { return AccentStrong; } }
+            public override Color ButtonPressedGradientEnd { get { return AccentStrong; } }
+            public override Color MenuBorder { get { return Border; } }
+            public override Color MenuItemBorder { get { return Accent; } }
+            public override Color SeparatorDark { get { return RailSelected; } }
+            public override Color SeparatorLight { get { return RailSelected; } }
         }
     }
 }

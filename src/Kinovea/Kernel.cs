@@ -260,6 +260,7 @@ namespace Kinovea.Root
             ExtendToolBar(mainWindow.toolStrip);
             ExtendStatusBar(mainWindow.statusStrip);
             ExtendUI();
+            ApplyCassetteMotionMainWindowChrome();
 
             FormsHelper.SetMainForm(mainWindow);
             CassetteReportImageSaveRouter.SaveReportImageRequested = SaveKinoveaReportImage;
@@ -400,6 +401,12 @@ namespace Kinovea.Root
                 updater.RefreshUICulture();
                 screenManager.RefreshUICulture();
             }
+
+            // Culture refreshes rebuild some menu entries. Reapply the Cassette Motion
+            // shell so new entries keep the same branded colors and laptop sizing.
+            CassetteMotionTheme.StyleApplicationMenu(mainWindow.menuStrip);
+            CassetteMotionTheme.StyleApplicationToolbar(mainWindow.toolStrip);
+            CassetteMotionTheme.StyleApplicationStatus(mainWindow.statusStrip);
             
             log.Debug("RefreshUICulture - Whole tree culture reloaded.");
         }
@@ -664,13 +671,18 @@ namespace Kinovea.Root
         }
         private void GetModuleToolBar(ToolStrip toolbar)
         {
+            ToolStripLabel brand = new ToolStripLabel("CMP");
+            brand.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
+            brand.ForeColor = CassetteMotionTheme.Accent;
+            brand.ToolTipText = "Cassette Motion Pro";
+
             toolClientPicker.Text = "Choose client + session";
             toolClientPicker.Image = Properties.Resources.user_detective;
             toolClientPicker.DisplayStyle = ToolStripItemDisplayStyle.ImageAndText;
             toolClientPicker.ToolTipText = "Choose a client and open the fit workspace";
             toolClientPicker.DropDownOpening += delegate { BuildClientPickerMenu(); };
 
-            toolFitWorkspace.Text = "Fit Workspace";
+            toolFitWorkspace.Text = "Fit Panel";
             toolFitWorkspace.DisplayStyle = ToolStripItemDisplayStyle.Text;
             toolFitWorkspace.ToolTipText = "Return to the active client fit session";
             toolFitWorkspace.Click += delegate
@@ -683,7 +695,7 @@ namespace Kinovea.Root
                     toolClientPicker.ShowDropDown();
             };
 
-            toolFitDayHeader.Text = "Hide Fit Header";
+            toolFitDayHeader.Text = "Header";
             toolFitDayHeader.DisplayStyle = ToolStripItemDisplayStyle.Text;
             toolFitDayHeader.ToolTipText = "Show or hide the persistent fit-day header without closing the active session";
             toolFitDayHeader.Click += delegate
@@ -698,6 +710,8 @@ namespace Kinovea.Root
             toolOpenFile.ToolTipText = ScreenManagerLang.mnuOpenVideo;
             toolOpenFile.Click += new EventHandler(mnuOpenFileOnClick);
             
+            toolbar.Items.Add(brand);
+            toolbar.Items.Add(new ToolStripSeparator());
             toolbar.Items.Add(toolClientPicker);
             toolbar.Items.Add(toolFitWorkspace);
             toolbar.Items.Add(toolFitDayHeader);
@@ -712,12 +726,12 @@ namespace Kinovea.Root
         }
         private void RefreshCultureMenu()
         {
-            mnuClients.Text = "Clients";
+            mnuClients.Text = "FIT DAY";
             mnuClientManager.Text = "Client Manager";
             mnuNewClient.Text = "New Client...";
             mnuRecentClients.Text = "Recent Clients";
 
-            mnuFile.Text = RootLang.mnuFile;
+            mnuFile.Text = "MEDIA";
             mnuOpenFile.Text = ScreenManagerLang.mnuOpenVideo;
 
             BuildReplayWatcherMenus();
@@ -727,19 +741,19 @@ namespace Kinovea.Root
             mnuHistoryReset.Text = RootLang.mnuHistoryReset;
             mnuQuit.Text = RootLang.Generic_Quit;
             
-            mnuEdit.Text = RootLang.mnuEdit;
+            mnuEdit.Text = "EDIT";
             mnuUndo.Text = RootLang.mnuUndo;
             mnuRedo.Text = RootLang.mnuRedo;
             
-            mnuView.Text = RootLang.mnuScreens;
+            mnuView.Text = "VIEW";
             mnuToggleNavigationPane.Text = Kinovea.Root.Languages.RootLang.NavigationPane;
             mnuFullScreen.Text = RootLang.mnuFullScreen;
             
-            mnuImage.Text = RootLang.mnuImage;
-            mnuVideo.Text = RootLang.mnuVideo;
-            mnuTools.Text = RootLang.mnuTools;
+            mnuImage.Text = "EVIDENCE";
+            mnuVideo.Text = "VIDEO";
+            mnuTools.Text = "MEASURE";
             
-            mnuOptions.Text = RootLang.mnuOptions;
+            mnuOptions.Text = "SETTINGS";
             mnuLanguages.Text = RootLang.mnuLanguages;
             mnuTranslate1.Text = RootLang.mnuTranslate;
             BuildLanguageMenus();
@@ -764,7 +778,7 @@ namespace Kinovea.Root
             // Rebuild the whole pointer menu to get the correct text.
             BuildPointerMenus();
 
-            mnuWindow.Text = RootLang.mnuWindow;
+            mnuWindow.Text = "WORKSPACE";
             mnuWindowProperties.Text = RootLang.mnuWindowProperties;
             mnuOpenNewWindow.Text = RootLang.mnuOpenNewWindow;
             mnuReopenWindow.Text = RootLang.mnuReopenWindow;
@@ -774,14 +788,25 @@ namespace Kinovea.Root
             // Rebuild the reopen window menu to get the correct list.
             BuildReopenWindowsMenus();
 
-            mnuHelp.Text = RootLang.mnuHelp;
+            mnuHelp.Text = "HELP";
             mnuHelpContents.Text = RootLang.mnuHelpContents;
             mnuTranslate2.Text = RootLang.mnuTranslate;
             mnuApplicationFolder.Text = RootLang.mnuOpenApplicationDataFolder;
             mnuEnableDebugLogs.Text = PreferencesManager.GeneralPreferences.EnableDebugLog ? RootLang.mnuDisableDebugLogs : RootLang.mnuEnableDebugLogs;
-            mnuWebsite.Text = "www.kinovea.org";
-            mnuAbout.Text = RootLang.mnuAbout;
-            mnuHelp.Text = RootLang.mnuHelp;
+            mnuWebsite.Text = "Kinovea Engine Website";
+            mnuAbout.Text = "About Cassette Motion Pro";
+            mnuPreferences.Text = "Application Preferences...";
+            mnuHelp.Text = "HELP";
+        }
+
+        private void ApplyCassetteMotionMainWindowChrome()
+        {
+            mainWindow.Text = "Cassette Motion Pro — Professional Bike Fitting";
+            mainWindow.BackColor = CassetteMotionTheme.Header;
+            CassetteMotionTheme.StyleApplicationMenu(mainWindow.menuStrip);
+            CassetteMotionTheme.StyleApplicationToolbar(mainWindow.toolStrip);
+            CassetteMotionTheme.StyleApplicationStatus(mainWindow.statusStrip);
+            statusLabel.Text = "Cassette Motion Pro ready · Choose a client and fit session to begin.";
         }
         #endregion
 
@@ -971,7 +996,7 @@ namespace Kinovea.Root
 
         private void ApplyFitDayHeaderVisibility()
         {
-            toolFitDayHeader.Text = fitDayHeaderVisible ? "Hide Fit Header" : "Show Fit Header";
+            toolFitDayHeader.Text = fitDayHeaderVisible ? "Header On" : "Header Off";
             if (fitDayHeader != null && !fitDayHeader.IsDisposed)
             {
                 fitDayHeader.Visible = fitDayHeaderVisible;
@@ -1101,7 +1126,7 @@ namespace Kinovea.Root
             if (fitWorkspacePanel == null || fitWorkspacePanel.IsDisposed)
                 return;
             fitWorkspacePanel.Visible = visible;
-            toolFitWorkspace.Text = visible ? "Hide Fit Panel" : "Show Fit Panel";
+            toolFitWorkspace.Text = visible ? "Hide Panel" : "Show Panel";
             if (visible)
             {
                 fitWorkspacePanel.Width = GetFitWorkspacePanelWidth();
@@ -1131,7 +1156,7 @@ namespace Kinovea.Root
             fitWorkspacePanel = null;
             fitWorkspaceHost = null;
             fitWorkspacePanelTitle = null;
-            toolFitWorkspace.Text = "Fit Workspace";
+            toolFitWorkspace.Text = "Fit Panel";
         }
 
         private void ShowVideoStudioForFit()
