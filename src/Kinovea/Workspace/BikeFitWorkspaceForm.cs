@@ -54,6 +54,10 @@ namespace CassetteMotionPro.Workspace
         private readonly TextBox txtCameraRightDevice = new TextBox();
         private readonly TextBox txtCameraResolution = new TextBox();
         private readonly TextBox txtCameraFrameRate = new TextBox();
+        private readonly TextBox txtCameraExposure = new TextBox();
+        private readonly TextBox txtCameraShutterSpeed = new TextBox();
+        private readonly TextBox txtCameraDriverInterface = new TextBox();
+        private readonly TextBox txtCameraLensCalibration = new TextBox();
         private readonly TextBox txtCameraNotes = new TextBox();
         private readonly Label cameraProfileStatus = new Label();
         private readonly Label fitTemplatePreview = new Label();
@@ -4227,7 +4231,7 @@ namespace CassetteMotionPro.Workspace
 
             Control cameraProfiles = BuildCameraProfilePanel();
             int cameraProfilesRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 278));
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 350));
             table.Controls.Add(cameraProfiles, 1, cameraProfilesRow);
             table.SetColumnSpan(cameraProfiles, 5);
 
@@ -4465,12 +4469,12 @@ namespace CassetteMotionPro.Workspace
             TableLayoutPanel layout = new TableLayoutPanel();
             layout.Dock = DockStyle.Fill;
             layout.ColumnCount = 4;
-            layout.RowCount = 6;
+            layout.RowCount = 8;
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 118));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 118));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-            for (int index = 0; index < 5; index++)
+            for (int index = 0; index < 7; index++)
                 layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
 
@@ -4487,7 +4491,11 @@ namespace CassetteMotionPro.Workspace
             AddCameraProfileField(layout, "Right camera", txtCameraRightDevice, 2, 2);
             AddCameraProfileField(layout, "Resolution", txtCameraResolution, 0, 3);
             AddCameraProfileField(layout, "Frame rate", txtCameraFrameRate, 2, 3);
-            AddCameraProfileField(layout, "Setup notes", txtCameraNotes, 0, 4);
+            AddCameraProfileField(layout, "Exposure / gain", txtCameraExposure, 0, 4);
+            AddCameraProfileField(layout, "Shutter", txtCameraShutterSpeed, 2, 4);
+            AddCameraProfileField(layout, "Camera interface", txtCameraDriverInterface, 0, 5);
+            AddCameraProfileField(layout, "Lens calibration", txtCameraLensCalibration, 2, 5);
+            AddCameraProfileField(layout, "Setup notes", txtCameraNotes, 0, 6);
             layout.SetColumnSpan(txtCameraNotes, 3);
 
             FlowLayoutPanel actions = new FlowLayoutPanel();
@@ -4505,6 +4513,9 @@ namespace CassetteMotionPro.Workspace
             Button delete = CreateButton("Delete Custom", false);
             delete.Size = new Size(135, 36);
             delete.Click += delegate { DeleteCameraProfile(); };
+            Button check = CreateButton("Run Camera Check", true);
+            check.Size = new Size(155, 36);
+            check.Click += delegate { RunProfessionalCameraCheck(); };
             cameraProfileStatus.AutoSize = false;
             cameraProfileStatus.Size = new Size(430, 38);
             cameraProfileStatus.Padding = new Padding(8, 8, 0, 0);
@@ -4513,8 +4524,9 @@ namespace CassetteMotionPro.Workspace
             actions.Controls.Add(openAfter);
             actions.Controls.Add(save);
             actions.Controls.Add(delete);
+            actions.Controls.Add(check);
             actions.Controls.Add(cameraProfileStatus);
-            layout.Controls.Add(actions, 0, 5);
+            layout.Controls.Add(actions, 0, 7);
             layout.SetColumnSpan(actions, 4);
             group.Controls.Add(layout);
             RefreshCameraProfiles(null);
@@ -4569,8 +4581,12 @@ namespace CassetteMotionPro.Workspace
             txtCameraRightDevice.Text = profile.RightCamera ?? string.Empty;
             txtCameraResolution.Text = profile.Resolution ?? string.Empty;
             txtCameraFrameRate.Text = profile.FrameRate ?? string.Empty;
+            txtCameraExposure.Text = profile.Exposure ?? string.Empty;
+            txtCameraShutterSpeed.Text = profile.ShutterSpeed ?? string.Empty;
+            txtCameraDriverInterface.Text = profile.DriverInterface ?? string.Empty;
+            txtCameraLensCalibration.Text = profile.LensCalibration ?? string.Empty;
             txtCameraNotes.Text = profile.Notes ?? string.Empty;
-            cameraProfileStatus.Text = (profile.IsBuiltIn ? "Built-in" : "Custom") + " · Camera choices remain under Kinovea’s capture controls.";
+            cameraProfileStatus.Text = (profile.IsBuiltIn ? "Built-in" : "Custom") + " · Settings guide the setup; choose the physical device in Kinovea capture controls.";
         }
 
         private void ApplyCameraProfileAndOpenCapture(string phase)
@@ -4632,6 +4648,10 @@ namespace CassetteMotionPro.Workspace
             profile.RightCamera = txtCameraRightDevice.Text.Trim();
             profile.Resolution = txtCameraResolution.Text.Trim();
             profile.FrameRate = txtCameraFrameRate.Text.Trim();
+            profile.Exposure = txtCameraExposure.Text.Trim();
+            profile.ShutterSpeed = txtCameraShutterSpeed.Text.Trim();
+            profile.DriverInterface = txtCameraDriverInterface.Text.Trim();
+            profile.LensCalibration = txtCameraLensCalibration.Text.Trim();
             profile.Notes = txtCameraNotes.Text.Trim();
             cameraProfileRepository.Save(profile);
             RefreshCameraProfiles(name);
@@ -4653,6 +4673,92 @@ namespace CassetteMotionPro.Workspace
             cameraProfileRepository.Delete(profile);
             RefreshCameraProfiles(null);
             UpdateSaveHint("Custom camera profile deleted.");
+        }
+
+        private void RunProfessionalCameraCheck()
+        {
+            List<string> ready = new List<string>();
+            List<string> review = new List<string>();
+            string resolution = txtCameraResolution.Text.Trim();
+            string frameRate = txtCameraFrameRate.Text.Trim();
+            string exposure = txtCameraExposure.Text.Trim();
+            string shutter = txtCameraShutterSpeed.Text.Trim();
+            string cameraInterface = txtCameraDriverInterface.Text.Trim();
+            string calibration = txtCameraLensCalibration.Text.Trim();
+
+            if (resolution.IndexOf("1920", StringComparison.OrdinalIgnoreCase) >= 0 && resolution.IndexOf("1080", StringComparison.OrdinalIgnoreCase) >= 0)
+                ready.Add("Resolution target is 1920 × 1080.");
+            else
+                review.Add("Set and verify a dependable resolution such as 1920 × 1080.");
+
+            int framesPerSecond;
+            if (TryReadFirstNumber(frameRate, out framesPerSecond) && framesPerSecond >= 60)
+                ready.Add("Frame-rate target is at least 60 FPS.");
+            else
+                review.Add("Set the capture format to 60 FPS or faster and verify the recorded file reports that rate.");
+
+            if (ContainsAny(exposure, "manual", "locked", "fixed"))
+                ready.Add("Exposure is marked manual or locked.");
+            else
+                review.Add("Lock exposure/gain so brightness does not change while the rider pedals.");
+
+            if (!string.IsNullOrWhiteSpace(shutter))
+                ready.Add("Shutter target is recorded: " + shutter + ".");
+            else
+                review.Add("Record a shutter target; start near 1/500 s for pedaling and adjust for available light.");
+
+            if (cameraInterface.IndexOf("DirectShow", StringComparison.OrdinalIgnoreCase) >= 0)
+                ready.Add("Profile uses the Kinovea-compatible DirectShow path.");
+            else
+                review.Add("Confirm that the camera exposes a DirectShow/UVC device to Kinovea.");
+
+            if (ContainsAny(calibration, "verified", "complete", "passed", "checkerboard"))
+                ready.Add("Lens calibration is recorded.");
+            else
+                review.Add("Run a checkerboard/straight-line lens check at the real camera distance before measuring.");
+
+            string message = "PROFILE CHECK\n\n" +
+                (ready.Count == 0 ? "No profile checks are ready." : "Ready:\n• " + string.Join("\n• ", ready.ToArray())) +
+                "\n\n" +
+                (review.Count == 0 ? "No profile warnings." : "Needs review:\n• " + string.Join("\n• ", review.ToArray())) +
+                "\n\nPHYSICAL CAMERA TEST\n" +
+                "1. Select the camera in Kinovea's capture screen.\n" +
+                "2. Confirm 1920 × 1080 at 60 FPS in camera properties.\n" +
+                "3. Record 10 seconds of pedaling and verify the saved file.\n" +
+                "4. Check for dropped frames, blur, exposure changes, and curved straight lines.\n" +
+                "5. For IDS, install IDS peak with its DirectShow component before opening Cassette Motion Pro.\n\n" +
+                "This check validates the saved setup, not whether disconnected hardware is functioning.";
+
+            cameraProfileStatus.Text = review.Count == 0 ? "Profile ready · Complete the physical 10-second camera test." : review.Count + " profile item(s) need review.";
+            MessageBox.Show(this, message, "Professional Camera Check", MessageBoxButtons.OK, review.Count == 0 ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+        }
+
+        private static bool ContainsAny(string value, params string[] terms)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+            foreach (string term in terms)
+            {
+                if (value.IndexOf(term, StringComparison.OrdinalIgnoreCase) >= 0)
+                    return true;
+            }
+            return false;
+        }
+
+        private static bool TryReadFirstNumber(string value, out int number)
+        {
+            number = 0;
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+            string digits = string.Empty;
+            foreach (char character in value)
+            {
+                if (char.IsDigit(character))
+                    digits += character;
+                else if (digits.Length > 0)
+                    break;
+            }
+            return int.TryParse(digits, out number);
         }
 
         private Control BuildFitDayPathGuide()
@@ -9276,9 +9382,25 @@ namespace CassetteMotionPro.Workspace
         {
             if (currentSession == null || string.IsNullOrWhiteSpace(currentSession.CameraSetupProfileName))
                 return;
+            CameraSetupProfile selectedProfile = null;
+            foreach (CameraSetupProfile profile in cameraProfileRepository.LoadAll())
+            {
+                if (string.Equals(profile.Name, currentSession.CameraSetupProfileName, StringComparison.OrdinalIgnoreCase))
+                {
+                    selectedProfile = profile;
+                    break;
+                }
+            }
             string content = "Cassette Motion Pro camera profile: " + currentSession.CameraSetupProfileName + Environment.NewLine +
                 "Left screen: " + (currentSession.CameraSetupLeftRole ?? string.Empty) + Environment.NewLine +
                 "Right screen: " + (currentSession.CameraSetupRightRole ?? string.Empty) + Environment.NewLine +
+                (selectedProfile == null ? string.Empty :
+                    "Resolution: " + (selectedProfile.Resolution ?? string.Empty) + Environment.NewLine +
+                    "Frame rate: " + (selectedProfile.FrameRate ?? string.Empty) + Environment.NewLine +
+                    "Exposure / gain: " + (selectedProfile.Exposure ?? string.Empty) + Environment.NewLine +
+                    "Shutter: " + (selectedProfile.ShutterSpeed ?? string.Empty) + Environment.NewLine +
+                    "Camera interface: " + (selectedProfile.DriverInterface ?? string.Empty) + Environment.NewLine +
+                    "Lens calibration: " + (selectedProfile.LensCalibration ?? string.Empty) + Environment.NewLine) +
                 "The client Before/After destination is controlled automatically by the fit session.";
             File.WriteAllText(Path.Combine(directory, "Camera Setup.txt"), content);
         }

@@ -24,6 +24,10 @@ namespace CassetteMotionPro.Workspace
         public string RightCamera { get; set; }
         public string Resolution { get; set; }
         public string FrameRate { get; set; }
+        public string Exposure { get; set; }
+        public string ShutterSpeed { get; set; }
+        public string DriverInterface { get; set; }
+        public string LensCalibration { get; set; }
         public string Notes { get; set; }
 
         [XmlIgnore]
@@ -88,13 +92,15 @@ namespace CassetteMotionPro.Workspace
         {
             return new List<CameraSetupProfile>
             {
-                BuiltIn("Side + Front", "Drive-side profile", "Front profile", "1920 × 1080", "60 fps", "Place both cameras level, square to the rider, and at matching height."),
-                BuiltIn("Drive + Non-drive", "Drive-side profile", "Non-drive profile", "1920 × 1080", "60 fps", "Match camera height, distance, zoom, and exposure on both sides."),
-                BuiltIn("Side + Rear", "Drive-side profile", "Rear alignment", "1920 × 1080", "60 fps", "Keep the rear camera centered on the bike and the side camera square to the rider.")
+                BuiltIn("Professional USB 60 FPS", "Drive-side profile", "Front or rear profile", "1920 × 1080", "60 fps", "Manual / locked", "1/500 s", "DirectShow / UVC", "Verify with checkerboard", "Use this as the dependable starting point for supported USB cameras."),
+                BuiltIn("IDS 60 FPS DirectShow", "Drive-side profile", "Front or rear profile", "1920 × 1080", "60 fps", "Manual / locked", "1/500 s", "IDS peak DirectShow", "Required before measurements", "Install IDS peak with the DirectShow component, then select the IDS device in Kinovea capture controls."),
+                BuiltIn("Side + Front", "Drive-side profile", "Front profile", "1920 × 1080", "60 fps", "Manual / locked", "1/500 s", "DirectShow / UVC", "Verify with checkerboard", "Place both cameras level, square to the rider, and at matching height."),
+                BuiltIn("Drive + Non-drive", "Drive-side profile", "Non-drive profile", "1920 × 1080", "60 fps", "Manual / matched", "1/500 s", "DirectShow / UVC", "Verify both lenses", "Match camera height, distance, zoom, exposure, and white balance on both sides."),
+                BuiltIn("Side + Rear", "Drive-side profile", "Rear alignment", "1920 × 1080", "60 fps", "Manual / locked", "1/500 s", "DirectShow / UVC", "Verify with checkerboard", "Keep the rear camera centered on the bike and the side camera square to the rider.")
             };
         }
 
-        private static CameraSetupProfile BuiltIn(string name, string leftRole, string rightRole, string resolution, string frameRate, string notes)
+        private static CameraSetupProfile BuiltIn(string name, string leftRole, string rightRole, string resolution, string frameRate, string exposure, string shutterSpeed, string driverInterface, string lensCalibration, string notes)
         {
             return new CameraSetupProfile
             {
@@ -105,6 +111,10 @@ namespace CassetteMotionPro.Workspace
                 RightCamera = "Select in right Kinovea capture screen",
                 Resolution = resolution,
                 FrameRate = frameRate,
+                Exposure = exposure,
+                ShutterSpeed = shutterSpeed,
+                DriverInterface = driverInterface,
+                LensCalibration = lensCalibration,
                 Notes = notes,
                 IsBuiltIn = true
             };

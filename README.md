@@ -5,7 +5,21 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 1.11.8 Tape-Assisted Handlebar Coordinates
+## Current milestone: 1.12.0 Professional Camera Integration
+
+Video Studio camera profiles now store resolution, frame rate, exposure/gain,
+shutter speed, camera interface, and lens-calibration guidance together. New
+Professional USB 60 FPS and IDS 60 FPS DirectShow starting profiles keep a
+repeatable setup available for every client. **Run Camera Check** reviews the
+saved profile and then gives the fitter a physical ten-second recording test
+for frame rate, dropped frames, motion blur, exposure changes, and lens
+distortion. The IDS path uses the official IDS peak DirectShow component while
+physical camera selection and device properties remain in Kinovea's proven
+capture controls.
+
+Use [the v1.12.0 test plan](docs/v1.12.0-test-plan.md) for the focused checks.
+
+### Previous milestone: 1.11.8 Tape-Assisted Handlebar Coordinates
 
 Advanced Bike Measurements now accepts the practical tape measurement from the saddle tip to the handlebar center. Cassette Motion Pro preserves the bar direction from the image, scales that vector to the tape length, and combines it with the saddle-tip position to report Handlebar X/Y from the bottom-bracket center. Results are explicitly labeled **BB reference + tape length + image direction**, so the single tape measurement improves the coordinates without pretending both axes were independently tape-measured.
 
