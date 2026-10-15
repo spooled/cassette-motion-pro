@@ -138,6 +138,9 @@ namespace CassetteMotionPro.Workspace
         private TabControl editorTabs;
         private FlowLayoutPanel workflowStageBar;
         private FlowLayoutPanel workflowSectionBar;
+        private Label workflowNavigationLabel;
+        private Button workflowRailToggle;
+        private bool workflowRailCollapsed;
         private readonly List<Button> workflowStageButtons = new List<Button>();
         private TableLayoutPanel workspaceRoot;
         private SplitContainer workspaceSplit;
@@ -749,6 +752,7 @@ namespace CassetteMotionPro.Workspace
             parent.Controls.Add(content);
             parent.Controls.Add(workflowStageBar);
             workflowStageBar.BringToFront();
+            SetWorkflowRailCollapsed(true);
             UpdateWorkflowStageBar();
             UpdateWorkflowSectionBar();
         }
@@ -764,15 +768,23 @@ namespace CassetteMotionPro.Workspace
             bar.AutoScroll = true;
             bar.BackColor = CassetteMotionTheme.Rail;
 
-            Label navigation = new Label();
-            navigation.Text = "FIT DAY\nWORKFLOW";
-            navigation.AutoSize = false;
-            navigation.Size = new Size(126, 48);
-            navigation.Margin = new Padding(2, 0, 0, 16);
-            navigation.Font = new Font("Segoe UI Semibold", 8.5F, FontStyle.Bold);
-            navigation.ForeColor = CassetteMotionTheme.Accent;
-            navigation.TextAlign = ContentAlignment.MiddleLeft;
-            bar.Controls.Add(navigation);
+            workflowRailToggle = CreateButton("‹", false);
+            workflowRailToggle.AccessibleName = "Collapse or expand fit-day workflow navigation";
+            workflowRailToggle.Size = new Size(126, 30);
+            workflowRailToggle.Margin = new Padding(0, 0, 0, 6);
+            workflowRailToggle.TextAlign = ContentAlignment.MiddleCenter;
+            workflowRailToggle.Click += delegate { SetWorkflowRailCollapsed(!workflowRailCollapsed); };
+            bar.Controls.Add(workflowRailToggle);
+
+            workflowNavigationLabel = new Label();
+            workflowNavigationLabel.Text = "FIT DAY\nWORKFLOW";
+            workflowNavigationLabel.AutoSize = false;
+            workflowNavigationLabel.Size = new Size(126, 42);
+            workflowNavigationLabel.Margin = new Padding(2, 0, 0, 10);
+            workflowNavigationLabel.Font = new Font("Segoe UI Semibold", 8.5F, FontStyle.Bold);
+            workflowNavigationLabel.ForeColor = CassetteMotionTheme.Accent;
+            workflowNavigationLabel.TextAlign = ContentAlignment.MiddleLeft;
+            bar.Controls.Add(workflowNavigationLabel);
 
             AddWorkflowStageButton(bar, "FIT DAY", FitDayHomeTabName);
             AddWorkflowStageButton(bar, "CLIENT", SessionSetupTabName);
@@ -798,6 +810,7 @@ namespace CassetteMotionPro.Workspace
         {
             Button button = CreateButton(text, false);
             button.Tag = tabName;
+            button.AccessibleName = text;
             button.Text = GetWorkflowStageNumber(tabName) + "   " + text;
             button.Height = 52;
             button.Width = 126;
@@ -808,6 +821,36 @@ namespace CassetteMotionPro.Workspace
             button.Click += delegate { SelectWorkspaceTab(tabName); };
             workflowStageButtons.Add(button);
             bar.Controls.Add(button);
+        }
+
+        private void SetWorkflowRailCollapsed(bool collapsed)
+        {
+            if (workflowStageBar == null)
+                return;
+
+            workflowRailCollapsed = collapsed;
+            workflowStageBar.SuspendLayout();
+            workflowStageBar.Width = collapsed ? 56 : 154;
+            workflowStageBar.Padding = collapsed ? new Padding(8, 12, 8, 8) : new Padding(12, 18, 12, 12);
+            if (workflowNavigationLabel != null)
+                workflowNavigationLabel.Visible = !collapsed;
+            if (workflowRailToggle != null)
+            {
+                workflowRailToggle.Text = collapsed ? "»" : "‹";
+                workflowRailToggle.Width = collapsed ? 38 : 126;
+            }
+
+            foreach (Button button in workflowStageButtons)
+            {
+                string stageName = button.AccessibleName ?? string.Empty;
+                string stageNumber = GetWorkflowStageNumber(Convert.ToString(button.Tag));
+                button.Width = collapsed ? 38 : 126;
+                button.Height = collapsed ? 42 : 52;
+                button.Padding = collapsed ? new Padding(0) : new Padding(8, 0, 0, 0);
+                button.TextAlign = collapsed ? ContentAlignment.MiddleCenter : ContentAlignment.MiddleLeft;
+                button.Text = collapsed ? stageNumber : stageNumber + "   " + stageName;
+            }
+            workflowStageBar.ResumeLayout(true);
         }
 
         private static string GetWorkflowStageNumber(string tabName)

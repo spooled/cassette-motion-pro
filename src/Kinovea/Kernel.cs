@@ -81,6 +81,7 @@ namespace Kinovea.Root
         private Label fitDayHeaderNext;
         private Button fitDayHeaderReview;
         private Button fitDayHeaderAction;
+        private Button fitDayHeaderCollapse;
         private readonly ToolStripDropDownButton toolClientPicker = new ToolStripDropDownButton();
         private ToolStripTextBox toolClientSearch;
         private readonly ToolStripButton toolFitWorkspace = new ToolStripButton();
@@ -926,14 +927,14 @@ namespace Kinovea.Root
             fitDayHeader = new Panel();
             fitDayHeader.Name = "CassetteMotionPersistentFitDayHeader";
             fitDayHeader.Dock = DockStyle.Top;
-            fitDayHeader.Height = 70;
-            fitDayHeader.Padding = new Padding(14, 9, 14, 9);
+            fitDayHeader.Height = 54;
+            fitDayHeader.Padding = new Padding(10, 6, 10, 6);
             fitDayHeader.BackColor = CassetteMotionTheme.Header;
 
             TableLayoutPanel layout = new TableLayoutPanel();
             layout.Dock = DockStyle.Fill;
             layout.RowCount = 1;
-            layout.ColumnCount = 7;
+            layout.ColumnCount = 8;
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 18F));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 18F));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 14F));
@@ -941,6 +942,7 @@ namespace Kinovea.Root
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 28F));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 92F));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 106F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 34F));
 
             fitDayHeaderClient = CreateFitDayHeaderLabel();
             fitDayHeaderSession = CreateFitDayHeaderLabel();
@@ -982,6 +984,20 @@ namespace Kinovea.Root
                 fitWorkspace.OpenIntegratedReview();
             };
 
+            fitDayHeaderCollapse = new Button();
+            fitDayHeaderCollapse.Dock = DockStyle.Fill;
+            fitDayHeaderCollapse.Text = "—";
+            fitDayHeaderCollapse.AccessibleName = "Hide fit-day header";
+            fitDayHeaderCollapse.FlatStyle = FlatStyle.Flat;
+            fitDayHeaderCollapse.FlatAppearance.BorderSize = 0;
+            fitDayHeaderCollapse.BackColor = CassetteMotionTheme.Header;
+            fitDayHeaderCollapse.ForeColor = Color.White;
+            fitDayHeaderCollapse.Click += delegate
+            {
+                fitDayHeaderVisible = false;
+                ApplyFitDayHeaderVisibility();
+            };
+
             layout.Controls.Add(fitDayHeaderClient, 0, 0);
             layout.Controls.Add(fitDayHeaderSession, 1, 0);
             layout.Controls.Add(fitDayHeaderMedia, 2, 0);
@@ -989,6 +1005,7 @@ namespace Kinovea.Root
             layout.Controls.Add(fitDayHeaderNext, 4, 0);
             layout.Controls.Add(fitDayHeaderReview, 5, 0);
             layout.Controls.Add(fitDayHeaderAction, 6, 0);
+            layout.Controls.Add(fitDayHeaderCollapse, 7, 0);
             fitDayHeader.Controls.Add(layout);
             mainWindow.Controls.Add(fitDayHeader);
             ApplyFitDayHeaderVisibility();
@@ -1056,6 +1073,7 @@ namespace Kinovea.Root
             fitDayHeaderNext = null;
             fitDayHeaderReview = null;
             fitDayHeaderAction = null;
+            fitDayHeaderCollapse = null;
         }
 
         private void EmbedFitWorkspace(ClientRecord client)
