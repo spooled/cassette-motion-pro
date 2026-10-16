@@ -198,7 +198,16 @@ namespace CassetteMotionPro.Workspace
         {
             embeddedLayout = true;
             if (workspaceRoot != null && workspaceRoot.RowStyles.Count > 0)
-                workspaceRoot.RowStyles[0].Height = 66;
+            {
+                // The main window already shows the active client/session header.
+                // Remove this duplicate banner in embedded mode so it cannot cover
+                // the laptop workspace or consume useful vertical video space.
+                Control duplicateHeader = workspaceRoot.GetControlFromPosition(0, 0);
+                if (duplicateHeader != null)
+                    duplicateHeader.Visible = false;
+                workspaceRoot.RowStyles[0].SizeType = SizeType.Absolute;
+                workspaceRoot.RowStyles[0].Height = 0;
+            }
             if (workspaceSplit != null)
             {
                 workspaceSplit.Panel1MinSize = 176;
