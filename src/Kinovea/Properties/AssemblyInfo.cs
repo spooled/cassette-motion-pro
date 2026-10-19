@@ -16,5 +16,5 @@ using System.Resources;
 [assembly: Guid("b049b83e-90f3-4e84-9289-52ee6ea2a9ea")]
 [assembly: AssemblyVersion("1.21.0.0")]
 [assembly: AssemblyFileVersion("1.21.0.0")]
-[assembly: AssemblyInformationalVersion("1.20.0+kinovea.2025.2.1")]
+[assembly: AssemblyInformationalVersion("1.21.0+kinovea.2025.2.1")]
 [assembly: NeutralResourcesLanguageAttribute("en")]
