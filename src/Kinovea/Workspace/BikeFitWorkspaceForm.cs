@@ -149,6 +149,7 @@ namespace CassetteMotionPro.Workspace
         private Button embeddedPreviewButton;
         private Button embeddedNextButton;
         private bool embeddedLayout;
+        private bool embeddedSplitterPreferenceHooked;
         private FitSessionRecord currentSession;
         public event Action<string> ActiveSessionChanged;
         public event Action FitDayHeaderChanged;
@@ -212,7 +213,22 @@ namespace CassetteMotionPro.Workspace
             {
                 workspaceSplit.Panel1MinSize = 176;
                 workspaceSplit.Panel2MinSize = 360;
-                workspaceSplit.SplitterDistance = Math.Min(198, Math.Max(176, workspaceSplit.Width / 5));
+                WorkspaceLayoutPreferences preferences = WorkspaceLayoutPreferences.Load();
+                int preferredSessionWidth = preferences.SessionPaneWidth > 0
+                    ? preferences.SessionPaneWidth
+                    : Math.Min(198, Math.Max(176, workspaceSplit.Width / 5));
+                int maximumSessionWidth = Math.Max(176, workspaceSplit.Width - workspaceSplit.Panel2MinSize - workspaceSplit.SplitterWidth);
+                workspaceSplit.SplitterDistance = Math.Max(176, Math.Min(maximumSessionWidth, preferredSessionWidth));
+                if (!embeddedSplitterPreferenceHooked)
+                {
+                    workspaceSplit.SplitterMoved += delegate
+                    {
+                        WorkspaceLayoutPreferences latest = WorkspaceLayoutPreferences.Load();
+                        latest.SessionPaneWidth = workspaceSplit.SplitterDistance;
+                        latest.Save();
+                    };
+                    embeddedSplitterPreferenceHooked = true;
+                }
             }
             if (editorActionPanel != null)
             {
@@ -259,7 +275,8 @@ namespace CassetteMotionPro.Workspace
             if (!embeddedLayout || editorTabs == null || editorTabs.SelectedTab == null)
                 return;
 
-            bool reportStage = string.Equals(editorTabs.SelectedTab.Text, "Report", StringComparison.OrdinalIgnoreCase);
+            bool reportStage = string.Equals(editorTabs.SelectedTab.Text, "Report", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(editorTabs.SelectedTab.Text, "Report Center", StringComparison.OrdinalIgnoreCase);
             chkShowBeforeMeasurementsInReport.Visible = reportStage;
             embeddedReviewButton.Visible = reportStage;
             embeddedPreviewButton.Visible = reportStage;

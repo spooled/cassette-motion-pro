@@ -72,6 +72,7 @@ namespace Kinovea.Root
         private ClientRecord fitWorkspaceClient;
         private Panel fitWorkspacePanel;
         private Panel fitWorkspaceHost;
+        private Panel fitWorkspaceResizeHandle;
         private Label fitWorkspacePanelTitle;
         private Panel fitDayHeader;
         private Label fitDayHeaderClient;
@@ -87,6 +88,9 @@ namespace Kinovea.Root
         private readonly ToolStripButton toolFitWorkspace = new ToolStripButton();
         private readonly ToolStripButton toolFitDayHeader = new ToolStripButton();
         private bool fitDayHeaderVisible = true;
+        private WorkspaceLayoutPreferences workspaceLayoutPreferences;
+        private int fitWorkspaceResizeStartX;
+        private int fitWorkspaceResizeStartWidth;
         
         #region Menus
 
@@ -226,6 +230,8 @@ namespace Kinovea.Root
             }
 
             clientRepository = new ClientRepository();
+            workspaceLayoutPreferences = WorkspaceLayoutPreferences.Load();
+            fitDayHeaderVisible = workspaceLayoutPreferences.FitHeaderVisible;
 
             // Build all other modules and their UI.
             BuildSubTree();
@@ -239,6 +245,7 @@ namespace Kinovea.Root
             };
             mainWindow.FormClosing += delegate(object sender, FormClosingEventArgs e)
             {
+                SaveWorkspaceLayoutPreferences();
                 if (fitWorkspace == null || fitWorkspace.IsDisposed)
                     return;
                 BikeFitWorkspaceForm openWorkspace = fitWorkspace;
@@ -683,9 +690,9 @@ namespace Kinovea.Root
             toolClientPicker.ToolTipText = "Choose a client and open the fit workspace";
             toolClientPicker.DropDownOpening += delegate { BuildClientPickerMenu(); };
 
-            toolFitWorkspace.Text = "Fit Panel";
+            toolFitWorkspace.Text = "VIDEO FOCUS";
             toolFitWorkspace.DisplayStyle = ToolStripItemDisplayStyle.Text;
-            toolFitWorkspace.ToolTipText = "Return to the active client fit session";
+            toolFitWorkspace.ToolTipText = "Switch between the full video canvas and the active fit workspace";
             toolFitWorkspace.Click += delegate
             {
                 if (fitWorkspace != null && !fitWorkspace.IsDisposed)
@@ -1020,6 +1027,11 @@ namespace Kinovea.Root
                 if (fitDayHeaderVisible)
                     fitDayHeader.BringToFront();
             }
+            if (workspaceLayoutPreferences != null)
+            {
+                workspaceLayoutPreferences.FitHeaderVisible = fitDayHeaderVisible;
+                SaveWorkspaceLayoutPreferences();
+            }
             mainWindow.PerformLayout();
         }
 
@@ -1088,7 +1100,7 @@ namespace Kinovea.Root
             fitWorkspaceHost.Controls.Add(fitWorkspace);
             fitWorkspace.BringToFront();
             fitWorkspace.Show();
-            SetFitWorkspacePanelVisible(true);
+            SetFitWorkspacePanelVisible(workspaceLayoutPreferences == null || workspaceLayoutPreferences.FitPanelVisible);
         }
 
         private void EnsureFitWorkspacePanel()
@@ -1106,6 +1118,15 @@ namespace Kinovea.Root
             fitWorkspaceHost = new Panel();
             fitWorkspaceHost.Dock = DockStyle.Fill;
             fitWorkspaceHost.BackColor = CassetteMotionTheme.Canvas;
+
+            fitWorkspaceResizeHandle = new Panel();
+            fitWorkspaceResizeHandle.Dock = DockStyle.Left;
+            fitWorkspaceResizeHandle.Width = 6;
+            fitWorkspaceResizeHandle.Cursor = Cursors.VSplit;
+            fitWorkspaceResizeHandle.BackColor = CassetteMotionTheme.Border;
+            fitWorkspaceResizeHandle.MouseDown += FitWorkspaceResizeHandle_MouseDown;
+            fitWorkspaceResizeHandle.MouseMove += FitWorkspaceResizeHandle_MouseMove;
+            fitWorkspaceResizeHandle.MouseUp += FitWorkspaceResizeHandle_MouseUp;
 
             Panel header = new Panel();
             header.Dock = DockStyle.Top;
@@ -1138,6 +1159,7 @@ namespace Kinovea.Root
             header.Controls.Add(fitWorkspacePanelTitle);
             header.Controls.Add(collapse);
             fitWorkspacePanel.Controls.Add(fitWorkspaceHost);
+            fitWorkspacePanel.Controls.Add(fitWorkspaceResizeHandle);
             fitWorkspacePanel.Controls.Add(header);
             header.BringToFront();
             mainWindow.Controls.Add(fitWorkspacePanel);
@@ -1149,7 +1171,7 @@ namespace Kinovea.Root
             if (fitWorkspacePanel == null || fitWorkspacePanel.IsDisposed)
                 return;
             fitWorkspacePanel.Visible = visible;
-            toolFitWorkspace.Text = visible ? "Hide Panel" : "Show Panel";
+            toolFitWorkspace.Text = visible ? "VIDEO FOCUS" : "FIT WORKSPACE";
             if (visible)
             {
                 fitWorkspacePanel.Width = GetFitWorkspacePanelWidth();
@@ -1157,15 +1179,65 @@ namespace Kinovea.Root
                 if (fitWorkspace != null && !fitWorkspace.IsDisposed)
                     fitWorkspace.Focus();
             }
+            if (workspaceLayoutPreferences != null)
+            {
+                workspaceLayoutPreferences.FitPanelVisible = visible;
+                SaveWorkspaceLayoutPreferences();
+            }
             mainWindow.PerformLayout();
         }
 
         private int GetFitWorkspacePanelWidth()
         {
             int windowWidth = Math.Max(900, mainWindow.ClientSize.Width);
-            int preferredWidth = windowWidth * 68 / 100;
+            int preferredWidth = workspaceLayoutPreferences != null && workspaceLayoutPreferences.FitPanelWidth > 0
+                ? workspaceLayoutPreferences.FitPanelWidth
+                : windowWidth * 68 / 100;
             int maximumWithVideoVisible = Math.Max(650, windowWidth - 380);
             return Math.Max(650, Math.Min(1120, Math.Min(preferredWidth, maximumWithVideoVisible)));
+        }
+
+        private void FitWorkspaceResizeHandle_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Left || fitWorkspacePanel == null)
+                return;
+            fitWorkspaceResizeStartX = Cursor.Position.X;
+            fitWorkspaceResizeStartWidth = fitWorkspacePanel.Width;
+            fitWorkspaceResizeHandle.Capture = true;
+        }
+
+        private void FitWorkspaceResizeHandle_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!fitWorkspaceResizeHandle.Capture || fitWorkspacePanel == null)
+                return;
+            int requestedWidth = fitWorkspaceResizeStartWidth + (fitWorkspaceResizeStartX - Cursor.Position.X);
+            int windowWidth = Math.Max(900, mainWindow.ClientSize.Width);
+            int maximum = Math.Max(650, Math.Min(1120, windowWidth - 300));
+            fitWorkspacePanel.Width = Math.Max(650, Math.Min(maximum, requestedWidth));
+            mainWindow.PerformLayout();
+        }
+
+        private void FitWorkspaceResizeHandle_MouseUp(object sender, MouseEventArgs e)
+        {
+            if (fitWorkspaceResizeHandle != null)
+                fitWorkspaceResizeHandle.Capture = false;
+            if (workspaceLayoutPreferences != null && fitWorkspacePanel != null)
+            {
+                workspaceLayoutPreferences.FitPanelWidth = fitWorkspacePanel.Width;
+                SaveWorkspaceLayoutPreferences();
+            }
+        }
+
+        private void SaveWorkspaceLayoutPreferences()
+        {
+            if (workspaceLayoutPreferences == null)
+                return;
+            WorkspaceLayoutPreferences latest = WorkspaceLayoutPreferences.Load();
+            latest.FitPanelWidth = workspaceLayoutPreferences.FitPanelWidth;
+            latest.FitPanelVisible = workspaceLayoutPreferences.FitPanelVisible;
+            latest.FitHeaderVisible = workspaceLayoutPreferences.FitHeaderVisible;
+            latest.Save();
+            workspaceLayoutPreferences = latest;
         }
 
         private void ClearFitWorkspacePanel()
@@ -1178,8 +1250,9 @@ namespace Kinovea.Root
             }
             fitWorkspacePanel = null;
             fitWorkspaceHost = null;
+            fitWorkspaceResizeHandle = null;
             fitWorkspacePanelTitle = null;
-            toolFitWorkspace.Text = "Fit Panel";
+            toolFitWorkspace.Text = "FIT WORKSPACE";
         }
 
         private void ShowVideoStudioForFit()
