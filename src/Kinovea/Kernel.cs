@@ -1109,7 +1109,12 @@ namespace Kinovea.Root
 
             Panel header = new Panel();
             header.Dock = DockStyle.Top;
-            header.Height = 50;
+            // The client/session state is already shown in the main fit-day header.
+            // Keep this legacy container at zero height so it cannot cover the
+            // embedded workspace on a laptop. The toolbar's Hide Panel action
+            // remains the single place to return to the full video canvas.
+            header.Height = 0;
+            header.Visible = false;
             header.BackColor = CassetteMotionTheme.Header;
 
             fitWorkspacePanelTitle = new Label();
