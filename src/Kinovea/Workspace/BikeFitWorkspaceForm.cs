@@ -775,9 +775,28 @@ namespace CassetteMotionPro.Workspace
             content.Controls.Add(editorActionPanel);
             content.Controls.Add(workflowSectionBar);
 
-            parent.Controls.Add(content);
-            parent.Controls.Add(workflowStageBar);
-            workflowStageBar.BringToFront();
+            // Keep the primary navigation in its own layout row. When the stage
+            // bar and the fill content were siblings docked directly to the same
+            // panel, WinForms could layer the bar over the top of the selected
+            // page at narrower laptop sizes. A fixed navigation row guarantees
+            // that every page begins below the black stage bar.
+            TableLayoutPanel editorShell = new TableLayoutPanel();
+            editorShell.Dock = DockStyle.Fill;
+            editorShell.Margin = new Padding(0);
+            editorShell.Padding = new Padding(0);
+            editorShell.ColumnCount = 1;
+            editorShell.RowCount = 2;
+            editorShell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            editorShell.RowStyles.Add(new RowStyle(SizeType.Absolute, workflowStageBar.Height));
+            editorShell.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+            workflowStageBar.Dock = DockStyle.Fill;
+            workflowStageBar.Margin = new Padding(0);
+            content.Dock = DockStyle.Fill;
+            content.Margin = new Padding(0);
+            editorShell.Controls.Add(workflowStageBar, 0, 0);
+            editorShell.Controls.Add(content, 0, 1);
+            parent.Controls.Add(editorShell);
             UpdateWorkflowStageBar();
             UpdateWorkflowSectionBar();
         }
