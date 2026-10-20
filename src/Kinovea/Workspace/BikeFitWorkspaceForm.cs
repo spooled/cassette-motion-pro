@@ -1428,7 +1428,7 @@ namespace CassetteMotionPro.Workspace
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 102));
 
             Label title = new Label();
-            title.Text = "Client Report Center";
+            title.Text = "Professional Client Report";
             title.Dock = DockStyle.Fill;
             title.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
             title.ForeColor = Color.FromArgb(24, 31, 29);
@@ -1444,7 +1444,7 @@ namespace CassetteMotionPro.Workspace
             ConfigureIntegratedReviewCard(integratedApprovalSummary, "FITTER APPROVAL");
 
             GroupBox recommendations = new GroupBox();
-            recommendations.Text = "Client recommendations — edit here";
+            recommendations.Text = "Client fit plan — recommendations and follow-up";
             recommendations.Dock = DockStyle.Fill;
             recommendations.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             recommendations.ForeColor = Color.FromArgb(37, 48, 43);
@@ -1482,7 +1482,7 @@ namespace CassetteMotionPro.Workspace
             recommendations.Controls.Add(recommendationLayout);
 
             GroupBox reportImages = new GroupBox();
-            reportImages.Text = "Report images — see exactly what the client will receive";
+            reportImages.Text = "Client evidence — choose the images they will receive";
             reportImages.Dock = DockStyle.Fill;
             reportImages.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             reportImages.ForeColor = Color.FromArgb(37, 48, 43);
@@ -1537,8 +1537,8 @@ namespace CassetteMotionPro.Workspace
             Button save = CreateButton("Save Report Draft", false);
             save.Size = new Size(145, 40);
             save.Click += delegate { Save_Click(this, EventArgs.Empty); RefreshIntegratedReview(); };
-            Button preview = CreateButton("Preview / Print PDF", true);
-            preview.Size = new Size(175, 40);
+            Button preview = CreateButton("Preview Client Report", true);
+            preview.Size = new Size(190, 40);
             preview.Click += delegate { PreviewReport_Click(this, EventArgs.Empty); RefreshIntegratedReview(); };
             Button package = CreateButton("Prepare Package", false);
             package.Size = new Size(145, 40);

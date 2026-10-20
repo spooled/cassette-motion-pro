@@ -5,16 +5,26 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 1.23.0 Cleaner Measurement Cards and Approval
+## Current milestone: 1.24.0 Professional Client Report Redesign
 
-Measurement Review now replaces the long dense results table with compact
-cards that are easier to scan on a laptop. Each card shows the Before value,
-After value, calculated change, and a clear Ready, Missing, or Review state.
-Bike and rider cards link directly to the correct editing screen. A persistent
-approval strip shows whether the fitter has approved the current measurements;
-editing any value automatically clears that approval so changed measurements
-must be reviewed again. The detailed quality and repeatability tools remain
-available without crowding the main review.
+The client report now opens with the rider’s goal, completed changes, final
+setup, recommendations, and follow-up plan instead of internal evidence counts.
+Baseline and final measurements use clearer client-facing labels, selected
+Before/After images have stronger presentation, and studio branding remains
+consistent across preview, print, PDF, and report packages. Internal readiness
+information stays visible to the fitter during preview but is automatically
+removed from the printed client report. The Report Center uses clearer language
+for editing the fit plan, choosing evidence, and previewing the client report.
+
+Use [the v1.24.0 test plan](docs/v1.24.0-test-plan.md) for the focused checks.
+
+### Previous milestone: 1.23.0 Cleaner Measurement Cards and Approval
+
+Measurement Review replaces the long dense results table with compact cards
+that are easier to scan on a laptop. Each card shows the Before value, After
+value, calculated change, and a clear Ready, Missing, or Review state. Editing
+any value automatically clears fitter approval so changed measurements must be
+reviewed again.
 
 Use [the v1.23.0 test plan](docs/v1.23.0-test-plan.md) for the focused checks.
 
