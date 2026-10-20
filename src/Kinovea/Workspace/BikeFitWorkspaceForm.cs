@@ -96,6 +96,9 @@ namespace CassetteMotionPro.Workspace
         private readonly TextBox finalizationChecklist = new TextBox();
         private readonly Label combinedMeasurementReviewStatus = new Label();
         private readonly TextBox combinedMeasurementReview = new TextBox();
+        private readonly FlowLayoutPanel measurementReviewCards = new FlowLayoutPanel();
+        private readonly Label measurementApprovalStatus = new Label();
+        private readonly Button measurementApprovalButton = new Button();
         private readonly Label measurementTrackingReviewStatus = new Label();
         private readonly Label measurementAssistedReviewStatus = new Label();
         private readonly Label measurementCorrectionReviewStatus = new Label();
@@ -1368,7 +1371,18 @@ namespace CassetteMotionPro.Workspace
 
         private TabPage BuildMeasurementsWorkspaceTab()
         {
-            return BuildGroupedWorkspaceTab("Measurements", BuildCombinedMeasurementReviewTab(), BuildGuidedMeasurementsTab(), BuildBikeMetricsTab(), BuildBodyAnglesTab());
+            TabPage group = BuildGroupedWorkspaceTab("Measurements", BuildCombinedMeasurementReviewTab(), BuildGuidedMeasurementsTab(), BuildBikeMetricsTab(), BuildBodyAnglesTab());
+            if (group.Controls.Count > 0)
+            {
+                TabControl sections = group.Controls[0] as TabControl;
+                if (sections != null)
+                    sections.SelectedIndexChanged += delegate
+                    {
+                        if (sections.SelectedTab != null && string.Equals(sections.SelectedTab.Text, "Measurement Review", StringComparison.OrdinalIgnoreCase))
+                            RefreshCombinedMeasurementReview();
+                    };
+            }
+            return group;
         }
 
         private TabPage BuildIntegratedReviewTab()
@@ -1812,14 +1826,15 @@ namespace CassetteMotionPro.Workspace
             layout.AutoSize = true;
             layout.Padding = new Padding(24, 22, 24, 18);
             layout.ColumnCount = 2;
-            layout.RowCount = 6;
+            layout.RowCount = 7;
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 72));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 154));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 390));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 480));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 68));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 70));
 
             Label eyebrow = new Label();
@@ -1870,14 +1885,28 @@ namespace CassetteMotionPro.Workspace
             quickActions.Controls.Add(openFolders);
             quickStart.Controls.Add(quickActions);
 
-            combinedMeasurementReview.Dock = DockStyle.Fill;
-            combinedMeasurementReview.Multiline = true;
-            combinedMeasurementReview.ReadOnly = true;
-            combinedMeasurementReview.ScrollBars = ScrollBars.Vertical;
-            combinedMeasurementReview.WordWrap = true;
-            combinedMeasurementReview.BackColor = Color.White;
-            combinedMeasurementReview.ForeColor = Color.FromArgb(24, 31, 29);
-            combinedMeasurementReview.Font = new Font("Consolas", 10F);
+            measurementReviewCards.Dock = DockStyle.Fill;
+            measurementReviewCards.AutoScroll = true;
+            measurementReviewCards.WrapContents = true;
+            measurementReviewCards.FlowDirection = FlowDirection.LeftToRight;
+            measurementReviewCards.Padding = new Padding(2, 8, 2, 8);
+            measurementReviewCards.BackColor = Color.FromArgb(244, 247, 245);
+
+            Panel approval = new Panel();
+            approval.Dock = DockStyle.Fill;
+            approval.BackColor = Color.FromArgb(248, 252, 238);
+            approval.BorderStyle = BorderStyle.FixedSingle;
+            measurementApprovalStatus.Dock = DockStyle.Fill;
+            measurementApprovalStatus.Padding = new Padding(12, 9, 200, 6);
+            measurementApprovalStatus.Font = new Font("Segoe UI", 9.5F, FontStyle.Bold);
+            measurementApprovalStatus.TextAlign = ContentAlignment.MiddleLeft;
+            CassetteMotionTheme.StyleButton(measurementApprovalButton, true);
+            measurementApprovalButton.Text = "APPROVE MEASUREMENTS";
+            measurementApprovalButton.Dock = DockStyle.Right;
+            measurementApprovalButton.Width = 190;
+            measurementApprovalButton.Click += ShowAssistedMeasurementAccuracyReview;
+            approval.Controls.Add(measurementApprovalStatus);
+            approval.Controls.Add(measurementApprovalButton);
 
             FlowLayoutPanel actions = new FlowLayoutPanel();
             actions.Dock = DockStyle.Fill;
@@ -1914,9 +1943,11 @@ namespace CassetteMotionPro.Workspace
             layout.SetColumnSpan(combinedMeasurementReviewStatus, 2);
             layout.Controls.Add(quickStart, 0, 3);
             layout.SetColumnSpan(quickStart, 2);
-            layout.Controls.Add(combinedMeasurementReview, 0, 4);
-            layout.SetColumnSpan(combinedMeasurementReview, 2);
-            layout.Controls.Add(actions, 0, 5);
+            layout.Controls.Add(measurementReviewCards, 0, 4);
+            layout.SetColumnSpan(measurementReviewCards, 2);
+            layout.Controls.Add(approval, 0, 5);
+            layout.SetColumnSpan(approval, 2);
+            layout.Controls.Add(actions, 0, 6);
             layout.SetColumnSpan(actions, 2);
             page.AutoScroll = true;
             page.Controls.Add(layout);
@@ -6254,7 +6285,11 @@ namespace CassetteMotionPro.Workspace
 
             string requestedTab = NormalizeWorkspaceTabName(tabText);
             if (SelectWorkspaceTab(editorTabs, requestedTab))
+            {
+                if (string.Equals(requestedTab, "Measurement Review", StringComparison.OrdinalIgnoreCase))
+                    RefreshCombinedMeasurementReview();
                 UpdateSaveHint("Opened " + requestedTab + " from the Fit Day workspace.");
+            }
         }
 
         private static bool SelectWorkspaceTab(TabControl tabs, string requestedTab)
@@ -6838,6 +6873,7 @@ namespace CassetteMotionPro.Workspace
             combinedMeasurementReviewStatus.Text = sessionName + "   ·   Complete Before/After pairs: " + completePairs.ToString() + "   ·   Partial: " + partialPairs.ToString() + "   ·   Not recorded: " + missingPairs.ToString() + Environment.NewLine +
                 (reviewReady ? "COMBINED VIEW READY — blank optional measurements are okay" : hasMeasurements ? "REVIEW THE NOTES BELOW BEFORE FINALIZING THE REPORT" : "ADD BIKE OR RIDER MEASUREMENTS TO BEGIN THE COMBINED REVIEW");
             combinedMeasurementReviewStatus.ForeColor = reviewReady ? Color.FromArgb(60, 145, 76) : Color.FromArgb(181, 118, 35);
+            RefreshMeasurementReviewCards();
 
             if (currentSession == null)
             {
@@ -6892,6 +6928,157 @@ namespace CassetteMotionPro.Workspace
                 string change = FormatMeasurementChange(before, after);
                 text.AppendLine(labels[index].PadRight(31) + DisplayReviewValue(before).PadRight(16) + DisplayReviewValue(after).PadRight(16) + change);
             }
+        }
+
+        private void RefreshMeasurementReviewCards()
+        {
+            if (measurementReviewCards == null)
+                return;
+            measurementReviewCards.SuspendLayout();
+            measurementReviewCards.Controls.Clear();
+
+            AddMeasurementReviewCard("Saddle height", "SaddleHeight", "mm", true, 500, 900, 60, "Bike Metrics");
+            AddMeasurementReviewCard("Saddle setback", "SaddleSetback", "mm", true, -120, 60, 50, "Bike Metrics");
+            AddMeasurementReviewCard("Saddle to grip", "SaddleTipToGripReach", "mm", true, 350, 750, 80, "Bike Metrics");
+            AddMeasurementReviewCard("Handlebar X", "HandlebarX", "mm", true, 300, 700, 80, "Bike Metrics");
+            AddMeasurementReviewCard("Handlebar Y", "HandlebarY", "mm", true, -180, 180, 80, "Bike Metrics");
+            AddMeasurementReviewCard("Handlebar reach", "HandlebarReach", "mm", false, -500, 800, 100, "Bike Metrics");
+            AddMeasurementReviewCard("Handlebar drop", "HandlebarDrop", "mm", false, -300, 300, 100, "Bike Metrics");
+            AddMeasurementReviewCard("Crank length", "CrankLength", "mm", false, 140, 200, 25, "Bike Metrics");
+            AddMeasurementReviewCard("Wheelbase", "Wheelbase", "mm", false, 750, 1400, 150, "Bike Metrics");
+            AddMeasurementReviewCard("Cleat position", "CleatPosition", string.Empty, false, double.MinValue, double.MaxValue, double.MaxValue, "Bike Metrics");
+            AddMeasurementReviewCard("Knee angle", "KneeAngle", "°", false, 90, 175, 20, "Body Angles");
+            AddMeasurementReviewCard("Hip angle", "HipAngle", "°", false, 25, 150, 20, "Body Angles");
+            AddMeasurementReviewCard("Ankle angle", "AnkleAngle", "°", false, 55, 175, 25, "Body Angles");
+            AddMeasurementReviewCard("Body reach", "TorsoAngle", "°", false, 20, 180, 25, "Body Angles");
+            AddMeasurementReviewCard("Back angle", "ShoulderAngle", "°", false, 5, 85, 20, "Body Angles");
+
+            bool approved = currentSession != null && !string.IsNullOrWhiteSpace(currentSession.AssistedMeasurementAccuracyApprovedUtc);
+            measurementApprovalStatus.Text = currentSession == null
+                ? "Open a client fit session before approving measurements."
+                : approved
+                    ? "✓ FITTER APPROVED · Editing any measurement automatically requires renewed approval."
+                    : "□ FITTER APPROVAL PENDING · Review warning cards, then approve the values used for this fit.";
+            measurementApprovalStatus.ForeColor = approved ? Color.FromArgb(60, 145, 76) : Color.FromArgb(181, 118, 35);
+            measurementApprovalButton.Text = approved ? "REVIEW APPROVAL" : "APPROVE MEASUREMENTS";
+            measurementApprovalButton.Enabled = currentSession != null;
+            measurementReviewCards.ResumeLayout();
+        }
+
+        private void AddMeasurementReviewCard(string label, string key, string unit, bool required, double minimum, double maximum, double maximumChange, string editTab)
+        {
+            string before = GetMeasurementText(key + "Before");
+            string after = GetMeasurementText(key + "After");
+            string state;
+            string detail;
+            Color accent;
+            GetMeasurementCardState(before, after, unit, required, minimum, maximum, maximumChange, out state, out detail, out accent);
+
+            Panel card = new Panel();
+            card.Size = new Size(238, 130);
+            card.Margin = new Padding(6);
+            card.Padding = new Padding(11, 9, 11, 8);
+            card.BackColor = Color.White;
+            card.BorderStyle = BorderStyle.FixedSingle;
+
+            Panel stripe = new Panel();
+            stripe.Dock = DockStyle.Left;
+            stripe.Width = 5;
+            stripe.BackColor = accent;
+
+            Label heading = new Label();
+            heading.Text = label.ToUpperInvariant();
+            heading.Dock = DockStyle.Top;
+            heading.Height = 24;
+            heading.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            heading.ForeColor = Color.FromArgb(37, 48, 43);
+
+            Label values = new Label();
+            values.Text = DisplayReviewValue(before) + "   →   " + DisplayReviewValue(after);
+            values.Dock = DockStyle.Top;
+            values.Height = 30;
+            values.Font = new Font("Segoe UI", 13F, FontStyle.Bold);
+            values.ForeColor = Color.FromArgb(24, 31, 29);
+
+            Label review = new Label();
+            review.Text = state + " · " + detail;
+            review.Dock = DockStyle.Fill;
+            review.Font = new Font("Segoe UI", 8.5F);
+            review.ForeColor = accent;
+            review.AutoEllipsis = true;
+
+            Button edit = CreateButton("EDIT", false);
+            edit.Dock = DockStyle.Bottom;
+            edit.Height = 28;
+            edit.Tag = editTab;
+            edit.Click += delegate(object sender, EventArgs e)
+            {
+                Button clicked = sender as Button;
+                SelectWorkspaceTab(Convert.ToString(clicked == null ? editTab : clicked.Tag));
+            };
+
+            card.Controls.Add(review);
+            card.Controls.Add(values);
+            card.Controls.Add(heading);
+            card.Controls.Add(edit);
+            card.Controls.Add(stripe);
+            measurementReviewCards.Controls.Add(card);
+        }
+
+        private static void GetMeasurementCardState(string before, string after, string unit, bool required, double minimum, double maximum, double maximumChange, out string state, out string detail, out Color accent)
+        {
+            if (string.IsNullOrWhiteSpace(before) && string.IsNullOrWhiteSpace(after))
+            {
+                state = required ? "NEEDS VALUE" : "NOT RECORDED";
+                detail = required ? "Add the final value" : "Optional for this fit";
+                accent = required ? Color.FromArgb(181, 118, 35) : Color.FromArgb(120, 132, 126);
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(after))
+            {
+                state = "NEEDS FINAL";
+                detail = "After value is blank";
+                accent = Color.FromArgb(181, 118, 35);
+                return;
+            }
+
+            double afterNumber;
+            bool numericAfter = TryParseMeasurementNumber(after, out afterNumber);
+            if (!string.IsNullOrWhiteSpace(unit) && !numericAfter)
+            {
+                state = "CHECK FORMAT";
+                detail = "Enter a numeric value";
+                accent = Color.FromArgb(181, 118, 35);
+                return;
+            }
+            if (numericAfter && (afterNumber < minimum || afterNumber > maximum))
+            {
+                state = "REVIEW";
+                detail = "Outside broad review range";
+                accent = Color.FromArgb(181, 118, 35);
+                return;
+            }
+
+            double beforeNumber;
+            if (TryParseMeasurementNumber(before, out beforeNumber) && numericAfter && Math.Abs(afterNumber - beforeNumber) > maximumChange)
+            {
+                state = "REVIEW CHANGE";
+                detail = "Δ " + FormatSignedChange(afterNumber - beforeNumber, unit);
+                accent = Color.FromArgb(181, 118, 35);
+                return;
+            }
+
+            state = "READY";
+            if (TryParseMeasurementNumber(before, out beforeNumber) && numericAfter)
+                detail = "Δ " + FormatSignedChange(afterNumber - beforeNumber, unit);
+            else
+                detail = "Final value saved";
+            accent = Color.FromArgb(60, 145, 76);
+        }
+
+        private static string FormatSignedChange(double change, string unit)
+        {
+            return (change > 0 ? "+" : string.Empty) + change.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + (string.IsNullOrWhiteSpace(unit) ? string.Empty : " " + unit);
         }
 
         private static string DisplayReviewValue(string value)
