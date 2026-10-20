@@ -77,6 +77,21 @@ namespace CassetteMotionPro.Workspace
                 (!string.IsNullOrWhiteSpace(session.SaddleHeightBefore) || !string.IsNullOrWhiteSpace(session.SaddleHeightAfter) ||
                  !string.IsNullOrWhiteSpace(session.KneeAngleBefore) || !string.IsNullOrWhiteSpace(session.KneeAngleAfter)))
                 Add(events, DateTime.MinValue, "Measurements", "Earlier measurements are saved in this session; their original entry time was not recorded.");
+            if (session.FitPositions != null)
+            {
+                foreach (FitPositionRecord position in session.FitPositions)
+                {
+                    if (position == null)
+                        continue;
+                    string description = "Position " + position.Sequence.ToString() + ": " + position.Name;
+                    if (!string.IsNullOrWhiteSpace(position.ChangeNotes))
+                        description += " — " + position.ChangeNotes;
+                    if (position.IsFinal)
+                        description += " (Final)";
+                    if (!events.Any(item => item.Category == "Position" && item.Description == description))
+                        Add(events, position.CapturedUtc, "Position", description);
+                }
+            }
             return events.OrderByDescending(item => item.OccurredUtc).ThenBy(item => item.Category).ToList();
         }
 

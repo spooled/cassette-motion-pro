@@ -21,7 +21,7 @@ namespace CassetteMotionPro.Workspace
     public static class FitSessionReportGenerator
     {
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "1.21.0";
+        private const string ReportVersion = "1.22.0";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
 
         private static StudioSettings ReportSettings { get { return StudioSettingsRepository.Current; } }
@@ -197,6 +197,25 @@ namespace CassetteMotionPro.Workspace
             AddSummarySection(text, "Fit summary - Changes made", session.FitSummaryChangesMade);
             AddSummarySection(text, "Fit summary - Recommendations", session.FitSummaryRecommendations);
             AddSummarySection(text, "Fit summary - Follow-up plan", session.FitSummaryFollowUp);
+
+            if (session.FitPositions != null && session.FitPositions.Count > 0)
+            {
+                text.AppendLine("Position history");
+                text.AppendLine("----------------");
+                foreach (FitPositionRecord position in session.FitPositions.OrderBy(item => item.Sequence))
+                {
+                    if (position == null)
+                        continue;
+                    text.Append("- " + position.Sequence.ToString(CultureInfo.InvariantCulture) + ". " + ValueOrPlaceholder(position.Name));
+                    text.Append(" · " + ValueOrPlaceholder(position.Phase));
+                    if (position.IsFinal)
+                        text.Append(" · FINAL");
+                    if (!string.IsNullOrWhiteSpace(position.ChangeNotes))
+                        text.Append(" — " + position.ChangeNotes.Trim());
+                    text.AppendLine();
+                }
+                text.AppendLine();
+            }
 
             text.AppendLine("Key bike metrics");
             text.AppendLine("----------------");
@@ -816,6 +835,8 @@ namespace CassetteMotionPro.Workspace
             if (HasAnyFinalPositionMetric(session))
                 AddFinalPositionSnapshot(html, session);
 
+            AddPositionHistory(html, session);
+
             if (hasVisualReview)
             {
                 html.AppendLine("<h2>Visual Fit Review</h2>");
@@ -1207,6 +1228,22 @@ namespace CassetteMotionPro.Workspace
             AddSnapshotCard(html, "Handlebar X", session.HandlebarXAfter);
             AddSnapshotCard(html, "Handlebar Y", session.HandlebarYAfter);
             html.AppendLine("</div>");
+        }
+
+        private static void AddPositionHistory(StringBuilder html, FitSessionRecord session)
+        {
+            if (session.FitPositions == null || session.FitPositions.Count == 0)
+                return;
+            html.AppendLine("<h2>Fit Position History</h2>");
+            html.AppendLine("<div class=\"section-kicker\">The meaningful positions reviewed during this fit, from baseline through the approved final setup.</div>");
+            html.AppendLine("<div class=\"table-wrap\"><table><thead><tr><th>#</th><th>Position</th><th>Stage</th><th>Changes and observations</th></tr></thead><tbody>");
+            foreach (FitPositionRecord position in session.FitPositions.OrderBy(item => item.Sequence))
+            {
+                if (position == null)
+                    continue;
+                html.AppendLine("<tr><td>" + position.Sequence.ToString(CultureInfo.InvariantCulture) + "</td><td>" + Encode(position.Name) + (position.IsFinal ? " <strong>· FINAL</strong>" : string.Empty) + "</td><td>" + Encode(position.Phase) + "</td><td>" + Encode(string.IsNullOrWhiteSpace(position.ChangeNotes) ? "No change note recorded." : position.ChangeNotes) + "</td></tr>");
+            }
+            html.AppendLine("</tbody></table></div>");
         }
 
         private static void AddSnapshotCard(StringBuilder html, string label, string value)

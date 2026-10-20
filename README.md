@@ -5,7 +5,21 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 1.21.0 Fit-Day Workspace Consolidation
+## Current milestone: 1.22.0 Position-Based Before/After History
+
+Each fit session can now preserve named bike positions instead of reducing the
+entire fitting to one Before and one After. Open **Position History** directly
+from the Fit Day dashboard or Client History, save a baseline from the Before fields,
+then save each meaningful adjustment from the current After fields. Each
+position keeps its change note, measurement snapshot, related image/video,
+time, and final-position status. The comparison panel shows changes from the
+baseline, the session timeline records saved positions, and the client report
+includes the position sequence. Existing Before/After folders and media remain
+fully compatible.
+
+Use [the v1.22.0 test plan](docs/v1.22.0-test-plan.md) for the focused checks.
+
+### Previous milestone: 1.21.0 Fit-Day Workspace Consolidation
 
 The fit-day workspace now uses one compact horizontal stage bar, one main
 client/session header, and one focus control instead of overlapping navigation

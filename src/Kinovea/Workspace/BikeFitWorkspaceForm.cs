@@ -2685,12 +2685,17 @@ namespace CassetteMotionPro.Workspace
             timeline.Size = new Size(155, 42);
             timeline.Margin = new Padding(8, 9, 0, 9);
             timeline.Click += ShowFitSessionTimeline;
+            Button positionHistory = CreateButton("Position History", true);
+            positionHistory.Size = new Size(155, 42);
+            positionHistory.Margin = new Padding(8, 9, 0, 9);
+            positionHistory.Click += ShowFitPositionHistory;
             Button fieldTest = CreateButton("Run Field Test", true);
             fieldTest.Size = new Size(150, 42);
             fieldTest.Margin = new Padding(8, 9, 0, 9);
             fieldTest.Click += ShowFitDayFieldTest;
             primaryActions.Controls.Add(resume);
             primaryActions.Controls.Add(recovery);
+            primaryActions.Controls.Add(positionHistory);
 
             FlowLayoutPanel secondaryActions = new FlowLayoutPanel();
             secondaryActions.Dock = DockStyle.Top;
@@ -3584,6 +3589,10 @@ namespace CassetteMotionPro.Workspace
             Button followUp = CreateButton("Add Follow-up", true);
             followUp.Size = new Size(135, 34);
             followUp.Click += delegate { AddClientFollowUp(); };
+            Button positions = CreateButton("Position History", true);
+            positions.Size = new Size(145, 34);
+            positions.Click += ShowFitPositionHistory;
+            actions.Controls.Add(positions);
             actions.Controls.Add(followUp);
             actions.Controls.Add(startRepeat);
             actions.Controls.Add(openFit);
@@ -8890,6 +8899,28 @@ namespace CassetteMotionPro.Workspace
                 SaveCurrentSession();
             using (FitSessionTimelineForm form = new FitSessionTimelineForm(currentSession))
                 form.ShowDialog(this);
+        }
+
+        private void ShowFitPositionHistory(object sender, EventArgs e)
+        {
+            if (!HasActiveFitSession())
+            {
+                MessageBox.Show(this, "Open or create a client fit session first.", "Position History", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            SaveCurrentSession();
+            using (FitPositionHistoryForm form = new FitPositionHistoryForm(currentSession))
+            {
+                form.ShowDialog(this);
+                if (form.Changed)
+                {
+                    AddTimelineEvent("Position", "Position history updated (" + currentSession.FitPositions.Count.ToString() + " saved position(s))");
+                    repository.Save(currentSession);
+                    recoveryStore.Save(currentSession, GetCurrentWorkspaceSection());
+                    SetAutosaveStatus("Position history saved " + DateTime.Now.ToString("h:mm tt"), false);
+                    UpdateWorkflowChecklist();
+                }
+            }
         }
 
         private void AddTimelineEvent(string category, string description)

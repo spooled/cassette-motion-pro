@@ -55,6 +55,7 @@ namespace CassetteMotionPro.Workspace
         public string HandoffInternalNotes { get; set; }
         public List<FitFollowUpEntry> FollowUps { get; set; }
         public List<FitSessionTimelineEvent> TimelineEvents { get; set; }
+        public List<FitPositionRecord> FitPositions { get; set; }
 
         public string LeftVideoPath { get; set; }
         public string RightVideoPath { get; set; }
@@ -211,6 +212,30 @@ namespace CassetteMotionPro.Workspace
         public DateTime OccurredUtc { get; set; }
         public string Category { get; set; }
         public string Description { get; set; }
+    }
+
+    [Serializable]
+    public class FitPositionRecord
+    {
+        public Guid Id { get; set; }
+        public int Sequence { get; set; }
+        public string Name { get; set; }
+        public string Phase { get; set; }
+        public string ChangeNotes { get; set; }
+        public DateTime CapturedUtc { get; set; }
+        public bool IsFinal { get; set; }
+        public string VideoPath { get; set; }
+        public string ImagePath { get; set; }
+        public string SaddleHeight { get; set; }
+        public string SaddleSetback { get; set; }
+        public string SaddleTipToGripReach { get; set; }
+        public string HandlebarX { get; set; }
+        public string HandlebarY { get; set; }
+        public string KneeAngle { get; set; }
+        public string HipAngle { get; set; }
+        public string AnkleAngle { get; set; }
+        public string BodyReach { get; set; }
+        public string BackAngle { get; set; }
     }
 
     [Serializable]
