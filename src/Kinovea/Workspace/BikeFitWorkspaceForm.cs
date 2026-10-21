@@ -923,13 +923,6 @@ namespace CassetteMotionPro.Workspace
                 AddWorkspaceSectionButton("Files", "Client Files");
                 AddWorkspaceSectionButton("History", "Client History");
             }
-            else if (string.Equals(stage, "Report Center", StringComparison.OrdinalIgnoreCase))
-            {
-                AddWorkspaceSectionLabel("REPORT");
-                AddWorkspaceSectionButton("Review", "Report Center");
-                AddWorkspaceSectionButton("Builder", "Report");
-            }
-
             workflowSectionBar.Visible = workflowSectionBar.Controls.Count > 0;
             workflowSectionBar.ResumeLayout();
         }
@@ -2344,15 +2337,12 @@ namespace CassetteMotionPro.Workspace
             reviewActions.FlowDirection = FlowDirection.LeftToRight;
             reviewActions.WrapContents = true;
             reviewActions.Padding = new Padding(0, 8, 0, 4);
-            Button refresh = CreateButton("Refresh Final Check", true);
-            refresh.Size = new Size(170, 38);
+            Button refresh = CreateButton("Refresh Check", true);
+            refresh.Size = new Size(140, 38);
             refresh.Click += delegate { RefreshFitSessionFinalization(); };
-            Button measurements = CreateButton("Measurement Review", false);
-            measurements.Size = new Size(185, 38);
+            Button measurements = CreateButton("Measurements", false);
+            measurements.Size = new Size(140, 38);
             measurements.Click += delegate { SelectWorkspaceTab("Measurement Review"); };
-            Button recommendations = CreateButton("Smart Recommendations", false);
-            recommendations.Size = new Size(180, 38);
-            recommendations.Click += delegate { SelectWorkspaceTab("Report Builder"); };
             Button preview = CreateButton("Preview Report", false);
             preview.Size = new Size(135, 38);
             preview.Click += delegate { PreviewReport_Click(this, EventArgs.Empty); };
@@ -2361,7 +2351,6 @@ namespace CassetteMotionPro.Workspace
             approve.Click += ShowReportReviewApproval;
             reviewActions.Controls.Add(refresh);
             reviewActions.Controls.Add(measurements);
-            reviewActions.Controls.Add(recommendations);
             reviewActions.Controls.Add(preview);
             reviewActions.Controls.Add(approve);
 
@@ -2370,26 +2359,26 @@ namespace CassetteMotionPro.Workspace
             finishActions.FlowDirection = FlowDirection.LeftToRight;
             finishActions.WrapContents = true;
             finishActions.Padding = new Padding(0, 8, 0, 4);
-            Button complete = CreateButton("Mark Session Complete", true);
-            complete.Size = new Size(190, 38);
+            Button complete = CreateButton("Mark Complete", true);
+            complete.Size = new Size(145, 38);
             complete.Click += delegate { TryMarkFitSessionComplete(); };
-            Button package = CreateButton("Complete + Package", false);
-            package.Size = new Size(170, 38);
-            package.Click += delegate { if (TryMarkFitSessionComplete()) ReportPackage_Click(this, EventArgs.Empty); };
-            Button zip = CreateButton("Complete + ZIP", false);
-            zip.Size = new Size(150, 38);
-            zip.Click += delegate { if (TryMarkFitSessionComplete()) ZipReportPackage_Click(this, EventArgs.Empty); };
-            Button open = CreateButton("Open Finished Folder", false);
-            open.Size = new Size(175, 38);
-            open.Click += delegate { OpenReports_Click(this, EventArgs.Empty); };
+            Button package = CreateButton("Create Package", false);
+            package.Size = new Size(145, 38);
+            package.Click += delegate { ReportPackage_Click(this, EventArgs.Empty); };
+            Button zip = CreateButton("Create ZIP", false);
+            zip.Size = new Size(120, 38);
+            zip.Click += delegate { ZipReportPackage_Click(this, EventArgs.Empty); };
             Button portal = CreateButton("Portal Package", false);
-            portal.Size = new Size(145, 38);
+            portal.Size = new Size(140, 38);
             portal.Click += delegate { ClientPortalPackage_Click(this, EventArgs.Empty); };
+            Button open = CreateButton("Open Reports", false);
+            open.Size = new Size(130, 38);
+            open.Click += delegate { OpenReports_Click(this, EventArgs.Empty); };
             finishActions.Controls.Add(complete);
             finishActions.Controls.Add(package);
             finishActions.Controls.Add(zip);
-            finishActions.Controls.Add(open);
             finishActions.Controls.Add(portal);
+            finishActions.Controls.Add(open);
 
             layout.Controls.Add(eyebrow, 0, 0);
             layout.Controls.Add(title, 0, 1);
@@ -2433,7 +2422,7 @@ namespace CassetteMotionPro.Workspace
             reportBuilderStatus.ForeColor = Color.FromArgb(74, 87, 81);
             reportBuilderStatus.Padding = new Padding(14, 10, 14, 8);
             reportBuilderStatus.TextAlign = ContentAlignment.TopLeft;
-            AddReportBuilderRow(layout, reportBuilderStatus, 142);
+            AddReportBuilderRow(layout, reportBuilderStatus, 112);
 
             GroupBox smartRecommendations = new GroupBox();
             smartRecommendations.Text = "Fit Change Recommendations — editable guidance";
@@ -2486,30 +2475,10 @@ namespace CassetteMotionPro.Workspace
             recommendationLayout.Controls.Add(smartRecommendationDraft, 0, 1);
             recommendationLayout.Controls.Add(recommendationActions, 0, 2);
             smartRecommendations.Controls.Add(recommendationLayout);
-            AddReportBuilderRow(layout, smartRecommendations, 286);
-
-            GroupBox sections = new GroupBox();
-            sections.Text = "Report sections";
-            sections.Dock = DockStyle.Fill;
-            sections.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            sections.ForeColor = Color.FromArgb(37, 48, 43);
-            sections.Padding = new Padding(12, 8, 12, 10);
-
-            FlowLayoutPanel sectionButtons = new FlowLayoutPanel();
-            sectionButtons.Dock = DockStyle.Fill;
-            sectionButtons.FlowDirection = FlowDirection.LeftToRight;
-            sectionButtons.WrapContents = true;
-            sectionButtons.AutoScroll = true;
-            AddReportBuilderButton(sectionButtons, "1. Fit Summary", true, delegate { SelectWorkspaceTab("Fit Summary"); });
-            AddReportBuilderButton(sectionButtons, "2. Report Images", false, delegate { SelectWorkspaceTab("Report Images"); });
-            AddReportBuilderButton(sectionButtons, "3. Measurements", false, delegate { SelectWorkspaceTab("Bike Metrics"); });
-            AddReportBuilderButton(sectionButtons, "4. Handoff", false, delegate { SelectWorkspaceTab("Handoff"); });
-            AddReportBuilderButton(sectionButtons, "Report Options", false, delegate { SelectWorkspaceTab("Report Images"); });
-            sections.Controls.Add(sectionButtons);
-            AddReportBuilderRow(layout, sections, 92);
+            AddReportBuilderRow(layout, smartRecommendations, 260);
 
             GroupBox actions = new GroupBox();
-            actions.Text = "Review and output";
+            actions.Text = "Preview and finish";
             actions.Dock = DockStyle.Fill;
             actions.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             actions.ForeColor = Color.FromArgb(37, 48, 43);
@@ -2522,13 +2491,9 @@ namespace CassetteMotionPro.Workspace
             actionButtons.AutoScroll = true;
             AddReportBuilderButton(actionButtons, "Check Readiness", false, delegate { ReviewSession_Click(this, EventArgs.Empty); });
             AddReportBuilderButton(actionButtons, "Preview Report", true, delegate { PreviewReport_Click(this, EventArgs.Empty); });
-            AddReportBuilderButton(actionButtons, "Generate Report", false, delegate { GenerateReport_Click(this, EventArgs.Empty); });
-            AddReportBuilderButton(actionButtons, "Create Package", false, delegate { ReportPackage_Click(this, EventArgs.Empty); });
-            AddReportBuilderButton(actionButtons, "Create Zip", false, delegate { ZipReportPackage_Click(this, EventArgs.Empty); });
-            AddReportBuilderButton(actionButtons, "Build Client Portal Package", true, delegate { ClientPortalPackage_Click(this, EventArgs.Empty); });
-            AddReportBuilderButton(actionButtons, "Open Reports", false, delegate { OpenReports_Click(this, EventArgs.Empty); });
+            AddReportBuilderButton(actionButtons, "Review + Deliver", false, delegate { SelectWorkspaceTab("Review & Deliver"); });
             actions.Controls.Add(actionButtons);
-            AddReportBuilderRow(layout, actions, 98);
+            AddReportBuilderRow(layout, actions, 76);
 
             reportBuilderOutput.Dock = DockStyle.Fill;
             reportBuilderOutput.BackColor = Color.FromArgb(247, 255, 229);

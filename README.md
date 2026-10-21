@@ -18,6 +18,13 @@ Video, Measurements, and Report stages, and F6 uses the same protected Next
 Step path as the button. Existing Kinovea capture, playback, drawing, and
 Before/After folder behavior remains unchanged.
 
+The Report workspace now uses one clear level of report tabs instead of
+repeating Review and Builder navigation above them. Review & Deliver keeps the
+four review actions and five delivery choices that matter, while Report Builder
+focuses on editable recommendations, readiness, preview, and the handoff to
+delivery. Duplicate section and output buttons have been removed so both pages
+fit and scan more cleanly on a laptop.
+
 Use [the v1.25.0 test plan](docs/v1.25.0-test-plan.md) for the focused checks.
 
 ### Previous milestone: 1.24.0 Professional Client Report Redesign
