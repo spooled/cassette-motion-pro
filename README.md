@@ -5,16 +5,27 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 1.24.0 Professional Client Report Redesign
+## Current milestone: 1.25.0 Full Fit-Day Usability and Reliability Pass
 
-The client report now opens with the rider’s goal, completed changes, final
-setup, recommendations, and follow-up plan instead of internal evidence counts.
-Baseline and final measurements use clearer client-facing labels, selected
-Before/After images have stronger presentation, and studio branding remains
-consistent across preview, print, PDF, and report packages. Internal readiness
-information stays visible to the fitter during preview but is automatically
-removed from the printed client report. The Report Center uses clearer language
-for editing the fit plan, choosing evidence, and previewing the client report.
+Fit Day now puts **Fit-Day Preflight** beside the main workflow actions so folder,
+storage, capture, playback, autosave, and session checks can be run before the
+rider starts. Autosave runs sooner and exposes the exact error when it cannot
+finish. Starting or switching sessions is paused safely when the current session
+cannot be saved, keeping the visible selection and active workspace together.
+Manual save and close failures keep the work open with a clear warning instead
+of silently losing edits. Ctrl+1–5 now matches the visible Fit Day, Client,
+Video, Measurements, and Report stages, and F6 uses the same protected Next
+Step path as the button. Existing Kinovea capture, playback, drawing, and
+Before/After folder behavior remains unchanged.
+
+Use [the v1.25.0 test plan](docs/v1.25.0-test-plan.md) for the focused checks.
+
+### Previous milestone: 1.24.0 Professional Client Report Redesign
+
+The client report opens with the rider’s goal, completed changes, final setup,
+recommendations, and follow-up plan. Baseline and final measurements use clearer
+client-facing labels, and internal readiness details are excluded from the
+printed report.
 
 Use [the v1.24.0 test plan](docs/v1.24.0-test-plan.md) for the focused checks.
 

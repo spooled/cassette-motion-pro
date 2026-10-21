@@ -295,6 +295,8 @@ namespace CassetteMotionPro.Workspace
         private bool outputInProgress;
         private readonly Timer autosaveTimer = new Timer();
         private bool hasUnsavedChanges;
+        private bool suppressSessionSelection;
+        private string lastAutosaveError = string.Empty;
         private string lastSavedFingerprint = string.Empty;
         private string cachedEvidenceFolder;
         private int cachedEvidenceCount;
@@ -340,7 +342,7 @@ namespace CassetteMotionPro.Workspace
             WireAutosaveEvents(this);
             lastSavedFingerprint = BuildAutosaveFingerprint();
             SetAutosaveStatus("Saved", false);
-            autosaveTimer.Interval = 6000;
+            autosaveTimer.Interval = 4000;
             autosaveTimer.Tick += AutosaveTimer_Tick;
             autosaveTimer.Start();
         }
@@ -354,16 +356,14 @@ namespace CassetteMotionPro.Workspace
             }
             if (keyData == Keys.F6)
             {
-                if (nextRecommendedStepActionHandler != null)
-                    nextRecommendedStepActionHandler();
-                UpdateWorkflowChecklist();
+                RunNextBestFitDayStep();
                 return true;
             }
             if (keyData == (Keys.Control | Keys.D1)) { SelectWorkspaceTab(FitDayHomeTabName); return true; }
-            if (keyData == (Keys.Control | Keys.D2)) { SelectWorkspaceTab(KinoveaVideoTabName); return true; }
-            if (keyData == (Keys.Control | Keys.D3)) { SelectWorkspaceTab("Bike Metrics"); return true; }
-            if (keyData == (Keys.Control | Keys.D4)) { SelectWorkspaceTab("Body Angles"); return true; }
-            if (keyData == (Keys.Control | Keys.D5)) { SelectWorkspaceTab("Review & Deliver"); return true; }
+            if (keyData == (Keys.Control | Keys.D2)) { SelectWorkspaceTab(SessionSetupTabName); return true; }
+            if (keyData == (Keys.Control | Keys.D3)) { SelectWorkspaceTab(KinoveaVideoTabName); return true; }
+            if (keyData == (Keys.Control | Keys.D4)) { SelectWorkspaceTab("Measurement Review"); return true; }
+            if (keyData == (Keys.Control | Keys.D5)) { SelectWorkspaceTab("Report Center"); return true; }
             if (keyData == (Keys.Control | Keys.Shift | Keys.R)) { OpenDualLiveCapture(); return true; }
             if (keyData == (Keys.Control | Keys.Shift | Keys.P)) { UseLatestBothVideos(); return true; }
             if (keyData == (Keys.Control | Keys.Shift | Keys.F)) { ReviewFavoriteFrames(); return true; }
@@ -427,10 +427,12 @@ namespace CassetteMotionPro.Workspace
                 SaveCurrentSession();
                 UpdateSaveHint("Autosaved " + DateTime.Now.ToString("h:mm:ss tt") + ".");
             }
-            catch
+            catch (Exception exception)
             {
                 hasUnsavedChanges = true;
-                SetAutosaveStatus("Autosave needs attention", true);
+                lastAutosaveError = exception.Message;
+                SetAutosaveStatus("Autosave failed — press Save", true);
+                UpdateSaveHint("Autosave could not finish. Press Save to retry. " + exception.Message);
             }
         }
 
@@ -2709,7 +2711,7 @@ namespace CassetteMotionPro.Workspace
             recovery.Size = new Size(150, 42);
             recovery.Margin = new Padding(8, 9, 0, 9);
             recovery.Click += delegate { ShowAssistedWorkflowRecovery(); };
-            Button diagnostics = CreateButton("Fit-Day Diagnostics", false);
+            Button diagnostics = CreateButton("Fit-Day Preflight", true);
             diagnostics.Size = new Size(170, 42);
             diagnostics.Margin = new Padding(8, 9, 0, 9);
             diagnostics.Click += ShowFitDayDiagnostics;
@@ -2724,7 +2726,7 @@ namespace CassetteMotionPro.Workspace
             {
                 MessageBox.Show(this,
                     "1. Create or open a client and fit session using INTAKE.\n\n" +
-                    "2. Run Practice Mode and Fit-Day Diagnostics before a real recording.\n\n" +
+                    "2. Run Fit-Day Preflight and Practice Mode before a real recording.\n\n" +
                     "3. Use RECORD for Kinovea live capture, then TRACK and MEASURE.\n\n" +
                     "4. Review the evidence, approve the fit, and create the report.\n\n" +
                     "If a session was interrupted, reopen that client first and use Workflow Check to review recovery. " +
@@ -2745,7 +2747,7 @@ namespace CassetteMotionPro.Workspace
             fieldTest.Click += ShowFitDayFieldTest;
             primaryActions.Controls.Add(resume);
             primaryActions.Controls.Add(recovery);
-            primaryActions.Controls.Add(positionHistory);
+            primaryActions.Controls.Add(diagnostics);
 
             FlowLayoutPanel secondaryActions = new FlowLayoutPanel();
             secondaryActions.Dock = DockStyle.Top;
@@ -2754,10 +2756,10 @@ namespace CassetteMotionPro.Workspace
             secondaryActions.WrapContents = true;
             secondaryActions.AutoScroll = true;
             secondaryActions.Padding = new Padding(0, 5, 0, 5);
-            secondaryActions.Controls.Add(diagnostics);
             secondaryActions.Controls.Add(practice);
             secondaryActions.Controls.Add(gettingStarted);
             secondaryActions.Controls.Add(timeline);
+            secondaryActions.Controls.Add(positionHistory);
             secondaryActions.Controls.Add(fieldTest);
 
             Button moreOptions = CreateButton("More Options + Folders", false);
@@ -2908,6 +2910,7 @@ namespace CassetteMotionPro.Workspace
             AddDiagnostic(results, client != null && Directory.Exists(client.FolderPath) ? "PASS" : "FAIL", "Client folder", client != null && Directory.Exists(client.FolderPath) ? client.FolderPath : "Client folder is unavailable. Reopen the client before the fit.");
             ProbeWritableFolder(results, "Client folder write access", client == null ? string.Empty : client.FolderPath, false);
             AddDiagnostic(results, autosaveTimer.Enabled ? "PASS" : "FAIL", "Autosave timer", autosaveTimer.Enabled ? "Autosave is running every " + (autosaveTimer.Interval / 1000).ToString() + " seconds." : "Autosave is stopped. Close and reopen the workspace before the fit.");
+            AddDiagnostic(results, string.IsNullOrWhiteSpace(lastAutosaveError) ? "PASS" : "FAIL", "Last autosave attempt", string.IsNullOrWhiteSpace(lastAutosaveError) ? "No autosave error is waiting for attention." : "Press Save to retry. Last error: " + lastAutosaveError);
             AddDiagnostic(results, hasUnsavedChanges ? "WARN" : "PASS", "Current save state", hasUnsavedChanges ? "Changes are waiting for the next autosave. Press Save before switching computers or closing unexpectedly." : "The workspace has no pending edits.");
             AddDiagnostic(results, openVideo != null ? "PASS" : "FAIL", "Kinovea playback connection", openVideo != null ? "Single-video playback is connected." : "Playback connection is unavailable.");
             AddDiagnostic(results, openVideoPair != null ? "PASS" : "WARN", "Dual playback connection", openVideoPair != null ? "Before/After dual playback is connected." : "Dual playback is unavailable; single playback can still be used.");
@@ -8203,6 +8206,8 @@ namespace CassetteMotionPro.Workspace
 
         private void SessionList_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (suppressSessionSelection)
+                return;
             if (sessionList.SelectedItems.Count == 0)
                 return;
             FitSessionRecord selected = sessionList.SelectedItems[0].Tag as FitSessionRecord;
@@ -8217,16 +8222,60 @@ namespace CassetteMotionPro.Workspace
                 }
                 catch (Exception exception)
                 {
+                    RestoreCurrentSessionSelection();
                     MessageBox.Show(this, "The current fit session could not be autosaved before switching.\n\n" + exception.Message,
-                        "Bike Fit Workspace", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        "Session Switch Paused", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
             }
             LoadSession(selected);
         }
 
+        private void RestoreCurrentSessionSelection()
+        {
+            suppressSessionSelection = true;
+            try
+            {
+                sessionList.SelectedItems.Clear();
+                if (currentSession == null)
+                    return;
+
+                foreach (ListViewItem item in sessionList.Items)
+                {
+                    FitSessionRecord listed = item.Tag as FitSessionRecord;
+                    if (listed != null && listed.Id == currentSession.Id)
+                    {
+                        item.Selected = true;
+                        item.Focused = true;
+                        item.EnsureVisible();
+                        break;
+                    }
+                }
+            }
+            finally
+            {
+                suppressSessionSelection = false;
+            }
+        }
+
         private void BeginNewSession()
         {
+            if (currentSession != null && hasUnsavedChanges)
+            {
+                try
+                {
+                    SaveCurrentSession();
+                    RefreshSessions(currentSession.Id);
+                }
+                catch (Exception exception)
+                {
+                    RestoreCurrentSessionSelection();
+                    MessageBox.Show(this,
+                        "A new session was not started because the current session could not be saved.\n\n" + exception.Message + "\n\nPress Save and resolve the folder or storage problem before trying again.",
+                        "New Session Paused", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+            }
             sessionList.SelectedItems.Clear();
             FitSessionRecord session = new FitSessionRecord();
             session.SessionDate = DateTime.Today;
@@ -8358,6 +8407,9 @@ namespace CassetteMotionPro.Workspace
             }
             catch (Exception exception)
             {
+                lastAutosaveError = exception.Message;
+                hasUnsavedChanges = true;
+                SetAutosaveStatus("Save failed — work kept open", true);
                 MessageBox.Show(this, "The fit session could not be saved.\n\n" + exception.Message, "Bike Fit Workspace", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -8927,6 +8979,9 @@ namespace CassetteMotionPro.Workspace
             {
                 e.Cancel = true;
                 autosaveTimer.Start();
+                lastAutosaveError = exception.Message;
+                hasUnsavedChanges = true;
+                SetAutosaveStatus("Close paused — save failed", true);
                 MessageBox.Show(this, "The fit session could not be saved.\n\n" + exception.Message, "Bike Fit Workspace", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -9086,6 +9141,7 @@ namespace CassetteMotionPro.Workspace
             currentSession.ShoulderAngleAfter = measurementBoxes["ShoulderAngleAfter"].Text.Trim();
             repository.Save(currentSession);
             recoveryStore.Save(currentSession, GetCurrentWorkspaceSection());
+            lastAutosaveError = string.Empty;
             lastSavedFingerprint = BuildAutosaveFingerprint();
             hasUnsavedChanges = false;
             SetAutosaveStatus("Saved " + DateTime.Now.ToString("h:mm tt"), false);
