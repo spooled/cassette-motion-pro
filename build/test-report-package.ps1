@@ -71,6 +71,14 @@ try {
 
     Write-Host 'PASS: report package ZIP is client-safe and the fitter-only copy keeps the internal notes.'
 }
+catch {
+    # Surface the real error as a GitHub annotation so a failed run explains itself.
+    $detail = $_.Exception.ToString()
+    if ($_.Exception.InnerException) { $detail += ' || INNER: ' + $_.Exception.InnerException.ToString() }
+    $detail += ' || AT: ' + $_.InvocationInfo.PositionMessage
+    Write-Host ('::error::' + ($detail -replace '\r?\n', ' | '))
+    exit 1
+}
 finally {
     if (Test-Path $root) { Remove-Item $root -Recurse -Force }
 }
