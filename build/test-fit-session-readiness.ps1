@@ -15,6 +15,7 @@ $sources = @(
   'src/Kinovea/Workspace/FitSessionRepository.cs',
   'src/Kinovea/Workspace/SessionPathRebaser.cs',
   'src/Kinovea/Workspace/MeasurementNumber.cs',
+  'src/Kinovea/Workspace/BikeFitGeometry.cs',
   'src/Kinovea/Workspace/FitSessionRecoveryStore.cs'
 )
 $usings = "using System;`nusing System.IO;`nusing System.Collections.Generic;`nusing System.Linq;`nusing System.Reflection;`nusing System.Globalization;`nusing System.Text.RegularExpressions;`nusing System.Xml.Serialization;`nusing CassetteMotionPro.Clients;`n"
@@ -177,9 +178,43 @@ try {
     if ([CassetteMotionPro.Workspace.MeasurementNumber]::TryParse($bad, [ref]$junk)) { throw ("Ambiguous or invalid measurement was accepted: '" + $bad + "'.") }
   }
 
+  # Guided-capture geometry: level line, facing direction, and the calibration error estimate.
+  $geometry = [CassetteMotionPro.Workspace.BikeFitGeometry]
+  $rx = 0.0; $ry = 0.0
+  # A point above a horizontal reference stays above it whichever end of the line was clicked first.
+  $geometry::CorrectForLevel(50.0, -30.0, 0.0, 0.0, 100.0, 0.0, $false, [ref]$rx, [ref]$ry)
+  if ([math]::Abs($rx - 50.0) -gt 0.0001 -or [math]::Abs($ry + 30.0) -gt 0.0001) { throw ("Level correction moved a point: " + $rx + ',' + $ry) }
+  $geometry::CorrectForLevel(50.0, -30.0, 100.0, 0.0, 0.0, 0.0, $false, [ref]$rx, [ref]$ry)
+  if ([math]::Abs($rx + 50.0) -gt 0.0001 -or [math]::Abs($ry + 30.0) -gt 0.0001) { throw ("Right-to-left level clicks turned the picture upside down: " + $rx + ',' + $ry) }
+  # A tilted reference line becomes horizontal in either click order.
+  foreach ($order in @(@(0.0, 0.0, 100.0, 10.0), @(100.0, 10.0, 0.0, 0.0))) {
+    $geometry::CorrectForLevel($order[2], $order[3], $order[0], $order[1], $order[2], $order[3], $false, [ref]$rx, [ref]$ry)
+    if ([math]::Abs($ry) -gt 0.0001) { throw 'The level reference did not become horizontal.' }
+  }
+  # A bike facing left is mirrored so forward is +X (rear axle on the right, front axle on the left).
+  $geometry::CorrectForLevel(150.0, -40.0, 200.0, 0.0, 0.0, 0.0, $true, [ref]$rx, [ref]$ry)
+  if ([math]::Abs($rx - 50.0) -gt 0.0001 -or [math]::Abs($ry + 40.0) -gt 0.0001) { throw ("Left-facing bike was not mirrored: " + $rx + ',' + $ry) }
+
+  # The calibration residual is measured on the four points the fit never saw (4 of 8, not 8 of 8).
+  $ideal = [double[]]@(0,0, 0,-350, -350,0, 350,0, 1000,0, 1000,-350, 650,0, 1350,0)
+  $image = New-Object 'double[]' 16
+  for ($i = 0; $i -lt 16; $i += 2) { $image[$i] = 0.5 * $ideal[$i] + 300; $image[$i + 1] = 0.5 * $ideal[$i + 1] + 400 }
+  $transform = New-Object 'double[]' 8
+  $residual = 0.0
+  if (-not $geometry::TryBuildPerspectiveTransform($image, $ideal, [ref]$transform, [ref]$residual)) { throw 'A clean wheel calibration did not build.' }
+  if ($residual -gt 0.001) { throw ('A perfect calibration reported a residual of ' + $residual) }
+  $image[4] += 4.0   # move a non-anchor point 4 px = 8 mm
+  if (-not $geometry::TryBuildPerspectiveTransform($image, $ideal, [ref]$transform, [ref]$residual)) { throw 'A slightly off wheel calibration did not build.' }
+  if ([math]::Abs($residual - 4.0) -gt 0.001) { throw ('Residual should be 4.0 mm (8 mm error over 4 checked points) but was ' + $residual) }
+  # A point the transform cannot convert is reported, never returned as raw pixels.
+  $horizon = [double[]]@(1,0,0, 0,1,0, 1,0)
+  $px = 0.0; $py = 0.0
+  if ($geometry::TryApplyPerspectiveTransform($horizon, -1.0, 5.0, [ref]$px, [ref]$py)) { throw 'A point on the transform horizon was converted.' }
+  if (-not $geometry::TryApplyPerspectiveTransform($horizon, 3.0, 5.0, [ref]$px, [ref]$py)) { throw 'A normal point could not be converted.' }
+
   [FitSessionRecoveryProbe]::Run($repository.RootPath, $session)
 
-  Write-Host 'PASS: legacy session load, current session round-trip, stable storage key, follow-up merge, restore path rebasing, measurement number parsing, manifest backup recovery, autosave backup recovery, recovery cleanup.'
+  Write-Host 'PASS: legacy session load, current session round-trip, stable storage key, follow-up merge, restore path rebasing, measurement number parsing, level/calibration geometry, manifest backup recovery, autosave backup recovery, recovery cleanup.'
 }
 finally {
   if (Test-Path $root) { Remove-Item $root -Recurse -Force }

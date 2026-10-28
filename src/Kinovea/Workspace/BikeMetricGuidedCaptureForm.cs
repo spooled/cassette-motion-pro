@@ -36,6 +36,7 @@ namespace CassetteMotionPro.Workspace
         private readonly List<PointF> wheelPerspectivePoints = new List<PointF>();
         private readonly List<PointF> verificationPoints = new List<PointF>();
         private readonly List<PointF> levelReferencePoints = new List<PointF>();
+        private bool levelReferenceFromAxles;
         private readonly List<PointF> landmarkPoints = new List<PointF>();
         private readonly string[] basicLandmarkNames = new string[]
         {
@@ -1012,9 +1013,19 @@ namespace CassetteMotionPro.Workspace
             perspectiveTransform = transform;
             perspectiveResidualMillimeters = residual;
             PointF imageCenter = new PointF(loadedImage.Width / 2F, loadedImage.Height / 2F);
-            PointF centerMillimeters = ApplyPerspectiveTransform(imageCenter);
-            PointF onePixelRight = ApplyPerspectiveTransform(new PointF(imageCenter.X + 1F, imageCenter.Y));
-            PointF onePixelDown = ApplyPerspectiveTransform(new PointF(imageCenter.X, imageCenter.Y + 1F));
+            PointF centerMillimeters;
+            PointF onePixelRight;
+            PointF onePixelDown;
+            if (!TryApplyPerspectiveTransform(transform, imageCenter, out centerMillimeters) ||
+                !TryApplyPerspectiveTransform(transform, new PointF(imageCenter.X + 1F, imageCenter.Y), out onePixelRight) ||
+                !TryApplyPerspectiveTransform(transform, new PointF(imageCenter.X, imageCenter.Y + 1F), out onePixelDown))
+            {
+                perspectiveTransform = null;
+                perspectiveResidualMillimeters = 0;
+                MessageBox.Show(this, "The perspective correction could not convert the middle of the photo to millimetres. Run the eight wheel points again.", "Perspective calibration", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                StartWheelPerspectiveCalibration();
+                return;
+            }
             horizontalMillimetersPerPixel = Distance(centerMillimeters, onePixelRight);
             verticalMillimetersPerPixel = Distance(centerMillimeters, onePixelDown);
             if (horizontalMillimetersPerPixel < 0.01 || horizontalMillimetersPerPixel > 20 || verticalMillimetersPerPixel < 0.01 || verticalMillimetersPerPixel > 20)
@@ -1035,6 +1046,7 @@ namespace CassetteMotionPro.Workspace
                 : "Perspective fit needs review. Recheck the camera angle and all eight wheel points.";
             currentLandmarkLabel.Text = "Dual-wheel calibration complete";
             nextPointHintLabel.Text = "Measurements will use the corrected bike-plane coordinates. Expected precision is shown in the perspective check.";
+            levelReferenceFromAxles = true;
             levelReferencePoints.Add(wheelPerspectivePoints[0]);
             levelReferencePoints.Add(wheelPerspectivePoints[4]);
             referenceLabel.Text = "Level reference: rear-to-front axle line locked";
@@ -1092,6 +1104,7 @@ namespace CassetteMotionPro.Workspace
             currentLandmarkLabel.Text = "Bike calibration complete";
             nextPointHintLabel.Text = "Horizontal scale uses wheelbase; vertical scale uses outside tire diameter.";
             levelReferencePoints.Clear();
+            levelReferenceFromAxles = true;
             levelReferencePoints.Add(rearAxle);
             levelReferencePoints.Add(frontAxle);
             referenceLabel.Text = "Level reference: rear-to-front axle line applied";
@@ -1261,6 +1274,7 @@ namespace CassetteMotionPro.Workspace
             levelReferencePoints.Clear();
             if (perspectiveTransform != null && wheelPerspectivePoints.Count >= 5)
             {
+                levelReferenceFromAxles = true;
                 levelReferencePoints.Add(wheelPerspectivePoints[0]);
                 levelReferencePoints.Add(wheelPerspectivePoints[4]);
             }
@@ -1513,6 +1527,8 @@ namespace CassetteMotionPro.Workspace
 
         private void AddLevelReferencePoint(PointF imagePoint)
         {
+            if (levelReferencePoints.Count == 0)
+                levelReferenceFromAxles = false;
             levelReferencePoints.Add(imagePoint);
             undoLast.Enabled = true;
             if (levelReferencePoints.Count == 1)
@@ -1586,6 +1602,14 @@ namespace CassetteMotionPro.Workspace
 
         private void CalculateMetrics()
         {
+            if (!CanMeasureLandmarks())
+            {
+                calculatedValues = new Dictionary<string, string>();
+                resultsLabel.Text = "Calculated metrics:\nA landmark cannot be converted to millimetres. Move it or redo the wheel calibration. Nothing can be saved until then.";
+                status.Text = "Measurement blocked: a landmark is outside the calibrated area.";
+                return;
+            }
+
             PointF bottomBracket = landmarkPoints[0];
             PointF saddleTop = landmarkPoints[1];
             PointF saddleTip = landmarkPoints[2];
@@ -2582,14 +2606,15 @@ namespace CassetteMotionPro.Workspace
             if (levelReferencePoints.Count != 2)
                 return point;
 
-            PointF origin = levelReferencePoints[0];
-            double angle = GetLevelReferenceAngleRadians();
-            double cos = Math.Cos(-angle);
-            double sin = Math.Sin(-angle);
-            double dx = point.X - origin.X;
-            double dy = point.Y - origin.Y;
-            double x = (dx * cos) - (dy * sin);
-            double y = (dx * sin) + (dy * cos);
+            // For a rear-to-front axle line, a bike facing left is mirrored so that forward is always +X,
+            // which is what the dual-wheel calibration already does.
+            bool mirrorForward = levelReferenceFromAxles && levelReferencePoints[1].X < levelReferencePoints[0].X;
+            double x;
+            double y;
+            BikeFitGeometry.CorrectForLevel(point.X, point.Y,
+                levelReferencePoints[0].X, levelReferencePoints[0].Y,
+                levelReferencePoints[1].X, levelReferencePoints[1].Y,
+                mirrorForward, out x, out y);
             return new PointF((float)x, (float)y);
         }
 
@@ -2600,7 +2625,7 @@ namespace CassetteMotionPro.Workspace
 
             PointF first = levelReferencePoints[0];
             PointF second = levelReferencePoints[1];
-            return Math.Atan2(second.Y - first.Y, second.X - first.X);
+            return BikeFitGeometry.LevelAngleRadians(first.X, first.Y, second.X, second.Y);
         }
 
         private double GetLevelReferenceAngleDegrees()
@@ -2653,133 +2678,49 @@ namespace CassetteMotionPro.Workspace
         {
             transform = null;
             residualMillimeters = double.NaN;
-            if (imagePoints == null || idealPoints == null || imagePoints.Count != idealPoints.Count || imagePoints.Count < 4)
+            if (imagePoints == null || idealPoints == null || imagePoints.Count != idealPoints.Count)
                 return false;
 
-            // Use the two axle centers and the two tire-top points as four
-            // stable anchors. Fitting all eight points through normal equations
-            // can become ill-conditioned because six points share the axle
-            // line, producing extreme values when landmarks are above it.
-            int[] anchorIndices = new int[] { 0, 1, 4, 5 };
-            double[,] system = new double[8, 8];
-            double[] right = new double[8];
-            int equation = 0;
-            for (int anchor = 0; anchor < anchorIndices.Length; anchor++)
-            {
-                int i = anchorIndices[anchor];
-                double x = imagePoints[i].X;
-                double y = imagePoints[i].Y;
-                double destinationX = idealPoints[i].X;
-                double destinationY = idealPoints[i].Y;
-                double[] xRow = new double[] { x, y, 1, 0, 0, 0, -destinationX * x, -destinationX * y };
-                double[] yRow = new double[] { 0, 0, 0, x, y, 1, -destinationY * x, -destinationY * y };
-                for (int column = 0; column < 8; column++)
-                {
-                    system[equation, column] = xRow[column];
-                    system[equation + 1, column] = yRow[column];
-                }
-                right[equation] = destinationX;
-                right[equation + 1] = destinationY;
-                equation += 2;
-            }
-
-            double[] solution;
-            if (!TrySolveLinearSystem(system, right, out solution))
-                return false;
-
-            double squaredError = 0;
+            double[] image = new double[imagePoints.Count * 2];
+            double[] ideal = new double[idealPoints.Count * 2];
             for (int i = 0; i < imagePoints.Count; i++)
             {
-                PointF projected;
-                if (!TryApplyPerspectiveTransform(solution, imagePoints[i], out projected))
-                    return false;
-                double error = Distance(projected, idealPoints[i]);
-                squaredError += error * error;
+                image[i * 2] = imagePoints[i].X;
+                image[i * 2 + 1] = imagePoints[i].Y;
+                ideal[i * 2] = idealPoints[i].X;
+                ideal[i * 2 + 1] = idealPoints[i].Y;
             }
-
-            transform = solution;
-            residualMillimeters = Math.Sqrt(squaredError / imagePoints.Count);
-            return !double.IsNaN(residualMillimeters) && !double.IsInfinity(residualMillimeters);
-        }
-
-        private static bool TrySolveLinearSystem(double[,] matrix, double[] right, out double[] solution)
-        {
-            const int size = 8;
-            solution = new double[size];
-            double[,] augmented = new double[size, size + 1];
-            for (int row = 0; row < size; row++)
-            {
-                for (int column = 0; column < size; column++)
-                    augmented[row, column] = matrix[row, column];
-                augmented[row, size] = right[row];
-            }
-
-            for (int pivot = 0; pivot < size; pivot++)
-            {
-                int bestRow = pivot;
-                double bestValue = Math.Abs(augmented[pivot, pivot]);
-                for (int row = pivot + 1; row < size; row++)
-                {
-                    double value = Math.Abs(augmented[row, pivot]);
-                    if (value > bestValue)
-                    {
-                        bestValue = value;
-                        bestRow = row;
-                    }
-                }
-
-                if (bestValue < 0.0000000001)
-                    return false;
-
-                if (bestRow != pivot)
-                {
-                    for (int column = pivot; column <= size; column++)
-                    {
-                        double temporary = augmented[pivot, column];
-                        augmented[pivot, column] = augmented[bestRow, column];
-                        augmented[bestRow, column] = temporary;
-                    }
-                }
-
-                double divisor = augmented[pivot, pivot];
-                for (int column = pivot; column <= size; column++)
-                    augmented[pivot, column] /= divisor;
-
-                for (int row = 0; row < size; row++)
-                {
-                    if (row == pivot)
-                        continue;
-                    double factor = augmented[row, pivot];
-                    for (int column = pivot; column <= size; column++)
-                        augmented[row, column] -= factor * augmented[pivot, column];
-                }
-            }
-
-            for (int row = 0; row < size; row++)
-                solution[row] = augmented[row, size];
-            return true;
+            return BikeFitGeometry.TryBuildPerspectiveTransform(image, ideal, out transform, out residualMillimeters);
         }
 
         private static bool TryApplyPerspectiveTransform(double[] transform, PointF point, out PointF result)
         {
-            result = PointF.Empty;
-            if (transform == null || transform.Length != 8)
-                return false;
-            double denominator = transform[6] * point.X + transform[7] * point.Y + 1.0;
-            if (Math.Abs(denominator) < 0.0000001)
-                return false;
-            double x = (transform[0] * point.X + transform[1] * point.Y + transform[2]) / denominator;
-            double y = (transform[3] * point.X + transform[4] * point.Y + transform[5]) / denominator;
-            if (double.IsNaN(x) || double.IsInfinity(x) || double.IsNaN(y) || double.IsInfinity(y))
-                return false;
-            result = new PointF((float)x, (float)y);
-            return true;
+            double x;
+            double y;
+            bool ok = BikeFitGeometry.TryApplyPerspectiveTransform(transform, point.X, point.Y, out x, out y);
+            result = ok ? new PointF((float)x, (float)y) : PointF.Empty;
+            return ok;
         }
 
+        // Callers must have confirmed with CanMeasureLandmarks() that every point converts. A point the
+        // transform cannot convert is never returned as raw pixels, which would be read as millimetres.
         private PointF ApplyPerspectiveTransform(PointF point)
         {
             PointF result;
-            return TryApplyPerspectiveTransform(perspectiveTransform, point, out result) ? result : point;
+            return TryApplyPerspectiveTransform(perspectiveTransform, point, out result) ? result : new PointF(float.NaN, float.NaN);
+        }
+
+        private bool CanMeasureLandmarks()
+        {
+            if (perspectiveTransform == null)
+                return true;
+            foreach (PointF landmark in landmarkPoints)
+            {
+                PointF converted;
+                if (!TryApplyPerspectiveTransform(perspectiveTransform, landmark, out converted))
+                    return false;
+            }
+            return true;
         }
 
         private PointF GetMeasurementPoint(PointF point)
