@@ -1,5 +1,13 @@
 $ErrorActionPreference = 'Stop'
 
+# Show the real failure in the GitHub run summary, not only a bare exit code.
+trap {
+    $detail = $_.Exception.Message
+    if ($_.Exception.InnerException) { $detail += ' || INNER: ' + $_.Exception.InnerException.Message }
+    Write-Host ('::error::' + ($detail -replace '\r?\n', ' | '))
+    exit 1
+}
+
 $sources = @(
   'src/Kinovea/Clients/ClientRecord.cs',
   'src/Kinovea/Workspace/FitFollowUpEntry.cs',
