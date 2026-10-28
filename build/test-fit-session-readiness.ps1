@@ -94,9 +94,30 @@ try {
     if ([CassetteMotionPro.Workspace.FitSessionRecord]::IsSafeStorageKey($bad)) { throw ('Unsafe storage key accepted: ' + $bad) }
   }
 
+  # FindById returns the saved session, and nothing for an unknown id.
+  if ($null -eq $repository.FindById($draft.Id)) { throw 'FindById did not return a saved session.' }
+  if ($null -ne $repository.FindById([guid]::NewGuid())) { throw 'FindById returned a session for an unknown id.' }
+
+  # A follow-up saved elsewhere (Client Manager) must survive a later save of a stale in-memory copy.
+  $stale = $repository.FindById($draft.Id)
+  $fresh = $repository.FindById($draft.Id)
+  $entry = [CassetteMotionPro.Workspace.FitFollowUpEntry]::new()
+  $entry.Id = [guid]::NewGuid()
+  $entry.RiderFeedback = 'Saved from Client Manager'
+  $fresh.FollowUps = [System.Collections.Generic.List[CassetteMotionPro.Workspace.FitFollowUpEntry]]::new()
+  $fresh.FollowUps.Add($entry)
+  $repository.Save($fresh) | Out-Null
+  $stale.Notes = 'Edited in Fit Day after the follow-up was saved'
+  $repository.Save($stale) | Out-Null
+  $merged = $repository.FindById($draft.Id)
+  if ($null -eq $merged.FollowUps -or @($merged.FollowUps | Where-Object { $_.Id -eq $entry.Id }).Count -ne 1) { throw 'A follow-up saved elsewhere was lost by a later save.' }
+  if ($merged.Notes -ne 'Edited in Fit Day after the follow-up was saved') { throw 'Follow-up merge discarded the newer in-memory edit.' }
+  $repository.Save($merged) | Out-Null
+  if (@($repository.FindById($draft.Id).FollowUps).Count -ne 1) { throw 'Saving twice duplicated a follow-up.' }
+
   [FitSessionRecoveryProbe]::Run($repository.RootPath, $session)
 
-  Write-Host 'PASS: legacy session load, current session round-trip, stable storage key, manifest backup recovery, autosave backup recovery, recovery cleanup.'
+  Write-Host 'PASS: legacy session load, current session round-trip, stable storage key, follow-up merge, manifest backup recovery, autosave backup recovery, recovery cleanup.'
 }
 finally {
   if (Test-Path $root) { Remove-Item $root -Recurse -Force }

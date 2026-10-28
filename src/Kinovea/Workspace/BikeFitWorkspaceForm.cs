@@ -297,6 +297,7 @@ namespace CassetteMotionPro.Workspace
         private bool hasUnsavedChanges;
         private bool suppressSessionSelection;
         private string lastAutosaveError = string.Empty;
+        private string lastRecoveryError = string.Empty;
         private string lastSavedFingerprint = string.Empty;
         private string cachedEvidenceFolder;
         private int cachedEvidenceCount;
@@ -502,23 +503,51 @@ namespace CassetteMotionPro.Workspace
             if (!recoveryStore.TryLoad(out recovered, out workspaceSection, out savedUtc))
                 return;
 
+            // Point the recovered copy at its real folder, and ignore a recovery point that
+            // is older than what was already saved to disk.
+            FitSessionRecord onDisk = null;
+            try { onDisk = repository.FindById(recovered.Id); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+            if (onDisk != null)
+            {
+                if (onDisk.ModifiedUtc > recovered.ModifiedUtc)
+                {
+                    recoveryStore.Clear();
+                    return;
+                }
+                recovered.FolderPath = onDisk.FolderPath;
+            }
+
             DialogResult result = MessageBox.Show(this,
                 "Cassette Motion Pro found a fit-day recovery point from " + savedUtc.ToLocalTime().ToString("MMM d, h:mm tt") + ".\n\n" +
                 "Session: " + recovered.DisplayName + "\n\nRestore it and return to the last workspace section?",
                 "Recover Fit-Day Work",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
-            if (result == DialogResult.Yes)
-            {
-                LoadSession(recovered);
-                if (!string.IsNullOrWhiteSpace(workspaceSection))
-                    SelectWorkspaceTab(workspaceSection);
-                UpdateSaveHint("Recovered the last autosaved fit-day session.");
-            }
-            else
+            if (result != DialogResult.Yes)
             {
                 recoveryStore.Clear();
+                return;
             }
+
+            LoadSession(recovered);
+            try
+            {
+                // Save first so the session list reloads the recovered data instead of the older copy on disk.
+                SaveCurrentSession();
+                RefreshSessions(recovered.Id);
+                UpdateSaveHint("Recovered the last autosaved fit-day session.");
+            }
+            catch (Exception exception)
+            {
+                hasUnsavedChanges = true;
+                lastAutosaveError = exception.Message;
+                SetAutosaveStatus("Recovered - press Save", true);
+                UpdateSaveHint("Recovered the session, but it could not be saved yet. Press Save to retry. " + exception.Message);
+            }
+            if (!string.IsNullOrWhiteSpace(workspaceSection))
+                SelectWorkspaceTab(workspaceSection);
         }
 
         private void BuildInterface()
@@ -8255,82 +8284,88 @@ namespace CassetteMotionPro.Workspace
         {
             session.EnsureStorageKey();
             loadingSession = true;
-            currentSession = session;
-            txtTitle.Text = session.Title ?? string.Empty;
-            dtpDate.Value = session.SessionDate == DateTime.MinValue ? DateTime.Today : session.SessionDate;
-            cmbStatus.SelectedItem = string.IsNullOrEmpty(session.Status) ? "Assessment" : session.Status;
-            if (cmbStatus.SelectedIndex < 0)
-                cmbStatus.SelectedIndex = 0;
-            txtGoals.Text = session.Goals ?? string.Empty;
-            txtNotes.Text = session.Notes ?? string.Empty;
-            txtFitSummaryMainGoal.Text = session.FitSummaryMainGoal ?? string.Empty;
-            txtFitSummaryKeyFindings.Text = session.FitSummaryKeyFindings ?? string.Empty;
-            txtFitSummaryChangesMade.Text = session.FitSummaryChangesMade ?? string.Empty;
-            txtFitSummaryRecommendations.Text = session.FitSummaryRecommendations ?? string.Empty;
-            smartRecommendationDraft.Text = session.FitChangeRecommendationDraft ?? string.Empty;
-            txtFitSummaryFollowUp.Text = session.FitSummaryFollowUp ?? string.Empty;
-            txtHandoffWhatToSend.Text = session.HandoffWhatToSend ?? string.Empty;
-            txtHandoffClientMessage.Text = session.HandoffClientMessage ?? string.Empty;
-            txtHandoffHomework.Text = session.HandoffHomework ?? string.Empty;
-            txtHandoffNextAppointment.Text = session.HandoffNextAppointment ?? string.Empty;
-            txtHandoffInternalNotes.Text = session.HandoffInternalNotes ?? string.Empty;
-            chkShowBeforeMeasurementsInReport.Checked = !session.HideBeforeMeasurementsInReport;
+            try
+            {
+                currentSession = session;
+                txtTitle.Text = session.Title ?? string.Empty;
+                dtpDate.Value = session.SessionDate == DateTime.MinValue ? DateTime.Today : session.SessionDate;
+                cmbStatus.SelectedItem = string.IsNullOrEmpty(session.Status) ? "Assessment" : session.Status;
+                if (cmbStatus.SelectedIndex < 0)
+                    cmbStatus.SelectedIndex = 0;
+                txtGoals.Text = session.Goals ?? string.Empty;
+                txtNotes.Text = session.Notes ?? string.Empty;
+                txtFitSummaryMainGoal.Text = session.FitSummaryMainGoal ?? string.Empty;
+                txtFitSummaryKeyFindings.Text = session.FitSummaryKeyFindings ?? string.Empty;
+                txtFitSummaryChangesMade.Text = session.FitSummaryChangesMade ?? string.Empty;
+                txtFitSummaryRecommendations.Text = session.FitSummaryRecommendations ?? string.Empty;
+                smartRecommendationDraft.Text = session.FitChangeRecommendationDraft ?? string.Empty;
+                txtFitSummaryFollowUp.Text = session.FitSummaryFollowUp ?? string.Empty;
+                txtHandoffWhatToSend.Text = session.HandoffWhatToSend ?? string.Empty;
+                txtHandoffClientMessage.Text = session.HandoffClientMessage ?? string.Empty;
+                txtHandoffHomework.Text = session.HandoffHomework ?? string.Empty;
+                txtHandoffNextAppointment.Text = session.HandoffNextAppointment ?? string.Empty;
+                txtHandoffInternalNotes.Text = session.HandoffInternalNotes ?? string.Empty;
+                chkShowBeforeMeasurementsInReport.Checked = !session.HideBeforeMeasurementsInReport;
 
-            string beforePath = session.BeforeVideoPath;
-            if (string.IsNullOrEmpty(beforePath))
-                beforePath = string.IsNullOrEmpty(session.LeftVideoPath) ? session.SideVideoPath : session.LeftVideoPath;
-            string afterPath = session.AfterVideoPath;
-            if (string.IsNullOrEmpty(afterPath))
-                afterPath = string.IsNullOrEmpty(session.RightVideoPath) ? session.FrontVideoPath : session.RightVideoPath;
-            SetMedia("BeforeVideoPath", beforePath);
-            SetMedia("AfterVideoPath", afterPath);
-            SetImage("BeforeReportImagePath", session.BeforeReportImagePath);
-            SetImage("AfterReportImagePath", session.AfterReportImagePath);
-            SetImage("SideBySideReportImagePath", session.SideBySideReportImagePath);
-            SetImage("MeasurementReferenceImagePath", session.MeasurementReferenceImagePath);
-            chkShowSideBySideImageInReport.Checked = !session.HideSideBySideImageInReport;
-            chkShowBeforeImageInReport.Checked = !session.HideBeforeImageInReport;
-            chkShowAfterImageInReport.Checked = !session.HideAfterImageInReport;
-            chkShowMeasurementReferenceImageInReport.Checked = !session.HideMeasurementReferenceImageInReport;
-            chkShowMeasurementCaptureTraceInReport.Checked = !session.HideMeasurementCaptureTraceInReport;
-            SetReportLogoStyle(session.ReportLogoStyle);
+                string beforePath = session.BeforeVideoPath;
+                if (string.IsNullOrEmpty(beforePath))
+                    beforePath = string.IsNullOrEmpty(session.LeftVideoPath) ? session.SideVideoPath : session.LeftVideoPath;
+                string afterPath = session.AfterVideoPath;
+                if (string.IsNullOrEmpty(afterPath))
+                    afterPath = string.IsNullOrEmpty(session.RightVideoPath) ? session.FrontVideoPath : session.RightVideoPath;
+                SetMedia("BeforeVideoPath", beforePath);
+                SetMedia("AfterVideoPath", afterPath);
+                SetImage("BeforeReportImagePath", session.BeforeReportImagePath);
+                SetImage("AfterReportImagePath", session.AfterReportImagePath);
+                SetImage("SideBySideReportImagePath", session.SideBySideReportImagePath);
+                SetImage("MeasurementReferenceImagePath", session.MeasurementReferenceImagePath);
+                chkShowSideBySideImageInReport.Checked = !session.HideSideBySideImageInReport;
+                chkShowBeforeImageInReport.Checked = !session.HideBeforeImageInReport;
+                chkShowAfterImageInReport.Checked = !session.HideAfterImageInReport;
+                chkShowMeasurementReferenceImageInReport.Checked = !session.HideMeasurementReferenceImageInReport;
+                chkShowMeasurementCaptureTraceInReport.Checked = !session.HideMeasurementCaptureTraceInReport;
+                SetReportLogoStyle(session.ReportLogoStyle);
 
-            SetMeasurement("SaddleHeightBefore", session.SaddleHeightBefore);
-            SetMeasurement("SaddleHeightAfter", session.SaddleHeightAfter);
-            SetMeasurement("SaddleSetbackBefore", session.SaddleSetbackBefore);
-            SetMeasurement("SaddleSetbackAfter", session.SaddleSetbackAfter);
-            SetMeasurement("HandlebarReachBefore", session.HandlebarReachBefore);
-            SetMeasurement("HandlebarReachAfter", session.HandlebarReachAfter);
-            SetMeasurement("HandlebarDropBefore", session.HandlebarDropBefore);
-            SetMeasurement("HandlebarDropAfter", session.HandlebarDropAfter);
-            SetMeasurement("SaddleTipToGripReachBefore", session.SaddleTipToGripReachBefore);
-            SetMeasurement("SaddleTipToGripReachAfter", session.SaddleTipToGripReachAfter);
-            SetMeasurement("HandlebarXBefore", session.HandlebarXBefore);
-            SetMeasurement("HandlebarXAfter", session.HandlebarXAfter);
-            SetMeasurement("HandlebarYBefore", session.HandlebarYBefore);
-            SetMeasurement("HandlebarYAfter", session.HandlebarYAfter);
-            SetMeasurement("CrankLengthBefore", session.CrankLengthBefore);
-            SetMeasurement("CrankLengthAfter", session.CrankLengthAfter);
-            SetMeasurement("WheelbaseBefore", session.WheelbaseBefore);
-            SetMeasurement("WheelbaseAfter", session.WheelbaseAfter);
-            SetMeasurement("CleatPositionBefore", session.CleatPositionBefore);
-            SetMeasurement("CleatPositionAfter", session.CleatPositionAfter);
-            SetMeasurement("KneeAngleBefore", session.KneeAngleBefore);
-            SetMeasurement("KneeAngleAfter", session.KneeAngleAfter);
-            SetMeasurement("HipAngleBefore", session.HipAngleBefore);
-            SetMeasurement("HipAngleAfter", session.HipAngleAfter);
-            SetMeasurement("AnkleAngleBefore", session.AnkleAngleBefore);
-            SetMeasurement("AnkleAngleAfter", session.AnkleAngleAfter);
-            SetMeasurement("TorsoAngleBefore", session.TorsoAngleBefore);
-            SetMeasurement("TorsoAngleAfter", session.TorsoAngleAfter);
-            SetMeasurement("ShoulderAngleBefore", session.ShoulderAngleBefore);
-            SetMeasurement("ShoulderAngleAfter", session.ShoulderAngleAfter);
+                SetMeasurement("SaddleHeightBefore", session.SaddleHeightBefore);
+                SetMeasurement("SaddleHeightAfter", session.SaddleHeightAfter);
+                SetMeasurement("SaddleSetbackBefore", session.SaddleSetbackBefore);
+                SetMeasurement("SaddleSetbackAfter", session.SaddleSetbackAfter);
+                SetMeasurement("HandlebarReachBefore", session.HandlebarReachBefore);
+                SetMeasurement("HandlebarReachAfter", session.HandlebarReachAfter);
+                SetMeasurement("HandlebarDropBefore", session.HandlebarDropBefore);
+                SetMeasurement("HandlebarDropAfter", session.HandlebarDropAfter);
+                SetMeasurement("SaddleTipToGripReachBefore", session.SaddleTipToGripReachBefore);
+                SetMeasurement("SaddleTipToGripReachAfter", session.SaddleTipToGripReachAfter);
+                SetMeasurement("HandlebarXBefore", session.HandlebarXBefore);
+                SetMeasurement("HandlebarXAfter", session.HandlebarXAfter);
+                SetMeasurement("HandlebarYBefore", session.HandlebarYBefore);
+                SetMeasurement("HandlebarYAfter", session.HandlebarYAfter);
+                SetMeasurement("CrankLengthBefore", session.CrankLengthBefore);
+                SetMeasurement("CrankLengthAfter", session.CrankLengthAfter);
+                SetMeasurement("WheelbaseBefore", session.WheelbaseBefore);
+                SetMeasurement("WheelbaseAfter", session.WheelbaseAfter);
+                SetMeasurement("CleatPositionBefore", session.CleatPositionBefore);
+                SetMeasurement("CleatPositionAfter", session.CleatPositionAfter);
+                SetMeasurement("KneeAngleBefore", session.KneeAngleBefore);
+                SetMeasurement("KneeAngleAfter", session.KneeAngleAfter);
+                SetMeasurement("HipAngleBefore", session.HipAngleBefore);
+                SetMeasurement("HipAngleAfter", session.HipAngleAfter);
+                SetMeasurement("AnkleAngleBefore", session.AnkleAngleBefore);
+                SetMeasurement("AnkleAngleAfter", session.AnkleAngleAfter);
+                SetMeasurement("TorsoAngleBefore", session.TorsoAngleBefore);
+                SetMeasurement("TorsoAngleAfter", session.TorsoAngleAfter);
+                SetMeasurement("ShoulderAngleBefore", session.ShoulderAngleBefore);
+                SetMeasurement("ShoulderAngleAfter", session.ShoulderAngleAfter);
 
-            RefreshFitTemplates(session.FitTemplateName);
-            SelectFitProtocol(string.IsNullOrWhiteSpace(session.FitProtocolBikeType) ? session.FitTemplateBikeType : session.FitProtocolBikeType);
-            RefreshCameraProfiles(session.CameraSetupProfileName);
-            RefreshClientHistory();
-            loadingSession = false;
+                RefreshFitTemplates(session.FitTemplateName);
+                SelectFitProtocol(string.IsNullOrWhiteSpace(session.FitProtocolBikeType) ? session.FitTemplateBikeType : session.FitProtocolBikeType);
+                RefreshCameraProfiles(session.CameraSetupProfileName);
+                RefreshClientHistory();
+            }
+            finally
+            {
+                loadingSession = false;
+            }
             cachedEvidenceFolder = null;
             cachedEvidenceUtc = DateTime.MinValue;
             UpdateActiveSessionStatus();
@@ -9108,7 +9143,7 @@ namespace CassetteMotionPro.Workspace
             currentSession.ShoulderAngleBefore = measurementBoxes["ShoulderAngleBefore"].Text.Trim();
             currentSession.ShoulderAngleAfter = measurementBoxes["ShoulderAngleAfter"].Text.Trim();
             repository.Save(currentSession);
-            recoveryStore.Save(currentSession, GetCurrentWorkspaceSection());
+            WriteRecoveryPoint();
             lastAutosaveError = string.Empty;
             lastSavedFingerprint = BuildAutosaveFingerprint();
             hasUnsavedChanges = false;
@@ -9116,6 +9151,21 @@ namespace CassetteMotionPro.Workspace
             UpdateActiveSessionStatus();
             UpdateWorkflowChecklist();
             RefreshRecordingFolderGuide();
+        }
+
+        // The recovery point is a convenience copy. A failure here must never make a
+        // successful session save look failed, so it is reported but not thrown.
+        private void WriteRecoveryPoint()
+        {
+            try
+            {
+                recoveryStore.Save(currentSession, GetCurrentWorkspaceSection());
+                lastRecoveryError = string.Empty;
+            }
+            catch (Exception exception)
+            {
+                lastRecoveryError = exception.Message;
+            }
         }
 
         private void ShowFitSessionTimeline(object sender, EventArgs e)
@@ -9146,7 +9196,7 @@ namespace CassetteMotionPro.Workspace
                 {
                     AddTimelineEvent("Position", "Position history updated (" + currentSession.FitPositions.Count.ToString() + " saved position(s))");
                     repository.Save(currentSession);
-                    recoveryStore.Save(currentSession, GetCurrentWorkspaceSection());
+                    WriteRecoveryPoint();
                     SetAutosaveStatus("Position history saved " + DateTime.Now.ToString("h:mm tt"), false);
                     UpdateWorkflowChecklist();
                 }

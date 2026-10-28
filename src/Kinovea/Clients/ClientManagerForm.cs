@@ -553,10 +553,22 @@ namespace CassetteMotionPro.Clients
             {
                 if (form.ShowDialog(this) != DialogResult.OK || form.Entry == null)
                     return;
-                if (summary.LatestSession.FollowUps == null)
-                    summary.LatestSession.FollowUps = new List<FitFollowUpEntry>();
-                summary.LatestSession.FollowUps.Add(form.Entry);
-                new FitSessionRepository(client).Save(summary.LatestSession);
+
+                // Re-read the session so a stale list snapshot cannot overwrite newer Fit Day work.
+                FitSessionRepository sessionRepository = new FitSessionRepository(client);
+                FitSessionRecord target = sessionRepository.FindById(summary.LatestSession.Id) ?? summary.LatestSession;
+                if (target.FollowUps == null)
+                    target.FollowUps = new List<FitFollowUpEntry>();
+                target.FollowUps.Add(form.Entry);
+                try
+                {
+                    sessionRepository.Save(target);
+                }
+                catch (Exception exception)
+                {
+                    MessageBox.Show(this, "The follow-up could not be saved.\n\n" + exception.Message, "Client Follow-up", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
             }
             Guid selectedId = client.Id;
             RefreshClients();
