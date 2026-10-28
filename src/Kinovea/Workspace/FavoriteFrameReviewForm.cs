@@ -25,6 +25,7 @@ namespace CassetteMotionPro.Workspace
 
         public FavoriteFrameReviewForm(string[] framePaths, string side)
         {
+            CassetteMotionTheme.Attach(this);
             if (framePaths == null || framePaths.Length == 0)
                 throw new ArgumentException("At least one saved frame is required.");
             this.framePaths = framePaths;

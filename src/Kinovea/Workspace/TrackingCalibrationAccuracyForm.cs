@@ -34,6 +34,7 @@ namespace CassetteMotionPro.Workspace
 
         public TrackingCalibrationAccuracyForm(string savedReferenceName, string savedKnownDimension, string savedPixelSpan, string savedTestOne, string savedTestTwo, string savedTestThree)
         {
+            CassetteMotionTheme.Attach(this);
             Text = "Tracking Calibration and Accuracy Test";
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(650, 610);

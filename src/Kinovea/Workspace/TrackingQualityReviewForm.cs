@@ -22,6 +22,7 @@ namespace CassetteMotionPro.Workspace
 
         public TrackingQualityReviewForm(string beforePath, string afterPath)
         {
+            CassetteMotionTheme.Attach(this);
             if (!File.Exists(beforePath) || !File.Exists(afterPath))
                 throw new FileNotFoundException("Both Before and After reference images are required.");
             before = TrackingImageQuality.Analyze(beforePath, "Before");

@@ -250,6 +250,7 @@ namespace CassetteMotionPro.Workspace
 
             public BeforeAfterVideoSaveDialog(string sessionVideosFolder)
             {
+                CassetteMotionTheme.Attach(this);
                 Text = "Cassette Motion Pro — Save Video";
                 FormBorderStyle = FormBorderStyle.FixedDialog;
                 MaximizeBox = false;

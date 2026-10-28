@@ -27,6 +27,7 @@ namespace CassetteMotionPro.Workspace
 
         public FitPositionHistoryForm(FitSessionRecord session)
         {
+            CassetteMotionTheme.Attach(this);
             this.session = session;
             Text = "Position History — " + session.DisplayName;
             StartPosition = FormStartPosition.CenterParent;

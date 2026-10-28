@@ -20,6 +20,7 @@ namespace CassetteMotionPro.Workspace
 
         public MeasurementRepeatabilityLabForm(List<MeasurementRepeatabilityCheck> existing)
         {
+            CassetteMotionTheme.Attach(this);
             checks = existing == null ? new List<MeasurementRepeatabilityCheck>() : new List<MeasurementRepeatabilityCheck>(existing);
             Text = "Measurement Repeatability Lab";
             StartPosition = FormStartPosition.CenterParent;

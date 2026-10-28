@@ -22,6 +22,7 @@ namespace CassetteMotionPro.Workspace
 
         public AssistedWorkflowRecoveryForm(string summary, string lastStage)
         {
+            CassetteMotionTheme.Attach(this);
             Text = "Assisted Workflow Check and Recovery";
             StartPosition = FormStartPosition.CenterParent;
             Size = new Size(760, 650);

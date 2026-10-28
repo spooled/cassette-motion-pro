@@ -26,6 +26,7 @@ namespace CassetteMotionPro.Workspace
 
         public FitDayFieldTestForm(string existingSummary, string saveFolder)
         {
+            CassetteMotionTheme.Attach(this);
             this.saveFolder = saveFolder;
             Text = "Real Fit-Day Field Test";
             StartPosition = FormStartPosition.CenterParent;

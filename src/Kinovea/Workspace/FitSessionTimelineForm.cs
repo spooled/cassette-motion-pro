@@ -11,6 +11,7 @@ namespace CassetteMotionPro.Workspace
     {
         public FitSessionTimelineForm(FitSessionRecord session)
         {
+            CassetteMotionTheme.Attach(this);
             Text = "Fit Session Timeline — " + session.DisplayName;
             StartPosition = FormStartPosition.CenterParent;
             Size = new Size(980, 680);

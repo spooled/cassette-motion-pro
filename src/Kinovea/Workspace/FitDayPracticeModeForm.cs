@@ -46,6 +46,7 @@ namespace CassetteMotionPro.Workspace
 
         public FitDayPracticeModeForm(string practiceRoot, bool captureConnected, bool playbackConnected, bool clientFolderReady, bool storageReady, string storageDetail, bool calibrationReady)
         {
+            CassetteMotionTheme.Attach(this);
             this.practiceRoot = practiceRoot;
             this.captureConnected = captureConnected;
             this.playbackConnected = playbackConnected;

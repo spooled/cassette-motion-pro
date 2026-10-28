@@ -31,6 +31,7 @@ namespace CassetteMotionPro.Workspace
 
         public FitDayDiagnosticsForm(Func<List<FitDayDiagnosticResult>> runDiagnostics, string saveFolder)
         {
+            CassetteMotionTheme.Attach(this);
             this.runDiagnostics = runDiagnostics;
             this.saveFolder = saveFolder;
             Text = "Fit-Day Diagnostics";
