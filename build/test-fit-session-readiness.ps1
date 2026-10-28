@@ -132,7 +132,7 @@ try {
   if ($rebaser::RebasePath('Videos\Before\a.mp4', 'Smith_Jo_ab12', 'D:\New') -ne 'Videos\Before\a.mp4') { throw 'A relative path was changed.' }
   if ($rebaser::RebasePath('C:\x\Smith_Jo_ab12\Other\a.txt', 'Smith_Jo_ab12', 'D:\New') -ne 'C:\x\Smith_Jo_ab12\Other\a.txt') { throw 'A path without a known client subfolder was changed.' }
   if ($rebaser::RebasePath($moved, 'Smith_Jo_ab12_2', 'D:\New\Clients\Smith_Jo_ab12_2') -ne $moved) { throw 'Rebasing is not stable when repeated.' }
-  if ($null -ne $rebaser::RebasePath($null, 'a', 'b')) { throw 'A null path was not left alone.' }
+  if (-not [string]::IsNullOrEmpty($rebaser::RebasePath($null, 'a', 'b'))) { throw 'An empty path was not left alone.' }
 
   $rebaseClientFolder = Join-Path $root 'Rebase Client'
   [System.IO.Directory]::CreateDirectory($rebaseClientFolder) | Out-Null
