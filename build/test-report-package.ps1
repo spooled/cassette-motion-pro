@@ -35,6 +35,12 @@ try {
     $session.Notes = $fitterNoteMarker
     $session.HandoffClientMessage = $clientMarker
 
+    # Studio settings normally load from the app's settings folder, which is not set up outside the
+    # running app. Use default settings so the report builds the same way for a new studio.
+    $settingsRepository = $assembly.GetType('CassetteMotionPro.Workspace.StudioSettingsRepository')
+    $defaultSettings = [Activator]::CreateInstance($assembly.GetType('CassetteMotionPro.Workspace.StudioSettings'))
+    $settingsRepository.GetField('current', [System.Reflection.BindingFlags]'NonPublic,Static').SetValue($null, $defaultSettings)
+
     $generator = $assembly.GetType('CassetteMotionPro.Workspace.FitSessionReportGenerator')
     # Pass the raw objects: reflection cannot convert PowerShell's wrapper objects.
     $zipPath = $generator.GetMethod('GeneratePackageZip').Invoke($null, [object[]]@($client.PSObject.BaseObject, $session.PSObject.BaseObject))
