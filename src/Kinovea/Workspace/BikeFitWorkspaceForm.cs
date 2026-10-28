@@ -97,6 +97,10 @@ namespace CassetteMotionPro.Workspace
         private readonly Label combinedMeasurementReviewStatus = new Label();
         private readonly TextBox combinedMeasurementReview = new TextBox();
         private readonly FlowLayoutPanel measurementReviewCards = new FlowLayoutPanel();
+        private TableLayoutPanel measurementReviewLayout;
+        private GroupBox measurementQuickStart;
+        private FlowLayoutPanel measurementQuickActions;
+        private bool fittingMeasurementRows;
         private readonly Label measurementApprovalStatus = new Label();
         private readonly Button measurementApprovalButton = new Button();
         private readonly Label measurementTrackingReviewStatus = new Label();
@@ -844,7 +848,7 @@ namespace CassetteMotionPro.Workspace
             bar.BackColor = CassetteMotionTheme.Rail;
 
             Label navigation = new Label();
-            navigation.Text = "FIT DAY";
+            navigation.Text = "WORKFLOW";
             navigation.AutoSize = false;
             navigation.Size = new Size(72, 36);
             navigation.Margin = new Padding(0, 0, 8, 0);
@@ -1908,7 +1912,8 @@ namespace CassetteMotionPro.Workspace
             quickActions.Dock = DockStyle.Fill;
             quickActions.FlowDirection = FlowDirection.LeftToRight;
             quickActions.WrapContents = true;
-            quickActions.AutoScroll = true;
+            // No inner scrollbar: the row is sized to fit its buttons (FitMeasurementReviewRows).
+            quickActions.AutoScroll = false;
             AddMeasurementQuickStartButton(quickActions, "BEFORE BIKE\nmeasurements", true, delegate { ShowGuidedBikeMetricCapture("Before"); RefreshCombinedMeasurementReview(); });
             AddMeasurementQuickStartButton(quickActions, "AFTER BIKE\nmeasurements", true, delegate { ShowGuidedBikeMetricCapture("After"); RefreshCombinedMeasurementReview(); });
             AddMeasurementQuickStartButton(quickActions, "BEFORE RIDER\nmeasurements", false, delegate { ShowGuidedRiderMeasurements("BeforeReportImagePath", "Before"); RefreshCombinedMeasurementReview(); });
@@ -1929,7 +1934,8 @@ namespace CassetteMotionPro.Workspace
             quickStart.Controls.Add(quickActions);
 
             measurementReviewCards.Dock = DockStyle.Fill;
-            measurementReviewCards.AutoScroll = true;
+            // The page scrolls as a whole; the cards grow the page instead of scrolling inside it.
+            measurementReviewCards.AutoScroll = false;
             measurementReviewCards.WrapContents = true;
             measurementReviewCards.FlowDirection = FlowDirection.LeftToRight;
             measurementReviewCards.Padding = new Padding(2, 8, 2, 8);
@@ -1994,7 +2000,49 @@ namespace CassetteMotionPro.Workspace
             layout.SetColumnSpan(actions, 2);
             page.AutoScroll = true;
             page.Controls.Add(layout);
+
+            measurementReviewLayout = layout;
+            measurementQuickStart = quickStart;
+            measurementQuickActions = quickActions;
+            layout.SizeChanged += delegate { FitMeasurementReviewRows(); };
             return page;
+        }
+
+        // Sizes the "Start here" and card rows to their content so nothing is clipped and
+        // only the page itself scrolls (no scrollbars nested inside it).
+        private void FitMeasurementReviewRows()
+        {
+            if (fittingMeasurementRows || measurementReviewLayout == null || measurementQuickStart == null ||
+                measurementQuickActions == null || measurementReviewCards == null)
+                return;
+
+            // Leave room for the page scrollbar so showing it cannot change how the rows wrap.
+            int contentWidth = measurementReviewLayout.ClientSize.Width - measurementReviewLayout.Padding.Horizontal - SystemInformation.VerticalScrollBarWidth;
+            if (contentWidth < 240)
+                return;
+
+            fittingMeasurementRows = true;
+            try
+            {
+                int quickWidth = Math.Max(120, contentWidth - measurementQuickStart.Padding.Horizontal - 8);
+                int quickHeight = measurementQuickActions.GetPreferredSize(new Size(quickWidth, 0)).Height + measurementQuickStart.Padding.Vertical + 26;
+                int cardsHeight = measurementReviewCards.GetPreferredSize(new Size(contentWidth, 0)).Height + 8;
+                SetMeasurementRowHeight(3, Math.Max(96, quickHeight));
+                SetMeasurementRowHeight(4, Math.Max(160, cardsHeight));
+            }
+            finally
+            {
+                fittingMeasurementRows = false;
+            }
+        }
+
+        private void SetMeasurementRowHeight(int row, int height)
+        {
+            if (measurementReviewLayout == null || row >= measurementReviewLayout.RowStyles.Count)
+                return;
+            RowStyle style = measurementReviewLayout.RowStyles[row];
+            if (style.SizeType == SizeType.Absolute && (int)style.Height != height)
+                style.Height = height;
         }
 
         private void AddMeasurementQuickStartButton(FlowLayoutPanel actions, string text, bool bike, EventHandler click)
@@ -6979,6 +7027,7 @@ namespace CassetteMotionPro.Workspace
             measurementApprovalButton.Text = approved ? "REVIEW APPROVAL" : "APPROVE MEASUREMENTS";
             measurementApprovalButton.Enabled = currentSession != null;
             measurementReviewCards.ResumeLayout();
+            FitMeasurementReviewRows();
         }
 
         private void AddMeasurementReviewCard(string label, string key, string unit, bool required, double minimum, double maximum, double maximumChange, string editTab)
