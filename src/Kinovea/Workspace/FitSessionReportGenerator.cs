@@ -22,6 +22,8 @@ namespace CassetteMotionPro.Workspace
     {
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
         private const string ReportVersion = "1.25.0";
+        // Subfolder of a report package that holds fitter-only files. It is never included in the client ZIP.
+        public const string FitterOnlyFolderName = "Fitter Only";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
 
         private static StudioSettings ReportSettings { get { return StudioSettingsRepository.Current; } }
@@ -56,22 +58,28 @@ namespace CassetteMotionPro.Workspace
 
             string packageFolder = GetUniqueDirectoryPath(Path.Combine(reportsPath, BuildPackageFolderName(client, session)));
             string imagesFolder = Path.Combine(packageFolder, "Images");
+            string fitterFolder = Path.Combine(packageFolder, FitterOnlyFolderName);
             Directory.CreateDirectory(packageFolder);
             Directory.CreateDirectory(imagesFolder);
+            Directory.CreateDirectory(fitterFolder);
 
             Dictionary<string, string> imageMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             CopyPackageImages(session, imagesFolder, imageMap);
 
+            // Client-safe files live in the package root: no fitter notes, no internal handoff notes, no local paths.
             string reportPath = Path.Combine(packageFolder, "Bike Fit Report.html");
             File.WriteAllText(reportPath, BuildHtml(client, session, delegate(string imagePath)
             {
                 return ResolvePackageImageSource(imagePath, imageMap);
-            }, true), Encoding.UTF8);
-            File.WriteAllText(Path.Combine(packageFolder, "README - Open This First.txt"), BuildPackageReadmeText(client, session), Encoding.UTF8);
-            File.WriteAllText(Path.Combine(packageFolder, "Session Summary.txt"), BuildSessionSummaryText(client, session), Encoding.UTF8);
-            File.WriteAllText(Path.Combine(packageFolder, "Client Handoff Notes.txt"), BuildHandoffText(client, session), Encoding.UTF8);
-            File.WriteAllText(Path.Combine(packageFolder, "Bike Metrics Review.txt"), BuildBikeMetricsReviewText(client, session), Encoding.UTF8);
-            File.WriteAllText(Path.Combine(packageFolder, "Approved Fit Evidence.txt"), AutomatedFitEvidenceBuilder.BuildManifest(session), Encoding.UTF8);
+            }, false), Encoding.UTF8);
+            File.WriteAllText(Path.Combine(packageFolder, "Client Handoff Notes.txt"), BuildHandoffText(client, session, false), Encoding.UTF8);
+
+            // Fitter-only working files are kept apart so they cannot be sent by accident.
+            File.WriteAllText(Path.Combine(fitterFolder, "README - Open This First.txt"), BuildPackageReadmeText(client, session), Encoding.UTF8);
+            File.WriteAllText(Path.Combine(fitterFolder, "Session Summary.txt"), BuildSessionSummaryText(client, session), Encoding.UTF8);
+            File.WriteAllText(Path.Combine(fitterFolder, "Handoff Notes - With Internal Notes.txt"), BuildHandoffText(client, session, true), Encoding.UTF8);
+            File.WriteAllText(Path.Combine(fitterFolder, "Bike Metrics Review.txt"), BuildBikeMetricsReviewText(client, session), Encoding.UTF8);
+            File.WriteAllText(Path.Combine(fitterFolder, "Approved Fit Evidence.txt"), AutomatedFitEvidenceBuilder.BuildManifest(session), Encoding.UTF8);
 
             return packageFolder;
         }
@@ -84,8 +92,35 @@ namespace CassetteMotionPro.Workspace
             if (File.Exists(zipPath))
                 zipPath = packageFolder + " " + DateTime.Now.ToString("HHmmss", CultureInfo.InvariantCulture) + ".zip";
 
-            ZipFile.CreateFromDirectory(packageFolder, zipPath);
+            CreateClientZip(packageFolder, zipPath);
             return zipPath;
+        }
+
+        // Zips a report package for the client, leaving out the fitter-only subfolder.
+        private static void CreateClientZip(string packageFolder, string zipPath)
+        {
+            string root = packageFolder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            string fitterOnlyPrefix = FitterOnlyFolderName + Path.DirectorySeparatorChar;
+            try
+            {
+                using (ZipArchive archive = ZipFile.Open(zipPath, ZipArchiveMode.Create))
+                {
+                    foreach (string file in Directory.GetFiles(packageFolder, "*", SearchOption.AllDirectories))
+                    {
+                        string relative = file.Substring(root.Length);
+                        if (relative.StartsWith(fitterOnlyPrefix, StringComparison.OrdinalIgnoreCase))
+                            continue;
+                        archive.CreateEntryFromFile(file, relative.Replace(Path.DirectorySeparatorChar, '/'), CompressionLevel.Optimal);
+                    }
+                }
+            }
+            catch
+            {
+                try { if (File.Exists(zipPath)) File.Delete(zipPath); }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+                throw;
+            }
         }
 
         public static string GenerateClientPortalPackage(ClientRecord client, FitSessionRecord session)
@@ -154,20 +189,24 @@ namespace CassetteMotionPro.Workspace
             text.AppendLine("Date: " + (session.SessionDate == DateTime.MinValue ? DateTime.Today.ToString("MMM d, yyyy") : session.SessionDate.ToString("MMM d, yyyy")));
             AddStudioContactText(text);
             text.AppendLine();
+            text.AppendLine("FITTER ONLY - do not send the contents of this folder to the client.");
+            text.AppendLine("This 'Fitter Only' subfolder is left out of the ZIP package automatically.");
+            text.AppendLine("If you share the package folder itself, share it without this subfolder.");
+            text.AppendLine();
             text.AppendLine("Start here");
             text.AppendLine("----------");
-            text.AppendLine("1. Open Bike Fit Report.html to view the polished report.");
-            text.AppendLine("2. Open Session Summary.txt for a quick plain-text overview of the fit.");
+            text.AppendLine("1. Open the Bike Fit Report.html one folder up to view the client report.");
+            text.AppendLine("2. Open Session Summary.txt for a quick plain-text overview, including fitter notes.");
             text.AppendLine("3. Open Bike Metrics Review.txt to check missing values or values that may need another look.");
-            text.AppendLine("4. Open Client Handoff Notes.txt only if you used the handoff tab or want to copy follow-up notes.");
+            text.AppendLine("4. Open Handoff Notes - With Internal Notes.txt for your internal follow-up notes. The client copy (Client Handoff Notes.txt, one folder up) leaves the internal notes out.");
             text.AppendLine("5. Open Approved Fit Evidence.txt to see the automatic inventory of saved measurements and approved visuals.");
-            text.AppendLine("6. The Images folder contains the approved report evidence copied into this package.");
+            text.AppendLine("6. The Images folder, one folder up, contains the approved report evidence copied into this package.");
             text.AppendLine();
             text.AppendLine("Suggested flow");
             text.AppendLine("--------------");
             text.AppendLine("- Review the metrics text file before sending the report.");
             text.AppendLine("- Open the HTML report and use Print / Save PDF if you want a PDF copy.");
-            text.AppendLine("- Keep this whole folder together so the report can find its Images folder.");
+            text.AppendLine("- Keep the report, the Images folder and Client Handoff Notes together so the report can find its images.");
             text.AppendLine();
             text.AppendLine("Reminder");
             text.AppendLine("--------");
@@ -267,21 +306,25 @@ namespace CassetteMotionPro.Workspace
             {
                 text.AppendLine("Handoff reminder");
                 text.AppendLine("----------------");
-                text.AppendLine("This session has handoff notes. Open Client Handoff Notes.txt before sending follow-up.");
+                text.AppendLine("This session has handoff notes. Open Handoff Notes - With Internal Notes.txt before sending follow-up.");
                 text.AppendLine();
             }
 
             text.AppendLine("Package files");
             text.AppendLine("-------------");
+            text.AppendLine("Client-safe (package root and ZIP):");
             text.AppendLine("- Bike Fit Report.html");
-            text.AppendLine("- Session Summary.txt");
-            text.AppendLine("- Bike Metrics Review.txt");
             text.AppendLine("- Client Handoff Notes.txt");
             text.AppendLine("- Images folder");
+            text.AppendLine("Fitter only (never in the ZIP):");
+            text.AppendLine("- Fitter Only\\Session Summary.txt");
+            text.AppendLine("- Fitter Only\\Bike Metrics Review.txt");
+            text.AppendLine("- Fitter Only\\Handoff Notes - With Internal Notes.txt");
+            text.AppendLine("- Fitter Only\\Approved Fit Evidence.txt");
             return text.ToString();
         }
 
-        private static string BuildHandoffText(ClientRecord client, FitSessionRecord session)
+        private static string BuildHandoffText(ClientRecord client, FitSessionRecord session, bool includeInternalNotes)
         {
             StringBuilder text = new StringBuilder();
             text.AppendLine("Cassette Motion Pro - Client Handoff Notes");
@@ -296,7 +339,8 @@ namespace CassetteMotionPro.Workspace
             AddHandoffSection(text, "Client follow-up message", session.HandoffClientMessage);
             AddHandoffSection(text, "Homework / ride instructions", session.HandoffHomework);
             AddHandoffSection(text, "Next appointment", session.HandoffNextAppointment);
-            AddHandoffSection(text, "Internal notes", session.HandoffInternalNotes);
+            if (includeInternalNotes)
+                AddHandoffSection(text, "Internal notes", session.HandoffInternalNotes);
             return text.ToString();
         }
 

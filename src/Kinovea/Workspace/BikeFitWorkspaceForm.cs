@@ -8253,6 +8253,7 @@ namespace CassetteMotionPro.Workspace
 
         private void LoadSession(FitSessionRecord session)
         {
+            session.EnsureStorageKey();
             loadingSession = true;
             currentSession = session;
             txtTitle.Text = session.Title ?? string.Empty;
@@ -8781,7 +8782,8 @@ namespace CassetteMotionPro.Workspace
                 MessageBox.Show(this,
                     "The report package was created in this fit session’s Reports folder.\n\n" +
                     packageFolder + "\n\n" +
-                    "It includes the report HTML and copied report images.",
+                    "It includes the client report HTML, copied report images and client handoff notes.\n\n" +
+                    "Fitter-only files (summary, metrics review, internal notes) are in the \"Fitter Only\" subfolder. Do not send that subfolder to the client; the ZIP leaves it out automatically.",
                     "Report package created",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
@@ -8812,7 +8814,8 @@ namespace CassetteMotionPro.Workspace
                 UpdateSaveHint("Zipped report package created in this session’s Reports folder.");
                 MessageBox.Show(this,
                     "The zipped report package was created in this fit session’s Reports folder.\n\n" +
-                    zipPath,
+                    zipPath + "\n\n" +
+                    "The ZIP contains only client-safe files. Fitter-only files stay in the package folder.",
                     "Zipped report package created",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);

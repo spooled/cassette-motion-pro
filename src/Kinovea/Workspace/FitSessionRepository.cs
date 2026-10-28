@@ -50,6 +50,7 @@ namespace CassetteMotionPro.Workspace
                 if (session == null)
                     continue;
                 session.FolderPath = directory;
+                session.EnsureStorageKey();
                 sessions.Add(session);
             }
 
@@ -73,6 +74,7 @@ namespace CassetteMotionPro.Workspace
                 session.CreatedUtc = now;
             session.ModifiedUtc = now;
 
+            session.EnsureStorageKey();
             if (string.IsNullOrEmpty(session.FolderPath))
             {
                 session.FolderPath = Path.Combine(RootPath, session.StorageFolderName);

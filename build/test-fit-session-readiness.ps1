@@ -64,9 +64,39 @@ try {
   $restored = @($repository.LoadAll() | Where-Object { $_.Id -eq $session.Id })
   if ($restored.Count -ne 1 -or $restored[0].Goals -ne 'Comfort and stability') { throw 'Session backup recovery failed.' }
 
+  # Storage folder must not move when the session date is edited after the first save.
+  $keyBefore = $session.StorageFolderName
+  if ([string]::IsNullOrWhiteSpace($session.StorageKey) -or $session.StorageKey -ne $keyBefore) { throw 'Storage key was not assigned on first save.' }
+  $session.SessionDate = $session.SessionDate.AddDays(-9)
+  if ($session.StorageFolderName -ne $keyBefore) { throw 'Editing the session date moved the storage folder.' }
+  $repository.Save($session) | Out-Null
+  $reloaded = @($repository.LoadAll() | Where-Object { $_.Id -eq $session.Id })
+  if ($reloaded.Count -ne 1 -or $reloaded[0].StorageKey -ne $keyBefore) { throw 'Storage key did not survive a save/load round trip.' }
+  if ((Split-Path $reloaded[0].FolderPath -Leaf) -ne $keyBefore) { throw 'Session folder does not match its storage key.' }
+
+  # A draft that has never been saved must get a stable, non-pending folder name.
+  $draft = [CassetteMotionPro.Workspace.FitSessionRecord]::new()
+  $draft.SessionDate = [datetime]::Today
+  $draft.EnsureStorageKey() | Out-Null
+  $draftKey = $draft.StorageFolderName
+  if ($draftKey -like '*pending*') { throw 'Draft session was given a pending storage folder.' }
+  $draft.SessionDate = [datetime]::Today.AddDays(3)
+  $repository.Save($draft) | Out-Null
+  if ($draft.StorageFolderName -ne $draftKey -or (Split-Path $draft.FolderPath -Leaf) -ne $draftKey) { throw 'Saving a draft changed its storage folder.' }
+
+  # Older manifests without a key keep the folder name the app already used for them.
+  $legacyLoaded = @($repository.LoadAll() | Where-Object { $_.Id -eq $legacyId })
+  $expectedLegacy = '2026-01-01_' + $legacyId.ToString('N').Substring(0, 8)
+  if ($legacyLoaded[0].StorageKey -ne $expectedLegacy) { throw 'Legacy session did not keep its existing storage folder name.' }
+
+  # A hostile or damaged key must never escape the session folder.
+  foreach ($bad in @('..', '..\..\Windows', 'C:\temp', 'a/b', '')) {
+    if ([CassetteMotionPro.Workspace.FitSessionRecord]::IsSafeStorageKey($bad)) { throw ('Unsafe storage key accepted: ' + $bad) }
+  }
+
   [FitSessionRecoveryProbe]::Run($repository.RootPath, $session)
 
-  Write-Host 'PASS: legacy session load, current session round-trip, manifest backup recovery, autosave backup recovery, recovery cleanup.'
+  Write-Host 'PASS: legacy session load, current session round-trip, stable storage key, manifest backup recovery, autosave backup recovery, recovery cleanup.'
 }
 finally {
   if (Test-Path $root) { Remove-Item $root -Recurse -Force }
