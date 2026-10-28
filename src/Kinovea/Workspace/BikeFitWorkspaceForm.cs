@@ -4985,6 +4985,8 @@ namespace CassetteMotionPro.Workspace
             reviewLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 78));
 
             savedEvidenceReviewStatus.Dock = DockStyle.Fill;
+            // Wrap long lines inside the box instead of running off its right edge.
+            savedEvidenceReviewStatus.AutoSize = false;
             savedEvidenceReviewStatus.ForeColor = Color.FromArgb(74, 87, 81);
             savedEvidenceReviewStatus.Padding = new Padding(4, 2, 4, 0);
             savedEvidenceReviewStatus.Text = "Open or create a client fit session first from Client Files. Then Video Studio Save Image and Save Video can offer Before, After, and Dual session folders.";
@@ -5049,6 +5051,36 @@ namespace CassetteMotionPro.Workspace
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 316));
             table.Controls.Add(review, 1, row);
             table.SetColumnSpan(review, 5);
+
+            // Size the box to its text and wrapped buttons so the second button row is never cut off.
+            bool fitting = false;
+            EventHandler fitToContent = delegate
+            {
+                if (fitting)
+                    return;
+                int innerWidth = review.ClientSize.Width - review.Padding.Horizontal - 8;
+                if (innerWidth < 240)
+                    return;
+                fitting = true;
+                try
+                {
+                    int statusHeight = savedEvidenceReviewStatus.GetPreferredSize(new Size(innerWidth, 0)).Height + savedEvidenceReviewStatus.Padding.Vertical;
+                    int actionsHeight = actions.GetPreferredSize(new Size(innerWidth, 0)).Height + 6;
+                    RowStyle actionsRow = reviewLayout.RowStyles[1];
+                    if ((int)actionsRow.Height != actionsHeight)
+                        actionsRow.Height = actionsHeight;
+                    int total = Math.Max(200, statusHeight + actionsHeight + review.Padding.Vertical + 24);
+                    RowStyle boxRow = table.RowStyles[row];
+                    if ((int)boxRow.Height != total)
+                        boxRow.Height = total;
+                }
+                finally
+                {
+                    fitting = false;
+                }
+            };
+            review.SizeChanged += fitToContent;
+            savedEvidenceReviewStatus.TextChanged += fitToContent;
 
             RefreshSavedEvidenceReview();
         }
