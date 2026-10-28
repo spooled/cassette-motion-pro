@@ -848,7 +848,7 @@ namespace CassetteMotionPro.Workspace
             bar.BackColor = CassetteMotionTheme.Rail;
 
             Label navigation = new Label();
-            navigation.Text = "WORKFLOW";
+            navigation.Text = "STAGES";
             navigation.AutoSize = false;
             navigation.Size = new Size(72, 36);
             navigation.Margin = new Padding(0, 0, 8, 0);
@@ -4344,7 +4344,9 @@ namespace CassetteMotionPro.Workspace
 
             Control commandCenter = BuildVideoWorkspaceCommandCenter();
             int commandCenterRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 226));
+            // Row must cover the card's rows and padding plus its 10px bottom margin, or the card's
+            // bottom border cuts through the last row of buttons.
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 252));
             table.Controls.Add(commandCenter, 1, commandCenterRow);
             table.SetColumnSpan(commandCenter, 5);
 
@@ -4485,8 +4487,8 @@ namespace CassetteMotionPro.Workspace
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
 
             Label heading = new Label();
             heading.Text = "Video Fit Desk";
@@ -4554,7 +4556,8 @@ namespace CassetteMotionPro.Workspace
             row.Dock = DockStyle.Fill;
             row.FlowDirection = FlowDirection.LeftToRight;
             row.WrapContents = false;
-            row.AutoScroll = true;
+            // A scrollbar here would eat into the row and clip the buttons.
+            row.AutoScroll = false;
             row.Padding = new Padding(0, 5, 0, 3);
             return row;
         }
