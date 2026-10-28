@@ -36,7 +36,8 @@ try {
     $session.HandoffClientMessage = $clientMarker
 
     $generator = $assembly.GetType('CassetteMotionPro.Workspace.FitSessionReportGenerator')
-    $zipPath = $generator.GetMethod('GeneratePackageZip').Invoke($null, @($client, $session))
+    # Pass the raw objects: reflection cannot convert PowerShell's wrapper objects.
+    $zipPath = $generator.GetMethod('GeneratePackageZip').Invoke($null, [object[]]@($client.PSObject.BaseObject, $session.PSObject.BaseObject))
     if (-not (Test-Path $zipPath)) { throw 'GeneratePackageZip did not create a ZIP.' }
 
     $zip = [System.IO.Compression.ZipFile]::OpenRead($zipPath)
