@@ -5,6 +5,7 @@ $sources = @(
   'src/Kinovea/Workspace/FitFollowUpEntry.cs',
   'src/Kinovea/Workspace/FitSessionRecord.cs',
   'src/Kinovea/Workspace/FitSessionRepository.cs',
+  'src/Kinovea/Workspace/SessionPathRebaser.cs',
   'src/Kinovea/Workspace/FitSessionRecoveryStore.cs'
 )
 $usings = "using System;`nusing System.IO;`nusing System.Collections.Generic;`nusing System.Linq;`nusing System.Xml.Serialization;`nusing CassetteMotionPro.Clients;`n"
@@ -115,9 +116,40 @@ try {
   $repository.Save($merged) | Out-Null
   if (@($repository.FindById($draft.Id).FollowUps).Count -ne 1) { throw 'Saving twice duplicated a follow-up.' }
 
+  # Restored or imported sessions must point inside the client's new folder, and only there.
+  $rebaser = [CassetteMotionPro.Workspace.SessionPathRebaser]
+  $moved = $rebaser::RebasePath('C:\Users\Old\AppData\Roaming\Kinovea\Clients\Smith_Jo_ab12\Videos\Before\a.mp4', 'Smith_Jo_ab12', 'D:\New\Clients\Smith_Jo_ab12_2')
+  if ($moved -ne 'D:\New\Clients\Smith_Jo_ab12_2\Videos\Before\a.mp4') { throw ('Path was not rebased: ' + $moved) }
+  if ($rebaser::RebasePath('E:\Other\movie.mp4', 'Smith_Jo_ab12', 'D:\New') -ne 'E:\Other\movie.mp4') { throw 'A path outside the client folder was changed.' }
+  if ($rebaser::RebasePath('Videos\Before\a.mp4', 'Smith_Jo_ab12', 'D:\New') -ne 'Videos\Before\a.mp4') { throw 'A relative path was changed.' }
+  if ($rebaser::RebasePath('C:\x\Smith_Jo_ab12\Other\a.txt', 'Smith_Jo_ab12', 'D:\New') -ne 'C:\x\Smith_Jo_ab12\Other\a.txt') { throw 'A path without a known client subfolder was changed.' }
+  if ($rebaser::RebasePath($moved, 'Smith_Jo_ab12_2', 'D:\New\Clients\Smith_Jo_ab12_2') -ne $moved) { throw 'Rebasing is not stable when repeated.' }
+  if ($null -ne $rebaser::RebasePath($null, 'a', 'b')) { throw 'A null path was not left alone.' }
+
+  $rebaseClientFolder = Join-Path $root 'Rebase Client'
+  [System.IO.Directory]::CreateDirectory($rebaseClientFolder) | Out-Null
+  $rebaseClient = [CassetteMotionPro.Clients.ClientRecord]::new()
+  $rebaseClient.FolderPath = $rebaseClientFolder
+  $rebaseRepository = [CassetteMotionPro.Workspace.FitSessionRepository]::new($rebaseClient)
+  $rebaseSession = [CassetteMotionPro.Workspace.FitSessionRecord]::new()
+  $rebaseSession.Title = 'Moved from another PC'
+  $rebaseSession.BeforeVideoPath = 'C:\Old\Clients\Rebase Client\Videos\Before\a.mp4'
+  $rebaseSession.AfterReportImagePath = 'F:\Elsewhere\after.png'
+  $rebasePosition = [CassetteMotionPro.Workspace.FitPositionRecord]::new()
+  $rebasePosition.ImagePath = 'C:\Old\Clients\Rebase Client\Photos\pos.png'
+  $rebaseSession.FitPositions = [System.Collections.Generic.List[CassetteMotionPro.Workspace.FitPositionRecord]]::new()
+  $rebaseSession.FitPositions.Add($rebasePosition)
+  $rebaseRepository.Save($rebaseSession) | Out-Null
+  if ($rebaser::RebaseClientSessions($rebaseClient, 'Rebase Client') -ne 1) { throw 'Expected exactly one session to be rebased.' }
+  $rebased = $rebaseRepository.FindById($rebaseSession.Id)
+  if ($rebased.BeforeVideoPath -ne (Join-Path $rebaseClientFolder 'Videos\Before\a.mp4')) { throw ('Session video path was not rebased: ' + $rebased.BeforeVideoPath) }
+  if ($rebased.AfterReportImagePath -ne 'F:\Elsewhere\after.png') { throw 'A session path outside the client folder was changed.' }
+  if ($rebased.FitPositions[0].ImagePath -ne (Join-Path $rebaseClientFolder 'Photos\pos.png')) { throw 'A saved position image path was not rebased.' }
+  if ($rebaser::RebaseClientSessions($rebaseClient, 'Rebase Client') -ne 0) { throw 'Rebasing saved sessions a second time changed them again.' }
+
   [FitSessionRecoveryProbe]::Run($repository.RootPath, $session)
 
-  Write-Host 'PASS: legacy session load, current session round-trip, stable storage key, follow-up merge, manifest backup recovery, autosave backup recovery, recovery cleanup.'
+  Write-Host 'PASS: legacy session load, current session round-trip, stable storage key, follow-up merge, restore path rebasing, manifest backup recovery, autosave backup recovery, recovery cleanup.'
 }
 finally {
   if (Test-Path $root) { Remove-Item $root -Recurse -Force }

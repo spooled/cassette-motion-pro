@@ -205,6 +205,7 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Workspace\DataPortabilityService.cs" />
+    <Compile Include="Workspace\SessionPathRebaser.cs" />
     <Compile Include="Workspace\BackupDataTransferForm.cs">
       <SubType>Form</SubType>
     </Compile>

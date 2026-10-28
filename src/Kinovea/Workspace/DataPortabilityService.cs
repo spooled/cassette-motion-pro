@@ -83,6 +83,7 @@ namespace CassetteMotionPro.Workspace
                         File.Copy(source, Path.Combine(Software.SettingsDirectory, fileName), true);
                 }
 
+                RebaseRestoredClientSessions();
                 StudioSettingsRepository.Reload();
                 RelinkRestoredStudioLogo();
                 return safetyPath;
@@ -115,6 +116,7 @@ namespace CassetteMotionPro.Workspace
                 ClientRecord existing = repository.LoadAll().FirstOrDefault(client => client.Id == imported.Id);
 
                 string sourceFolder = imported.FolderPath;
+                string originalFolderName = Path.GetFileName(sourceFolder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
                 string destinationFolder;
                 if (existing != null && choice == ClientImportChoice.Replace)
                 {
@@ -136,6 +138,7 @@ namespace CassetteMotionPro.Workspace
                 imported.FolderPath = destinationFolder;
                 WriteClientManifest(imported);
                 repository.EnsureFolders(imported);
+                SessionPathRebaser.RebaseClientSessions(imported, originalFolderName);
                 return imported;
             }
             finally
@@ -313,6 +316,22 @@ namespace CassetteMotionPro.Workspace
                 Directory.CreateDirectory(Path.GetDirectoryName(target));
                 File.Copy(file, target, true);
             }
+        }
+
+        // Restored sessions still hold absolute paths from the PC the backup was made on.
+        private static void RebaseRestoredClientSessions()
+        {
+            try
+            {
+                foreach (ClientRecord client in new ClientRepository().LoadAll())
+                {
+                    string folderName = Path.GetFileName(client.FolderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                    SessionPathRebaser.RebaseClientSessions(client, folderName);
+                }
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+            catch (InvalidOperationException) { }
         }
 
         private static void RelinkRestoredStudioLogo()
