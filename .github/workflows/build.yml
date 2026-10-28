@@ -188,6 +188,10 @@ jobs:
         shell: pwsh
         run: ./build/test-fit-session-readiness.ps1
 
+      - name: Check client report package contents
+        shell: powershell
+        run: ./build/test-report-package.ps1
+
       - name: Verify and stage x64 video assemblies
         shell: pwsh
         run: |
