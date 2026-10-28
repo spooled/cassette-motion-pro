@@ -8818,19 +8818,7 @@ namespace CassetteMotionPro.Workspace
 
         private static bool TryParseMeasurementNumber(string value, out double number)
         {
-            number = 0;
-            if (string.IsNullOrWhiteSpace(value))
-                return false;
-
-            string text = value.Trim();
-            int index = 0;
-            while (index < text.Length && (char.IsDigit(text[index]) || text[index] == '-' || text[index] == '+' || text[index] == '.'))
-                index++;
-
-            if (index == 0)
-                return false;
-
-            return double.TryParse(text.Substring(0, index), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out number);
+            return MeasurementNumber.TryParse(value, out number);
         }
 
         private void GenerateReport_Click(object sender, EventArgs e)

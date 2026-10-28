@@ -14,9 +14,10 @@ $sources = @(
   'src/Kinovea/Workspace/FitSessionRecord.cs',
   'src/Kinovea/Workspace/FitSessionRepository.cs',
   'src/Kinovea/Workspace/SessionPathRebaser.cs',
+  'src/Kinovea/Workspace/MeasurementNumber.cs',
   'src/Kinovea/Workspace/FitSessionRecoveryStore.cs'
 )
-$usings = "using System;`nusing System.IO;`nusing System.Collections.Generic;`nusing System.Linq;`nusing System.Reflection;`nusing System.Xml.Serialization;`nusing CassetteMotionPro.Clients;`n"
+$usings = "using System;`nusing System.IO;`nusing System.Collections.Generic;`nusing System.Linq;`nusing System.Reflection;`nusing System.Globalization;`nusing System.Text.RegularExpressions;`nusing System.Xml.Serialization;`nusing CassetteMotionPro.Clients;`n"
 $source = $usings + (($sources | ForEach-Object { (Get-Content $_ -Raw) -replace '(?m)^using [^;]+;\r?\n', '' }) -join "`n")
 $source += @'
 
@@ -155,9 +156,30 @@ try {
   if ($rebased.FitPositions[0].ImagePath -ne (Join-Path $rebaseClientFolder 'Photos\pos.png')) { throw 'A saved position image path was not rebased.' }
   if ($rebaser::RebaseClientSessions($rebaseClient, 'Rebase Client') -ne 0) { throw 'Rebasing saved sessions a second time changed them again.' }
 
+  # Typed measurements: decimal commas, thousands separators, signs and units must not be misread.
+  $minus = [string][char]0x2212
+  $numberCases = @(
+    @('742 mm', 742.0, 'mm'), @('-35 mm', -35.0, 'mm'), @('+5', 5.0, ''), @('12,5 mm', 12.5, 'mm'),
+    @('1,025 mm', 1025.0, 'mm'), @('1.025,5 mm', 1025.5, 'mm'), @('1,234.5', 1234.5, ''), @('0,125', 0.125, ''),
+    @(($minus + '35'), -35.0, ''), @('12.5mm', 12.5, 'mm'), @('35' + [char]0x00B0, 35.0, [string][char]0x00B0),
+    @('.5', 0.5, ''), @('1,25', 1.25, ''), @('1,234,567', 1234567.0, '')
+  )
+  foreach ($case in $numberCases) {
+    $parsedNumber = 0.0
+    $parsedUnit = ''
+    $ok = [CassetteMotionPro.Workspace.MeasurementNumber]::TryParse([string]$case[0], [ref]$parsedNumber, [ref]$parsedUnit)
+    if (-not $ok -or [math]::Abs($parsedNumber - [double]$case[1]) -gt 0.0000001 -or $parsedUnit -ne $case[2]) {
+      throw ("Measurement '" + $case[0] + "' parsed as " + $parsedNumber + " '" + $parsedUnit + "' (ok=" + $ok + "), expected " + $case[1] + " '" + $case[2] + "'.")
+    }
+  }
+  foreach ($bad in @('5,5,5', '12.5.3', 'abc', '', '   ', '1,2,3 mm', '--5')) {
+    $junk = 0.0
+    if ([CassetteMotionPro.Workspace.MeasurementNumber]::TryParse($bad, [ref]$junk)) { throw ("Ambiguous or invalid measurement was accepted: '" + $bad + "'.") }
+  }
+
   [FitSessionRecoveryProbe]::Run($repository.RootPath, $session)
 
-  Write-Host 'PASS: legacy session load, current session round-trip, stable storage key, follow-up merge, restore path rebasing, manifest backup recovery, autosave backup recovery, recovery cleanup.'
+  Write-Host 'PASS: legacy session load, current session round-trip, stable storage key, follow-up merge, restore path rebasing, measurement number parsing, manifest backup recovery, autosave backup recovery, recovery cleanup.'
 }
 finally {
   if (Test-Path $root) { Remove-Item $root -Recurse -Force }
