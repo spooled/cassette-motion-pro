@@ -109,6 +109,8 @@ namespace CassetteMotionPro.Workspace
         private double verificationErrorPercent = double.NaN;
         private double verticalScaleCorrection = 1.0;
         private bool verticalScaleCalibrated;
+        private const string TapeNotChecked = "Scale not checked against a tape measurement";
+        private string tapeCheckSummary = TapeNotChecked;
         private string calibrationVerificationStatus = "Not verified";
         private string cameraProfileName = "Standard camera · 70–90°";
         private Dictionary<string, string> calculatedValues = new Dictionary<string, string>();
@@ -1719,6 +1721,7 @@ namespace CassetteMotionPro.Workspace
                 ? "Quick bike reference · wheelbase " + knownWheelbase.Value.ToString("0.0", CultureInfo.InvariantCulture) + " mm · tire " + knownTireDiameter.Value.ToString("0.0", CultureInfo.InvariantCulture) + " mm" + TireDiameterNote()
                 : knownCalibrationMillimeters > 0 ? knownCalibrationMillimeters.ToString("0.0", CultureInfo.InvariantCulture) + " mm" : "Not set";
             calculatedValues["CalibrationVerification"] = calibrationVerificationStatus;
+            calculatedValues["TapeCheck"] = tapeCheckSummary;
             double estimatedTolerance = perspectiveTransform != null
                 ? Math.Max(3.0, Math.Ceiling(perspectiveResidualMillimeters))
                 : 5.0;
@@ -1755,7 +1758,7 @@ namespace CassetteMotionPro.Workspace
             AssistedLandmarkSummary = landmarksSuggested
                 ? "Eight suggested bike landmarks reviewed for bottom bracket, saddle top/tip, grip, pedal spindle, handlebar center, and wheel axles; starting confidence " + landmarkSuggestionConfidence.ToString("0", CultureInfo.InvariantCulture) + "%"
                 : "Bike landmarks placed manually by fitter";
-            AssistedLandmarkSummary += "; camera profile " + cameraProfileName + "; calibration " + calibrationVerificationStatus;
+            AssistedLandmarkSummary += "; camera profile " + cameraProfileName + "; calibration " + calibrationVerificationStatus + "; " + tapeCheckSummary;
             AssistedLandmarkSummary += "; handlebar reference " + GetHandlebarReferenceSummary();
             AssistedLandmarkSummary += "; saddle-to-hood source " + GetCalculatedValue("SaddleTipToGripSource");
             AnnotatedImagePath = SaveAnnotatedLandmarkImage(side);
@@ -1974,6 +1977,19 @@ namespace CassetteMotionPro.Workspace
                 return;
             }
 
+            // What the wheel calibration alone said the bottom-bracket-to-saddle distance was, before
+            // the tape value overrides it. This is the real accuracy check: the corrected height
+            // always equals the tape by construction.
+            double wheelEstimate = Math.Sqrt((dx * dx) + (dy * dy));
+            double differencePercent = (wheelEstimate - target) / target * 100.0;
+            double differenceAbs = Math.Abs(differencePercent);
+            string verdict = differenceAbs <= 1.5 ? "scale agrees with the tape"
+                : differenceAbs <= 3.0 ? "scale was off; rescaled to the tape"
+                : "scale was well off; rescaled to the tape, recheck the wheel calibration";
+            tapeCheckSummary = "Tape " + target.ToString("0.0", CultureInfo.InvariantCulture) + " mm vs wheel-calibration estimate " +
+                wheelEstimate.ToString("0.0", CultureInfo.InvariantCulture) + " mm (" +
+                (differencePercent >= 0 ? "+" : "-") + differenceAbs.ToString("0.0", CultureInfo.InvariantCulture) + "%): " + verdict;
+
             double correction = Math.Sqrt(verticalSquared) / Math.Abs(dy);
             if (correction < 0.75 || correction > 1.35)
             {
@@ -1983,8 +1999,8 @@ namespace CassetteMotionPro.Workspace
 
             verticalScaleCorrection = correction;
             verticalScaleCalibrated = true;
-            verticalCalibrationLabel.Text = "Vertical scale: tape calibrated · " + correction.ToString("0.000", CultureInfo.InvariantCulture) + "×";
-            verticalCalibrationLabel.ForeColor = Color.FromArgb(60, 145, 76);
+            verticalCalibrationLabel.Text = "Vertical scale: tape calibrated · " + correction.ToString("0.000", CultureInfo.InvariantCulture) + "× · " + verdict;
+            verticalCalibrationLabel.ForeColor = differenceAbs <= 1.5 ? Color.FromArgb(60, 145, 76) : Color.FromArgb(166, 92, 34);
             CalculateMetrics();
             status.Text = "Tape-calibrated vertical scale applied. Future point adjustments use this locked correction.";
             picture.Invalidate();
@@ -1994,6 +2010,7 @@ namespace CassetteMotionPro.Workspace
         {
             verticalScaleCorrection = 1.0;
             verticalScaleCalibrated = false;
+            tapeCheckSummary = TapeNotChecked;
             if (verticalCalibrationLabel != null)
             {
                 verticalCalibrationLabel.Text = "Vertical scale: not tape calibrated";
@@ -2023,6 +2040,7 @@ namespace CassetteMotionPro.Workspace
                 "Level reference: " + GetCalculatedValue("LevelReference") + "\n" +
                 "Camera setup: " + GetCalculatedValue("CameraSetup") + "\n" +
                 "Calibration: " + GetCalculatedValue("CalibrationReference") + " · " + GetCalculatedValue("CalibrationVerification") + "\n" +
+                "Tape check: " + GetCalculatedValue("TapeCheck") + "\n" +
                 "Expected precision: " + GetCalculatedValue("MeasurementTolerance") + "\n" +
                 "Handlebar reference: " + GetCalculatedValue("HandlebarReference") + "\n" +
                 "Setback convention: " + GetCalculatedValue("SaddleSetbackConvention");
@@ -2047,6 +2065,7 @@ namespace CassetteMotionPro.Workspace
                 "Level reference: " + GetCalculatedValue("LevelReference") + "\n" +
                 "Camera setup: " + GetCalculatedValue("CameraSetup") + "\n" +
                 "Calibration verification: " + GetCalculatedValue("CalibrationVerification") + "\n" +
+                "Tape check: " + GetCalculatedValue("TapeCheck") + "\n" +
                 "Expected precision: " + GetCalculatedValue("MeasurementTolerance") + "\n" +
                 "Handlebar reference: " + GetCalculatedValue("HandlebarReference") + "\n" +
                 "Saddle setback convention: " + GetCalculatedValue("SaddleSetbackConvention");
