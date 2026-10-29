@@ -228,8 +228,8 @@ namespace CassetteMotionPro.Workspace
             Label guide = new Label();
             guide.Text =
                 "1. Confirm the camera profile and setup.\n" +
-                "2. Choose Dual-wheel Perspective, Quick Bike Reference, or Known Reference.\n" +
-                "3. Dual-wheel: enter wheelbase and measure the tire outer diameter (a 700c road tire is about 670-690 mm, not 700), then click eight wheel points.\n" +
+                "2. Choose Quick Bike Reference (wheelbase + tire) or Known Reference (a measured length in the bike plane).\n" +
+                "3. Quick Bike: enter wheelbase and measure the tire outer diameter (a 700c road tire is about 670-690 mm, not 700), then click the two axles. Check the scale with a tape.\n" +
                 "4. Optional: set a floor or axle level reference.\n" +
                 "5. Suggest Bike Landmarks, or place them manually.\n" +
                 "   • Bottom bracket center\n" +
@@ -253,7 +253,7 @@ namespace CassetteMotionPro.Workspace
             progressLabel.Padding = new Padding(10, 8, 10, 6);
 
             status = new Label();
-            status.Text = "Start with Dual-wheel Perspective calibration.";
+            status.Text = "Start with Quick Bike calibration, or choose Known Reference.";
             status.Dock = DockStyle.Top;
             status.Height = 44;
             status.ForeColor = Color.FromArgb(24, 31, 29);
@@ -504,11 +504,10 @@ namespace CassetteMotionPro.Workspace
             calibrationMethod.DropDownStyle = ComboBoxStyle.DropDownList;
             calibrationMethod.Items.AddRange(new object[]
             {
-                "Dual-wheel perspective",
                 "Quick bike reference",
                 "Known reference / board"
             });
-            calibrationMethod.SelectedIndex = 0;
+            calibrationMethod.SelectedIndex = 0; // Quick bike reference
             calibrationMethod.Dock = DockStyle.Fill;
             calibrationMethod.Margin = new Padding(3, 5, 3, 3);
             calibrationMethod.SelectedIndexChanged += CalibrationMethodChanged;
@@ -532,8 +531,8 @@ namespace CassetteMotionPro.Workspace
             calibrationOptions.Controls.Add(knownTireDiameter, 1, 2);
 
             Button cameraSetup = CreateButton("1. Camera Setup", false);
-            calibrateButton = CreateButton("2. Calibrate From Both Wheels", false);
-            verifyCalibration = CreateButton("3. Verify Calibration", true);
+            calibrateButton = CreateButton("2. Quick Bike Calibration", false);
+            verifyCalibration = CreateButton("3. Bike Scale Check", true);
             levelReference = CreateButton("4. Level Reference (optional)", false);
             Button capture = CreateButton("5. Start Guided Capture", false);
             Button suggest = CreateButton("Suggest Bike Landmarks", true);
@@ -690,13 +689,21 @@ namespace CassetteMotionPro.Workspace
             Recalculate_Click(sender, e);
         }
 
+        // The dual-wheel perspective method was removed from the list because it was unreliable in
+        // use. Its code is still keyed to the old three-item numbering (0 = dual-wheel, 1 = quick
+        // bike, 2 = known reference), so the two remaining list entries map to 1 and 2 here.
+        private int CalibrationIndex
+        {
+            get { return calibrationMethod.SelectedIndex + 1; }
+        }
+
         private void CalibrationMethodChanged(object sender, EventArgs e)
         {
-            bool usesBikeDimensions = calibrationMethod.SelectedIndex <= 1;
-            bool wheelPerspective = calibrationMethod.SelectedIndex == 0;
+            bool usesBikeDimensions = CalibrationIndex <= 1;
+            bool wheelPerspective = CalibrationIndex == 0;
             knownWheelbase.Enabled = usesBikeDimensions;
             knownTireDiameter.Enabled = usesBikeDimensions;
-            calibrateButton.Text = wheelPerspective ? "2. Calibrate From Both Wheels" : calibrationMethod.SelectedIndex == 1 ? "2. Quick Bike Calibration" : "2. Calibrate Known Reference";
+            calibrateButton.Text = wheelPerspective ? "2. Calibrate From Both Wheels" : CalibrationIndex == 1 ? "2. Quick Bike Calibration" : "2. Calibrate Known Reference";
             verifyCalibration.Text = usesBikeDimensions ? "3. Bike Scale Check" : "3. Verify Calibration";
             millimetersPerPixel = 0;
             horizontalMillimetersPerPixel = 0;
@@ -726,7 +733,7 @@ namespace CassetteMotionPro.Workspace
             saveAfter.Enabled = false;
             status.Text = wheelPerspective
                 ? "Dual-wheel perspective selected. Enter wheelbase and the measured tire outer diameter (about 680 for a 700x28 road tire)."
-                : calibrationMethod.SelectedIndex == 1
+                : CalibrationIndex == 1
                     ? "Quick bike reference selected. Enter wheelbase and outside tire diameter."
                     : "Known reference selected. Use a measured line or calibration board in the bike plane.";
             currentLandmarkLabel.Text = "Current point: --";
@@ -737,7 +744,7 @@ namespace CassetteMotionPro.Workspace
 
         private void BikeCalibrationDimensionChanged(object sender, EventArgs e)
         {
-            if (calibrationMethod == null || calibrationMethod.SelectedIndex > 1)
+            if (calibrationMethod == null || CalibrationIndex > 1)
                 return;
             if (millimetersPerPixel <= 0 && bikeCalibrationPoints.Count == 0 && wheelPerspectivePoints.Count == 0)
                 return;
@@ -760,7 +767,7 @@ namespace CassetteMotionPro.Workspace
 
             if (millimetersPerPixel <= 0)
             {
-                int calibrationIndex = calibrationMethod == null ? 0 : calibrationMethod.SelectedIndex;
+                int calibrationIndex = calibrationMethod == null ? 1 : CalibrationIndex;
                 progressLabel.Text = calibrationIndex == 0 ? "STEP 2 OF 5 · Correct perspective from both wheels" : calibrationIndex == 1 ? "STEP 2 OF 5 · Quick wheelbase + tire calibration" : "STEP 2 OF 5 · Calibrate one known distance";
                 primaryAction.Text = calibrationIndex == 0 ? "Continue: Dual-wheel Calibration" : calibrationIndex == 1 ? "Continue: Quick Calibration" : "Continue: Calibrate Scale";
                 return;
@@ -825,13 +832,13 @@ namespace CassetteMotionPro.Workspace
 
         private void Calibrate_Click(object sender, EventArgs e)
         {
-            if (calibrationMethod.SelectedIndex == 0)
+            if (CalibrationIndex == 0)
             {
                 StartWheelPerspectiveCalibration();
                 return;
             }
 
-            if (calibrationMethod.SelectedIndex == 1)
+            if (CalibrationIndex == 1)
             {
                 StartBikeCalibration();
                 return;
@@ -1715,9 +1722,9 @@ namespace CassetteMotionPro.Workspace
             calculatedValues["SaddleSetbackConvention"] = "Behind BB = negative";
             calculatedValues["LandmarkMode"] = advancedLandmarks.Checked ? "Advanced 8-point" : "Basic 4-point";
             calculatedValues["CameraSetup"] = CameraSetupStatus;
-            calculatedValues["CalibrationReference"] = calibrationMethod.SelectedIndex == 0
+            calculatedValues["CalibrationReference"] = CalibrationIndex == 0
                 ? "Dual-wheel perspective · wheelbase " + knownWheelbase.Value.ToString("0.0", CultureInfo.InvariantCulture) + " mm · tire " + knownTireDiameter.Value.ToString("0.0", CultureInfo.InvariantCulture) + " mm" + TireDiameterNote()
-                : calibrationMethod.SelectedIndex == 1
+                : CalibrationIndex == 1
                 ? "Quick bike reference · wheelbase " + knownWheelbase.Value.ToString("0.0", CultureInfo.InvariantCulture) + " mm · tire " + knownTireDiameter.Value.ToString("0.0", CultureInfo.InvariantCulture) + " mm" + TireDiameterNote()
                 : knownCalibrationMillimeters > 0 ? knownCalibrationMillimeters.ToString("0.0", CultureInfo.InvariantCulture) + " mm" : "Not set";
             calculatedValues["CalibrationVerification"] = calibrationVerificationStatus;
@@ -1957,7 +1964,7 @@ namespace CassetteMotionPro.Workspace
         {
             if (landmarkPoints.Count < ActiveLandmarkNames.Length || !CanUseWheelbaseVerticalCalibration())
             {
-                MessageBox.Show(this, "Complete Dual-wheel or Quick Bike calibration and place the bike landmarks first.", "Vertical calibration", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, "Complete Quick Bike calibration and place the bike landmarks first.", "Vertical calibration", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
