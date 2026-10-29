@@ -34,6 +34,9 @@ try {
     $session.HandoffInternalNotes = $internalMarker
     $session.Notes = $fitterNoteMarker
     $session.HandoffClientMessage = $clientMarker
+    # A decimal comma must be read as 742.5, not truncated to 742 with ",5 mm" left over as the unit.
+    $session.SaddleHeightBefore = '742,5 mm'
+    $session.SaddleHeightAfter = '745 mm'
 
     # Studio settings normally load from the app's settings folder, which is not set up outside the
     # running app. Use default settings so the report builds the same way for a new studio.
@@ -56,6 +59,7 @@ try {
         if ($leaked.Count -gt 0) { throw ('Client ZIP contains fitter-only entries: ' + ($leaked -join ', ')) }
 
         $clientNotesSeen = $false
+        $reportChangeSeen = $false
         foreach ($entry in $zip.Entries) {
             if ($entry.Length -eq 0 -or $entry.FullName -notmatch '(?i)\.(html|txt)$') { continue }
             $reader = New-Object System.IO.StreamReader($entry.Open())
@@ -64,8 +68,13 @@ try {
             if ($text.Contains($fitterNoteMarker)) { throw ("Fitter notes leaked into client ZIP entry '" + $entry.FullName + "'.") }
             if ($text.Contains($root)) { throw ("A local path leaked into client ZIP entry '" + $entry.FullName + "'.") }
             if ($entry.FullName -eq 'Client Handoff Notes.txt' -and $text.Contains($clientMarker)) { $clientNotesSeen = $true }
+            if ($entry.FullName -eq 'Bike Fit Report.html') {
+                if ($text.Contains('+2.5 mm</span>')) { $reportChangeSeen = $true }
+                if ($text.Contains(',5 mm</span>')) { throw 'A decimal-comma measurement was split into a number and a unit in the report.' }
+            }
         }
         if (-not $clientNotesSeen) { throw 'Client Handoff Notes.txt did not contain the client-facing message.' }
+        if (-not $reportChangeSeen) { throw 'The report did not show a +2.5 mm change for 742,5 mm -> 745 mm.' }
     }
     finally {
         $zip.Dispose()

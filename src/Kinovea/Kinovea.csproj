@@ -206,6 +206,8 @@
     </Compile>
     <Compile Include="Workspace\DataPortabilityService.cs" />
     <Compile Include="Workspace\SessionPathRebaser.cs" />
+    <Compile Include="Workspace\MeasurementNumber.cs" />
+    <Compile Include="Workspace\BikeFitGeometry.cs" />
     <Compile Include="Workspace\BackupDataTransferForm.cs">
       <SubType>Form</SubType>
     </Compile>

@@ -447,19 +447,7 @@ namespace CassetteMotionPro.Workspace
 
         private static bool TryParseMeasurementNumber(string value, out double number)
         {
-            number = 0;
-            if (string.IsNullOrWhiteSpace(value))
-                return false;
-
-            string text = value.Trim();
-            int index = 0;
-            while (index < text.Length && (char.IsDigit(text[index]) || text[index] == '-' || text[index] == '+' || text[index] == '.'))
-                index++;
-
-            if (index == 0)
-                return false;
-
-            return double.TryParse(text.Substring(0, index), NumberStyles.Float, CultureInfo.InvariantCulture, out number);
+            return MeasurementNumber.TryParse(value, out number);
         }
 
         private static void AddHandoffSection(StringBuilder text, string label, string value)
@@ -1457,17 +1445,7 @@ namespace CassetteMotionPro.Workspace
 
         private static bool TryParseMeasurement(string value, out double number, out string unit)
         {
-            number = 0;
-            unit = string.Empty;
-            if (string.IsNullOrWhiteSpace(value))
-                return false;
-
-            Match match = Regex.Match(value.Trim(), @"^\s*(-?\d+(?:\.\d+)?)\s*(.*)$");
-            if (!match.Success)
-                return false;
-
-            unit = match.Groups[2].Value;
-            return double.TryParse(match.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out number);
+            return MeasurementNumber.TryParse(value, out number, out unit);
         }
 
         private static string CleanFileName(string value)
