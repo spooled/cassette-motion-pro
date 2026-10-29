@@ -21,7 +21,7 @@ namespace CassetteMotionPro.Workspace
     public static class FitSessionReportGenerator
     {
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "1.26.0";
+        private const string ReportVersion = "1.26.1";
         // Subfolder of a report package that holds fitter-only files. It is never included in the client ZIP.
         public const string FitterOnlyFolderName = "Fitter Only";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
