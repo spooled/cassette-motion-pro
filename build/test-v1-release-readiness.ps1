@@ -47,6 +47,44 @@ foreach ($file in $requiredFiles) {
     Assert-True (Test-Path (Join-Path $OutputPath $file)) "Required release file is missing: $file"
 }
 
+# Native FFmpeg runtime. Kinovea.Video.FFMpeg.dll loads these at run time, so a missing or
+# wrong-architecture file builds fine and then fails to open any video.
+$ffmpegPrefixes = @("avcodec", "avformat", "avutil", "swscale", "swresample")
+
+function Get-PeMachine([byte[]]$bytes) {
+    if ($bytes.Length -lt 0x40 -or $bytes[0] -ne 0x4D -or $bytes[1] -ne 0x5A) { return "not-a-pe-file" }
+    $peOffset = [BitConverter]::ToInt32($bytes, 0x3C)
+    if ($peOffset -lt 0 -or $peOffset + 6 -gt $bytes.Length) { return "bad-pe-header" }
+    switch ([BitConverter]::ToUInt16($bytes, $peOffset + 4)) {
+        0x8664 { return "x64" }
+        0x014C { return "x86" }
+        default { return "other" }
+    }
+}
+
+function Read-ZipEntryBytes($entry) {
+    $stream = $entry.Open()
+    try {
+        $memory = New-Object System.IO.MemoryStream
+        $stream.CopyTo($memory)
+        return $memory.ToArray()
+    }
+    finally { $stream.Dispose() }
+}
+
+function Assert-FfmpegFolder([string]$folder, [string]$label) {
+    foreach ($prefix in $ffmpegPrefixes) {
+        $found = @(Get-ChildItem $folder -Filter "$prefix*.dll" -File -ErrorAction SilentlyContinue)
+        Assert-True ($found.Count -gt 0) "$label is missing the native FFmpeg library $prefix*.dll."
+        foreach ($match in $found) {
+            $machine = Get-PeMachine ([System.IO.File]::ReadAllBytes($match.FullName))
+            Assert-True ($machine -eq "x64") "$label FFmpeg library $($match.Name) is '$machine', expected x64."
+        }
+    }
+}
+
+Assert-FfmpegFolder $OutputPath "Release output"
+
 $drawingTools = Join-Path $OutputPath "DrawingTools"
 Assert-True (Test-Path $drawingTools) "DrawingTools folder is missing from the release output."
 Assert-True (@(Get-ChildItem $drawingTools -File -Recurse -ErrorAction SilentlyContinue).Count -gt 0) "DrawingTools folder is empty."
@@ -60,6 +98,14 @@ if (![string]::IsNullOrWhiteSpace($PortableZip)) {
         Assert-True ($entryNames -contains "CassetteMotionPro.exe") "Portable ZIP does not contain CassetteMotionPro.exe."
         Assert-True (@($entryNames | Where-Object { $_ -like "DrawingTools\*" }).Count -gt 0) "Portable ZIP does not contain DrawingTools."
         Assert-True (@($entryNames | Where-Object { $_ -like "AppData*" }).Count -gt 0) "Portable ZIP does not contain the portable AppData marker."
+        foreach ($prefix in $ffmpegPrefixes) {
+            $zipDlls = @($archive.Entries | Where-Object { $_.FullName -notmatch '[\\/]' -and $_.Name -like "$prefix*.dll" })
+            Assert-True ($zipDlls.Count -gt 0) "Portable ZIP does not contain the native FFmpeg library $prefix*.dll."
+            foreach ($zipDll in $zipDlls) {
+                $machine = Get-PeMachine (Read-ZipEntryBytes $zipDll)
+                Assert-True ($machine -eq "x64") "Portable ZIP FFmpeg library $($zipDll.Name) is '$machine', expected x64."
+            }
+        }
     }
     finally {
         $archive.Dispose()
@@ -81,6 +127,7 @@ if (![string]::IsNullOrWhiteSpace($InstallerPath)) {
             Assert-True ($install.ExitCode -eq 0) "Silent installer smoke test failed with exit code $($install.ExitCode)."
             Assert-True (Test-Path (Join-Path $smokeRoot "CassetteMotionPro.exe")) "Installed application executable was not found."
             Assert-True (Test-Path (Join-Path $smokeRoot "Kinovea.Video.FFMpeg.dll")) "Installed FFmpeg playback component was not found."
+            Assert-FfmpegFolder $smokeRoot "Installed application"
             Assert-True (@(Get-ChildItem (Join-Path $smokeRoot "DrawingTools") -File -Recurse -ErrorAction SilentlyContinue).Count -gt 0) "Installed DrawingTools folder is missing or empty."
 
             $uninstaller = Join-Path $smokeRoot "Uninstall-CassetteMotionPro.exe"
