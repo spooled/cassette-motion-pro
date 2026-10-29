@@ -227,7 +227,7 @@ namespace CassetteMotionPro.Workspace
             guide.Text =
                 "1. Confirm the camera profile and setup.\n" +
                 "2. Choose Dual-wheel Perspective, Quick Bike Reference, or Known Reference.\n" +
-                "3. Dual-wheel: enter wheelbase, leave 700 for a 700c wheel, then click eight wheel points.\n" +
+                "3. Dual-wheel: enter wheelbase and measure the tire outer diameter (a 700c road tire is about 670-690 mm, not 700), then click eight wheel points.\n" +
                 "4. Optional: set a floor or axle level reference.\n" +
                 "5. Suggest Bike Landmarks, or place them manually.\n" +
                 "   • Bottom bracket center\n" +
@@ -516,10 +516,10 @@ namespace CassetteMotionPro.Workspace
             wheelbaseLabel.TextAlign = ContentAlignment.MiddleLeft;
             knownWheelbase = CreateCalibrationNumber(700, 1400, 1050);
             Label tireDiameterLabel = new Label();
-            tireDiameterLabel.Text = "Wheel preset (700c = 700):";
+            tireDiameterLabel.Text = "Tire outer dia. (mm, measure):";
             tireDiameterLabel.Dock = DockStyle.Fill;
             tireDiameterLabel.TextAlign = ContentAlignment.MiddleLeft;
-            knownTireDiameter = CreateCalibrationNumber(400, 900, 700);
+            knownTireDiameter = CreateCalibrationNumber(400, 900, DefaultTireDiameterMillimeters);
             knownWheelbase.ValueChanged += BikeCalibrationDimensionChanged;
             knownTireDiameter.ValueChanged += BikeCalibrationDimensionChanged;
             calibrationOptions.Controls.Add(calibrationMethodLabel, 0, 0);
@@ -723,7 +723,7 @@ namespace CassetteMotionPro.Workspace
             saveBefore.Enabled = false;
             saveAfter.Enabled = false;
             status.Text = wheelPerspective
-                ? "Dual-wheel perspective selected. Enter wheelbase; leave the wheel preset at 700 for 700c."
+                ? "Dual-wheel perspective selected. Enter wheelbase and the measured tire outer diameter (about 680 for a 700x28 road tire)."
                 : calibrationMethod.SelectedIndex == 1
                     ? "Quick bike reference selected. Enter wheelbase and outside tire diameter."
                     : "Known reference selected. Use a measured line or calibration board in the bike plane.";
@@ -975,7 +975,7 @@ namespace CassetteMotionPro.Workspace
             if (residual > 25.0)
             {
                 MessageBox.Show(this,
-                    "The wheel reference points disagree by " + residual.ToString("0.0", CultureInfo.InvariantCulture) + " mm. Measurements would not be reliable, so calibration cannot continue.\n\nConfirm that each left/right tire point is on the axle-height guide. For a 700c wheel, leave the wheel preset at 700.",
+                    "The wheel reference points disagree by " + residual.ToString("0.0", CultureInfo.InvariantCulture) + " mm. Measurements would not be reliable, so calibration cannot continue.\n\nConfirm that each left/right tire point is on the axle-height guide. Also check the tire outer diameter: a 700c road tire is about 670-690 mm, not 700.",
                     "Wheel calibration needs review",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
@@ -1714,9 +1714,9 @@ namespace CassetteMotionPro.Workspace
             calculatedValues["LandmarkMode"] = advancedLandmarks.Checked ? "Advanced 8-point" : "Basic 4-point";
             calculatedValues["CameraSetup"] = CameraSetupStatus;
             calculatedValues["CalibrationReference"] = calibrationMethod.SelectedIndex == 0
-                ? "Dual-wheel perspective · wheelbase " + knownWheelbase.Value.ToString("0.0", CultureInfo.InvariantCulture) + " mm · tire " + knownTireDiameter.Value.ToString("0.0", CultureInfo.InvariantCulture) + " mm"
+                ? "Dual-wheel perspective · wheelbase " + knownWheelbase.Value.ToString("0.0", CultureInfo.InvariantCulture) + " mm · tire " + knownTireDiameter.Value.ToString("0.0", CultureInfo.InvariantCulture) + " mm" + TireDiameterNote()
                 : calibrationMethod.SelectedIndex == 1
-                ? "Quick bike reference · wheelbase " + knownWheelbase.Value.ToString("0.0", CultureInfo.InvariantCulture) + " mm · tire " + knownTireDiameter.Value.ToString("0.0", CultureInfo.InvariantCulture) + " mm"
+                ? "Quick bike reference · wheelbase " + knownWheelbase.Value.ToString("0.0", CultureInfo.InvariantCulture) + " mm · tire " + knownTireDiameter.Value.ToString("0.0", CultureInfo.InvariantCulture) + " mm" + TireDiameterNote()
                 : knownCalibrationMillimeters > 0 ? knownCalibrationMillimeters.ToString("0.0", CultureInfo.InvariantCulture) + " mm" : "Not set";
             calculatedValues["CalibrationVerification"] = calibrationVerificationStatus;
             double estimatedTolerance = perspectiveTransform != null
@@ -2936,6 +2936,18 @@ namespace CassetteMotionPro.Workspace
                 form.ShowDialog(owner);
                 return profiles.SelectedItem == null ? currentProfile : profiles.SelectedItem.ToString();
             }
+        }
+
+        // A typical 700x28 road tire is about 680 mm across. Only a starting value: the tire-top
+        // point sets the vertical scale, so the real diameter matters (a 2-4 percent error is
+        // roughly 15-30 mm on a 740 mm saddle height).
+        private const decimal DefaultTireDiameterMillimeters = 680;
+
+        private string TireDiameterNote()
+        {
+            return knownTireDiameter != null && knownTireDiameter.Value == DefaultTireDiameterMillimeters
+                ? " (starting value, not measured)"
+                : string.Empty;
         }
 
         private static NumericUpDown CreateCalibrationNumber(decimal minimum, decimal maximum, decimal value)

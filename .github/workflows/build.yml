@@ -609,6 +609,12 @@ jobs:
           }
           $checksums | Set-Content "dist\windows\RELEASE-CHECKSUMS.sha256"
 
+          # Pushes and PRs may skip the installer when the runner cannot get NSIS. A manually
+          # started (release) run must not ship a "verified" release without one.
+          if (-not $installer -and "${{ github.event_name }}" -eq "workflow_dispatch") {
+            throw "Release run produced no installer. See dist\windows\INSTALLER-BUILD-STATUS.txt."
+          }
+
           $installerStatus = Get-Content "dist\windows\INSTALLER-BUILD-STATUS.txt" -Raw
           if ($installerStatus -match "Installer build status: FAILED") {
             throw "Installer build status reports FAILED."

@@ -6604,6 +6604,7 @@ namespace CassetteMotionPro.Workspace
             values.Add(chkShowMeasurementReferenceImageInReport.Checked.ToString());
             values.Add(chkShowMeasurementCaptureTraceInReport.Checked.ToString());
             values.Add(GetReportLogoStyle());
+            AddSessionReportValues(values, currentSession);
 
             string content = string.Join("\u001f", values.ToArray());
             unchecked
@@ -6615,6 +6616,80 @@ namespace CassetteMotionPro.Workspace
                     hash *= 1099511628211UL;
                 }
                 return hash.ToString("X16", System.Globalization.CultureInfo.InvariantCulture);
+            }
+        }
+
+        // Session fields the report generator reads that have no editor control feeding the
+        // fingerprint above. Without these, editing them after approval left the approval "valid"
+        // while the report content had changed. Keep in step with FitSessionReportGenerator.
+        private static readonly string[] ReportSessionFieldNames = new string[]
+        {
+            "ReportLogoStyle", "HandoffInternalNotes",
+            "SaddleHeightBefore", "SaddleHeightAfter", "SaddleSetbackBefore", "SaddleSetbackAfter",
+            "SaddleTipToGripReachBefore", "SaddleTipToGripReachAfter", "HandlebarXBefore", "HandlebarXAfter",
+            "HandlebarYBefore", "HandlebarYAfter", "CleatPositionBefore", "CleatPositionAfter",
+            "CrankLengthBefore", "CrankLengthAfter", "HandlebarReachBefore", "HandlebarReachAfter",
+            "HandlebarDropBefore", "HandlebarDropAfter", "WheelbaseBefore", "WheelbaseAfter",
+            "KneeAngleBefore", "KneeAngleAfter", "HipAngleBefore", "HipAngleAfter",
+            "AnkleAngleBefore", "AnkleAngleAfter", "TorsoAngleBefore", "TorsoAngleAfter",
+            "ShoulderAngleBefore", "ShoulderAngleAfter",
+            "BikeMetricsCameraSetupBefore", "BikeMetricsCameraSetupAfter",
+            "BikeMetricsCaptureMethodBefore", "BikeMetricsCaptureMethodAfter",
+            "BikeMetricsLevelReferenceBefore", "BikeMetricsLevelReferenceAfter",
+            "BikeMetricsSetbackConventionBefore", "BikeMetricsSetbackConventionAfter",
+            "AssistedMeasurementAccuracyNotes", "AssistedWorkflowRecoverySummary", "DualCameraSynchronizationSummary",
+            "FavoriteFrameBeforeNotes", "FavoriteFrameAfterNotes",
+            "SmartMeasurementBeforeSummary", "SmartMeasurementAfterSummary",
+            "ShortClipTrackingBeforeSummary", "ShortClipTrackingAfterSummary",
+            "PedalCycleBeforeSummary", "PedalCycleAfterSummary", "PedalCycleTrendBeforeSummary", "PedalCycleTrendAfterSummary",
+            "AssistedBikeLandmarksBeforeSummary", "AssistedBikeLandmarksAfterSummary",
+            "SmartMeasurementBeforeEvidencePath", "SmartMeasurementAfterEvidencePath",
+            "ShortClipTrackingBeforeEvidencePath", "ShortClipTrackingAfterEvidencePath",
+            "PedalCycleBeforeEvidencePath", "PedalCycleAfterEvidencePath",
+            "PedalCycleTrendBeforeEvidencePath", "PedalCycleTrendAfterEvidencePath",
+            "AssistedBikeLandmarksBeforeEvidencePath", "AssistedBikeLandmarksAfterEvidencePath",
+            "MeasurementReferenceImagePath", "BeforeReportImagePath", "AfterReportImagePath", "SideBySideReportImagePath"
+        };
+
+        private static void AddSessionReportValues(List<string> values, FitSessionRecord session)
+        {
+            if (session == null)
+                return;
+
+            Type type = session.GetType();
+            foreach (string name in ReportSessionFieldNames)
+            {
+                System.Reflection.PropertyInfo property = type.GetProperty(name);
+                object value = property == null ? null : property.GetValue(session, null);
+                string text = value == null ? string.Empty : Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture);
+                string fileState = string.Empty;
+                if (name.EndsWith("Path", StringComparison.Ordinal) && !string.IsNullOrWhiteSpace(text))
+                {
+                    try
+                    {
+                        if (File.Exists(text))
+                        {
+                            FileInfo info = new FileInfo(text);
+                            fileState = "|" + info.Length.ToString() + "|" + info.LastWriteTimeUtc.Ticks.ToString();
+                        }
+                    }
+                    catch
+                    {
+                        fileState = "|unavailable";
+                    }
+                }
+                values.Add("session." + name + "=" + text + fileState);
+            }
+
+            if (session.FitPositions != null)
+            {
+                foreach (FitPositionRecord position in session.FitPositions)
+                {
+                    values.Add("pos|" + position.Id + "|" + position.Sequence + "|" + position.Name + "|" + position.Phase + "|" +
+                        position.ChangeNotes + "|" + position.IsFinal + "|" + position.VideoPath + "|" + position.ImagePath + "|" +
+                        position.SaddleHeight + "|" + position.SaddleSetback + "|" + position.SaddleTipToGripReach + "|" +
+                        position.HandlebarX + "|" + position.HandlebarY + "|" + position.KneeAngle + "|" + position.HipAngle + "|" + position.AnkleAngle);
+                }
             }
         }
 
