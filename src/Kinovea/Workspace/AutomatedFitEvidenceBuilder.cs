@@ -107,9 +107,9 @@ namespace CassetteMotionPro.Workspace
             if (bundle.Images.Count == 0)
                 text.AppendLine("No approved report images were found.");
             foreach (FitEvidenceImage image in bundle.Images)
-                text.AppendLine("- " + image.Label + " · " + image.ApprovalSource + " · " + image.Path);
+                text.AppendLine("- " + image.Label + " · " + image.ApprovalSource + " · " + Path.GetFileName(image.Path));
             text.AppendLine();
-            text.AppendLine("Only saved session evidence is included. Review the HTML report before sharing it with the client.");
+            text.AppendLine("Only saved session evidence is included. Review the HTML report before sharing it with the client. This file is for the fitter and is not part of the client ZIP.");
             return text.ToString();
         }
 

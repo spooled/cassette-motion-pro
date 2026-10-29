@@ -21,7 +21,9 @@ namespace CassetteMotionPro.Workspace
     public static class FitSessionReportGenerator
     {
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "1.25.0";
+        private const string ReportVersion = "1.26.0";
+        // Subfolder of a report package that holds fitter-only files. It is never included in the client ZIP.
+        public const string FitterOnlyFolderName = "Fitter Only";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
 
         private static StudioSettings ReportSettings { get { return StudioSettingsRepository.Current; } }
@@ -56,22 +58,28 @@ namespace CassetteMotionPro.Workspace
 
             string packageFolder = GetUniqueDirectoryPath(Path.Combine(reportsPath, BuildPackageFolderName(client, session)));
             string imagesFolder = Path.Combine(packageFolder, "Images");
+            string fitterFolder = Path.Combine(packageFolder, FitterOnlyFolderName);
             Directory.CreateDirectory(packageFolder);
             Directory.CreateDirectory(imagesFolder);
+            Directory.CreateDirectory(fitterFolder);
 
             Dictionary<string, string> imageMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             CopyPackageImages(session, imagesFolder, imageMap);
 
+            // Client-safe files live in the package root: no fitter notes, no internal handoff notes, no local paths.
             string reportPath = Path.Combine(packageFolder, "Bike Fit Report.html");
             File.WriteAllText(reportPath, BuildHtml(client, session, delegate(string imagePath)
             {
                 return ResolvePackageImageSource(imagePath, imageMap);
-            }, true), Encoding.UTF8);
-            File.WriteAllText(Path.Combine(packageFolder, "README - Open This First.txt"), BuildPackageReadmeText(client, session), Encoding.UTF8);
-            File.WriteAllText(Path.Combine(packageFolder, "Session Summary.txt"), BuildSessionSummaryText(client, session), Encoding.UTF8);
-            File.WriteAllText(Path.Combine(packageFolder, "Client Handoff Notes.txt"), BuildHandoffText(client, session), Encoding.UTF8);
-            File.WriteAllText(Path.Combine(packageFolder, "Bike Metrics Review.txt"), BuildBikeMetricsReviewText(client, session), Encoding.UTF8);
-            File.WriteAllText(Path.Combine(packageFolder, "Approved Fit Evidence.txt"), AutomatedFitEvidenceBuilder.BuildManifest(session), Encoding.UTF8);
+            }, false), Encoding.UTF8);
+            File.WriteAllText(Path.Combine(packageFolder, "Client Handoff Notes.txt"), BuildHandoffText(client, session, false), Encoding.UTF8);
+
+            // Fitter-only working files are kept apart so they cannot be sent by accident.
+            File.WriteAllText(Path.Combine(fitterFolder, "README - Open This First.txt"), BuildPackageReadmeText(client, session), Encoding.UTF8);
+            File.WriteAllText(Path.Combine(fitterFolder, "Session Summary.txt"), BuildSessionSummaryText(client, session), Encoding.UTF8);
+            File.WriteAllText(Path.Combine(fitterFolder, "Handoff Notes - With Internal Notes.txt"), BuildHandoffText(client, session, true), Encoding.UTF8);
+            File.WriteAllText(Path.Combine(fitterFolder, "Bike Metrics Review.txt"), BuildBikeMetricsReviewText(client, session), Encoding.UTF8);
+            File.WriteAllText(Path.Combine(fitterFolder, "Approved Fit Evidence.txt"), AutomatedFitEvidenceBuilder.BuildManifest(session), Encoding.UTF8);
 
             return packageFolder;
         }
@@ -84,8 +92,35 @@ namespace CassetteMotionPro.Workspace
             if (File.Exists(zipPath))
                 zipPath = packageFolder + " " + DateTime.Now.ToString("HHmmss", CultureInfo.InvariantCulture) + ".zip";
 
-            ZipFile.CreateFromDirectory(packageFolder, zipPath);
+            CreateClientZip(packageFolder, zipPath);
             return zipPath;
+        }
+
+        // Zips a report package for the client, leaving out the fitter-only subfolder.
+        private static void CreateClientZip(string packageFolder, string zipPath)
+        {
+            string root = packageFolder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            string fitterOnlyPrefix = FitterOnlyFolderName + Path.DirectorySeparatorChar;
+            try
+            {
+                using (ZipArchive archive = ZipFile.Open(zipPath, ZipArchiveMode.Create))
+                {
+                    foreach (string file in Directory.GetFiles(packageFolder, "*", SearchOption.AllDirectories))
+                    {
+                        string relative = file.Substring(root.Length);
+                        if (relative.StartsWith(fitterOnlyPrefix, StringComparison.OrdinalIgnoreCase))
+                            continue;
+                        archive.CreateEntryFromFile(file, relative.Replace(Path.DirectorySeparatorChar, '/'), CompressionLevel.Optimal);
+                    }
+                }
+            }
+            catch
+            {
+                try { if (File.Exists(zipPath)) File.Delete(zipPath); }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+                throw;
+            }
         }
 
         public static string GenerateClientPortalPackage(ClientRecord client, FitSessionRecord session)
@@ -154,20 +189,24 @@ namespace CassetteMotionPro.Workspace
             text.AppendLine("Date: " + (session.SessionDate == DateTime.MinValue ? DateTime.Today.ToString("MMM d, yyyy") : session.SessionDate.ToString("MMM d, yyyy")));
             AddStudioContactText(text);
             text.AppendLine();
+            text.AppendLine("FITTER ONLY - do not send the contents of this folder to the client.");
+            text.AppendLine("This 'Fitter Only' subfolder is left out of the ZIP package automatically.");
+            text.AppendLine("If you share the package folder itself, share it without this subfolder.");
+            text.AppendLine();
             text.AppendLine("Start here");
             text.AppendLine("----------");
-            text.AppendLine("1. Open Bike Fit Report.html to view the polished report.");
-            text.AppendLine("2. Open Session Summary.txt for a quick plain-text overview of the fit.");
+            text.AppendLine("1. Open the Bike Fit Report.html one folder up to view the client report.");
+            text.AppendLine("2. Open Session Summary.txt for a quick plain-text overview, including fitter notes.");
             text.AppendLine("3. Open Bike Metrics Review.txt to check missing values or values that may need another look.");
-            text.AppendLine("4. Open Client Handoff Notes.txt only if you used the handoff tab or want to copy follow-up notes.");
+            text.AppendLine("4. Open Handoff Notes - With Internal Notes.txt for your internal follow-up notes. The client copy (Client Handoff Notes.txt, one folder up) leaves the internal notes out.");
             text.AppendLine("5. Open Approved Fit Evidence.txt to see the automatic inventory of saved measurements and approved visuals.");
-            text.AppendLine("6. The Images folder contains the approved report evidence copied into this package.");
+            text.AppendLine("6. The Images folder, one folder up, contains the approved report evidence copied into this package.");
             text.AppendLine();
             text.AppendLine("Suggested flow");
             text.AppendLine("--------------");
             text.AppendLine("- Review the metrics text file before sending the report.");
             text.AppendLine("- Open the HTML report and use Print / Save PDF if you want a PDF copy.");
-            text.AppendLine("- Keep this whole folder together so the report can find its Images folder.");
+            text.AppendLine("- Keep the report, the Images folder and Client Handoff Notes together so the report can find its images.");
             text.AppendLine();
             text.AppendLine("Reminder");
             text.AppendLine("--------");
@@ -267,21 +306,25 @@ namespace CassetteMotionPro.Workspace
             {
                 text.AppendLine("Handoff reminder");
                 text.AppendLine("----------------");
-                text.AppendLine("This session has handoff notes. Open Client Handoff Notes.txt before sending follow-up.");
+                text.AppendLine("This session has handoff notes. Open Handoff Notes - With Internal Notes.txt before sending follow-up.");
                 text.AppendLine();
             }
 
             text.AppendLine("Package files");
             text.AppendLine("-------------");
+            text.AppendLine("Client-safe (package root and ZIP):");
             text.AppendLine("- Bike Fit Report.html");
-            text.AppendLine("- Session Summary.txt");
-            text.AppendLine("- Bike Metrics Review.txt");
             text.AppendLine("- Client Handoff Notes.txt");
             text.AppendLine("- Images folder");
+            text.AppendLine("Fitter only (never in the ZIP):");
+            text.AppendLine("- Fitter Only\\Session Summary.txt");
+            text.AppendLine("- Fitter Only\\Bike Metrics Review.txt");
+            text.AppendLine("- Fitter Only\\Handoff Notes - With Internal Notes.txt");
+            text.AppendLine("- Fitter Only\\Approved Fit Evidence.txt");
             return text.ToString();
         }
 
-        private static string BuildHandoffText(ClientRecord client, FitSessionRecord session)
+        private static string BuildHandoffText(ClientRecord client, FitSessionRecord session, bool includeInternalNotes)
         {
             StringBuilder text = new StringBuilder();
             text.AppendLine("Cassette Motion Pro - Client Handoff Notes");
@@ -296,7 +339,8 @@ namespace CassetteMotionPro.Workspace
             AddHandoffSection(text, "Client follow-up message", session.HandoffClientMessage);
             AddHandoffSection(text, "Homework / ride instructions", session.HandoffHomework);
             AddHandoffSection(text, "Next appointment", session.HandoffNextAppointment);
-            AddHandoffSection(text, "Internal notes", session.HandoffInternalNotes);
+            if (includeInternalNotes)
+                AddHandoffSection(text, "Internal notes", session.HandoffInternalNotes);
             return text.ToString();
         }
 
@@ -527,9 +571,9 @@ namespace CassetteMotionPro.Workspace
         {
             string sessionDate = session.SessionDate == DateTime.MinValue ? DateTime.Today.ToString("MMMM d, yyyy") : session.SessionDate.ToString("MMMM d, yyyy");
             StringBuilder html = new StringBuilder();
-            html.AppendLine("<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">");
+            html.AppendLine("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">");
             html.AppendLine("<title>" + Encode(client.DisplayName) + " · Bike Fit</title>");
-            html.AppendLine("<style>body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:#e9efea;color:#18201d}.page{max-width:900px;margin:36px auto;background:#fff;border-radius:26px;overflow:hidden;box-shadow:0 24px 70px rgba(10,20,14,.15)}header{padding:42px;background:#111a16;color:#fff}small{color:#b8f34a;font-weight:900;letter-spacing:.16em}h1{font-size:40px;margin:10px 0 6px}header p{color:#c8d2cc}.content{padding:34px}.welcome{font-size:18px;line-height:1.55}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:28px 0}.card{display:block;text-decoration:none;color:#18201d;border:1px solid #dce5df;border-radius:18px;padding:20px;background:#f8faf8}.card strong{display:block;font-size:17px;margin-bottom:7px}.card span{color:#68766f;font-size:14px}.primary{background:#b8f34a;border-color:#92c52f}.contact{border-top:1px solid #e1e7e3;padding-top:22px;color:#68766f;line-height:1.6}@media(max-width:700px){.page{margin:0;border-radius:0}.cards{grid-template-columns:1fr}header,.content{padding:26px}h1{font-size:32px}}</style></head><body>");
+            html.AppendLine("<style>body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,Roboto,'Helvetica Neue',Arial,sans-serif;background:#e9efea;color:#18201d}.page{max-width:900px;margin:36px auto;background:#fff;border-radius:26px;overflow:hidden;box-shadow:0 24px 70px rgba(10,20,14,.15)}header{padding:42px;background:#111a16;color:#fff}small{color:#b8f34a;font-weight:900;letter-spacing:.16em}h1{font-size:40px;margin:10px 0 6px}header p{color:#c8d2cc}.content{padding:34px}.welcome{font-size:18px;line-height:1.55}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:28px 0}.card{display:block;text-decoration:none;color:#18201d;border:1px solid #dce5df;border-radius:18px;padding:20px;background:#f8faf8}.card strong{display:block;font-size:17px;margin-bottom:7px}.card span{color:#68766f;font-size:14px}.card{transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease}.card:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(10,20,14,.12);border-color:#92c52f}.card:focus-visible{outline:3px solid #557b00;outline-offset:3px}.primary{background:#b8f34a;border-color:#92c52f}.contact{border-top:1px solid #e1e7e3;padding-top:22px;color:#68766f;line-height:1.6}@media(max-width:700px){.page{margin:0;border-radius:0}.cards{grid-template-columns:1fr}header,.content{padding:26px}h1{font-size:32px}}</style></head><body>");
             html.AppendLine("<div class=\"page\"><header><small>CASSETTE MOTION PRO</small><h1>Your Bike Fit</h1><p>" + Encode(client.DisplayName) + " · " + Encode(sessionDate) + " · " + Encode(client.BikeDescription) + "</p></header><div class=\"content\">");
             html.AppendLine("<div class=\"welcome\">Your completed fit information is organized below. Start with the full report, then review the recommendations and follow-up plan.</div>");
             html.AppendLine("<div class=\"cards\"><a class=\"card primary\" href=\"Bike Fit Report.html\"><strong>Open Bike Fit Report</strong><span>Measurements, approved images, comparisons, and fit summary.</span></a>");
@@ -686,14 +730,15 @@ namespace CassetteMotionPro.Workspace
                 (!session.HideAfterImageInReport && HasReportImage(session.AfterReportImagePath));
             bool hasMeasurementReference = !session.HideMeasurementReferenceImageInReport && HasReportImage(session.MeasurementReferenceImagePath);
             html.AppendLine("<!doctype html>");
-            html.AppendLine("<html>");
+            html.AppendLine("<html lang=\"en\">");
             html.AppendLine("<head>");
             html.AppendLine("<meta charset=\"utf-8\">");
+            html.AppendLine("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">");
             html.AppendLine("<title>" + Encode(client.DisplayName) + " Bike Fit Report</title>");
             html.AppendLine("<style>");
             html.AppendLine(":root{--ink:#17211d;--muted:#68776f;--line:#dce5df;--soft:#f5f8f6;--brand:#b8f34a;--brand-dark:#557b00;--deep:#0a100e;--warm:#f4f0e8;}");
             html.AppendLine("*{box-sizing:border-box;}");
-            html.AppendLine("body{font-family:Segoe UI,Arial,sans-serif;margin:0;background:linear-gradient(180deg,#edf2ed 0%,#dde6df 100%);color:var(--ink);}");
+            html.AppendLine("html{-webkit-text-size-adjust:100%;text-size-adjust:100%}body{font-family:'Segoe UI',system-ui,-apple-system,Roboto,'Helvetica Neue',Arial,sans-serif;margin:0;background:linear-gradient(180deg,#edf2ed 0%,#dde6df 100%);color:var(--ink);}");
             html.AppendLine(".page{max-width:1080px;margin:30px auto;background:white;border-radius:26px;box-shadow:0 24px 72px rgba(12,19,16,.16);overflow:hidden;}");
             html.AppendLine(".hero{background:radial-gradient(circle at 82% 18%,rgba(184,243,74,.22),transparent 28%),linear-gradient(135deg,#090f0d 0%,#14231d 58%,#27351f 100%);color:white;padding:48px 54px 38px;position:relative;}");
             html.AppendLine(".hero:after{content:\"\";position:absolute;left:50px;right:50px;bottom:0;height:1px;background:linear-gradient(90deg,rgba(184,243,74,.7),rgba(255,255,255,.08));}");
@@ -773,10 +818,13 @@ namespace CassetteMotionPro.Workspace
             html.AppendLine(".prepared-footer .value{font-weight:800;color:#1f2b25;}");
             html.AppendLine(".confidential{margin-top:12px;background:#f6f8f6;border:1px solid #e5ebe7;border-radius:14px;padding:12px 14px;font-size:12px;color:#607169;}");
             html.AppendLine(".footer{margin-top:18px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between;gap:20px;}");
+            html.AppendLine("td,th,.snapshot-value,.hero-card .value,.change{font-variant-numeric:tabular-nums;}");
+            html.AppendLine(".print-button{transition:transform .12s ease,box-shadow .12s ease;}.print-button:hover{transform:translateY(-1px);box-shadow:0 14px 30px rgba(0,0,0,.3);}.print-button:focus-visible{outline:3px solid #fff;outline-offset:3px;}");
+            html.AppendLine("tbody tr:hover td{background:#f3f9ea;}");
             html.AppendLine("@page{size:Letter portrait;margin:11mm;}");
             html.AppendLine(".screen-only{display:block;}");
-            html.AppendLine("@media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{background:white;font-size:10.5pt}.page{box-shadow:none;margin:0;max-width:none;border-radius:0;overflow:visible}.hero{padding:25px 28px 22px;border-radius:0}.hero:after{left:28px;right:28px}.content{padding:20px 28px 18px}.print-button,.review-strip,.preview-guide,.screen-only{display:none!important}.hero-grid{margin-top:20px}.hero-card{padding:11px 12px}.prepared-card{padding:11px 13px;margin-top:13px}.client-lead{padding:18px 20px;margin-bottom:18px}.media-card{min-height:100px}.media-card img{height:235px}.media-card.full img{height:330px}.hero-grid,.summary,.fit-summary,.final-snapshot,.media-grid,.section-card,.prepared-footer,.table-wrap,.panel,.media-card,.client-lead{break-inside:avoid;page-break-inside:avoid}h2,h3{break-after:avoid;page-break-after:avoid}h2{margin-top:28px}.section-card{padding:17px;margin-top:11px;box-shadow:none}.table-wrap{box-shadow:none}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}.footer{padding-bottom:2mm}}");
-            html.AppendLine("@media(max-width:760px){.hero-grid,.summary,.fit-summary,.media-grid,.review-list,.prepared-footer,.final-snapshot,.client-lead{grid-template-columns:1fr}.fit-summary .wide{grid-column:auto}.prepared-card{display:block}.prepared-card .contact{text-align:left;margin-top:10px}.client-lead .session-stamp{border-left:0;border-top:1px solid rgba(255,255,255,.16);padding:16px 0 0}}");
+            html.AppendLine("@media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{background:white;font-size:10.5pt}.page{box-shadow:none;margin:0;max-width:none;border-radius:0;overflow:visible}.hero{padding:25px 28px 22px;border-radius:0}.hero:after{left:28px;right:28px}.content{padding:20px 28px 18px}.print-button,.review-strip,.preview-guide,.screen-only{display:none!important}tbody tr:hover td{background:inherit}.hero-grid{margin-top:20px}.hero-card{padding:11px 12px}.prepared-card{padding:11px 13px;margin-top:13px}.client-lead{padding:18px 20px;margin-bottom:18px}.media-card{min-height:100px}.media-card img{height:235px}.media-card.full img{height:330px}.hero-grid,.summary,.fit-summary,.final-snapshot,.media-grid,.section-card,.prepared-footer,.table-wrap,.panel,.media-card,.client-lead{break-inside:avoid;page-break-inside:avoid}h2,h3{break-after:avoid;page-break-after:avoid}h2{margin-top:28px}.section-card{padding:17px;margin-top:11px;box-shadow:none}.table-wrap{box-shadow:none}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}.footer{padding-bottom:2mm}}");
+            html.AppendLine("@media(max-width:760px){.hero-grid,.summary,.fit-summary,.media-grid,.review-list,.prepared-footer,.final-snapshot,.client-lead{grid-template-columns:1fr}.fit-summary .wide{grid-column:auto}.prepared-card{display:block}.prepared-card .contact{text-align:left;margin-top:10px}.client-lead .session-stamp{border-left:0;border-top:1px solid rgba(255,255,255,.16);padding:16px 0 0}.page{margin:0;border-radius:0}.hero{padding:30px 20px 24px}.hero-top{flex-wrap:wrap}h1{font-size:34px}.content{padding:24px 16px 32px}.review-strip,.preview-guide{padding-left:20px;padding-right:20px}.table-wrap{overflow-x:auto}th,td{padding:10px 8px;font-size:13px}td:not(:first-child){white-space:nowrap}}");
             html.AppendLine("</style>");
             html.AppendLine("</head>");
             html.AppendLine("<body>");

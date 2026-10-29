@@ -79,6 +79,7 @@ namespace CassetteMotionPro.Workspace
 
         public ImageMeasurementAssistantForm(string imagePath, string measurementName, string instructions, DefaultMeasurementAxis defaultMeasurementAxis)
         {
+            CassetteMotionTheme.Attach(this);
             if (string.IsNullOrEmpty(imagePath))
                 throw new ArgumentNullException("imagePath");
             if (!File.Exists(imagePath))

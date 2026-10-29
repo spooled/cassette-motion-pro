@@ -97,6 +97,10 @@ namespace CassetteMotionPro.Workspace
         private readonly Label combinedMeasurementReviewStatus = new Label();
         private readonly TextBox combinedMeasurementReview = new TextBox();
         private readonly FlowLayoutPanel measurementReviewCards = new FlowLayoutPanel();
+        private TableLayoutPanel measurementReviewLayout;
+        private GroupBox measurementQuickStart;
+        private FlowLayoutPanel measurementQuickActions;
+        private bool fittingMeasurementRows;
         private readonly Label measurementApprovalStatus = new Label();
         private readonly Button measurementApprovalButton = new Button();
         private readonly Label measurementTrackingReviewStatus = new Label();
@@ -297,6 +301,7 @@ namespace CassetteMotionPro.Workspace
         private bool hasUnsavedChanges;
         private bool suppressSessionSelection;
         private string lastAutosaveError = string.Empty;
+        private string lastRecoveryError = string.Empty;
         private string lastSavedFingerprint = string.Empty;
         private string cachedEvidenceFolder;
         private int cachedEvidenceCount;
@@ -502,23 +507,51 @@ namespace CassetteMotionPro.Workspace
             if (!recoveryStore.TryLoad(out recovered, out workspaceSection, out savedUtc))
                 return;
 
+            // Point the recovered copy at its real folder, and ignore a recovery point that
+            // is older than what was already saved to disk.
+            FitSessionRecord onDisk = null;
+            try { onDisk = repository.FindById(recovered.Id); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+            if (onDisk != null)
+            {
+                if (onDisk.ModifiedUtc > recovered.ModifiedUtc)
+                {
+                    recoveryStore.Clear();
+                    return;
+                }
+                recovered.FolderPath = onDisk.FolderPath;
+            }
+
             DialogResult result = MessageBox.Show(this,
                 "Cassette Motion Pro found a fit-day recovery point from " + savedUtc.ToLocalTime().ToString("MMM d, h:mm tt") + ".\n\n" +
                 "Session: " + recovered.DisplayName + "\n\nRestore it and return to the last workspace section?",
                 "Recover Fit-Day Work",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
-            if (result == DialogResult.Yes)
-            {
-                LoadSession(recovered);
-                if (!string.IsNullOrWhiteSpace(workspaceSection))
-                    SelectWorkspaceTab(workspaceSection);
-                UpdateSaveHint("Recovered the last autosaved fit-day session.");
-            }
-            else
+            if (result != DialogResult.Yes)
             {
                 recoveryStore.Clear();
+                return;
             }
+
+            LoadSession(recovered);
+            try
+            {
+                // Save first so the session list reloads the recovered data instead of the older copy on disk.
+                SaveCurrentSession();
+                RefreshSessions(recovered.Id);
+                UpdateSaveHint("Recovered the last autosaved fit-day session.");
+            }
+            catch (Exception exception)
+            {
+                hasUnsavedChanges = true;
+                lastAutosaveError = exception.Message;
+                SetAutosaveStatus("Recovered - press Save", true);
+                UpdateSaveHint("Recovered the session, but it could not be saved yet. Press Save to retry. " + exception.Message);
+            }
+            if (!string.IsNullOrWhiteSpace(workspaceSection))
+                SelectWorkspaceTab(workspaceSection);
         }
 
         private void BuildInterface()
@@ -815,7 +848,7 @@ namespace CassetteMotionPro.Workspace
             bar.BackColor = CassetteMotionTheme.Rail;
 
             Label navigation = new Label();
-            navigation.Text = "FIT DAY";
+            navigation.Text = "STAGES";
             navigation.AutoSize = false;
             navigation.Size = new Size(72, 36);
             navigation.Margin = new Padding(0, 0, 8, 0);
@@ -1879,7 +1912,8 @@ namespace CassetteMotionPro.Workspace
             quickActions.Dock = DockStyle.Fill;
             quickActions.FlowDirection = FlowDirection.LeftToRight;
             quickActions.WrapContents = true;
-            quickActions.AutoScroll = true;
+            // No inner scrollbar: the row is sized to fit its buttons (FitMeasurementReviewRows).
+            quickActions.AutoScroll = false;
             AddMeasurementQuickStartButton(quickActions, "BEFORE BIKE\nmeasurements", true, delegate { ShowGuidedBikeMetricCapture("Before"); RefreshCombinedMeasurementReview(); });
             AddMeasurementQuickStartButton(quickActions, "AFTER BIKE\nmeasurements", true, delegate { ShowGuidedBikeMetricCapture("After"); RefreshCombinedMeasurementReview(); });
             AddMeasurementQuickStartButton(quickActions, "BEFORE RIDER\nmeasurements", false, delegate { ShowGuidedRiderMeasurements("BeforeReportImagePath", "Before"); RefreshCombinedMeasurementReview(); });
@@ -1900,7 +1934,8 @@ namespace CassetteMotionPro.Workspace
             quickStart.Controls.Add(quickActions);
 
             measurementReviewCards.Dock = DockStyle.Fill;
-            measurementReviewCards.AutoScroll = true;
+            // The page scrolls as a whole; the cards grow the page instead of scrolling inside it.
+            measurementReviewCards.AutoScroll = false;
             measurementReviewCards.WrapContents = true;
             measurementReviewCards.FlowDirection = FlowDirection.LeftToRight;
             measurementReviewCards.Padding = new Padding(2, 8, 2, 8);
@@ -1965,7 +2000,49 @@ namespace CassetteMotionPro.Workspace
             layout.SetColumnSpan(actions, 2);
             page.AutoScroll = true;
             page.Controls.Add(layout);
+
+            measurementReviewLayout = layout;
+            measurementQuickStart = quickStart;
+            measurementQuickActions = quickActions;
+            layout.SizeChanged += delegate { FitMeasurementReviewRows(); };
             return page;
+        }
+
+        // Sizes the "Start here" and card rows to their content so nothing is clipped and
+        // only the page itself scrolls (no scrollbars nested inside it).
+        private void FitMeasurementReviewRows()
+        {
+            if (fittingMeasurementRows || measurementReviewLayout == null || measurementQuickStart == null ||
+                measurementQuickActions == null || measurementReviewCards == null)
+                return;
+
+            // Leave room for the page scrollbar so showing it cannot change how the rows wrap.
+            int contentWidth = measurementReviewLayout.ClientSize.Width - measurementReviewLayout.Padding.Horizontal - SystemInformation.VerticalScrollBarWidth;
+            if (contentWidth < 240)
+                return;
+
+            fittingMeasurementRows = true;
+            try
+            {
+                int quickWidth = Math.Max(120, contentWidth - measurementQuickStart.Padding.Horizontal - 8);
+                int quickHeight = measurementQuickActions.GetPreferredSize(new Size(quickWidth, 0)).Height + measurementQuickStart.Padding.Vertical + 26;
+                int cardsHeight = measurementReviewCards.GetPreferredSize(new Size(contentWidth, 0)).Height + 8;
+                SetMeasurementRowHeight(3, Math.Max(96, quickHeight));
+                SetMeasurementRowHeight(4, Math.Max(160, cardsHeight));
+            }
+            finally
+            {
+                fittingMeasurementRows = false;
+            }
+        }
+
+        private void SetMeasurementRowHeight(int row, int height)
+        {
+            if (measurementReviewLayout == null || row >= measurementReviewLayout.RowStyles.Count)
+                return;
+            RowStyle style = measurementReviewLayout.RowStyles[row];
+            if (style.SizeType == SizeType.Absolute && (int)style.Height != height)
+                style.Height = height;
         }
 
         private void AddMeasurementQuickStartButton(FlowLayoutPanel actions, string text, bool bike, EventHandler click)
@@ -4267,7 +4344,9 @@ namespace CassetteMotionPro.Workspace
 
             Control commandCenter = BuildVideoWorkspaceCommandCenter();
             int commandCenterRow = table.RowCount++;
-            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 226));
+            // Row must cover the card's rows and padding plus its 10px bottom margin, or the card's
+            // bottom border cuts through the last row of buttons.
+            table.RowStyles.Add(new RowStyle(SizeType.Absolute, 252));
             table.Controls.Add(commandCenter, 1, commandCenterRow);
             table.SetColumnSpan(commandCenter, 5);
 
@@ -4408,8 +4487,8 @@ namespace CassetteMotionPro.Workspace
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
 
             Label heading = new Label();
             heading.Text = "Video Fit Desk";
@@ -4477,7 +4556,8 @@ namespace CassetteMotionPro.Workspace
             row.Dock = DockStyle.Fill;
             row.FlowDirection = FlowDirection.LeftToRight;
             row.WrapContents = false;
-            row.AutoScroll = true;
+            // A scrollbar here would eat into the row and clip the buttons.
+            row.AutoScroll = false;
             row.Padding = new Padding(0, 5, 0, 3);
             return row;
         }
@@ -4908,6 +4988,8 @@ namespace CassetteMotionPro.Workspace
             reviewLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 78));
 
             savedEvidenceReviewStatus.Dock = DockStyle.Fill;
+            // Wrap long lines inside the box instead of running off its right edge.
+            savedEvidenceReviewStatus.AutoSize = false;
             savedEvidenceReviewStatus.ForeColor = Color.FromArgb(74, 87, 81);
             savedEvidenceReviewStatus.Padding = new Padding(4, 2, 4, 0);
             savedEvidenceReviewStatus.Text = "Open or create a client fit session first from Client Files. Then Video Studio Save Image and Save Video can offer Before, After, and Dual session folders.";
@@ -4972,6 +5054,36 @@ namespace CassetteMotionPro.Workspace
             table.RowStyles.Add(new RowStyle(SizeType.Absolute, 316));
             table.Controls.Add(review, 1, row);
             table.SetColumnSpan(review, 5);
+
+            // Size the box to its text and wrapped buttons so the second button row is never cut off.
+            bool fitting = false;
+            EventHandler fitToContent = delegate
+            {
+                if (fitting)
+                    return;
+                int innerWidth = review.ClientSize.Width - review.Padding.Horizontal - 8;
+                if (innerWidth < 240)
+                    return;
+                fitting = true;
+                try
+                {
+                    int statusHeight = savedEvidenceReviewStatus.GetPreferredSize(new Size(innerWidth, 0)).Height + savedEvidenceReviewStatus.Padding.Vertical;
+                    int actionsHeight = actions.GetPreferredSize(new Size(innerWidth, 0)).Height + 6;
+                    RowStyle actionsRow = reviewLayout.RowStyles[1];
+                    if ((int)actionsRow.Height != actionsHeight)
+                        actionsRow.Height = actionsHeight;
+                    int total = Math.Max(200, statusHeight + actionsHeight + review.Padding.Vertical + 24);
+                    RowStyle boxRow = table.RowStyles[row];
+                    if ((int)boxRow.Height != total)
+                        boxRow.Height = total;
+                }
+                finally
+                {
+                    fitting = false;
+                }
+            };
+            review.SizeChanged += fitToContent;
+            savedEvidenceReviewStatus.TextChanged += fitToContent;
 
             RefreshSavedEvidenceReview();
         }
@@ -6950,6 +7062,7 @@ namespace CassetteMotionPro.Workspace
             measurementApprovalButton.Text = approved ? "REVIEW APPROVAL" : "APPROVE MEASUREMENTS";
             measurementApprovalButton.Enabled = currentSession != null;
             measurementReviewCards.ResumeLayout();
+            FitMeasurementReviewRows();
         }
 
         private void AddMeasurementReviewCard(string label, string key, string unit, bool required, double minimum, double maximum, double maximumChange, string editTab)
@@ -8253,83 +8366,90 @@ namespace CassetteMotionPro.Workspace
 
         private void LoadSession(FitSessionRecord session)
         {
+            session.EnsureStorageKey();
             loadingSession = true;
-            currentSession = session;
-            txtTitle.Text = session.Title ?? string.Empty;
-            dtpDate.Value = session.SessionDate == DateTime.MinValue ? DateTime.Today : session.SessionDate;
-            cmbStatus.SelectedItem = string.IsNullOrEmpty(session.Status) ? "Assessment" : session.Status;
-            if (cmbStatus.SelectedIndex < 0)
-                cmbStatus.SelectedIndex = 0;
-            txtGoals.Text = session.Goals ?? string.Empty;
-            txtNotes.Text = session.Notes ?? string.Empty;
-            txtFitSummaryMainGoal.Text = session.FitSummaryMainGoal ?? string.Empty;
-            txtFitSummaryKeyFindings.Text = session.FitSummaryKeyFindings ?? string.Empty;
-            txtFitSummaryChangesMade.Text = session.FitSummaryChangesMade ?? string.Empty;
-            txtFitSummaryRecommendations.Text = session.FitSummaryRecommendations ?? string.Empty;
-            smartRecommendationDraft.Text = session.FitChangeRecommendationDraft ?? string.Empty;
-            txtFitSummaryFollowUp.Text = session.FitSummaryFollowUp ?? string.Empty;
-            txtHandoffWhatToSend.Text = session.HandoffWhatToSend ?? string.Empty;
-            txtHandoffClientMessage.Text = session.HandoffClientMessage ?? string.Empty;
-            txtHandoffHomework.Text = session.HandoffHomework ?? string.Empty;
-            txtHandoffNextAppointment.Text = session.HandoffNextAppointment ?? string.Empty;
-            txtHandoffInternalNotes.Text = session.HandoffInternalNotes ?? string.Empty;
-            chkShowBeforeMeasurementsInReport.Checked = !session.HideBeforeMeasurementsInReport;
+            try
+            {
+                currentSession = session;
+                txtTitle.Text = session.Title ?? string.Empty;
+                dtpDate.Value = session.SessionDate == DateTime.MinValue ? DateTime.Today : session.SessionDate;
+                cmbStatus.SelectedItem = string.IsNullOrEmpty(session.Status) ? "Assessment" : session.Status;
+                if (cmbStatus.SelectedIndex < 0)
+                    cmbStatus.SelectedIndex = 0;
+                txtGoals.Text = session.Goals ?? string.Empty;
+                txtNotes.Text = session.Notes ?? string.Empty;
+                txtFitSummaryMainGoal.Text = session.FitSummaryMainGoal ?? string.Empty;
+                txtFitSummaryKeyFindings.Text = session.FitSummaryKeyFindings ?? string.Empty;
+                txtFitSummaryChangesMade.Text = session.FitSummaryChangesMade ?? string.Empty;
+                txtFitSummaryRecommendations.Text = session.FitSummaryRecommendations ?? string.Empty;
+                smartRecommendationDraft.Text = session.FitChangeRecommendationDraft ?? string.Empty;
+                txtFitSummaryFollowUp.Text = session.FitSummaryFollowUp ?? string.Empty;
+                txtHandoffWhatToSend.Text = session.HandoffWhatToSend ?? string.Empty;
+                txtHandoffClientMessage.Text = session.HandoffClientMessage ?? string.Empty;
+                txtHandoffHomework.Text = session.HandoffHomework ?? string.Empty;
+                txtHandoffNextAppointment.Text = session.HandoffNextAppointment ?? string.Empty;
+                txtHandoffInternalNotes.Text = session.HandoffInternalNotes ?? string.Empty;
+                chkShowBeforeMeasurementsInReport.Checked = !session.HideBeforeMeasurementsInReport;
 
-            string beforePath = session.BeforeVideoPath;
-            if (string.IsNullOrEmpty(beforePath))
-                beforePath = string.IsNullOrEmpty(session.LeftVideoPath) ? session.SideVideoPath : session.LeftVideoPath;
-            string afterPath = session.AfterVideoPath;
-            if (string.IsNullOrEmpty(afterPath))
-                afterPath = string.IsNullOrEmpty(session.RightVideoPath) ? session.FrontVideoPath : session.RightVideoPath;
-            SetMedia("BeforeVideoPath", beforePath);
-            SetMedia("AfterVideoPath", afterPath);
-            SetImage("BeforeReportImagePath", session.BeforeReportImagePath);
-            SetImage("AfterReportImagePath", session.AfterReportImagePath);
-            SetImage("SideBySideReportImagePath", session.SideBySideReportImagePath);
-            SetImage("MeasurementReferenceImagePath", session.MeasurementReferenceImagePath);
-            chkShowSideBySideImageInReport.Checked = !session.HideSideBySideImageInReport;
-            chkShowBeforeImageInReport.Checked = !session.HideBeforeImageInReport;
-            chkShowAfterImageInReport.Checked = !session.HideAfterImageInReport;
-            chkShowMeasurementReferenceImageInReport.Checked = !session.HideMeasurementReferenceImageInReport;
-            chkShowMeasurementCaptureTraceInReport.Checked = !session.HideMeasurementCaptureTraceInReport;
-            SetReportLogoStyle(session.ReportLogoStyle);
+                string beforePath = session.BeforeVideoPath;
+                if (string.IsNullOrEmpty(beforePath))
+                    beforePath = string.IsNullOrEmpty(session.LeftVideoPath) ? session.SideVideoPath : session.LeftVideoPath;
+                string afterPath = session.AfterVideoPath;
+                if (string.IsNullOrEmpty(afterPath))
+                    afterPath = string.IsNullOrEmpty(session.RightVideoPath) ? session.FrontVideoPath : session.RightVideoPath;
+                SetMedia("BeforeVideoPath", beforePath);
+                SetMedia("AfterVideoPath", afterPath);
+                SetImage("BeforeReportImagePath", session.BeforeReportImagePath);
+                SetImage("AfterReportImagePath", session.AfterReportImagePath);
+                SetImage("SideBySideReportImagePath", session.SideBySideReportImagePath);
+                SetImage("MeasurementReferenceImagePath", session.MeasurementReferenceImagePath);
+                chkShowSideBySideImageInReport.Checked = !session.HideSideBySideImageInReport;
+                chkShowBeforeImageInReport.Checked = !session.HideBeforeImageInReport;
+                chkShowAfterImageInReport.Checked = !session.HideAfterImageInReport;
+                chkShowMeasurementReferenceImageInReport.Checked = !session.HideMeasurementReferenceImageInReport;
+                chkShowMeasurementCaptureTraceInReport.Checked = !session.HideMeasurementCaptureTraceInReport;
+                SetReportLogoStyle(session.ReportLogoStyle);
 
-            SetMeasurement("SaddleHeightBefore", session.SaddleHeightBefore);
-            SetMeasurement("SaddleHeightAfter", session.SaddleHeightAfter);
-            SetMeasurement("SaddleSetbackBefore", session.SaddleSetbackBefore);
-            SetMeasurement("SaddleSetbackAfter", session.SaddleSetbackAfter);
-            SetMeasurement("HandlebarReachBefore", session.HandlebarReachBefore);
-            SetMeasurement("HandlebarReachAfter", session.HandlebarReachAfter);
-            SetMeasurement("HandlebarDropBefore", session.HandlebarDropBefore);
-            SetMeasurement("HandlebarDropAfter", session.HandlebarDropAfter);
-            SetMeasurement("SaddleTipToGripReachBefore", session.SaddleTipToGripReachBefore);
-            SetMeasurement("SaddleTipToGripReachAfter", session.SaddleTipToGripReachAfter);
-            SetMeasurement("HandlebarXBefore", session.HandlebarXBefore);
-            SetMeasurement("HandlebarXAfter", session.HandlebarXAfter);
-            SetMeasurement("HandlebarYBefore", session.HandlebarYBefore);
-            SetMeasurement("HandlebarYAfter", session.HandlebarYAfter);
-            SetMeasurement("CrankLengthBefore", session.CrankLengthBefore);
-            SetMeasurement("CrankLengthAfter", session.CrankLengthAfter);
-            SetMeasurement("WheelbaseBefore", session.WheelbaseBefore);
-            SetMeasurement("WheelbaseAfter", session.WheelbaseAfter);
-            SetMeasurement("CleatPositionBefore", session.CleatPositionBefore);
-            SetMeasurement("CleatPositionAfter", session.CleatPositionAfter);
-            SetMeasurement("KneeAngleBefore", session.KneeAngleBefore);
-            SetMeasurement("KneeAngleAfter", session.KneeAngleAfter);
-            SetMeasurement("HipAngleBefore", session.HipAngleBefore);
-            SetMeasurement("HipAngleAfter", session.HipAngleAfter);
-            SetMeasurement("AnkleAngleBefore", session.AnkleAngleBefore);
-            SetMeasurement("AnkleAngleAfter", session.AnkleAngleAfter);
-            SetMeasurement("TorsoAngleBefore", session.TorsoAngleBefore);
-            SetMeasurement("TorsoAngleAfter", session.TorsoAngleAfter);
-            SetMeasurement("ShoulderAngleBefore", session.ShoulderAngleBefore);
-            SetMeasurement("ShoulderAngleAfter", session.ShoulderAngleAfter);
+                SetMeasurement("SaddleHeightBefore", session.SaddleHeightBefore);
+                SetMeasurement("SaddleHeightAfter", session.SaddleHeightAfter);
+                SetMeasurement("SaddleSetbackBefore", session.SaddleSetbackBefore);
+                SetMeasurement("SaddleSetbackAfter", session.SaddleSetbackAfter);
+                SetMeasurement("HandlebarReachBefore", session.HandlebarReachBefore);
+                SetMeasurement("HandlebarReachAfter", session.HandlebarReachAfter);
+                SetMeasurement("HandlebarDropBefore", session.HandlebarDropBefore);
+                SetMeasurement("HandlebarDropAfter", session.HandlebarDropAfter);
+                SetMeasurement("SaddleTipToGripReachBefore", session.SaddleTipToGripReachBefore);
+                SetMeasurement("SaddleTipToGripReachAfter", session.SaddleTipToGripReachAfter);
+                SetMeasurement("HandlebarXBefore", session.HandlebarXBefore);
+                SetMeasurement("HandlebarXAfter", session.HandlebarXAfter);
+                SetMeasurement("HandlebarYBefore", session.HandlebarYBefore);
+                SetMeasurement("HandlebarYAfter", session.HandlebarYAfter);
+                SetMeasurement("CrankLengthBefore", session.CrankLengthBefore);
+                SetMeasurement("CrankLengthAfter", session.CrankLengthAfter);
+                SetMeasurement("WheelbaseBefore", session.WheelbaseBefore);
+                SetMeasurement("WheelbaseAfter", session.WheelbaseAfter);
+                SetMeasurement("CleatPositionBefore", session.CleatPositionBefore);
+                SetMeasurement("CleatPositionAfter", session.CleatPositionAfter);
+                SetMeasurement("KneeAngleBefore", session.KneeAngleBefore);
+                SetMeasurement("KneeAngleAfter", session.KneeAngleAfter);
+                SetMeasurement("HipAngleBefore", session.HipAngleBefore);
+                SetMeasurement("HipAngleAfter", session.HipAngleAfter);
+                SetMeasurement("AnkleAngleBefore", session.AnkleAngleBefore);
+                SetMeasurement("AnkleAngleAfter", session.AnkleAngleAfter);
+                SetMeasurement("TorsoAngleBefore", session.TorsoAngleBefore);
+                SetMeasurement("TorsoAngleAfter", session.TorsoAngleAfter);
+                SetMeasurement("ShoulderAngleBefore", session.ShoulderAngleBefore);
+                SetMeasurement("ShoulderAngleAfter", session.ShoulderAngleAfter);
 
-            RefreshFitTemplates(session.FitTemplateName);
-            SelectFitProtocol(string.IsNullOrWhiteSpace(session.FitProtocolBikeType) ? session.FitTemplateBikeType : session.FitProtocolBikeType);
-            RefreshCameraProfiles(session.CameraSetupProfileName);
-            RefreshClientHistory();
-            loadingSession = false;
+                RefreshFitTemplates(session.FitTemplateName);
+                SelectFitProtocol(string.IsNullOrWhiteSpace(session.FitProtocolBikeType) ? session.FitTemplateBikeType : session.FitProtocolBikeType);
+                RefreshCameraProfiles(session.CameraSetupProfileName);
+                RefreshClientHistory();
+            }
+            finally
+            {
+                loadingSession = false;
+            }
             cachedEvidenceFolder = null;
             cachedEvidenceUtc = DateTime.MinValue;
             UpdateActiveSessionStatus();
@@ -8781,7 +8901,8 @@ namespace CassetteMotionPro.Workspace
                 MessageBox.Show(this,
                     "The report package was created in this fit session’s Reports folder.\n\n" +
                     packageFolder + "\n\n" +
-                    "It includes the report HTML and copied report images.",
+                    "It includes the client report HTML, copied report images and client handoff notes.\n\n" +
+                    "Fitter-only files (summary, metrics review, internal notes) are in the \"Fitter Only\" subfolder. Do not send that subfolder to the client; the ZIP leaves it out automatically.",
                     "Report package created",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
@@ -8812,7 +8933,8 @@ namespace CassetteMotionPro.Workspace
                 UpdateSaveHint("Zipped report package created in this session’s Reports folder.");
                 MessageBox.Show(this,
                     "The zipped report package was created in this fit session’s Reports folder.\n\n" +
-                    zipPath,
+                    zipPath + "\n\n" +
+                    "The ZIP contains only client-safe files. Fitter-only files stay in the package folder.",
                     "Zipped report package created",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information);
@@ -9105,7 +9227,7 @@ namespace CassetteMotionPro.Workspace
             currentSession.ShoulderAngleBefore = measurementBoxes["ShoulderAngleBefore"].Text.Trim();
             currentSession.ShoulderAngleAfter = measurementBoxes["ShoulderAngleAfter"].Text.Trim();
             repository.Save(currentSession);
-            recoveryStore.Save(currentSession, GetCurrentWorkspaceSection());
+            WriteRecoveryPoint();
             lastAutosaveError = string.Empty;
             lastSavedFingerprint = BuildAutosaveFingerprint();
             hasUnsavedChanges = false;
@@ -9113,6 +9235,21 @@ namespace CassetteMotionPro.Workspace
             UpdateActiveSessionStatus();
             UpdateWorkflowChecklist();
             RefreshRecordingFolderGuide();
+        }
+
+        // The recovery point is a convenience copy. A failure here must never make a
+        // successful session save look failed, so it is reported but not thrown.
+        private void WriteRecoveryPoint()
+        {
+            try
+            {
+                recoveryStore.Save(currentSession, GetCurrentWorkspaceSection());
+                lastRecoveryError = string.Empty;
+            }
+            catch (Exception exception)
+            {
+                lastRecoveryError = exception.Message;
+            }
         }
 
         private void ShowFitSessionTimeline(object sender, EventArgs e)
@@ -9143,7 +9280,7 @@ namespace CassetteMotionPro.Workspace
                 {
                     AddTimelineEvent("Position", "Position history updated (" + currentSession.FitPositions.Count.ToString() + " saved position(s))");
                     repository.Save(currentSession);
-                    recoveryStore.Save(currentSession, GetCurrentWorkspaceSection());
+                    WriteRecoveryPoint();
                     SetAutosaveStatus("Position history saved " + DateTime.Now.ToString("h:mm tt"), false);
                     UpdateWorkflowChecklist();
                 }

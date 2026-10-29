@@ -49,6 +49,7 @@ namespace CassetteMotionPro.Workspace
 
         public ShortClipRiderTrackingForm(string[] framePaths, string outputDirectory, string side, bool pedalCycleMode)
         {
+            CassetteMotionTheme.Attach(this);
             if (framePaths == null || framePaths.Length < 3)
                 throw new ArgumentException("At least three ordered checkpoint frames are required.");
             if (pedalCycleMode && framePaths.Length < 6)

@@ -28,6 +28,7 @@ namespace CassetteMotionPro.Workspace
 
         public FavoriteFrameComparisonForm(string beforePath, string afterPath, string savedBeforeNotes, string savedAfterNotes)
         {
+            CassetteMotionTheme.Attach(this);
             if (!File.Exists(beforePath) || !File.Exists(afterPath))
                 throw new FileNotFoundException("Both favorite report frames are required.");
             this.beforePath = beforePath;

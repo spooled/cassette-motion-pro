@@ -27,6 +27,7 @@ namespace CassetteMotionPro.Workspace
 
         public RiderTrackingComparisonForm(string beforePath, string afterPath, string outputDirectory)
         {
+            CassetteMotionTheme.Attach(this);
             if (!File.Exists(beforePath) || !File.Exists(afterPath))
                 throw new FileNotFoundException("Both Before and After rider images are required.");
             this.outputDirectory = outputDirectory;

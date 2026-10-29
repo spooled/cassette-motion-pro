@@ -50,6 +50,7 @@ namespace CassetteMotionPro.Workspace
                 if (session == null)
                     continue;
                 session.FolderPath = directory;
+                session.EnsureStorageKey();
                 sessions.Add(session);
             }
 
@@ -73,6 +74,7 @@ namespace CassetteMotionPro.Workspace
                 session.CreatedUtc = now;
             session.ModifiedUtc = now;
 
+            session.EnsureStorageKey();
             if (string.IsNullOrEmpty(session.FolderPath))
             {
                 session.FolderPath = Path.Combine(RootPath, session.StorageFolderName);
@@ -80,6 +82,7 @@ namespace CassetteMotionPro.Workspace
 
             Directory.CreateDirectory(session.FolderPath);
             string manifestPath = Path.Combine(session.FolderPath, ManifestFileName);
+            MergeFollowUpsFromDisk(session, manifestPath);
             string temporaryPath = manifestPath + ".tmp";
             using (FileStream stream = File.Create(temporaryPath))
                 serializer.Serialize(stream, session);
@@ -89,6 +92,46 @@ namespace CassetteMotionPro.Workspace
                 File.Move(temporaryPath, manifestPath);
 
             return session;
+        }
+
+        public FitSessionRecord FindById(Guid id)
+        {
+            if (id == Guid.Empty)
+                return null;
+            foreach (FitSessionRecord session in LoadAll())
+            {
+                if (session.Id == id)
+                    return session;
+            }
+            return null;
+        }
+
+        // Follow-ups can be added from Client Manager while this session is open in Fit Day.
+        // Nothing deletes follow-ups, so keep any saved entry the in-memory copy has not seen.
+        private void MergeFollowUpsFromDisk(FitSessionRecord session, string manifestPath)
+        {
+            FitSessionRecord onDisk = TryRead(manifestPath) ?? TryRead(manifestPath + BackupSuffix);
+            if (onDisk == null || onDisk.Id != session.Id || onDisk.FollowUps == null || onDisk.FollowUps.Count == 0)
+                return;
+
+            if (session.FollowUps == null)
+                session.FollowUps = new List<FitFollowUpEntry>();
+            foreach (FitFollowUpEntry saved in onDisk.FollowUps)
+            {
+                if (saved == null)
+                    continue;
+                bool known = false;
+                foreach (FitFollowUpEntry current in session.FollowUps)
+                {
+                    if (current != null && current.Id == saved.Id)
+                    {
+                        known = true;
+                        break;
+                    }
+                }
+                if (!known)
+                    session.FollowUps.Add(saved);
+            }
         }
 
         private FitSessionRecord TryRead(string path)

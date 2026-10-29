@@ -18,6 +18,7 @@ namespace CassetteMotionPro.Workspace
 
         public BackupDataTransferForm()
         {
+            CassetteMotionTheme.Attach(this);
             Text = "Backup & Data Transfer";
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

@@ -39,6 +39,7 @@ namespace CassetteMotionPro.Workspace
 
         public DualCameraSynchronizationForm(string folder, string savedLeftPath, string savedRightPath, string savedLeftRole, string savedRightRole, string savedEventOneLeft, string savedEventOneRight, string savedEventTwoLeft, string savedEventTwoRight)
         {
+            CassetteMotionTheme.Attach(this);
             Text = "Dual-Camera Synchronization and Comparison";
             StartPosition = FormStartPosition.CenterParent;
             Size = new Size(850, 730);

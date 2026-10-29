@@ -19,6 +19,7 @@ namespace CassetteMotionPro.Workspace
 
         public StudioSettingsForm()
         {
+            CassetteMotionTheme.Attach(this);
             Text = "Studio Settings";
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;

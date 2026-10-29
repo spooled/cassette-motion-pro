@@ -16,6 +16,9 @@ namespace CassetteMotionPro.Workspace
     public class FitSessionRecord
     {
         public Guid Id { get; set; }
+        // Folder name used for this session's media, evidence and reports. Assigned once and never
+        // recomputed, so editing the session date later cannot move the destination folders.
+        public string StorageKey { get; set; }
         public string Title { get; set; }
         public DateTime SessionDate { get; set; }
         public string Status { get; set; }
@@ -193,10 +196,43 @@ namespace CassetteMotionPro.Workspace
         {
             get
             {
-                DateTime date = SessionDate == DateTime.MinValue ? DateTime.Today : SessionDate;
-                string id = Id == Guid.Empty ? "pending" : Id.ToString("N").Substring(0, 8);
-                return string.Format("{0:yyyy-MM-dd}_{1}", date, id);
+                if (IsSafeStorageKey(StorageKey))
+                    return StorageKey;
+                return BuildStorageKey(false);
             }
+        }
+
+        // Fixes the storage folder name the first time it is needed and returns it.
+        // Existing sessions keep the name the app already used for them, so nothing moves on upgrade.
+        public string EnsureStorageKey()
+        {
+            if (!IsSafeStorageKey(StorageKey))
+                StorageKey = BuildStorageKey(true);
+            return StorageKey;
+        }
+
+        private string BuildStorageKey(bool randomForDraft)
+        {
+            DateTime date = SessionDate == DateTime.MinValue ? DateTime.Today : SessionDate;
+            string id;
+            if (Id != Guid.Empty)
+                id = Id.ToString("N").Substring(0, 8);
+            else if (randomForDraft)
+                id = Guid.NewGuid().ToString("N").Substring(0, 8);
+            else
+                id = "pending";
+            return string.Format("{0:yyyy-MM-dd}_{1}", date, id);
+        }
+
+        // A key read from session.xml becomes part of a file path, so reject anything that could
+        // leave the session folder (separators, "..", drive letters, invalid characters).
+        public static bool IsSafeStorageKey(string key)
+        {
+            if (string.IsNullOrWhiteSpace(key) || key.Length > 80)
+                return false;
+            if (key != key.Trim() || key == "." || key == ".." || key.EndsWith("."))
+                return false;
+            return key.IndexOfAny(Path.GetInvalidFileNameChars()) < 0;
         }
 
         [XmlIgnore]

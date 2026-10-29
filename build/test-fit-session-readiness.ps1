@@ -1,13 +1,22 @@
 $ErrorActionPreference = 'Stop'
 
+# Show the real failure in the GitHub run summary, not only a bare exit code.
+trap {
+    $detail = $_.Exception.Message
+    if ($_.Exception.InnerException) { $detail += ' || INNER: ' + $_.Exception.InnerException.Message }
+    Write-Host ('::error::' + ($detail -replace '\r?\n', ' | '))
+    exit 1
+}
+
 $sources = @(
   'src/Kinovea/Clients/ClientRecord.cs',
   'src/Kinovea/Workspace/FitFollowUpEntry.cs',
   'src/Kinovea/Workspace/FitSessionRecord.cs',
   'src/Kinovea/Workspace/FitSessionRepository.cs',
+  'src/Kinovea/Workspace/SessionPathRebaser.cs',
   'src/Kinovea/Workspace/FitSessionRecoveryStore.cs'
 )
-$usings = "using System;`nusing System.IO;`nusing System.Collections.Generic;`nusing System.Linq;`nusing System.Xml.Serialization;`nusing CassetteMotionPro.Clients;`n"
+$usings = "using System;`nusing System.IO;`nusing System.Collections.Generic;`nusing System.Linq;`nusing System.Reflection;`nusing System.Xml.Serialization;`nusing CassetteMotionPro.Clients;`n"
 $source = $usings + (($sources | ForEach-Object { (Get-Content $_ -Raw) -replace '(?m)^using [^;]+;\r?\n', '' }) -join "`n")
 $source += @'
 
@@ -64,9 +73,91 @@ try {
   $restored = @($repository.LoadAll() | Where-Object { $_.Id -eq $session.Id })
   if ($restored.Count -ne 1 -or $restored[0].Goals -ne 'Comfort and stability') { throw 'Session backup recovery failed.' }
 
+  # Storage folder must not move when the session date is edited after the first save.
+  $keyBefore = $session.StorageFolderName
+  if ([string]::IsNullOrWhiteSpace($session.StorageKey) -or $session.StorageKey -ne $keyBefore) { throw 'Storage key was not assigned on first save.' }
+  $session.SessionDate = $session.SessionDate.AddDays(-9)
+  if ($session.StorageFolderName -ne $keyBefore) { throw 'Editing the session date moved the storage folder.' }
+  $repository.Save($session) | Out-Null
+  $reloaded = @($repository.LoadAll() | Where-Object { $_.Id -eq $session.Id })
+  if ($reloaded.Count -ne 1 -or $reloaded[0].StorageKey -ne $keyBefore) { throw 'Storage key did not survive a save/load round trip.' }
+  if ((Split-Path $reloaded[0].FolderPath -Leaf) -ne $keyBefore) { throw 'Session folder does not match its storage key.' }
+
+  # A draft that has never been saved must get a stable, non-pending folder name.
+  $draft = [CassetteMotionPro.Workspace.FitSessionRecord]::new()
+  $draft.SessionDate = [datetime]::Today
+  $draft.EnsureStorageKey() | Out-Null
+  $draftKey = $draft.StorageFolderName
+  if ($draftKey -like '*pending*') { throw 'Draft session was given a pending storage folder.' }
+  $draft.SessionDate = [datetime]::Today.AddDays(3)
+  $repository.Save($draft) | Out-Null
+  if ($draft.StorageFolderName -ne $draftKey -or (Split-Path $draft.FolderPath -Leaf) -ne $draftKey) { throw 'Saving a draft changed its storage folder.' }
+
+  # Older manifests without a key keep the folder name the app already used for them.
+  $legacyLoaded = @($repository.LoadAll() | Where-Object { $_.Id -eq $legacyId })
+  $expectedLegacy = '2026-01-01_' + $legacyId.ToString('N').Substring(0, 8)
+  if ($legacyLoaded[0].StorageKey -ne $expectedLegacy) { throw 'Legacy session did not keep its existing storage folder name.' }
+
+  # A hostile or damaged key must never escape the session folder.
+  foreach ($bad in @('..', '..\..\Windows', 'C:\temp', 'a/b', '')) {
+    if ([CassetteMotionPro.Workspace.FitSessionRecord]::IsSafeStorageKey($bad)) { throw ('Unsafe storage key accepted: ' + $bad) }
+  }
+
+  # FindById returns the saved session, and nothing for an unknown id.
+  if ($null -eq $repository.FindById($draft.Id)) { throw 'FindById did not return a saved session.' }
+  if ($null -ne $repository.FindById([guid]::NewGuid())) { throw 'FindById returned a session for an unknown id.' }
+
+  # A follow-up saved elsewhere (Client Manager) must survive a later save of a stale in-memory copy.
+  $stale = $repository.FindById($draft.Id)
+  $fresh = $repository.FindById($draft.Id)
+  $entry = [CassetteMotionPro.Workspace.FitFollowUpEntry]::new()
+  $entry.Id = [guid]::NewGuid()
+  $entry.RiderFeedback = 'Saved from Client Manager'
+  $fresh.FollowUps = [System.Collections.Generic.List[CassetteMotionPro.Workspace.FitFollowUpEntry]]::new()
+  $fresh.FollowUps.Add($entry)
+  $repository.Save($fresh) | Out-Null
+  $stale.Notes = 'Edited in Fit Day after the follow-up was saved'
+  $repository.Save($stale) | Out-Null
+  $merged = $repository.FindById($draft.Id)
+  if ($null -eq $merged.FollowUps -or @($merged.FollowUps | Where-Object { $_.Id -eq $entry.Id }).Count -ne 1) { throw 'A follow-up saved elsewhere was lost by a later save.' }
+  if ($merged.Notes -ne 'Edited in Fit Day after the follow-up was saved') { throw 'Follow-up merge discarded the newer in-memory edit.' }
+  $repository.Save($merged) | Out-Null
+  if (@($repository.FindById($draft.Id).FollowUps).Count -ne 1) { throw 'Saving twice duplicated a follow-up.' }
+
+  # Restored or imported sessions must point inside the client's new folder, and only there.
+  $rebaser = [CassetteMotionPro.Workspace.SessionPathRebaser]
+  $moved = $rebaser::RebasePath('C:\Users\Old\AppData\Roaming\Kinovea\Clients\Smith_Jo_ab12\Videos\Before\a.mp4', 'Smith_Jo_ab12', 'D:\New\Clients\Smith_Jo_ab12_2')
+  if ($moved -ne 'D:\New\Clients\Smith_Jo_ab12_2\Videos\Before\a.mp4') { throw ('Path was not rebased: ' + $moved) }
+  if ($rebaser::RebasePath('E:\Other\movie.mp4', 'Smith_Jo_ab12', 'D:\New') -ne 'E:\Other\movie.mp4') { throw 'A path outside the client folder was changed.' }
+  if ($rebaser::RebasePath('Videos\Before\a.mp4', 'Smith_Jo_ab12', 'D:\New') -ne 'Videos\Before\a.mp4') { throw 'A relative path was changed.' }
+  if ($rebaser::RebasePath('C:\x\Smith_Jo_ab12\Other\a.txt', 'Smith_Jo_ab12', 'D:\New') -ne 'C:\x\Smith_Jo_ab12\Other\a.txt') { throw 'A path without a known client subfolder was changed.' }
+  if ($rebaser::RebasePath($moved, 'Smith_Jo_ab12_2', 'D:\New\Clients\Smith_Jo_ab12_2') -ne $moved) { throw 'Rebasing is not stable when repeated.' }
+  if (-not [string]::IsNullOrEmpty($rebaser::RebasePath($null, 'a', 'b'))) { throw 'An empty path was not left alone.' }
+
+  $rebaseClientFolder = Join-Path $root 'Rebase Client'
+  [System.IO.Directory]::CreateDirectory($rebaseClientFolder) | Out-Null
+  $rebaseClient = [CassetteMotionPro.Clients.ClientRecord]::new()
+  $rebaseClient.FolderPath = $rebaseClientFolder
+  $rebaseRepository = [CassetteMotionPro.Workspace.FitSessionRepository]::new($rebaseClient)
+  $rebaseSession = [CassetteMotionPro.Workspace.FitSessionRecord]::new()
+  $rebaseSession.Title = 'Moved from another PC'
+  $rebaseSession.BeforeVideoPath = 'C:\Old\Clients\Rebase Client\Videos\Before\a.mp4'
+  $rebaseSession.AfterReportImagePath = 'F:\Elsewhere\after.png'
+  $rebasePosition = [CassetteMotionPro.Workspace.FitPositionRecord]::new()
+  $rebasePosition.ImagePath = 'C:\Old\Clients\Rebase Client\Photos\pos.png'
+  $rebaseSession.FitPositions = [System.Collections.Generic.List[CassetteMotionPro.Workspace.FitPositionRecord]]::new()
+  $rebaseSession.FitPositions.Add($rebasePosition)
+  $rebaseRepository.Save($rebaseSession) | Out-Null
+  if ($rebaser::RebaseClientSessions($rebaseClient, 'Rebase Client') -ne 1) { throw 'Expected exactly one session to be rebased.' }
+  $rebased = $rebaseRepository.FindById($rebaseSession.Id)
+  if ($rebased.BeforeVideoPath -ne (Join-Path $rebaseClientFolder 'Videos\Before\a.mp4')) { throw ('Session video path was not rebased: ' + $rebased.BeforeVideoPath) }
+  if ($rebased.AfterReportImagePath -ne 'F:\Elsewhere\after.png') { throw 'A session path outside the client folder was changed.' }
+  if ($rebased.FitPositions[0].ImagePath -ne (Join-Path $rebaseClientFolder 'Photos\pos.png')) { throw 'A saved position image path was not rebased.' }
+  if ($rebaser::RebaseClientSessions($rebaseClient, 'Rebase Client') -ne 0) { throw 'Rebasing saved sessions a second time changed them again.' }
+
   [FitSessionRecoveryProbe]::Run($repository.RootPath, $session)
 
-  Write-Host 'PASS: legacy session load, current session round-trip, manifest backup recovery, autosave backup recovery, recovery cleanup.'
+  Write-Host 'PASS: legacy session load, current session round-trip, stable storage key, follow-up merge, restore path rebasing, manifest backup recovery, autosave backup recovery, recovery cleanup.'
 }
 finally {
   if (Test-Path $root) { Remove-Item $root -Recurse -Force }

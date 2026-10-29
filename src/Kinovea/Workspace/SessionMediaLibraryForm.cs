@@ -39,6 +39,7 @@ namespace CassetteMotionPro.Workspace
 
         public SessionMediaLibraryForm(List<SessionMediaItem> items, string sessionName)
         {
+            CassetteMotionTheme.Attach(this);
             allItems = items ?? new List<SessionMediaItem>();
             Text = "Cassette Motion Pro - Session Media Library";
             Font = new Font("Segoe UI", 9F);

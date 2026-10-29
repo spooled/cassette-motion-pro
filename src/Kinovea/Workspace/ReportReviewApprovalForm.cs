@@ -22,6 +22,7 @@ namespace CassetteMotionPro.Workspace
 
         public ReportReviewApprovalForm(string sessionName, string reviewText, string savedNotes)
         {
+            CassetteMotionTheme.Attach(this);
             Text = "Report Review and Approval";
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(760, 620);

@@ -2,13 +2,13 @@ name: Build Cassette Motion Pro
 
 on:
   push:
-    branches: ["main", "feature/**"]
+    branches: ["main", "feature/**", "fix/**"]
   pull_request:
     branches: ["main"]
   workflow_dispatch:
 
 env:
-  VERSION: 1.25.0
+  VERSION: 1.26.0
   KINOVEA_UPSTREAM_REF: 7e7c9dcf55b6e6f0d6a7080e191a7ae9485ff3e9
 
 jobs:
@@ -187,6 +187,10 @@ jobs:
       - name: Check session compatibility and recovery
         shell: pwsh
         run: ./build/test-fit-session-readiness.ps1
+
+      - name: Check client report package contents
+        shell: powershell
+        run: ./build/test-report-package.ps1
 
       - name: Verify and stage x64 video assemblies
         shell: pwsh

@@ -64,6 +64,7 @@ namespace CassetteMotionPro.Workspace
 
         public RiderBodyGuidedMeasurementForm(string imagePath, string defaultSide, string outputDirectory)
         {
+            CassetteMotionTheme.Attach(this);
             if (string.IsNullOrEmpty(imagePath) || !File.Exists(imagePath))
                 throw new FileNotFoundException("The rider reference image could not be found.", imagePath);
 

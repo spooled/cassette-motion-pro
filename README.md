@@ -5,7 +5,28 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 1.25.0 Full Fit-Day Usability and Reliability Pass
+## Current milestone: 1.26.0 Safer Sessions, Client-Safe Reports and Visual Polish
+
+Each fit session now has a permanent storage folder, so changing the session date
+no longer moves or hides its Before/After videos, report images, or captures.
+Existing sessions keep the folder they already use. The report package and ZIP
+contain only client-safe files (the report, its images, and the client handoff
+notes); internal notes, summaries, metrics review, and the evidence manifest are
+written to a separate `Fitter Only` folder that the ZIP skips.
+
+Saving and crash recovery are more dependable. A failed recovery-point write no
+longer makes a good save look failed, restored sessions return to their real
+folder, a failed session load can no longer leave autosave switched off, and a
+follow-up added from Client Manager is no longer overwritten by an open Fit Day
+window.
+
+Buttons are now rounded with clear hover, pressed, disabled, and keyboard-focus
+states, Fit Day dialogs share the Cassette Motion look, and the HTML report
+reads better on phones and when printed.
+
+Use [the v1.26.0 test plan](docs/v1.26.0-test-plan.md) for the focused checks.
+
+### Previous milestone: 1.25.0 Full Fit-Day Usability and Reliability Pass
 
 Fit Day now puts **Fit-Day Preflight** beside the main workflow actions so folder,
 storage, capture, playback, autosave, and session checks can be run before the

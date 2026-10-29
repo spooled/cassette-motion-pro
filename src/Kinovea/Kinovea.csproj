@@ -47,7 +47,7 @@
     <PublisherName>Cassette Fit Studio</PublisherName>
     <OpenBrowserOnPublish>false</OpenBrowserOnPublish>
     <ApplicationRevision>0</ApplicationRevision>
-    <ApplicationVersion>1.25.0.0</ApplicationVersion>
+    <ApplicationVersion>1.26.0.0</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
@@ -205,6 +205,7 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Workspace\DataPortabilityService.cs" />
+    <Compile Include="Workspace\SessionPathRebaser.cs" />
     <Compile Include="Workspace\BackupDataTransferForm.cs">
       <SubType>Form</SubType>
     </Compile>

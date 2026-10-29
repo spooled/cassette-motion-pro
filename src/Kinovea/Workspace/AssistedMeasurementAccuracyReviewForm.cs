@@ -15,6 +15,7 @@ namespace CassetteMotionPro.Workspace
 
         public AssistedMeasurementAccuracyReviewForm(string sessionName, string scoreText, string summary, string savedNotes, bool previouslyApproved)
         {
+            CassetteMotionTheme.Attach(this);
             Text = "Assisted Measurement Accuracy Review";
             StartPosition = FormStartPosition.CenterParent;
             MinimumSize = new Size(780, 600);

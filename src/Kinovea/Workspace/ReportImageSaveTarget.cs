@@ -230,6 +230,7 @@ namespace CassetteMotionPro.Workspace
 
         public BeforeAfterReportImageDialog(string folderPath)
         {
+            CassetteMotionTheme.Attach(this);
             Text = "Cassette Motion Pro — Save Image";
             FormBorderStyle = FormBorderStyle.FixedDialog;
             StartPosition = FormStartPosition.CenterParent;
