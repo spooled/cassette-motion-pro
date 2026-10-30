@@ -89,12 +89,16 @@ namespace CassetteMotionPro
         {
             if (menu == null)
                 return;
-            menu.BackColor = Header;
+            menu.BackColor = Color.FromArgb(8, 12, 10);
             menu.ForeColor = Color.White;
             menu.Renderer = new ToolStripProfessionalRenderer(new CassetteMotionColorTable());
             menu.Padding = new Padding(8, 2, 4, 2);
             menu.AutoSize = false;
-            menu.Height = 31;
+            menu.Height = 38;
+            // Brand mark and wordmark at the left end. This method runs again after
+            // a language change, so only add it once.
+            if (!menu.Items.ContainsKey("cassetteBrandWordmark"))
+                menu.Items.Insert(0, new BrandWordmarkItem());
             StyleToolStripItems(menu.Items);
         }
 
@@ -433,8 +437,8 @@ namespace CassetteMotionPro
 
         private sealed class CassetteMotionColorTable : ProfessionalColorTable
         {
-            public override Color MenuStripGradientBegin { get { return Header; } }
-            public override Color MenuStripGradientEnd { get { return Header; } }
+            public override Color MenuStripGradientBegin { get { return Color.FromArgb(8, 12, 10); } }
+            public override Color MenuStripGradientEnd { get { return Color.FromArgb(8, 12, 10); } }
             public override Color ToolStripGradientBegin { get { return HeaderSoft; } }
             public override Color ToolStripGradientMiddle { get { return HeaderSoft; } }
             public override Color ToolStripGradientEnd { get { return HeaderSoft; } }
