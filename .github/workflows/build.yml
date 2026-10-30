@@ -135,6 +135,11 @@ jobs:
         run: |
           .\build\patch-kinovea-video-save.ps1
 
+      - name: Apply brand player icons
+        shell: pwsh
+        run: |
+          .\build\apply-brand-player-icons.ps1
+
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
