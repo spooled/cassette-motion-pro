@@ -65,7 +65,7 @@ namespace CassetteMotionPro.Workspace
         private Label scaleLabel;
         private Label verificationLabel;
         private Label referenceLabel;
-        private Label resultsLabel;
+        private ResultsTable resultsLabel;
         private Label progressLabel;
         private Button primaryAction;
         private Button levelReference;
@@ -162,8 +162,8 @@ namespace CassetteMotionPro.Workspace
 
             Text = "Cassette Motion Pro - Guided Measurements";
             Font = new Font("Segoe UI", 9F);
-            BackColor = Color.FromArgb(240, 243, 241);
-            ForeColor = Color.FromArgb(24, 31, 29);
+            BackColor = CaptureDark.Bg;
+            ForeColor = CaptureDark.Text;
             ClientSize = new Size(1180, 760);
             MinimumSize = new Size(980, 650);
             StartPosition = FormStartPosition.CenterParent;
@@ -210,13 +210,13 @@ namespace CassetteMotionPro.Workspace
             side.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             side.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             side.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
-            side.BackColor = Color.White;
+            side.BackColor = CaptureDark.Panel;
 
             Panel sideScroll = new Panel();
             sideScroll.Dock = DockStyle.Fill;
             sideScroll.AutoScroll = true;
-            sideScroll.BackColor = Color.White;
-            sideScroll.Padding = new Padding(22);
+            sideScroll.BackColor = CaptureDark.Panel;
+            sideScroll.Padding = new Padding(16, 14, 8, 8);
 
             Label eyebrow = new Label();
             eyebrow.Text = "GUIDED LANDMARK CAPTURE";
@@ -301,12 +301,9 @@ namespace CassetteMotionPro.Workspace
             referenceLabel.Height = 30;
             referenceLabel.ForeColor = Color.FromArgb(92, 104, 98);
 
-            resultsLabel = new Label();
+            resultsLabel = new ResultsTable();
             resultsLabel.Text = "Calculated metrics:\n--";
             resultsLabel.Dock = DockStyle.Top;
-            resultsLabel.Height = 286;
-            resultsLabel.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            resultsLabel.ForeColor = Color.FromArgb(24, 31, 29);
 
             FlowLayoutPanel zoomPanel = new FlowLayoutPanel();
             zoomPanel.Dock = DockStyle.Top;
@@ -629,46 +626,163 @@ namespace CassetteMotionPro.Workspace
             close.Height = 40;
             close.Click += delegate { Close(); };
 
-            sideScroll.Controls.Add(saveAfter);
-            sideScroll.Controls.Add(saveBefore);
-            sideScroll.Controls.Add(flipSetbackSign);
-            sideScroll.Controls.Add(chainringCenterButton);
-            sideScroll.Controls.Add(recalculate);
-            sideScroll.Controls.Add(clear);
-            sideScroll.Controls.Add(undoLast);
-            sideScroll.Controls.Add(capture);
-            sideScroll.Controls.Add(suggest);
-            sideScroll.Controls.Add(levelReference);
-            sideScroll.Controls.Add(verifyCalibration);
-            sideScroll.Controls.Add(calibrateButton);
-            sideScroll.Controls.Add(calibrationOptions);
-            sideScroll.Controls.Add(cameraSetup);
-            sideScroll.Controls.Add(primaryAction);
-            sideScroll.Controls.Add(advancedLandmarks);
-            sideScroll.Controls.Add(handlebarReferencePanel);
-            sideScroll.Controls.Add(barCenterTapePanel);
-            sideScroll.Controls.Add(reachOverridePanel);
-            sideScroll.Controls.Add(verticalCalibrationPanel);
-            sideScroll.Controls.Add(zoomPanel);
-            sideScroll.Controls.Add(resultsLabel);
-            sideScroll.Controls.Add(referenceLabel);
-            sideScroll.Controls.Add(verificationLabel);
-            sideScroll.Controls.Add(scaleLabel);
-            sideScroll.Controls.Add(nextPointHintLabel);
-            sideScroll.Controls.Add(currentLandmarkLabel);
-            sideScroll.Controls.Add(status);
-            sideScroll.Controls.Add(guide);
-            sideScroll.Controls.Add(progressLabel);
-            sideScroll.Controls.Add(title);
-            sideScroll.Controls.Add(eyebrow);
+            // Layout: one column of grouped cards (instead of one long list of controls), a step
+            // strip at the top, and the save buttons pinned at the bottom.
+            StepStrip stepStrip = new StepStrip();
+            stepStrip.Margin = new Padding(0, 2, 0, 4);
+            progressLabel.TextChanged += delegate { stepStrip.Step = ParseStepNumber(progressLabel.Text); };
 
+            eyebrow.Text = "GUIDED MEASUREMENTS";
+            eyebrow.ForeColor = CaptureDark.Accent;
+            eyebrow.Height = 22;
+            title.Text = "Bike Metrics";
+            title.ForeColor = CaptureDark.Text;
+            title.Height = 38;
+            progressLabel.BackColor = Color.Transparent;
+            progressLabel.ForeColor = CaptureDark.Accent;
+            progressLabel.Padding = new Padding(0, 4, 0, 0);
+            progressLabel.Height = 30;
+            status.ForeColor = CaptureDark.Text;
+            status.Height = 46;
+            currentLandmarkLabel.BackColor = Color.Transparent;
+            currentLandmarkLabel.ForeColor = CaptureDark.Text;
+            currentLandmarkLabel.Font = new Font("Segoe UI", 11.5F, FontStyle.Bold);
+            currentLandmarkLabel.Padding = new Padding(0);
+            currentLandmarkLabel.Height = 30;
+            nextPointHintLabel.BackColor = Color.Transparent;
+            nextPointHintLabel.ForeColor = CaptureDark.Soft;
+            nextPointHintLabel.Font = new Font("Segoe UI", 9.5F, FontStyle.Regular);
+            nextPointHintLabel.Padding = new Padding(0);
+            nextPointHintLabel.Height = 54;
+            guide.ForeColor = CaptureDark.Soft;
+            primaryAction.Height = 44;
+
+            TableLayoutPanel stack = new TableLayoutPanel();
+            stack.Dock = DockStyle.Top;
+            stack.AutoSize = true;
+            stack.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            stack.ColumnCount = 1;
+            stack.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            stack.BackColor = CaptureDark.Panel;
+
+            AddStackRow(stack, eyebrow, 0);
+            AddStackRow(stack, title, 0);
+            AddStackRow(stack, stepStrip, 4);
+            AddStackRow(stack, progressLabel, 6);
+
+            CaptureCard instruction = new CaptureCard(null, false, false);
+            instruction.AddRow(status, 4);
+            instruction.AddRow(currentLandmarkLabel, 2);
+            instruction.AddRow(nextPointHintLabel, 2);
+            AddStackRow(stack, instruction, 10);
+
+            AddStackRow(stack, primaryAction, 12);
+
+            CaptureCard setup = new CaptureCard("CAMERA AND SCALE", false, false);
+            setup.AddRow(cameraSetup);
+            setup.AddRow(calibrationOptions);
+            setup.AddRow(calibrateButton);
+            setup.AddRow(verifyCalibration);
+            setup.AddRow(scaleLabel, 0);
+            setup.AddRow(verificationLabel, 0);
+            setup.AddRow(levelReference);
+            setup.AddRow(referenceLabel, 2);
+            AddStackRow(stack, setup, 10);
+
+            CaptureCard landmarks = new CaptureCard("LANDMARKS", false, false);
+            landmarks.AddRow(advancedLandmarks);
+            landmarks.AddRow(capture);
+            landmarks.AddRow(suggest);
+            landmarks.AddRow(chainringCenterButton);
+            landmarks.AddRow(undoLast);
+            landmarks.AddRow(clear);
+            landmarks.AddRow(zoomPanel, 2);
+            AddStackRow(stack, landmarks, 10);
+
+            CaptureCard tape = new CaptureCard("TAPE CHECK", false, false);
+            tape.AddRow(verticalCalibrationPanel, 2);
+            AddStackRow(stack, tape, 10);
+
+            CaptureCard results = new CaptureCard("RESULTS", false, false);
+            results.AddRow(resultsLabel, 6);
+            results.AddRow(recalculate);
+            results.AddRow(flipSetbackSign, 2);
+            AddStackRow(stack, results, 10);
+
+            CaptureCard moreOptions = new CaptureCard("MORE OPTIONS", true, true);
+            moreOptions.AddRow(handlebarReferencePanel);
+            moreOptions.AddRow(barCenterTapePanel);
+            moreOptions.AddRow(reachOverridePanel, 2);
+            AddStackRow(stack, moreOptions, 10);
+
+            CaptureCard help = new CaptureCard("HOW IT WORKS", true, true);
+            help.AddRow(guide, 2);
+            AddStackRow(stack, help, 10);
+
+            sideScroll.Controls.Add(stack);
+
+            TableLayoutPanel bar = new TableLayoutPanel();
+            bar.Dock = DockStyle.Fill;
+            bar.ColumnCount = 3;
+            bar.RowCount = 1;
+            bar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 82F));
+            bar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            bar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            bar.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            bar.BackColor = CaptureDark.Panel;
+            bar.Padding = new Padding(16, 8, 16, 10);
+            saveBefore.Text = "Save to Before";
+            saveAfter.Text = "Save to After";
+            close.Dock = DockStyle.Fill;
+            close.Margin = new Padding(0, 0, 6, 0);
+            saveBefore.Dock = DockStyle.Fill;
+            saveBefore.Margin = new Padding(0, 0, 6, 0);
+            saveAfter.Dock = DockStyle.Fill;
+            saveAfter.Margin = new Padding(0);
+            bar.Controls.Add(close, 0, 0);
+            if (saveBefore.Visible && saveAfter.Visible)
+            {
+                bar.Controls.Add(saveBefore, 1, 0);
+                bar.Controls.Add(saveAfter, 2, 0);
+            }
+            else
+            {
+                Button only = saveBefore.Visible ? saveBefore : saveAfter;
+                only.Margin = new Padding(0);
+                bar.Controls.Add(only, 1, 0);
+                bar.SetColumnSpan(only, 2);
+            }
+
+            side.RowStyles[1] = new RowStyle(SizeType.Absolute, 62);
             side.Controls.Add(sideScroll, 0, 0);
-            side.Controls.Add(close, 0, 1);
+            side.Controls.Add(bar, 0, 1);
+            CaptureDark.ApplyTree(side);
 
             root.Controls.Add(picture, 0, 0);
             root.Controls.Add(side, 1, 0);
             Controls.Add(root);
             UpdateWizardProgress();
+        }
+
+        private static void AddStackRow(TableLayoutPanel stack, Control control, int bottomMargin)
+        {
+            control.Dock = DockStyle.Fill;
+            control.Margin = new Padding(0, 0, 0, bottomMargin);
+            int row = stack.RowCount;
+            stack.RowCount = row + 1;
+            stack.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            stack.Controls.Add(control, 0, row);
+        }
+
+        // Reads the step number out of text such as "STEP 3 OF 5 - Verify ...".
+        private static int ParseStepNumber(string text)
+        {
+            if (string.IsNullOrEmpty(text) || !text.StartsWith("STEP ", StringComparison.Ordinal))
+                return 1;
+            int value = 0;
+            for (int index = 5; index < text.Length && char.IsDigit(text[index]); index++)
+                value = value * 10 + (text[index] - '0');
+            return value > 0 ? value : 1;
         }
 
         private void PrimaryAction_Click(object sender, EventArgs e)
@@ -3122,12 +3236,7 @@ namespace CassetteMotionPro.Workspace
         {
             Button button = new Button();
             button.Text = text;
-            button.FlatStyle = FlatStyle.Flat;
-            button.FlatAppearance.BorderSize = primary ? 0 : 1;
-            button.FlatAppearance.BorderColor = Color.FromArgb(186, 197, 191);
-            button.BackColor = primary ? Color.FromArgb(184, 243, 74) : Color.White;
-            button.ForeColor = Color.FromArgb(13, 19, 17);
-            button.Font = new Font("Segoe UI", 9F, primary ? FontStyle.Bold : FontStyle.Regular);
+            CaptureDark.StyleButton(button, primary);
             return button;
         }
     }
