@@ -47,7 +47,7 @@
     <PublisherName>Cassette Fit Studio</PublisherName>
     <OpenBrowserOnPublish>false</OpenBrowserOnPublish>
     <ApplicationRevision>0</ApplicationRevision>
-    <ApplicationVersion>1.26.3.0</ApplicationVersion>
+    <ApplicationVersion>1.27.0.0</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
@@ -208,6 +208,7 @@
     <Compile Include="Workspace\SessionPathRebaser.cs" />
     <Compile Include="Workspace\MeasurementNumber.cs" />
     <Compile Include="Workspace\BikeFitGeometry.cs" />
+    <Compile Include="Workspace\CaptureDarkTheme.cs" />
     <Compile Include="Workspace\BackupDataTransferForm.cs">
       <SubType>Form</SubType>
     </Compile>
