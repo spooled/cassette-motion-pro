@@ -123,6 +123,34 @@ namespace CassetteMotionPro.Workspace
             resultY = y;
         }
 
+        // Circle through three points, for finding a chainring centre (the bottom bracket) from three
+        // clicks on its edge. Rejects nearly straight or tightly bunched points.
+        public static bool TryCircleThroughPoints(double x1, double y1, double x2, double y2, double x3, double y3,
+            out double centerX, out double centerY, out double radius)
+        {
+            centerX = 0;
+            centerY = 0;
+            radius = 0;
+            double d = 2.0 * (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2));
+            if (Math.Abs(d) < 1e-6)
+                return false;
+
+            double s1 = x1 * x1 + y1 * y1;
+            double s2 = x2 * x2 + y2 * y2;
+            double s3 = x3 * x3 + y3 * y3;
+            centerX = (s1 * (y2 - y3) + s2 * (y3 - y1) + s3 * (y1 - y2)) / d;
+            centerY = (s1 * (x3 - x2) + s2 * (x1 - x3) + s3 * (x2 - x1)) / d;
+            radius = Math.Sqrt((x1 - centerX) * (x1 - centerX) + (y1 - centerY) * (y1 - centerY));
+            if (double.IsNaN(radius) || double.IsInfinity(radius) || radius <= 0)
+                return false;
+
+            // The three points must span a good part of the circle, not sit in one small arc.
+            double longest = Math.Max(Math.Sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)),
+                Math.Max(Math.Sqrt((x2 - x3) * (x2 - x3) + (y2 - y3) * (y2 - y3)),
+                         Math.Sqrt((x1 - x3) * (x1 - x3) + (y1 - y3) * (y1 - y3))));
+            return longest >= radius * 0.9;
+        }
+
         private static bool TrySolveLinearSystem(double[,] matrix, double[] right, out double[] solution)
         {
             const int size = 8;

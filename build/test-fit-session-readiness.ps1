@@ -212,6 +212,15 @@ try {
   if ($geometry::TryApplyPerspectiveTransform($horizon, -1.0, 5.0, [ref]$px, [ref]$py)) { throw 'A point on the transform horizon was converted.' }
   if (-not $geometry::TryApplyPerspectiveTransform($horizon, 3.0, 5.0, [ref]$px, [ref]$py)) { throw 'A normal point could not be converted.' }
 
+  # Chainring centre from three edge clicks (bottom bracket helper).
+  $ccx = 0.0; $ccy = 0.0; $cr = 0.0
+  $pts = @(@(1100.0, 850.0), @(1045.0, 795.0), @(990.0, 850.0))   # centre (1045,850) radius 55
+  if (-not $geometry::TryCircleThroughPoints($pts[0][0], $pts[0][1], $pts[1][0], $pts[1][1], $pts[2][0], $pts[2][1], [ref]$ccx, [ref]$ccy, [ref]$cr)) { throw 'A clean chainring circle did not fit.' }
+  if ([math]::Abs($ccx - 1045.0) -gt 0.001 -or [math]::Abs($ccy - 850.0) -gt 0.001 -or [math]::Abs($cr - 55.0) -gt 0.001) { throw ('Chainring centre was ' + $ccx + ',' + $ccy + ' r' + $cr) }
+  if ($geometry::TryCircleThroughPoints(0.0, 0.0, 10.0, 0.0, 20.0, 0.0, [ref]$ccx, [ref]$ccy, [ref]$cr)) { throw 'Collinear chainring clicks were accepted.' }
+  # Three clicks bunched into one small arc are too unreliable to trust.
+  if ($geometry::TryCircleThroughPoints(1100.0, 850.0, 1099.0, 855.0, 1097.0, 860.0, [ref]$ccx, [ref]$ccy, [ref]$cr)) { throw 'Bunched chainring clicks were accepted.' }
+
   [FitSessionRecoveryProbe]::Run($repository.RootPath, $session)
 
   Write-Host 'PASS: legacy session load, current session round-trip, stable storage key, follow-up merge, restore path rebasing, measurement number parsing, level/calibration geometry, manifest backup recovery, autosave backup recovery, recovery cleanup.'
