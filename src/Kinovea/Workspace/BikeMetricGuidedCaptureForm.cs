@@ -25,7 +25,8 @@ namespace CassetteMotionPro.Workspace
             WheelPerspectiveCalibration,
             Verification,
             LevelReference,
-            Landmarks
+            Landmarks,
+            ChainringCenter
         }
 
         private readonly string imagePath;
@@ -72,6 +73,11 @@ namespace CassetteMotionPro.Workspace
         private Button undoLast;
         private Button recalculate;
         private Button flipSetbackSign;
+        private Button chainringCenterButton;
+        private readonly List<PointF> chainringPoints = new List<PointF>();
+        private PointF chainringCenter = PointF.Empty;
+        private float chainringRadius;
+        private ClickMode modeBeforeChainring = ClickMode.None;
         private Button saveBefore;
         private Button saveAfter;
         private CheckBox advancedLandmarks;
@@ -541,6 +547,7 @@ namespace CassetteMotionPro.Workspace
             Button clear = CreateButton("Clear Points", false);
             recalculate = CreateButton("Recalculate Values", false);
             flipSetbackSign = CreateButton("Flip Setback Sign", false);
+            chainringCenterButton = CreateButton("Bottom Bracket from Chainring (3 clicks)", false);
             saveBefore = CreateButton("Save to Before", string.Equals(preferredSide, "Before", StringComparison.OrdinalIgnoreCase));
             saveAfter = CreateButton("Save to After", string.IsNullOrEmpty(preferredSide) || string.Equals(preferredSide, "After", StringComparison.OrdinalIgnoreCase));
             if (string.Equals(preferredSide, "Before", StringComparison.OrdinalIgnoreCase))
@@ -564,6 +571,7 @@ namespace CassetteMotionPro.Workspace
             clear.Dock = DockStyle.Top;
             recalculate.Dock = DockStyle.Top;
             flipSetbackSign.Dock = DockStyle.Top;
+            chainringCenterButton.Dock = DockStyle.Top;
             saveBefore.Dock = DockStyle.Top;
             saveAfter.Dock = DockStyle.Top;
             cameraSetup.Height = 34;
@@ -577,6 +585,7 @@ namespace CassetteMotionPro.Workspace
             clear.Height = 34;
             recalculate.Height = 34;
             flipSetbackSign.Height = 34;
+            chainringCenterButton.Height = 34;
             saveBefore.Height = 34;
             saveAfter.Height = 34;
             cameraSetup.Margin = new Padding(0, 6, 0, 0);
@@ -590,6 +599,7 @@ namespace CassetteMotionPro.Workspace
             clear.Margin = new Padding(0, 6, 0, 0);
             recalculate.Margin = new Padding(0, 6, 0, 0);
             flipSetbackSign.Margin = new Padding(0, 6, 0, 0);
+            chainringCenterButton.Margin = new Padding(0, 6, 0, 0);
             saveBefore.Margin = new Padding(0, 6, 0, 0);
             saveAfter.Margin = new Padding(0, 6, 0, 0);
             cameraSetup.Click += CameraSetup_Click;
@@ -603,6 +613,7 @@ namespace CassetteMotionPro.Workspace
             clear.Click += Clear_Click;
             recalculate.Click += Recalculate_Click;
             flipSetbackSign.Click += FlipSetbackSign_Click;
+            chainringCenterButton.Click += ChainringCenter_Click;
             saveBefore.Click += delegate { SaveResult("Before"); };
             saveAfter.Click += delegate { SaveResult("After"); };
             levelReference.Enabled = false;
@@ -621,6 +632,7 @@ namespace CassetteMotionPro.Workspace
             sideScroll.Controls.Add(saveAfter);
             sideScroll.Controls.Add(saveBefore);
             sideScroll.Controls.Add(flipSetbackSign);
+            sideScroll.Controls.Add(chainringCenterButton);
             sideScroll.Controls.Add(recalculate);
             sideScroll.Controls.Add(clear);
             sideScroll.Controls.Add(undoLast);
@@ -1444,6 +1456,96 @@ namespace CassetteMotionPro.Workspace
                 AddLevelReferencePoint(imagePoint);
             else if (mode == ClickMode.Landmarks)
                 AddLandmarkPoint(imagePoint);
+            else if (mode == ClickMode.ChainringCenter)
+                AddChainringPoint(imagePoint);
+        }
+
+        // Bottom bracket helper. The bottom bracket is hidden behind the chainring and crank, so it is
+        // hard to click directly. The chainring is a clean circle: three clicks on its outer edge give
+        // its centre, which is the crank spindle and so the bottom bracket.
+        private void ChainringCenter_Click(object sender, EventArgs e)
+        {
+            if (millimetersPerPixel <= 0)
+            {
+                MessageBox.Show(this, "Calibrate the scale first.", "Scale required", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            if (mode != ClickMode.ChainringCenter)
+                modeBeforeChainring = mode;
+            mode = ClickMode.ChainringCenter;
+            chainringPoints.Clear();
+            chainringRadius = 0;
+            status.Text = "Click 3 points around the outer edge of the big chainring, spread well apart (for example top, rear and bottom).";
+            currentLandmarkLabel.Text = "Current point: chainring edge 1 of 3";
+            nextPointHintLabel.Text = "The bottom bracket is placed at the chainring centre.";
+            picture.Invalidate();
+        }
+
+        private void AddChainringPoint(PointF imagePoint)
+        {
+            chainringPoints.Add(imagePoint);
+            if (chainringPoints.Count < 3)
+            {
+                currentLandmarkLabel.Text = "Current point: chainring edge " + (chainringPoints.Count + 1).ToString(CultureInfo.InvariantCulture) + " of 3";
+                picture.Invalidate();
+                return;
+            }
+
+            double cx;
+            double cy;
+            double radius;
+            bool fitted = BikeFitGeometry.TryCircleThroughPoints(
+                chainringPoints[0].X, chainringPoints[0].Y,
+                chainringPoints[1].X, chainringPoints[1].Y,
+                chainringPoints[2].X, chainringPoints[2].Y,
+                out cx, out cy, out radius);
+            // A chainring is roughly 60-130 mm across its radius; reject results far from that.
+            double radiusMillimeters = radius * GetHorizontalScale();
+            if (!fitted || radiusMillimeters < 40 || radiusMillimeters > 200)
+            {
+                chainringPoints.Clear();
+                currentLandmarkLabel.Text = "Current point: chainring edge 1 of 3";
+                status.Text = "Those three points do not form a believable chainring. Spread them wider around the edge and try again.";
+                picture.Invalidate();
+                return;
+            }
+
+            chainringCenter = new PointF((float)cx, (float)cy);
+            chainringRadius = (float)radius;
+            chainringPoints.Clear();
+            mode = modeBeforeChainring;
+
+            if (landmarkPoints.Count == 0 && mode == ClickMode.Landmarks)
+            {
+                // First landmark is the bottom bracket: place it here and carry on as normal.
+                AddLandmarkPoint(chainringCenter);
+                status.Text = "Bottom bracket set from the chainring centre. " + status.Text;
+                return;
+            }
+
+            if (landmarkPoints.Count >= 1)
+            {
+                landmarkPoints[0] = chainringCenter;
+                calculatedValues.Clear();
+                if (landmarkPoints.Count >= ActiveLandmarkNames.Length && millimetersPerPixel > 0)
+                {
+                    CalculateMetrics();
+                    flipSetbackSign.Enabled = true;
+                    recalculate.Enabled = true;
+                    saveBefore.Enabled = true;
+                    saveAfter.Enabled = true;
+                }
+                status.Text = "Bottom bracket moved to the chainring centre (chainring radius " + radiusMillimeters.ToString("0", CultureInfo.InvariantCulture) + " mm).";
+            }
+            else
+            {
+                status.Text = "Chainring centre found, but Start Guided Capture first; then use this button again to set the bottom bracket.";
+                chainringRadius = 0;
+            }
+
+            picture.Invalidate();
+            UpdateWizardProgress();
         }
 
         private void AddCalibrationPoint(PointF imagePoint)
@@ -2214,20 +2316,43 @@ namespace CassetteMotionPro.Workspace
             DrawLine(e.Graphics, verificationPoints, Color.FromArgb(255, 176, 74), "V");
             DrawLine(e.Graphics, levelReferencePoints, Color.FromArgb(74, 145, 255), "L");
             DrawLandmarks(e.Graphics);
+            DrawChainringHelper(e.Graphics);
             DrawActiveClickCue(e.Graphics);
             DrawPlacementMagnifier(e.Graphics);
         }
 
+        private void DrawChainringHelper(Graphics graphics)
+        {
+            using (Pen pen = new Pen(Color.FromArgb(70, 215, 235), 2F))
+            using (Brush brush = new SolidBrush(Color.FromArgb(70, 215, 235)))
+            {
+                foreach (PointF imagePoint in chainringPoints)
+                {
+                    PointF p = ConvertImagePointToControlPoint(imagePoint);
+                    graphics.FillEllipse(brush, p.X - 4, p.Y - 4, 8, 8);
+                }
+
+                if (chainringRadius > 0 && landmarkPoints.Count > 0)
+                {
+                    PointF c = ConvertImagePointToControlPoint(chainringCenter);
+                    PointF edge = ConvertImagePointToControlPoint(new PointF(chainringCenter.X + chainringRadius, chainringCenter.Y));
+                    float r = Math.Abs(edge.X - c.X);
+                    graphics.DrawEllipse(pen, c.X - r, c.Y - r, r * 2, r * 2);
+                }
+            }
+        }
+
         private void DrawPlacementMagnifier(Graphics graphics)
         {
-            if (!hasMousePosition || loadedImage == null || mode == ClickMode.None)
+            // Also shown while dragging a placed landmark, which is when fine-tuning happens.
+            if (!hasMousePosition || loadedImage == null || (mode == ClickMode.None && !isDraggingLandmark))
                 return;
 
             PointF imagePoint;
             if (!TryConvertControlPointToImagePoint(mousePosition, out imagePoint))
                 return;
 
-            const int sourceSize = 80;
+            const int sourceSize = 48;
             const int insetSize = 184;
             int sourceWidth = Math.Min(sourceSize, loadedImage.Width);
             int sourceHeight = Math.Min(sourceSize, loadedImage.Height);
@@ -2235,6 +2360,10 @@ namespace CassetteMotionPro.Workspace
             int sourceY = Math.Max(0, Math.Min(loadedImage.Height - sourceHeight, (int)imagePoint.Y - sourceHeight / 2));
             Rectangle source = new Rectangle(sourceX, sourceY, sourceWidth, sourceHeight);
             Rectangle inset = new Rectangle(Math.Max(12, picture.ClientSize.Width - insetSize - 18), 92, insetSize, insetSize);
+            // If the cursor is under the loupe, move it to the other side so it never hides the point.
+            Rectangle hitArea = Rectangle.Inflate(inset, 24, 24);
+            if (hitArea.Contains(mousePosition))
+                inset.X = 18;
             using (Brush background = new SolidBrush(Color.FromArgb(230, 13, 19, 17)))
             using (Pen border = new Pen(Color.FromArgb(184, 243, 74), 3F))
             using (Pen crosshair = new Pen(Color.FromArgb(255, 176, 74), 2F))
