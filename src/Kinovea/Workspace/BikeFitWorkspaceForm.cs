@@ -2359,7 +2359,7 @@ namespace CassetteMotionPro.Workspace
             scoreText = "Quality score " + score.ToString() + "/100 · " + tier;
             text.AppendLine();
             text.AppendLine("This score is a transparent workflow-quality check, not a guarantee of measurement accuracy or a diagnosis.");
-            text.AppendLine("Verify warnings with Kinovea's playback and drawing tools before approving the report.");
+            text.AppendLine("Verify warnings with Video Studio's playback and drawing tools before approving the report.");
             return text.ToString();
         }
 
@@ -2769,7 +2769,7 @@ namespace CassetteMotionPro.Workspace
                 MessageBox.Show(this,
                     "1. Create or open a client and fit session using INTAKE.\n\n" +
                     "2. Run Fit-Day Preflight and Practice Mode before a real recording.\n\n" +
-                    "3. Use RECORD for Kinovea live capture, then TRACK and MEASURE.\n\n" +
+                    "3. Use RECORD for Video Studio live capture, then TRACK and MEASURE.\n\n" +
                     "4. Review the evidence, approve the fit, and create the report.\n\n" +
                     "If a session was interrupted, reopen that client first and use Workflow Check to review recovery. " +
                     "Keep a separate backup of the client folder before updating or moving computers.",
@@ -2954,7 +2954,7 @@ namespace CassetteMotionPro.Workspace
             AddDiagnostic(results, autosaveTimer.Enabled ? "PASS" : "FAIL", "Autosave timer", autosaveTimer.Enabled ? "Autosave is running every " + (autosaveTimer.Interval / 1000).ToString() + " seconds." : "Autosave is stopped. Close and reopen the workspace before the fit.");
             AddDiagnostic(results, string.IsNullOrWhiteSpace(lastAutosaveError) ? "PASS" : "FAIL", "Last autosave attempt", string.IsNullOrWhiteSpace(lastAutosaveError) ? "No autosave error is waiting for attention." : "Press Save to retry. Last error: " + lastAutosaveError);
             AddDiagnostic(results, hasUnsavedChanges ? "WARN" : "PASS", "Current save state", hasUnsavedChanges ? "Changes are waiting for the next autosave. Press Save before switching computers or closing unexpectedly." : "The workspace has no pending edits.");
-            AddDiagnostic(results, openVideo != null ? "PASS" : "FAIL", "Kinovea playback connection", openVideo != null ? "Single-video playback is connected." : "Playback connection is unavailable.");
+            AddDiagnostic(results, openVideo != null ? "PASS" : "FAIL", "Video Studio playback connection", openVideo != null ? "Single-video playback is connected." : "Playback connection is unavailable.");
             AddDiagnostic(results, openVideoPair != null ? "PASS" : "WARN", "Dual playback connection", openVideoPair != null ? "Before/After dual playback is connected." : "Dual playback is unavailable; single playback can still be used.");
             AddDiagnostic(results, openLiveCaptureFolder != null ? "PASS" : "FAIL", "Live capture connection", openLiveCaptureFolder != null ? "Live capture can receive the active client folder." : "Live capture connection is unavailable.");
             AddDiagnostic(results, openDualLiveCaptureFolders != null ? "PASS" : "WARN", "Dual live capture connection", openDualLiveCaptureFolders != null ? "Dual capture folder routing is connected." : "Dual capture is unavailable; single capture can still be used.");
@@ -4755,7 +4755,7 @@ namespace CassetteMotionPro.Workspace
             txtCameraDriverInterface.Text = profile.DriverInterface ?? string.Empty;
             txtCameraLensCalibration.Text = profile.LensCalibration ?? string.Empty;
             txtCameraNotes.Text = profile.Notes ?? string.Empty;
-            cameraProfileStatus.Text = (profile.IsBuiltIn ? "Built-in" : "Custom") + " · Settings guide the setup; choose the physical device in Kinovea capture controls.";
+            cameraProfileStatus.Text = (profile.IsBuiltIn ? "Built-in" : "Custom") + " · Settings guide the setup; choose the physical device in Video Studio capture controls.";
         }
 
         private void ApplyCameraProfileAndOpenCapture(string phase)
@@ -4877,9 +4877,9 @@ namespace CassetteMotionPro.Workspace
                 review.Add("Record a shutter target; start near 1/500 s for pedaling and adjust for available light.");
 
             if (cameraInterface.IndexOf("DirectShow", StringComparison.OrdinalIgnoreCase) >= 0)
-                ready.Add("Profile uses the Kinovea-compatible DirectShow path.");
+                ready.Add("Profile uses the DirectShow camera path.");
             else
-                review.Add("Confirm that the camera exposes a DirectShow/UVC device to Kinovea.");
+                review.Add("Confirm that the camera exposes a DirectShow/UVC device to Video Studio.");
 
             if (ContainsAny(calibration, "verified", "complete", "passed", "checkerboard"))
                 ready.Add("Lens calibration is recorded.");
@@ -4891,7 +4891,7 @@ namespace CassetteMotionPro.Workspace
                 "\n\n" +
                 (review.Count == 0 ? "No profile warnings." : "Needs review:\n• " + string.Join("\n• ", review.ToArray())) +
                 "\n\nPHYSICAL CAMERA TEST\n" +
-                "1. Select the camera in Kinovea's capture screen.\n" +
+                "1. Select the camera in the Video Studio capture screen.\n" +
                 "2. Confirm 1920 × 1080 at 60 FPS in camera properties.\n" +
                 "3. Record 10 seconds of pedaling and verify the saved file.\n" +
                 "4. Check for dropped frames, blur, exposure changes, and curved straight lines.\n" +
