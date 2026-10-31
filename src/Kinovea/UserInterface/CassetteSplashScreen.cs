@@ -22,14 +22,14 @@ namespace Kinovea.Root
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.CenterScreen;
             ShowInTaskbar = false;
-            BackColor = Color.White;
+            BackColor = Color.FromArgb(11, 16, 14);
             Width = 620;
-            Height = 160;
+            Height = 391;
 
             Panel panel = new Panel();
             panel.Dock = DockStyle.Fill;
-            panel.BackColor = Color.White;
-            panel.Padding = new Padding(18);
+            panel.BackColor = Color.FromArgb(11, 16, 14);
+            panel.Padding = new Padding(0);
             Controls.Add(panel);
 
             Image splash = LoadSplashImage();
@@ -48,7 +48,7 @@ namespace Kinovea.Root
                 label.Dock = DockStyle.Fill;
                 label.TextAlign = ContentAlignment.MiddleCenter;
                 label.Font = new Font("Segoe UI", 24F, FontStyle.Regular, GraphicsUnit.Point);
-                label.ForeColor = Color.FromArgb(13, 19, 17);
+                label.ForeColor = Color.FromArgb(228, 236, 231);
                 panel.Controls.Add(label);
             }
 
@@ -59,7 +59,9 @@ namespace Kinovea.Root
             version.Dock = DockStyle.Bottom;
             version.TextAlign = ContentAlignment.MiddleRight;
             version.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point);
-            version.ForeColor = Color.FromArgb(104, 150, 34);
+            version.ForeColor = Color.FromArgb(191, 244, 74);
+            version.BackColor = Color.Transparent;
+            version.Padding = new Padding(0, 0, 14, 8);
             panel.Controls.Add(version);
             version.BringToFront();
         }

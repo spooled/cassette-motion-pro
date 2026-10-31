@@ -382,7 +382,7 @@ namespace CassetteMotionPro.Workspace
                 text += suggestion.Label.PadRight(16) + "#" + (suggestion.FrameIndex + 1).ToString(CultureInfo.InvariantCulture) +
                     " · " + FormatAngle(suggestion.Angle) + " · clarity " + suggestion.Clarity.ToString("0", CultureInfo.InvariantCulture) + "/100\n";
             }
-            text += "Suggestions are starting points—confirm the frame and measurement in Kinovea.\n";
+            text += "Suggestions are starting points—confirm the frame and measurement in Video Studio.\n";
             return text;
         }
 
@@ -494,7 +494,7 @@ namespace CassetteMotionPro.Workspace
                 graphics.Clear(Color.FromArgb(20, 27, 24));
                 graphics.DrawString(side.ToUpperInvariant() + " PEDAL-CYCLE MEASUREMENT TRENDS", title, white, 34, 24);
                 trendChart.DrawChart(graphics, new Rectangle(34, 92, 1732, 760), CollectValues(), FindCrankPositions(), true);
-                graphics.DrawString("Fitter-approved checkpoints · trends are measurement guidance and remain subject to Kinovea precision review.", note, white, 38, 890);
+                graphics.DrawString("Fitter-approved checkpoints · trends are measurement guidance and remain subject to Video Studio precision review.", note, white, 38, 890);
                 output.Save(path, ImageFormat.Png);
             }
             return path;
@@ -570,7 +570,7 @@ namespace CassetteMotionPro.Workspace
                         ShortClipTrackingCanvas.RenderPose(graphics, image, frame.Points, new RectangleF(x, y, 870, 490), label);
                     }
                 }
-                graphics.DrawString("Frame suggestions are advisory. Confirm each pose and final measurement with Kinovea playback and drawing tools.", note, white, new RectangleF(28, 1650, 1740, 80));
+                graphics.DrawString("Frame suggestions are advisory. Confirm each pose and final measurement with Video Studio playback and drawing tools.", note, white, new RectangleF(28, 1650, 1740, 80));
                 output.Save(path, ImageFormat.Png);
             }
             return path;
