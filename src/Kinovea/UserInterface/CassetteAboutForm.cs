@@ -19,7 +19,7 @@ namespace Kinovea.Root
     {
         private static readonly Color Ink = Color.FromArgb(11, 16, 14);
         private static readonly Color Card = Color.FromArgb(17, 25, 22);
-        private static readonly Color Text = Color.FromArgb(228, 236, 231);
+        private static readonly Color TextColor = Color.FromArgb(228, 236, 231);
         private static readonly Color Soft = Color.FromArgb(182, 196, 188);
         private static readonly Color Muted = Color.FromArgb(143, 161, 152);
         private static readonly Color Lime = Color.FromArgb(191, 244, 74);
@@ -33,7 +33,7 @@ namespace Kinovea.Root
             MinimizeBox = false;
             ShowInTaskbar = false;
             BackColor = Ink;
-            ForeColor = Text;
+            ForeColor = TextColor;
             Font = new Font("Segoe UI", 9.5F);
             ClientSize = new Size(560, 640);
 
