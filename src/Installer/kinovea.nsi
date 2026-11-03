@@ -39,6 +39,13 @@
 ;--------------------------------
     ;Show a message box with a warning when the user wants to close the installer.
     !define MUI_ABORTWARNING
+    !define MUI_ICON "art\cassette-motion-pro.ico"
+    !define MUI_UNICON "art\cassette-motion-pro.ico"
+    !define MUI_WELCOMEFINISHPAGE_BITMAP "art\welcome.bmp"
+    !define MUI_UNWELCOMEFINISHPAGE_BITMAP "art\welcome.bmp"
+    !define MUI_HEADERIMAGE
+    !define MUI_HEADERIMAGE_BITMAP "art\header.bmp"
+    !define MUI_HEADERIMAGE_RIGHT
 
 ;--------------------------------------
 ;Language Selection Dialog Settings
