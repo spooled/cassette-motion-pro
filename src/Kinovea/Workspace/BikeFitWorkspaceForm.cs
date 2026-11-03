@@ -143,9 +143,9 @@ namespace CassetteMotionPro.Workspace
         private readonly List<WorkflowChecklistItem> workflowChecklistItems = new List<WorkflowChecklistItem>();
         private readonly List<FitDayFlowStep> fitDayFlowSteps = new List<FitDayFlowStep>();
         private TabControl editorTabs;
-        private FlowLayoutPanel workflowStageBar;
+        private Panel workflowStageBar;
         private FlowLayoutPanel workflowSectionBar;
-        private readonly List<Button> workflowStageButtons = new List<Button>();
+        private readonly List<RailButton> workflowStageButtons = new List<RailButton>();
         private TableLayoutPanel workspaceRoot;
         private SplitContainer workspaceSplit;
         private Panel editorActionPanel;
@@ -819,10 +819,10 @@ namespace CassetteMotionPro.Workspace
             editorShell.Dock = DockStyle.Fill;
             editorShell.Margin = new Padding(0);
             editorShell.Padding = new Padding(0);
-            editorShell.ColumnCount = 1;
-            editorShell.RowCount = 2;
+            editorShell.ColumnCount = 2;
+            editorShell.RowCount = 1;
+            editorShell.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, workflowStageBar.Width));
             editorShell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            editorShell.RowStyles.Add(new RowStyle(SizeType.Absolute, workflowStageBar.Height));
             editorShell.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
             workflowStageBar.Dock = DockStyle.Fill;
@@ -830,39 +830,27 @@ namespace CassetteMotionPro.Workspace
             content.Dock = DockStyle.Fill;
             content.Margin = new Padding(0);
             editorShell.Controls.Add(workflowStageBar, 0, 0);
-            editorShell.Controls.Add(content, 0, 1);
+            editorShell.Controls.Add(content, 1, 0);
             parent.Controls.Add(editorShell);
             UpdateWorkflowStageBar();
             UpdateWorkflowSectionBar();
         }
 
-        private FlowLayoutPanel BuildWorkflowStageBar()
+        private Panel BuildWorkflowStageBar()
         {
-            FlowLayoutPanel bar = new FlowLayoutPanel();
-            bar.Dock = DockStyle.Top;
-            bar.Height = 52;
-            bar.FlowDirection = FlowDirection.LeftToRight;
-            bar.Padding = new Padding(10, 7, 8, 7);
-            bar.WrapContents = false;
-            bar.AutoScroll = true;
-            bar.BackColor = CassetteMotionTheme.Rail;
+            Panel rail = new Panel();
+            rail.Width = 84;
+            rail.Padding = new Padding(8, 14, 8, 8);
+            rail.BackColor = Color.FromArgb(15, 21, 18);
 
-            Label navigation = new Label();
-            navigation.Text = "STAGES";
-            navigation.AutoSize = false;
-            navigation.Size = new Size(72, 36);
-            navigation.Margin = new Padding(0, 0, 8, 0);
-            navigation.Font = new Font("Segoe UI Semibold", 8.5F, FontStyle.Bold);
-            navigation.ForeColor = CassetteMotionTheme.Accent;
-            navigation.TextAlign = ContentAlignment.MiddleLeft;
-            bar.Controls.Add(navigation);
-
-            AddWorkflowStageButton(bar, "FIT DAY", FitDayHomeTabName);
-            AddWorkflowStageButton(bar, "CLIENT", SessionSetupTabName);
-            AddWorkflowStageButton(bar, "VIDEO", KinoveaVideoTabName);
-            AddWorkflowStageButton(bar, "MEASUREMENTS", "Measurement Review");
-            AddWorkflowStageButton(bar, "REPORT", "Report Center");
-            return bar;
+            // Docked top-down in reverse so the first stage ends up first.
+            AddWorkflowStageButton(rail, "REPORT", "Report Center", "Report", RailButton.Glyph.Report);
+            AddWorkflowStageButton(rail, "MEASUREMENTS", "Measurement Review", "Measure", RailButton.Glyph.Measure);
+            AddWorkflowStageButton(rail, "VIDEO", KinoveaVideoTabName, "Video", RailButton.Glyph.Video);
+            AddWorkflowStageButton(rail, "CLIENT", SessionSetupTabName, "Client", RailButton.Glyph.Client);
+            AddWorkflowStageButton(rail, "FIT DAY", FitDayHomeTabName, "Fit Day", RailButton.Glyph.FitDay);
+            workflowStageButtons.Reverse();
+            return rail;
         }
 
         private FlowLayoutPanel BuildWorkflowSectionBar()
@@ -877,30 +865,18 @@ namespace CassetteMotionPro.Workspace
             return bar;
         }
 
-        private void AddWorkflowStageButton(FlowLayoutPanel bar, string text, string tabName)
+        private void AddWorkflowStageButton(Panel rail, string accessibleName, string tabName, string label, RailButton.Glyph glyph)
         {
-            Button button = CreateButton(text, false);
+            RailButton button = new RailButton();
             button.Tag = tabName;
-            button.AccessibleName = text;
-            button.Text = GetWorkflowStageNumber(tabName) + "  " + text;
-            button.Height = 36;
-            button.Width = text == "MEASUREMENTS" ? 142 : 105;
-            button.TextAlign = ContentAlignment.MiddleCenter;
-            button.Padding = new Padding(0);
-            button.Margin = new Padding(0, 0, 6, 0);
-            button.FlatAppearance.BorderSize = 0;
+            button.AccessibleName = accessibleName;
+            button.Text = label;
+            button.Icon = glyph;
+            button.Dock = DockStyle.Top;
+            button.Height = 66;
             button.Click += delegate { SelectWorkspaceTab(tabName); };
             workflowStageButtons.Add(button);
-            bar.Controls.Add(button);
-        }
-
-        private static string GetWorkflowStageNumber(string tabName)
-        {
-            if (string.Equals(tabName, FitDayHomeTabName, StringComparison.OrdinalIgnoreCase)) return "01";
-            if (string.Equals(tabName, SessionSetupTabName, StringComparison.OrdinalIgnoreCase)) return "02";
-            if (string.Equals(tabName, KinoveaVideoTabName, StringComparison.OrdinalIgnoreCase)) return "03";
-            if (string.Equals(tabName, "Measurement Review", StringComparison.OrdinalIgnoreCase)) return "04";
-            return "05";
+            rail.Controls.Add(button);
         }
 
         private void UpdateWorkflowStageBar()
@@ -910,13 +886,8 @@ namespace CassetteMotionPro.Workspace
 
             string active = GetActiveWorkspaceStage();
 
-            foreach (Button button in workflowStageButtons)
-            {
-                bool isActive = string.Equals(Convert.ToString(button.Tag), active, StringComparison.OrdinalIgnoreCase);
-                button.BackColor = isActive ? CassetteMotionTheme.Accent : CassetteMotionTheme.Rail;
-                button.ForeColor = isActive ? CassetteMotionTheme.Header : Color.FromArgb(206, 218, 211);
-                button.FlatAppearance.BorderColor = isActive ? CassetteMotionTheme.Accent : CassetteMotionTheme.Rail;
-            }
+            foreach (RailButton button in workflowStageButtons)
+                button.Active = string.Equals(Convert.ToString(button.Tag), active, StringComparison.OrdinalIgnoreCase);
         }
 
         private string GetActiveWorkspaceStage()
