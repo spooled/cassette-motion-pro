@@ -1768,7 +1768,7 @@ namespace Kinovea.Root
 
         private void mnuAbout_OnClick(object sender, EventArgs e)
         {
-            FormAbout fa = new FormAbout();
+            CassetteAboutForm fa = new CassetteAboutForm();
             fa.ShowDialog();
             fa.Dispose();
         }

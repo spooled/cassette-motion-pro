@@ -93,7 +93,7 @@ namespace CassetteMotionPro.Workspace
             return new List<CameraSetupProfile>
             {
                 BuiltIn("Professional USB 60 FPS", "Drive-side profile", "Front or rear profile", "1920 × 1080", "60 fps", "Manual / locked", "1/500 s", "DirectShow / UVC", "Verify with checkerboard", "Use this as the dependable starting point for supported USB cameras."),
-                BuiltIn("IDS 60 FPS DirectShow", "Drive-side profile", "Front or rear profile", "1920 × 1080", "60 fps", "Manual / locked", "1/500 s", "IDS peak DirectShow", "Required before measurements", "Install IDS peak with the DirectShow component, then select the IDS device in Kinovea capture controls."),
+                BuiltIn("IDS 60 FPS DirectShow", "Drive-side profile", "Front or rear profile", "1920 × 1080", "60 fps", "Manual / locked", "1/500 s", "IDS peak DirectShow", "Required before measurements", "Install IDS peak with the DirectShow component, then select the IDS device in Video Studio capture controls."),
                 BuiltIn("Side + Front", "Drive-side profile", "Front profile", "1920 × 1080", "60 fps", "Manual / locked", "1/500 s", "DirectShow / UVC", "Verify with checkerboard", "Place both cameras level, square to the rider, and at matching height."),
                 BuiltIn("Drive + Non-drive", "Drive-side profile", "Non-drive profile", "1920 × 1080", "60 fps", "Manual / matched", "1/500 s", "DirectShow / UVC", "Verify both lenses", "Match camera height, distance, zoom, exposure, and white balance on both sides."),
                 BuiltIn("Side + Rear", "Drive-side profile", "Rear alignment", "1920 × 1080", "60 fps", "Manual / locked", "1/500 s", "DirectShow / UVC", "Verify with checkerboard", "Keep the rear camera centered on the bike and the side camera square to the rider.")
@@ -107,8 +107,8 @@ namespace CassetteMotionPro.Workspace
                 Name = name,
                 LeftRole = leftRole,
                 RightRole = rightRole,
-                LeftCamera = "Select in left Kinovea capture screen",
-                RightCamera = "Select in right Kinovea capture screen",
+                LeftCamera = "Select in left Video Studio capture screen",
+                RightCamera = "Select in right Video Studio capture screen",
                 Resolution = resolution,
                 FrameRate = frameRate,
                 Exposure = exposure,

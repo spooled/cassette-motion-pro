@@ -57,7 +57,7 @@ namespace CassetteMotionPro.Workspace
             results.Font = new Font("Consolas", 9.5F);
             results.BackColor = Color.White;
 
-            verifyKinovea.Text = "I verified flagged landmarks and measurements in Kinovea.";
+            verifyKinovea.Text = "I verified flagged landmarks and measurements in Video Studio.";
             verifyKinovea.Dock = DockStyle.Fill;
             verifyKinovea.Checked = previouslyApproved;
             acknowledgeWarnings.Text = "I reviewed the warnings and accept the approved values for this fit.";
