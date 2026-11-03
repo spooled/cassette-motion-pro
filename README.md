@@ -5,9 +5,9 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 1.26.3 Safer Sessions, Client-Safe Reports and Visual Polish
+## Current milestone: 1.27.0 Safer Sessions, Client-Safe Reports and Visual Polish
 
-1.26.3 adds a bottom-bracket helper (three clicks on the chainring edge) and a 3.8x zoom loupe that also shows while dragging a placed point. 1.26.2 removes the dual-wheel perspective calibration (Quick Bike Reference is now the default; Known Reference is unchanged). 1.26.1 adds a tape check to bike capture: the report now states how far the wheel-based scale was from your tape measurement, or that no tape check was done. It also changes the tire preset to a measured outer diameter (default 680 mm) and widens report-approval coverage.
+1.27.0 gives the guided capture screen a dark, technical look: grouped cards, a five-step progress strip, a results table with monospaced values, and save buttons pinned at the bottom. 1.26.3 adds a bottom-bracket helper (three clicks on the chainring edge) and a 3.8x zoom loupe that also shows while dragging a placed point. 1.26.2 removes the dual-wheel perspective calibration (Quick Bike Reference is now the default; Known Reference is unchanged). 1.26.1 adds a tape check to bike capture: the report now states how far the wheel-based scale was from your tape measurement, or that no tape check was done. It also changes the tire preset to a measured outer diameter (default 680 mm) and widens report-approval coverage.
 
 Each fit session now has a permanent storage folder, so changing the session date
 no longer moves or hides its Before/After videos, report images, or captures.
