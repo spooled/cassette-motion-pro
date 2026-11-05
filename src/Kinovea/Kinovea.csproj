@@ -153,9 +153,6 @@
     <Reference Include="ObjectListView, Version=2.9.1.1072, Culture=neutral, PublicKeyToken=b1c5bf581481bcd4, processorArchitecture=MSIL">
       <HintPath>..\packages\ObjectListView.Official.2.9.1\lib\net20\ObjectListView.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.ML.OnnxRuntime">
-      <HintPath>..\packages\Microsoft.ML.OnnxRuntime.1.20.1\lib\netstandard2.0\Microsoft.ML.OnnxRuntime.dll</HintPath>
-    </Reference>
     <Reference Include="System.Memory">
       <HintPath>..\packages\System.Memory.4.5.5\lib\net461\System.Memory.dll</HintPath>
     </Reference>
@@ -671,6 +668,18 @@
       <IncludeHash>True</IncludeHash>
       <FileType>Satellite</FileType>
     </PublishFile>
+  </ItemGroup>
+  <PropertyGroup>
+    <OrtDll Condition="'$(OrtDll)' == '' And Exists('$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.1.20.1\lib\netstandard2.0\Microsoft.ML.OnnxRuntime.dll')">$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.1.20.1\lib\netstandard2.0\Microsoft.ML.OnnxRuntime.dll</OrtDll>
+    <OrtDll Condition="'$(OrtDll)' == '' And Exists('$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.1.20.1\lib\net462\Microsoft.ML.OnnxRuntime.dll')">$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.1.20.1\lib\net462\Microsoft.ML.OnnxRuntime.dll</OrtDll>
+    <OrtDll Condition="'$(OrtDll)' == '' And Exists('$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.1.20.1\lib\netstandard2.1\Microsoft.ML.OnnxRuntime.dll')">$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.1.20.1\lib\netstandard2.1\Microsoft.ML.OnnxRuntime.dll</OrtDll>
+    <OrtDll Condition="'$(OrtDll)' == '' And Exists('$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.1.20.1\lib\net6.0\Microsoft.ML.OnnxRuntime.dll')">$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.1.20.1\lib\net6.0\Microsoft.ML.OnnxRuntime.dll</OrtDll>
+    <OrtDll Condition="'$(OrtDll)' == '' And Exists('$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.1.20.1\lib\net8.0\Microsoft.ML.OnnxRuntime.dll')">$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.1.20.1\lib\net8.0\Microsoft.ML.OnnxRuntime.dll</OrtDll>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.ML.OnnxRuntime" Condition="'$(OrtDll)' != ''">
+      <HintPath>$(OrtDll)</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Content Include="Resources\pose\movenet_thunder.onnx"><Link>models\movenet_thunder.onnx</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>

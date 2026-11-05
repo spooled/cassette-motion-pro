@@ -169,6 +169,10 @@ jobs:
             msbuild $_.FullName /t:Restore /p:Platform="x64" /p:Configuration=Release
           }
 
+      - name: List ONNX Runtime package
+        shell: pwsh
+        run: Get-ChildItem src\packages\Microsoft.ML.OnnxRuntime.* -Recurse -Include *.dll | ForEach-Object { $_.FullName }
+
       - name: Patch FFmpeg headers for CI compiler
         shell: pwsh
         run: |
