@@ -153,6 +153,21 @@
     <Reference Include="ObjectListView, Version=2.9.1.1072, Culture=neutral, PublicKeyToken=b1c5bf581481bcd4, processorArchitecture=MSIL">
       <HintPath>..\packages\ObjectListView.Official.2.9.1\lib\net20\ObjectListView.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.ML.OnnxRuntime">
+      <HintPath>..\packages\Microsoft.ML.OnnxRuntime.1.20.1\lib\netstandard2.0\Microsoft.ML.OnnxRuntime.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Memory">
+      <HintPath>..\packages\System.Memory.4.5.5\lib\net461\System.Memory.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Buffers">
+      <HintPath>..\packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Numerics.Vectors">
+      <HintPath>..\packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe">
+      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.4.5.3\lib\net461\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Data" />
@@ -208,6 +223,7 @@
     <Compile Include="Workspace\SessionPathRebaser.cs" />
     <Compile Include="Workspace\MeasurementNumber.cs" />
     <Compile Include="BrandChrome.cs" />
+    <Compile Include="Workspace\PoseEstimator.cs" />
     <Compile Include="Workspace\ClipFrameExtractor.cs" />
     <Compile Include="Workspace\PositionCaptureForm.cs" />
     <Compile Include="Workspace\BikeFitGeometry.cs" />
@@ -655,6 +671,11 @@
       <IncludeHash>True</IncludeHash>
       <FileType>Satellite</FileType>
     </PublishFile>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Resources\pose\movenet_thunder.onnx"><Link>models\movenet_thunder.onnx</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
+    <Content Include="..\packages\Microsoft.ML.OnnxRuntime.1.20.1\runtimes\win-x64\native\onnxruntime.dll"><Link>onnxruntime.dll</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
+    <Content Include="..\packages\Microsoft.ML.OnnxRuntime.1.20.1\runtimes\win-x64\native\onnxruntime_providers_shared.dll"><Link>onnxruntime_providers_shared.dll</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
   </ItemGroup>
   <ItemGroup>
     <Content Include="cassette-motion-pro.ico" />
