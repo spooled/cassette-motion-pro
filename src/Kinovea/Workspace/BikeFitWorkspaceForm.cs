@@ -5661,6 +5661,9 @@ namespace CassetteMotionPro.Workspace
             actions.FlowDirection = FlowDirection.LeftToRight;
             actions.WrapContents = true;
 
+            Button capturePosition = CreateButton("Capture Position", true);
+            capturePosition.Size = new Size(170, 38);
+            capturePosition.Click += delegate { ShowPositionCapture(); };
             Button guidedBefore = CreateButton("Track Before Rider", true);
             guidedBefore.Size = new Size(180, 38);
             guidedBefore.Click += delegate { ShowGuidedRiderMeasurements("BeforeReportImagePath", "Before"); };
@@ -5692,6 +5695,7 @@ namespace CassetteMotionPro.Workspace
             Button reviewQuality = CreateButton("Review Measurement Quality", false);
             reviewQuality.Size = new Size(210, 38);
             reviewQuality.Click += ReviewMetrics_Click;
+            actions.Controls.Add(capturePosition);
             actions.Controls.Add(guidedBefore);
             actions.Controls.Add(guidedAfter);
             actions.Controls.Add(compareTracking);
@@ -5853,6 +5857,87 @@ namespace CassetteMotionPro.Workspace
                     UpdateSaveHint(side + " short-clip tracking saved with accepted motion ranges and correction history.");
                 }
             }
+        }
+
+        // Pick a clip and a few steady seconds, pull frames out automatically, review the joints,
+        // and file the result as a named position in the fit log.
+        private void ShowPositionCapture()
+        {
+            if (currentSession == null)
+            {
+                MessageBox.Show(this, "Create or open a client fit session first.", "Capture Position", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            string suggestedClip = string.Empty;
+            if (mediaBoxes.ContainsKey("AfterVideoPath") && File.Exists(mediaBoxes["AfterVideoPath"].Text))
+                suggestedClip = mediaBoxes["AfterVideoPath"].Text;
+            else if (mediaBoxes.ContainsKey("BeforeVideoPath") && File.Exists(mediaBoxes["BeforeVideoPath"].Text))
+                suggestedClip = mediaBoxes["BeforeVideoPath"].Text;
+
+            int nextSequence = 1;
+            if (currentSession.FitPositions != null)
+                foreach (FitPositionRecord existing in currentSession.FitPositions)
+                    nextSequence = Math.Max(nextSequence, existing.Sequence + 1);
+
+            Directory.CreateDirectory(GetSessionReportImagesFolderPath());
+            using (PositionCaptureForm capture = new PositionCaptureForm(suggestedClip, "Position " + nextSequence.ToString(), GetSessionReportImagesFolderPath()))
+            {
+                if (capture.ShowDialog(this) != DialogResult.OK)
+                    return;
+
+                using (ShortClipRiderTrackingForm review = new ShortClipRiderTrackingForm(capture.Frames, GetSessionReportImagesFolderPath(), capture.Side, capture.PedalTurn))
+                {
+                    if (review.ShowDialog(this) != DialogResult.OK)
+                        return;
+
+                    bool baseline = capture.Phase == "Baseline";
+                    bool isFinal = capture.Phase == "Final";
+                    if (currentSession.FitPositions == null)
+                        currentSession.FitPositions = new List<FitPositionRecord>();
+                    if (isFinal)
+                        foreach (FitPositionRecord existing in currentSession.FitPositions)
+                            existing.IsFinal = false;
+
+                    Dictionary<string, string> angles = review.ResultValues ?? new Dictionary<string, string>();
+                    string notes = capture.Notes;
+                    if (!string.IsNullOrWhiteSpace(review.TrackingSummary))
+                        notes = (string.IsNullOrWhiteSpace(notes) ? string.Empty : notes + " | ") + review.TrackingSummary;
+
+                    FitPositionRecord position = new FitPositionRecord
+                    {
+                        Id = Guid.NewGuid(),
+                        Sequence = nextSequence,
+                        Name = capture.PositionName,
+                        Phase = capture.Phase,
+                        ChangeNotes = notes,
+                        CapturedUtc = DateTime.UtcNow,
+                        IsFinal = isFinal,
+                        VideoPath = capture.VideoPath,
+                        ImagePath = review.EvidenceImagePath,
+                        SaddleHeight = baseline ? currentSession.SaddleHeightBefore : currentSession.SaddleHeightAfter,
+                        SaddleSetback = baseline ? currentSession.SaddleSetbackBefore : currentSession.SaddleSetbackAfter,
+                        SaddleTipToGripReach = baseline ? currentSession.SaddleTipToGripReachBefore : currentSession.SaddleTipToGripReachAfter,
+                        HandlebarX = baseline ? currentSession.HandlebarXBefore : currentSession.HandlebarXAfter,
+                        HandlebarY = baseline ? currentSession.HandlebarYBefore : currentSession.HandlebarYAfter,
+                        KneeAngle = AngleValue(angles, "KneeAngle"),
+                        HipAngle = AngleValue(angles, "HipAngle"),
+                        AnkleAngle = AngleValue(angles, "AnkleAngle"),
+                        BodyReach = AngleValue(angles, "TorsoAngle"),
+                        BackAngle = AngleValue(angles, "ShoulderAngle")
+                    };
+                    currentSession.FitPositions.Add(position);
+                    AddTimelineEvent("Measurements", "Captured position " + position.Name + " (" + position.Phase + ")");
+                    SaveCurrentSession();
+                    UpdateSaveHint("Saved position \"" + position.Name + "\" to the fit log with knee, hip, ankle, body reach and back angles.");
+                }
+            }
+        }
+
+        private static string AngleValue(Dictionary<string, string> values, string key)
+        {
+            string value;
+            return values.TryGetValue(key, out value) ? value : string.Empty;
         }
 
         private void ShowPedalCycleReview(object sender, EventArgs e)
