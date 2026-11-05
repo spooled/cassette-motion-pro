@@ -787,6 +787,9 @@ namespace CassetteMotionPro.Workspace
     {
         private readonly List<PointF> points = new List<PointF>();
         private Image image;
+        private string imagePath;
+        private List<float> scores = new List<float>();
+        public bool PoseDetected { get; private set; }
         private int dragIndex = -1;
         private bool facingRight = true;
         private bool correctedThisDrag;
@@ -816,6 +819,9 @@ namespace CassetteMotionPro.Workspace
         {
             if (image != null) image.Dispose();
             image = Image.FromFile(path);
+            imagePath = path;
+            PoseDetected = false;
+            scores.Clear();
             points.Clear();
             LastCorrectedPointIndex = -1;
             if (trackedPoints != null) points.AddRange(trackedPoints);
@@ -825,6 +831,26 @@ namespace CassetteMotionPro.Workspace
         public void Suggest()
         {
             if (image == null) return;
+            PoseDetection pose = PoseEstimator.Detect(imagePath);
+            if (pose != null)
+            {
+                points.Clear();
+                points.AddRange(pose.Points);
+                scores = pose.Scores.ToList();
+                facingRight = pose.FacingRight;
+                PoseDetected = true;
+                Confidence = pose.Confidence;
+                Invalidate();
+                return;
+            }
+            SuggestFromLayout();
+        }
+
+        private void SuggestFromLayout()
+        {
+            if (image == null) return;
+            PoseDetected = false;
+            scores.Clear();
             float left = image.Width * 0.22F, top = image.Height * 0.12F, width = image.Width * 0.58F, height = image.Height * 0.78F;
             points.Clear();
             float direction = facingRight ? 1F : -1F;
@@ -842,7 +868,7 @@ namespace CassetteMotionPro.Workspace
             Invalidate();
         }
 
-        public void Flip() { facingRight = !facingRight; Suggest(); }
+        public void Flip() { facingRight = !facingRight; SuggestFromLayout(); }
 
         protected override void Dispose(bool disposing)
         {
@@ -859,6 +885,17 @@ namespace CassetteMotionPro.Workspace
             base.OnPaint(e);
             if (image == null) return;
             RenderPose(e.Graphics, image, points, ClientRectangle, string.Empty);
+            if (PoseDetected)
+            {
+                RectangleF fitted = Fit(ClientRectangle, image.Width, image.Height);
+                using (Pen warn = new Pen(Color.FromArgb(255, 214, 64), 3F))
+                    for (int i = 0; i < points.Count && i < scores.Count; i++)
+                        if (scores[i] < 0.4F)
+                        {
+                            PointF p = Map(points[i], fitted, image);
+                            e.Graphics.DrawEllipse(warn, p.X - 13, p.Y - 13, 26, 26);
+                        }
+            }
         }
 
         public static void RenderPose(Graphics graphics, Image image, IList<PointF> pose, RectangleF bounds, string label)

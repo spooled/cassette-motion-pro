@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  VERSION: 1.29.1
+  VERSION: 1.30.0
   KINOVEA_UPSTREAM_REF: 7e7c9dcf55b6e6f0d6a7080e191a7ae9485ff3e9
 
 jobs:
@@ -168,6 +168,10 @@ jobs:
             Write-Host "Restoring PackageReference dependencies from $($_.FullName)"
             msbuild $_.FullName /t:Restore /p:Platform="x64" /p:Configuration=Release
           }
+
+      - name: List ONNX Runtime package
+        shell: pwsh
+        run: Get-ChildItem src\packages\Microsoft.ML.OnnxRuntime.Managed* -Recurse -Include *.dll | ForEach-Object { $_.FullName }
 
       - name: Patch FFmpeg headers for CI compiler
         shell: pwsh
