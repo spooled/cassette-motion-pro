@@ -670,11 +670,11 @@
     </PublishFile>
   </ItemGroup>
   <PropertyGroup>
-    <OrtDll Condition="'$(OrtDll)' == '' And Exists('$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.1.20.1\lib\netstandard2.0\Microsoft.ML.OnnxRuntime.dll')">$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.1.20.1\lib\netstandard2.0\Microsoft.ML.OnnxRuntime.dll</OrtDll>
-    <OrtDll Condition="'$(OrtDll)' == '' And Exists('$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.1.20.1\lib\net462\Microsoft.ML.OnnxRuntime.dll')">$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.1.20.1\lib\net462\Microsoft.ML.OnnxRuntime.dll</OrtDll>
-    <OrtDll Condition="'$(OrtDll)' == '' And Exists('$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.1.20.1\lib\netstandard2.1\Microsoft.ML.OnnxRuntime.dll')">$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.1.20.1\lib\netstandard2.1\Microsoft.ML.OnnxRuntime.dll</OrtDll>
-    <OrtDll Condition="'$(OrtDll)' == '' And Exists('$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.1.20.1\lib\net6.0\Microsoft.ML.OnnxRuntime.dll')">$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.1.20.1\lib\net6.0\Microsoft.ML.OnnxRuntime.dll</OrtDll>
-    <OrtDll Condition="'$(OrtDll)' == '' And Exists('$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.1.20.1\lib\net8.0\Microsoft.ML.OnnxRuntime.dll')">$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.1.20.1\lib\net8.0\Microsoft.ML.OnnxRuntime.dll</OrtDll>
+    <OrtDll Condition="'$(OrtDll)' == '' And Exists('$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.Managed.1.20.1\lib\netstandard2.0\Microsoft.ML.OnnxRuntime.dll')">$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.Managed.1.20.1\lib\netstandard2.0\Microsoft.ML.OnnxRuntime.dll</OrtDll>
+    <OrtDll Condition="'$(OrtDll)' == '' And Exists('$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.Managed.1.20.1\lib\net462\Microsoft.ML.OnnxRuntime.dll')">$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.Managed.1.20.1\lib\net462\Microsoft.ML.OnnxRuntime.dll</OrtDll>
+    <OrtDll Condition="'$(OrtDll)' == '' And Exists('$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.Managed.1.20.1\lib\netstandard2.1\Microsoft.ML.OnnxRuntime.dll')">$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.Managed.1.20.1\lib\netstandard2.1\Microsoft.ML.OnnxRuntime.dll</OrtDll>
+    <OrtDll Condition="'$(OrtDll)' == '' And Exists('$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.Managed.1.20.1\lib\net6.0\Microsoft.ML.OnnxRuntime.dll')">$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.Managed.1.20.1\lib\net6.0\Microsoft.ML.OnnxRuntime.dll</OrtDll>
+    <OrtDll Condition="'$(OrtDll)' == '' And Exists('$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.Managed.1.20.1\lib\net8.0\Microsoft.ML.OnnxRuntime.dll')">$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.Managed.1.20.1\lib\net8.0\Microsoft.ML.OnnxRuntime.dll</OrtDll>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.ML.OnnxRuntime" Condition="'$(OrtDll)' != ''">

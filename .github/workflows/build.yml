@@ -171,7 +171,7 @@ jobs:
 
       - name: List ONNX Runtime package
         shell: pwsh
-        run: Get-ChildItem src\packages\Microsoft.ML.OnnxRuntime.* -Recurse -Include *.dll | ForEach-Object { $_.FullName }
+        run: Get-ChildItem src\packages\Microsoft.ML.OnnxRuntime.Managed* -Recurse -Include *.dll | ForEach-Object { $_.FullName }
 
       - name: Patch FFmpeg headers for CI compiler
         shell: pwsh
