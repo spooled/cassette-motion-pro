@@ -72,3 +72,30 @@ foreach ($icon in Get-ChildItem $drawingSource -Filter *.png) {
 }
 [System.IO.File]::WriteAllText($resx, $text, (New-Object System.Text.UTF8Encoding($hasBom)))
 Write-Host "Replaced $patched embedded drawing icons in Drawings.resx."
+
+# Main window menu and toolbar icons: PNG files in the main app's Resources folder.
+$menuSource = Join-Path $RepoRoot "branding\toolbar-icons"
+$menuTarget = Join-Path $RepoRoot "src\Kinovea\Resources"
+if (!(Test-Path $menuSource)) { throw "Brand toolbar icon folder not found: $menuSource" }
+if (!(Test-Path $menuTarget)) { throw "Main app resources not found: $menuTarget" }
+
+$menuApplied = 0
+foreach ($icon in Get-ChildItem $menuSource -Filter *.png) {
+    $existing = Join-Path $menuTarget $icon.Name
+    if (!(Test-Path $existing)) { throw "Main app has no icon named $($icon.Name); upstream may have changed." }
+
+    $old = [System.Drawing.Image]::FromFile($existing)
+    $new = [System.Drawing.Image]::FromFile($icon.FullName)
+    try {
+        if ($old.Width -ne $new.Width -or $old.Height -ne $new.Height) {
+            throw "Size mismatch for $($icon.Name): upstream $($old.Width)x$($old.Height), brand $($new.Width)x$($new.Height)."
+        }
+    }
+    finally {
+        $old.Dispose()
+        $new.Dispose()
+    }
+    Copy-Item $icon.FullName $existing -Force
+    $menuApplied++
+}
+Write-Host "Applied $menuApplied brand menu and toolbar icons."

@@ -13,6 +13,7 @@ LIME_INK = "#101a08"
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "player-icons")
 OUT_DRAWING = os.path.join(HERE, "drawing-icons")
+OUT_MENU = os.path.join(HERE, "toolbar-icons")
 
 def stroke(body, w=1.9, color=INK):
     return f'<g fill="none" stroke="{color}" stroke-width="{w}" stroke-linecap="round" stroke-linejoin="round">{body}</g>'
@@ -94,6 +95,52 @@ DRAWING = {
     "flipvertical": sq(16, stroke('<path d="M3 12h18" stroke-dasharray="2.5 2.5"/><path d="M7 9l5-6 5 6Z"/><path d="M7 15l5 6 5-6Z"/>', 2.1)),
 }
 
+SOFT = "#cfdbd4"   # menu and toolbar sit on a dark bar, so these icons are light
+
+def lt(body, w=2.1):
+    return stroke(body, w, SOFT)
+
+FOLDER = '<path d="M3 7.5a1.5 1.5 0 0 1 1.5-1.5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 10v8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18Z"/>'
+CLOCK = '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5.2l3.2 2"/>'
+WINDOW = '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9.5h18"/>'
+PENCIL = '<path d="M14 20l5-5-3-3-5 5-.8 3.8Z"/>'
+
+def txt(label, size):
+    return f'<text x="12" y="16.5" text-anchor="middle" font-family="DejaVu Sans Mono, Consolas, monospace" font-weight="700" font-size="{size}" fill="{SOFT}">{label}</text>'
+
+# Icons used by the main window menus and toolbar. Key = upstream file name, sizes match upstream.
+MENU = {
+    "user-detective": sq(16, lt('<circle cx="12" cy="8" r="4"/><path d="M4 20c1-4 4-6 8-6s7 2 8 6"/>')),
+    "folder_add": sq(16, lt(FOLDER + '<path d="M12 11v6M9 14h6"/>')),
+    "folder": sq(16, lt(FOLDER)),
+    "time": sq(16, lt(CLOCK)),
+    "time_edit": sq(16, lt('<circle cx="10.5" cy="10.5" r="7.5"/><path d="M10.5 6.5v4.4l2.6 1.6"/>' + PENCIL)),
+    "bin_empty": sq(16, lt('<path d="M4 7h16M9 7V4.5h6V7M6 7l1 13h10l1-13M10 11v6M14 11v6"/>')),
+    "close2-16": sq(16, lt('<path d="M6 6l12 12M18 6 6 18"/>', 2.4)),
+    "undo-16": sq(16, lt('<path d="M9 5 4 10l5 5"/><path d="M4 10h10a6 6 0 0 1 0 12h-3"/>')),
+    "redo-16": sq(16, lt('<path d="M15 5l5 5-5 5"/><path d="M20 10H10a6 6 0 0 0 0 12h3"/>')),
+    "navigation-pane": sq(16, lt('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M9.5 5v14"/>')),
+    "expand_16": sq(16, lt('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>')),
+    "application_form": sq(16, lt(WINDOW + '<path d="M7 14h6"/>')),
+    "application_add": sq(16, lt(WINDOW + '<path d="M12 12v5M9.5 14.5h5"/>')),
+    "application_cascade": sq(16, lt('<rect x="3" y="8" width="13" height="11" rx="1.5"/><path d="M8 8V5.5A1.5 1.5 0 0 1 9.5 4H19.5A1.5 1.5 0 0 1 21 5.5V15a1.5 1.5 0 0 1-1.5 1.5H16"/>')),
+    "application_edit": sq(16, lt(WINDOW + PENCIL.replace('M14 20','M13 20'))),
+    "workspace": sq(16, lt('<rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1.2"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="1.2"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="1.2"/><rect x="13" y="13" width="7.5" height="7.5" rx="1.2"/>', 1.9)),
+    "international": sq(16, lt('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>', 1.9)),
+    "wrench": sq(16, lt('<path d="M14.5 6.5a4 4 0 0 0-5 5L4 17l3 3 5.5-5.5a4 4 0 0 0 5-5l-2.5 2.5-2.5-.5-.5-2.5Z"/>', 1.9)),
+    "handopen24c": sq(24, lt('<path d="M12 3v18M3 12h18"/><path d="M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/>', 1.7)),
+    "book_open": sq(16, lt('<path d="M12 6c-2-1.3-5-1.8-8-1.5V18c3-.3 6 .2 8 1.5 2-1.3 5-1.8 8-1.5V4.5c-3-.3-6 .2-8 1.5ZM12 6v13.5"/>', 1.9)),
+    "bug-16": sq(16, lt('<rect x="8" y="8" width="8" height="11" rx="4"/><path d="M12 8V5M9 5l2 2M15 5l-2 2M8 12H4M16 12h4M8 16H5M16 16h3"/>', 1.9)),
+    "website": sq(16, lt('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18"/><path d="M12 3c-3 3-3 15 0 18"/>', 1.9)),
+    "information": sq(16, lt('<circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.8" r="0.6"/>', 2.2)),
+    "timecode": sq(16, lt(CLOCK)),
+    "framenumber": sq(16, lt('<path d="M9 4 7 20M17 4l-2 16M4 9h16M3.5 15h16"/>', 2)),
+    "milliseconds": sq(16, txt("ms", 11)),
+    "microseconds": sq(16, txt("\u00b5s", 11)),
+    "arrow_refresh": sq(16, lt('<path d="M19 12a7 7 0 0 0-12-4.9L5 9"/><path d="M5 4v5h5"/><path d="M5 12a7 7 0 0 0 12 4.9L19 15"/><path d="M19 20v-5h-5"/>', 2)),
+    "file-browser": sq(16, lt(FOLDER.replace('M3 7.5','M3 6.5') + '<path d="M8 13h8M8 16.5h5"/>', 1.9)),
+}
+
 def render(page, folder, icons):
     os.makedirs(folder, exist_ok=True)
     for name, (w, h, box, body) in icons.items():
@@ -108,8 +155,9 @@ def main():
         page = browser.new_page(device_scale_factor=1)
         render(page, OUT, ICONS)
         render(page, OUT_DRAWING, DRAWING)
+        render(page, OUT_MENU, MENU)
         browser.close()
-    print("wrote", len(ICONS), "file icons and", len(DRAWING), "embedded icons")
+    print("wrote", len(ICONS), "file icons,", len(DRAWING), "embedded icons and", len(MENU), "menu icons")
 
 if __name__ == "__main__":
     main()
