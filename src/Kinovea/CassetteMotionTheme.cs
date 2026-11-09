@@ -15,28 +15,49 @@ namespace CassetteMotionPro
 {
     internal static class CassetteMotionTheme
     {
-        public static readonly Color Canvas = Color.FromArgb(239, 243, 240);
-        public static readonly Color Surface = Color.FromArgb(252, 253, 252);
-        public static readonly Color SurfaceSoft = Color.FromArgb(228, 235, 230);
-        public static readonly Color SurfaceRaised = Color.White;
+        public static readonly Color Canvas = Color.FromArgb(11, 16, 14);
+        public static readonly Color Surface = Color.FromArgb(23, 32, 28);
+        public static readonly Color SurfaceSoft = Color.FromArgb(31, 44, 39);
+        public static readonly Color SurfaceRaised = Color.FromArgb(30, 42, 37);
         public static readonly Color Header = Color.FromArgb(13, 20, 18);
         public static readonly Color HeaderSoft = Color.FromArgb(28, 40, 36);
         public static readonly Color Rail = Color.FromArgb(17, 27, 24);
         public static readonly Color RailSelected = Color.FromArgb(45, 62, 55);
-        public static readonly Color Ink = Color.FromArgb(19, 31, 27);
-        public static readonly Color Muted = Color.FromArgb(92, 105, 98);
-        public static readonly Color Border = Color.FromArgb(198, 210, 202);
+        public static readonly Color Ink = Color.FromArgb(228, 236, 231);
+        public static readonly Color Muted = Color.FromArgb(143, 161, 152);
+        public static readonly Color Border = Color.FromArgb(52, 70, 63);
         public static readonly Color Accent = Color.FromArgb(191, 244, 74);
-        public static readonly Color AccentSoft = Color.FromArgb(224, 250, 169);
+        public static readonly Color AccentSoft = Color.FromArgb(48, 66, 22);
         public static readonly Color AccentStrong = Color.FromArgb(126, 190, 23);
-        public static readonly Color Success = Color.FromArgb(42, 142, 78);
-        public static readonly Color Warning = Color.FromArgb(190, 119, 29);
+        public static readonly Color Success = Color.FromArgb(104, 214, 138);
+        public static readonly Color Warning = Color.FromArgb(255, 176, 74);
+
+        public static readonly Color PrimaryText = Color.FromArgb(16, 26, 8);
 
         public static void ApplyForm(Form form)
         {
             form.Font = new Font("Segoe UI", 9.25F);
             form.BackColor = Canvas;
             form.ForeColor = Ink;
+            // Some screens set their own light colours; once the form is on screen, fix any text that ended up unreadable.
+            form.Shown += delegate { EnsureReadable(form); };
+        }
+
+        public static void EnsureReadable(Control root)
+        {
+            foreach (Control control in root.Controls)
+            {
+                if (control is Label || control is CheckBox || control is RadioButton || control is GroupBox || control is Button)
+                {
+                    Color back = control.BackColor.A < 255 ? ResolveBackground(control.Parent) : control.BackColor;
+                    Color fore = control.ForeColor;
+                    if (!back.IsEmpty && !fore.IsEmpty && fore.A == 255 &&
+                        Math.Abs(back.GetBrightness() - fore.GetBrightness()) < 0.28f)
+                        control.ForeColor = back.GetBrightness() > 0.5f ? Color.FromArgb(19, 31, 27) : Ink;
+                }
+                if (control.HasChildren)
+                    EnsureReadable(control);
+            }
         }
 
         public static void StyleButton(Button button, bool primary)
@@ -54,9 +75,9 @@ namespace CassetteMotionPro
             button.FlatAppearance.BorderSize = primary ? 0 : 1;
             button.FlatAppearance.BorderColor = primary ? AccentStrong : Border;
             button.FlatAppearance.MouseOverBackColor = primary ? Color.FromArgb(204, 249, 108) : SurfaceSoft;
-            button.FlatAppearance.MouseDownBackColor = primary ? AccentStrong : Color.FromArgb(221, 228, 222);
+            button.FlatAppearance.MouseDownBackColor = primary ? AccentStrong : Color.FromArgb(24, 34, 30);
             button.BackColor = primary ? Accent : Surface;
-            button.ForeColor = Ink;
+            button.ForeColor = primary ? PrimaryText : Ink;
             button.Cursor = Cursors.Hand;
             button.UseVisualStyleBackColor = false;
         }
