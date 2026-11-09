@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  VERSION: 1.30.0
+  VERSION: 1.31.0
   KINOVEA_UPSTREAM_REF: 7e7c9dcf55b6e6f0d6a7080e191a7ae9485ff3e9
 
 jobs:
@@ -139,6 +139,11 @@ jobs:
         shell: pwsh
         run: |
           .\build\apply-brand-player-icons.ps1
+
+      - name: Apply live pose hook
+        shell: pwsh
+        run: |
+          .\build\apply-live-pose-hook.ps1
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2

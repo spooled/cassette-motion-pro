@@ -87,6 +87,7 @@ namespace Kinovea.Root
             splashForm.Show();
             splashForm.Update();
 
+            CassetteMotionPro.Workspace.LivePoseService.Install();
             RootKernel kernel = new RootKernel();
             kernel.Prepare();
 
