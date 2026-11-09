@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Threading;
+using System.Windows.Forms;
 using Kinovea.ScreenManager;
 
 namespace CassetteMotionPro.Workspace
@@ -25,7 +26,22 @@ namespace CassetteMotionPro.Workspace
         private static PoseDetection latest;
         private static Size latestSize;
 
-        public static bool Enabled = true;
+        private static bool enabled = true;
+        private static long toastUntil;
+        public static event EventHandler EnabledChanged;
+
+        public static bool Enabled
+        {
+            get { return enabled; }
+            set
+            {
+                if (enabled == value) return;
+                enabled = value;
+                toastUntil = clock.ElapsedMilliseconds + 1400;
+                EventHandler handler = EnabledChanged;
+                if (handler != null) handler(null, EventArgs.Empty);
+            }
+        }
 
         public static bool Available { get { return !PoseEstimator.Unavailable; } }
 
@@ -33,6 +49,21 @@ namespace CassetteMotionPro.Workspace
         {
             LivePoseHook.FrameReady = OnFrame;
             LivePoseHook.Paint = OnPaint;
+            Application.AddMessageFilter(new KeyFilter());
+        }
+
+        // Ctrl+J turns the live overlay on or off from anywhere in the app.
+        private class KeyFilter : IMessageFilter
+        {
+            private const int WM_KEYDOWN = 0x0100;
+
+            public bool PreFilterMessage(ref Message m)
+            {
+                if (m.Msg != WM_KEYDOWN || (Keys)(int)m.WParam != Keys.J) return false;
+                if (Control.ModifierKeys != Keys.Control) return false;
+                Enabled = !Enabled;
+                return true;
+            }
         }
 
         private static void OnFrame(Bitmap frame)
@@ -86,7 +117,13 @@ namespace CassetteMotionPro.Workspace
 
         private static void OnPaint(Graphics g, Rectangle target, Size imageSize)
         {
-            if (!Enabled) return;
+            if (!Enabled)
+            {
+                if (clock.ElapsedMilliseconds < toastUntil)
+                    using (Font font = new Font("Segoe UI", 10F, FontStyle.Bold))
+                        Label(g, font, new PointF(target.X + 8, target.Y + 22), "LIVE JOINTS \u00B7 off (Ctrl+J)", true, true);
+                return;
+            }
             PoseDetection pose; Size size;
             lock (gate)
             {
