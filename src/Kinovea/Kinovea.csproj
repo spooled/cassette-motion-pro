@@ -221,6 +221,7 @@
     <Compile Include="Workspace\MeasurementNumber.cs" />
     <Compile Include="BrandChrome.cs" />
     <Compile Include="Workspace\PoseEstimator.cs" />
+    <Compile Include="Workspace\LivePoseService.cs" />
     <Compile Include="Workspace\ClipFrameExtractor.cs" />
     <Compile Include="Workspace\PositionCaptureForm.cs" />
     <Compile Include="Workspace\BikeFitGeometry.cs" />

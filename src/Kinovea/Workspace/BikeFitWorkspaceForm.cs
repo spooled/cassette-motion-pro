@@ -3306,6 +3306,15 @@ namespace CassetteMotionPro.Workspace
             captureButtons.Padding = new Padding(0, 2, 0, 0);
 
             AddFitCommandButton(captureButtons, "Dual Live Capture", true, OpenDualLiveCapture);
+            Button liveJoints = CreateButton("Live Joints: On", false);
+            liveJoints.Size = new Size(174, 48);
+            liveJoints.Margin = new Padding(0, 4, 9, 4);
+            liveJoints.Click += delegate
+            {
+                LivePoseService.Enabled = !LivePoseService.Enabled;
+                liveJoints.Text = LivePoseService.Enabled ? "Live Joints: On" : "Live Joints: Off";
+            };
+            captureButtons.Controls.Add(liveJoints);
             AddFitCommandButton(captureButtons, "Record Before", false, delegate { OpenLiveCaptureForVideo("BeforeVideoPath"); });
             AddFitCommandButton(captureButtons, "Record After", false, delegate { OpenLiveCaptureForVideo("AfterVideoPath"); });
             AddFitCommandButton(captureButtons, "Use Latest Before", false, delegate { UseLatestVideo("BeforeVideoPath"); });

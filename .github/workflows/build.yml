@@ -140,6 +140,11 @@ jobs:
         run: |
           .\build\apply-brand-player-icons.ps1
 
+      - name: Apply live pose hook
+        shell: pwsh
+        run: |
+          .\build\apply-live-pose-hook.ps1
+
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 

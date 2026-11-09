@@ -34,6 +34,30 @@ namespace CassetteMotionPro.Workspace
             get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "models", "movenet_thunder.onnx"); }
         }
 
+        public static PoseDetection Detect(Bitmap frame)
+        {
+            try
+            {
+                lock (gate)
+                {
+                    if (failed) return null;
+                    if (session == null)
+                    {
+                        if (!File.Exists(ModelPath)) { failed = true; return null; }
+                        session = new InferenceSession(ModelPath);
+                    }
+                    return Run(frame);
+                }
+            }
+            catch (Exception)
+            {
+                failed = true;
+                return null;
+            }
+        }
+
+        public static bool Unavailable { get { return failed; } }
+
         public static PoseDetection Detect(string imagePath)
         {
             try
@@ -71,12 +95,20 @@ namespace CassetteMotionPro.Workspace
                     float scale = (float)Size / side;
                     g.DrawImage(source, offsetX * scale, offsetY * scale, source.Width * scale, source.Height * scale);
                 }
-                for (int y = 0; y < Size; y++)
-                for (int x = 0; x < Size; x++)
+                System.Drawing.Imaging.BitmapData data = square.LockBits(new Rectangle(0, 0, Size, Size),
+                    System.Drawing.Imaging.ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+                try
                 {
-                    Color c = square.GetPixel(x, y);
-                    input[0, y, x, 0] = c.R; input[0, y, x, 1] = c.G; input[0, y, x, 2] = c.B;
+                    byte[] bytes = new byte[data.Stride * Size];
+                    System.Runtime.InteropServices.Marshal.Copy(data.Scan0, bytes, 0, bytes.Length);
+                    for (int y = 0; y < Size; y++)
+                    for (int x = 0; x < Size; x++)
+                    {
+                        int i = y * data.Stride + x * 3; // BGR in memory
+                        input[0, y, x, 0] = bytes[i + 2]; input[0, y, x, 1] = bytes[i + 1]; input[0, y, x, 2] = bytes[i];
+                    }
                 }
+                finally { square.UnlockBits(data); }
             }
 
             float[] raw;
