@@ -341,6 +341,7 @@ namespace CassetteMotionPro.Workspace
             SuspendLayout();
             BuildInterface();
             ApplyVisualIdentity(this);
+            CassetteMotionTheme.KeepReadable(this);
             ResumeLayout(true);
             RefreshSessions(Guid.Empty);
             OfferCrashRecovery();
