@@ -8,6 +8,7 @@ GNU General Public License version 2.
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Windows.Forms;
 
@@ -40,13 +41,15 @@ namespace CassetteMotionPro
             form.BackColor = Canvas;
             form.ForeColor = Ink;
             // Some screens set their own light colours; once the form is on screen, fix any text that ended up unreadable.
-            form.Shown += delegate { EnsureReadable(form); };
+            form.Shown += delegate { KeepReadable(form); };
         }
 
         public static void EnsureReadable(Control root)
         {
             foreach (Control control in root.Controls)
             {
+                FixDarkBackground(control);
+
                 if (control is Label || control is CheckBox || control is RadioButton || control is GroupBox || control is Button)
                 {
                     Color back = control.BackColor.A < 255 ? ResolveBackground(control.Parent) : control.BackColor;
@@ -57,6 +60,95 @@ namespace CassetteMotionPro
                 }
                 if (control.HasChildren)
                     EnsureReadable(control);
+            }
+        }
+
+        // Re-runs the readability pass now, when the control is shown, and when the user switches tabs (pages are filled late).
+        public static void KeepReadable(Control root)
+        {
+            EnsureReadable(root);
+            root.VisibleChanged += delegate { if (root.Visible) EnsureReadable(root); };
+            HookTabs(root, root);
+        }
+
+        private static void HookTabs(Control control, Control root)
+        {
+            TabControl tabs = control as TabControl;
+            if (tabs != null)
+                tabs.SelectedIndexChanged += delegate
+                {
+                    if (root.IsHandleCreated)
+                        root.BeginInvoke(new Action(delegate { EnsureReadable(root); }));
+                };
+            foreach (Control child in control.Controls)
+                HookTabs(child, root);
+        }
+
+        private static bool IsLightOpaque(Color color)
+        {
+            return color.A == 255 && color.GetBrightness() > 0.8f;
+        }
+
+        // The screens were written for a light page: turn white or near-white surfaces dark.
+        private static void FixDarkBackground(Control control)
+        {
+            TabPage page = control as TabPage;
+            if (page != null)
+            {
+                page.UseVisualStyleBackColor = false;
+                page.BackColor = Canvas;
+                return;
+            }
+
+            GroupBox group = control as GroupBox;
+            if (group != null)
+            {
+                group.FlatStyle = FlatStyle.Flat; // the system style draws a white border that cannot be recoloured
+                if (IsLightOpaque(group.BackColor)) group.BackColor = Surface;
+                return;
+            }
+
+            ComboBox combo = control as ComboBox;
+            if (combo != null)
+            {
+                combo.FlatStyle = FlatStyle.Flat;
+                combo.BackColor = Surface;
+                combo.ForeColor = Ink;
+                return;
+            }
+
+            if (control is TextBox || control is NumericUpDown)
+            {
+                if (IsLightOpaque(control.BackColor)) control.BackColor = Surface;
+                if (control.ForeColor.GetBrightness() < 0.5f) control.ForeColor = Ink;
+                return;
+            }
+
+            ListBox listBox = control as ListBox;
+            if (listBox != null)
+            {
+                listBox.BackColor = Surface;
+                listBox.ForeColor = Ink;
+                listBox.BorderStyle = BorderStyle.None;
+                return;
+            }
+
+            ListView listView = control as ListView;
+            if (listView != null)
+            {
+                StyleListView(listView);
+                return;
+            }
+
+            if (control is PictureBox)
+            {
+                if (IsLightOpaque(control.BackColor)) control.BackColor = Canvas;
+                return;
+            }
+
+            if (control is Label || control is Panel || control is FlowLayoutPanel || control is TableLayoutPanel || control is UserControl)
+            {
+                if (IsLightOpaque(control.BackColor)) control.BackColor = Surface;
             }
         }
 
@@ -104,6 +196,13 @@ namespace CassetteMotionPro
             tabs.ItemSize = new Size(0, 40);
             tabs.BackColor = Canvas;
             tabs.DrawItem += DrawTab;
+            try
+            {
+                MethodInfo setStyle = typeof(Control).GetMethod("SetStyle", BindingFlags.Instance | BindingFlags.NonPublic);
+                setStyle.Invoke(tabs, new object[] { ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true });
+                tabs.Paint += PaintTabStrip;
+            }
+            catch (Exception) { }
         }
 
         public static void StyleApplicationMenu(MenuStrip menu)
@@ -426,6 +525,18 @@ namespace CassetteMotionPro
 
                 if (control.HasChildren)
                     ThemeDialogControls(form, control);
+            }
+        }
+
+        private static void PaintTabStrip(object sender, PaintEventArgs e)
+        {
+            TabControl tabs = sender as TabControl;
+            if (tabs == null) return;
+            e.Graphics.Clear(Canvas);
+            for (int i = 0; i < tabs.TabCount; i++)
+            {
+                DrawItemState state = i == tabs.SelectedIndex ? DrawItemState.Selected : DrawItemState.None;
+                DrawTab(tabs, new DrawItemEventArgs(e.Graphics, tabs.Font, tabs.GetTabRect(i), i, state));
             }
         }
 
