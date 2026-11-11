@@ -1419,8 +1419,8 @@ namespace CassetteMotionPro.Workspace
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 226));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 246));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 102));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 300));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 128));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 126));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 104));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 96));
@@ -1608,7 +1608,7 @@ namespace CassetteMotionPro.Workspace
         {
             GroupBox card = new GroupBox();
             card.Text = title;
-            card.Size = new Size(250, 202);
+            card.Size = new Size(260, 250);
             card.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             card.ForeColor = Color.FromArgb(37, 48, 43);
             card.Padding = new Padding(9, 8, 9, 8);
@@ -1617,9 +1617,10 @@ namespace CassetteMotionPro.Workspace
             layout.Dock = DockStyle.Fill;
             layout.ColumnCount = 1;
             layout.RowCount = 3;
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 100));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
+            layout.AutoScroll = false;
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 104));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
 
             preview.Dock = DockStyle.Fill;
             preview.BackColor = Color.FromArgb(236, 240, 237);
@@ -1636,11 +1637,12 @@ namespace CassetteMotionPro.Workspace
             actions.Dock = DockStyle.Fill;
             actions.FlowDirection = FlowDirection.LeftToRight;
             actions.WrapContents = false;
+            actions.AutoScroll = false;
             Button latest = CreateButton("Use Latest", true);
-            latest.Size = new Size(102, 32);
+            latest.Size = new Size(104, 40);
             latest.Click += delegate { UseLatestReportImage(key); RefreshIntegratedReview(); };
             Button choose = CreateButton("Choose…", false);
-            choose.Size = new Size(96, 32);
+            choose.Size = new Size(104, 40);
             choose.Click += delegate { BrowseReportImage(key); RefreshIntegratedReview(); };
             actions.Controls.Add(latest);
             actions.Controls.Add(choose);

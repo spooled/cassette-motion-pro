@@ -33,7 +33,7 @@ namespace CassetteMotionPro
         public static readonly Color Success = Color.FromArgb(104, 214, 138);
         public static readonly Color Warning = Color.FromArgb(255, 176, 74);
 
-        public static readonly Color PrimaryText = Color.FromArgb(16, 26, 8);
+        public static readonly Color PrimaryText = Color.FromArgb(6, 10, 2);
 
         public static void ApplyForm(Form form)
         {
@@ -155,7 +155,7 @@ namespace CassetteMotionPro
         public static void StyleButton(Button button, bool primary)
         {
             StyleButtonColors(button, primary);
-            button.Font = new Font("Segoe UI Semibold", 9F, FontStyle.Bold);
+            button.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold);
             button.MinimumSize = new Size(82, 38);
             ApplyButtonPainting(button);
         }
