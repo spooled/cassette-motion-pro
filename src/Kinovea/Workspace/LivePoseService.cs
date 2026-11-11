@@ -24,6 +24,13 @@ namespace CassetteMotionPro.Workspace
         private static long lastResult;
         private static int busy;
         private static PoseDetection latest;
+        private static readonly SegmentModel segments = new SegmentModel();
+        private static Bitmap ghost;
+        private static Bitmap ghostScaled;
+        private static Size ghostScaledFor;
+        private static bool ghostVisible;
+        public static string GhostPath { get; private set; }
+        public static event EventHandler GhostChanged;
         private static Size latestSize;
 
         private static bool enabled = true;
@@ -52,17 +59,79 @@ namespace CassetteMotionPro.Workspace
             Application.AddMessageFilter(new KeyFilter());
         }
 
-        // Ctrl+J turns the live overlay on or off from anywhere in the app.
+        // Ctrl+J turns the live joint overlay on or off, Ctrl+G shows or hides the ghost image, from anywhere in the app.
         private class KeyFilter : IMessageFilter
         {
             private const int WM_KEYDOWN = 0x0100;
 
             public bool PreFilterMessage(ref Message m)
             {
-                if (m.Msg != WM_KEYDOWN || (Keys)(int)m.WParam != Keys.J) return false;
-                if (Control.ModifierKeys != Keys.Control) return false;
-                Enabled = !Enabled;
-                return true;
+                if (m.Msg != WM_KEYDOWN || Control.ModifierKeys != Keys.Control) return false;
+                Keys key = (Keys)(int)m.WParam;
+                if (key == Keys.J) { Enabled = !Enabled; return true; }
+                if (key == Keys.G && ghost != null) { GhostVisible = !GhostVisible; return true; }
+                return false;
+            }
+        }
+
+        public static bool HasGhost { get { return ghost != null; } }
+
+        public static bool GhostVisible
+        {
+            get { return ghostVisible; }
+            set
+            {
+                if (ghostVisible == value) return;
+                ghostVisible = value;
+                toastUntil = clock.ElapsedMilliseconds + 1400;
+                EventHandler handler = GhostChanged;
+                if (handler != null) handler(null, EventArgs.Empty);
+            }
+        }
+
+        // Loads a saved picture (for example the Before frame) to blend over the live view.
+        public static void SetGhost(string path)
+        {
+            Bitmap loaded = null;
+            if (!string.IsNullOrEmpty(path))
+                using (Bitmap raw = new Bitmap(path))
+                    loaded = new Bitmap(raw); // copy so the file is not locked
+            lock (gate)
+            {
+                if (ghost != null) ghost.Dispose();
+                if (ghostScaled != null) ghostScaled.Dispose();
+                ghost = loaded;
+                ghostScaled = null;
+                GhostPath = loaded == null ? null : path;
+            }
+            ghostVisible = false;
+            GhostVisible = loaded != null;
+        }
+
+        private static void DrawGhost(Graphics g, Rectangle target)
+        {
+            lock (gate)
+            {
+                if (!ghostVisible || ghost == null || target.Width < 8 || target.Height < 8) return;
+                if (ghostScaled == null || ghostScaledFor != target.Size)
+                {
+                    if (ghostScaled != null) ghostScaled.Dispose();
+                    ghostScaled = new Bitmap(target.Width, target.Height, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+                    using (Graphics sg = Graphics.FromImage(ghostScaled))
+                    using (System.Drawing.Imaging.ImageAttributes attributes = new System.Drawing.Imaging.ImageAttributes())
+                    {
+                        float[][] matrix =
+                        {
+                            new float[] { 1, 0, 0, 0, 0 }, new float[] { 0, 1, 0, 0, 0 }, new float[] { 0, 0, 1, 0, 0 },
+                            new float[] { 0, 0, 0, 0.42F, 0 }, new float[] { 0, 0, 0, 0, 1 }
+                        };
+                        attributes.SetColorMatrix(new System.Drawing.Imaging.ColorMatrix(matrix));
+                        sg.InterpolationMode = InterpolationMode.HighQualityBilinear;
+                        sg.DrawImage(ghost, new Rectangle(0, 0, target.Width, target.Height), 0, 0, ghost.Width, ghost.Height, GraphicsUnit.Pixel, attributes);
+                    }
+                    ghostScaledFor = target.Size;
+                }
+                g.DrawImageUnscaled(ghostScaled, target.Location);
             }
         }
 
@@ -87,6 +156,7 @@ namespace CassetteMotionPro.Workspace
                     {
                         lock (gate)
                         {
+                            segments.Constrain(result, clock.ElapsedMilliseconds);
                             Smooth(result, latest, DateTime.UtcNow);
                             latest = result;
                             latestSize = copy.Size;
@@ -117,6 +187,7 @@ namespace CassetteMotionPro.Workspace
 
         private static void OnPaint(Graphics g, Rectangle target, Size imageSize)
         {
+            DrawGhost(g, target);
             if (!Enabled)
             {
                 if (clock.ElapsedMilliseconds < toastUntil)
@@ -190,6 +261,92 @@ namespace CassetteMotionPro.Workspace
             if (len < 1e-6) return 0;
             double cos = Math.Max(-1, Math.Min(1, (v1x * v2x + v1y * v2y) / len));
             return Math.Acos(cos) * 180.0 / Math.PI;
+        }
+    }
+
+    /// <summary>
+    /// Learns the rider's limb lengths while the joints are detected clearly, then uses them to correct a
+    /// knee or elbow the model is unsure about: the joint must sit where both limb lengths fit between its neighbours.
+    /// </summary>
+    internal class SegmentModel
+    {
+        private const int Needed = 8, Kept = 40;
+        private readonly List<double>[] samples = { new List<double>(), new List<double>(), new List<double>(), new List<double>() };
+        private bool facingRight;
+        private long lastSeen;
+
+        // 0 hip, 1 knee, 2 ankle, 4 shoulder, 5 elbow, 6 wrist (the order PoseDetection uses).
+        private static readonly int[,] Limbs = { { 0, 1, 2 }, { 4, 5, 6 } };
+
+        public void Constrain(PoseDetection pose, long now)
+        {
+            if (pose == null || pose.Points.Count < 8) return;
+            if (pose.FacingRight != facingRight || now - lastSeen > 6000)
+                foreach (List<double> list in samples) list.Clear();
+            facingRight = pose.FacingRight;
+            lastSeen = now;
+
+            for (int limb = 0; limb < 2; limb++)
+            {
+                int a = Limbs[limb, 0], b = Limbs[limb, 1], c = Limbs[limb, 2];
+                List<double> upper = samples[limb * 2], lower = samples[limb * 2 + 1];
+                double upperNow = Dist(pose.Points[a], pose.Points[b]), lowerNow = Dist(pose.Points[b], pose.Points[c]);
+                bool clear = pose.Scores[a] >= 0.55F && pose.Scores[b] >= 0.55F && pose.Scores[c] >= 0.55F;
+                if (clear)
+                {
+                    Add(upper, upperNow);
+                    Add(lower, lowerNow);
+                    continue;
+                }
+                if (upper.Count < Needed || lower.Count < Needed) continue;
+                if (pose.Scores[a] < 0.4F || pose.Scores[c] < 0.4F) continue; // the ends must be trusted to place the middle joint
+
+                double upperLen = Median(upper), lowerLen = Median(lower);
+                bool offLength = Math.Abs(upperNow - upperLen) > 0.15 * upperLen || Math.Abs(lowerNow - lowerLen) > 0.15 * lowerLen;
+                if (pose.Scores[b] >= 0.55F && !offLength) continue;
+
+                pose.Points[b] = PlaceMiddle(pose.Points[a], pose.Points[c], upperLen, lowerLen, pose.Points[b]);
+                pose.Scores[b] = Math.Max(pose.Scores[b], 0.5F);
+            }
+        }
+
+        // The middle joint lies where circles of the two limb lengths around the end points meet; take the meeting point nearest the detection.
+        internal static PointF PlaceMiddle(PointF start, PointF end, double upper, double lower, PointF detected)
+        {
+            double dx = end.X - start.X, dy = end.Y - start.Y;
+            double d = Math.Sqrt(dx * dx + dy * dy);
+            if (d < 1e-6) return detected;
+            double ux = dx / d, uy = dy / d;
+            if (d >= upper + lower || d <= Math.Abs(upper - lower))
+            {
+                double t = upper / (upper + lower); // stretched out or folded: stay on the line
+                return new PointF((float)(start.X + dx * t), (float)(start.Y + dy * t));
+            }
+            double along = (upper * upper - lower * lower + d * d) / (2 * d);
+            double height = Math.Sqrt(Math.Max(0, upper * upper - along * along));
+            double px = start.X + ux * along, py = start.Y + uy * along;
+            PointF one = new PointF((float)(px - uy * height), (float)(py + ux * height));
+            PointF two = new PointF((float)(px + uy * height), (float)(py - ux * height));
+            return Dist(one, detected) <= Dist(two, detected) ? one : two;
+        }
+
+        private static void Add(List<double> list, double value)
+        {
+            list.Add(value);
+            if (list.Count > Kept) list.RemoveAt(0);
+        }
+
+        private static double Median(List<double> list)
+        {
+            List<double> sorted = new List<double>(list);
+            sorted.Sort();
+            return sorted[sorted.Count / 2];
+        }
+
+        private static double Dist(PointF a, PointF b)
+        {
+            double dx = a.X - b.X, dy = a.Y - b.Y;
+            return Math.Sqrt(dx * dx + dy * dy);
         }
     }
 }
