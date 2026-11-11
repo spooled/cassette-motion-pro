@@ -3320,6 +3320,43 @@ namespace CassetteMotionPro.Workspace
             LivePoseService.EnabledChanged += liveJointsChanged;
             liveJoints.Disposed += delegate { LivePoseService.EnabledChanged -= liveJointsChanged; };
             captureButtons.Controls.Add(liveJoints);
+            Button ghostButton = CreateButton("Ghost: Off (Ctrl+G)", false);
+            ghostButton.Size = new Size(174, 48);
+            ghostButton.Margin = new Padding(0, 4, 9, 4);
+            Action refreshGhostText = delegate
+            {
+                ghostButton.Text = !LivePoseService.HasGhost ? "Ghost: Off (Ctrl+G)" : (LivePoseService.GhostVisible ? "Ghost: On (Ctrl+G)" : "Ghost: Hidden (Ctrl+G)");
+            };
+            ghostButton.Click += delegate
+            {
+                if (LivePoseService.HasGhost)
+                {
+                    LivePoseService.GhostVisible = !LivePoseService.GhostVisible;
+                    return;
+                }
+                string path = ResolveSessionReportImage("BeforeReportImagePath");
+                if (string.IsNullOrEmpty(path) || !File.Exists(path))
+                {
+                    using (OpenFileDialog dialog = new OpenFileDialog())
+                    {
+                        dialog.Title = "Choose the picture to show faintly over the live view";
+                        dialog.Filter = "Image files|*.jpg;*.jpeg;*.png;*.bmp|All files|*.*";
+                        if (client != null && Directory.Exists(client.PhotosPath))
+                            dialog.InitialDirectory = client.PhotosPath;
+                        if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                        path = dialog.FileName;
+                    }
+                }
+                try { LivePoseService.SetGhost(path); }
+                catch (Exception exception)
+                {
+                    MessageBox.Show(this, "That picture could not be opened: " + exception.Message, "Ghost image", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            };
+            EventHandler ghostChanged = delegate { refreshGhostText(); };
+            LivePoseService.GhostChanged += ghostChanged;
+            ghostButton.Disposed += delegate { LivePoseService.GhostChanged -= ghostChanged; };
+            captureButtons.Controls.Add(ghostButton);
             AddFitCommandButton(captureButtons, "Record Before", false, delegate { OpenLiveCaptureForVideo("BeforeVideoPath"); });
             AddFitCommandButton(captureButtons, "Record After", false, delegate { OpenLiveCaptureForVideo("AfterVideoPath"); });
             AddFitCommandButton(captureButtons, "Use Latest Before", false, delegate { UseLatestVideo("BeforeVideoPath"); });
