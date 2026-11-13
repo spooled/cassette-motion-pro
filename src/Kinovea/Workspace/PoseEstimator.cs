@@ -43,20 +43,37 @@ namespace CassetteMotionPro.Workspace
                     if (failed) return null;
                     if (session == null)
                     {
-                        if (!File.Exists(ModelPath)) { failed = true; return null; }
+                        if (!File.Exists(ModelPath)) { Fail("Model file not found: " + ModelPath, null); return null; }
                         session = new InferenceSession(ModelPath);
                     }
                     return Run(frame);
                 }
             }
-            catch (Exception)
+            catch (Exception exception)
             {
-                failed = true;
+                Fail(exception.GetType().Name + ": " + exception.Message, exception.ToString());
                 return null;
             }
         }
 
         public static bool Unavailable { get { return failed; } }
+
+        /// <summary>Short reason the pose model could not run, shown on screen. Full detail goes to pose-error.txt.</summary>
+        public static string LastError { get; private set; }
+
+        private static void Fail(string reason, string detail)
+        {
+            failed = true;
+            LastError = reason;
+            try
+            {
+                string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Cassette Motion Pro");
+                Directory.CreateDirectory(folder);
+                File.AppendAllText(Path.Combine(folder, "pose-error.txt"),
+                    DateTime.Now.ToString("s") + "  " + reason + Environment.NewLine + (detail ?? string.Empty) + Environment.NewLine + Environment.NewLine);
+            }
+            catch (Exception) { }
+        }
 
         public static PoseDetection Detect(string imagePath)
         {
@@ -67,16 +84,16 @@ namespace CassetteMotionPro.Workspace
                     if (failed) return null;
                     if (session == null)
                     {
-                        if (!File.Exists(ModelPath)) { failed = true; return null; }
+                        if (!File.Exists(ModelPath)) { Fail("Model file not found: " + ModelPath, null); return null; }
                         session = new InferenceSession(ModelPath);
                     }
                     using (Bitmap source = new Bitmap(imagePath))
                         return Run(source);
                 }
             }
-            catch (Exception)
+            catch (Exception exception)
             {
-                failed = true;
+                Fail(exception.GetType().Name + ": " + exception.Message, exception.ToString());
                 return null;
             }
         }
