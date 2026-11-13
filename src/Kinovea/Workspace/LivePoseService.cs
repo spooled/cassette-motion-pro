@@ -188,6 +188,12 @@ namespace CassetteMotionPro.Workspace
         private static void OnPaint(Graphics g, Rectangle target, Size imageSize)
         {
             DrawGhost(g, target);
+            if (Enabled && PoseEstimator.Unavailable)
+            {
+                using (Font font = new Font("Segoe UI", 10F, FontStyle.Bold))
+                    Label(g, font, new PointF(target.X + 8, target.Y + 22), "LIVE JOINTS unavailable: " + Shorten(PoseEstimator.LastError), true, true);
+                return;
+            }
             if (!Enabled)
             {
                 if (clock.ElapsedMilliseconds < toastUntil)
@@ -239,6 +245,12 @@ namespace CassetteMotionPro.Workspace
                 }
             }
             finally { g.SmoothingMode = oldSmoothing; }
+        }
+
+        private static string Shorten(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return "see pose-error.txt";
+            return text.Length > 110 ? text.Substring(0, 110) + "..." : text;
         }
 
         private static void Label(Graphics g, Font font, PointF anchor, string text, bool toTheRight, bool pinned = false)
