@@ -31,4 +31,16 @@ Edit-File (Join-Path $sm "CaptureScreen\Views\ViewPort.cs") `
     'DrawKVA(e.Graphics);' `
     ('DrawKVA(e.Graphics);' + "`r`n" + '            LivePoseHook.Draw(e.Graphics, displayRectangle, controller.Bitmap.Size);')
 
+Edit-File (Join-Path $sm "CaptureScreen\Views\ViewPort.cs") `
+    'base.OnMouseDown(e);' `
+    ('base.OnMouseDown(e);' + "`r`n" + '            if (LivePoseHook.PointerDown(e.Location, e.Button, displayRectangle)) { Invalidate(); return; }')
+
+Edit-File (Join-Path $sm "CaptureScreen\Views\ViewPort.cs") `
+    'this.Focus();' `
+    ('this.Focus();' + "`r`n" + '            if (LivePoseHook.PointerMove(e.Location, e.Button, displayRectangle)) { Invalidate(); return; }')
+
+Edit-File (Join-Path $sm "CaptureScreen\Views\ViewPort.cs") `
+    'base.OnMouseUp(e);' `
+    ('base.OnMouseUp(e);' + "`r`n" + '            if (LivePoseHook.PointerUp(e.Location, e.Button, displayRectangle)) { Invalidate(); return; }')
+
 Write-Host "Live pose hook applied."

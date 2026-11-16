@@ -30,6 +30,10 @@ namespace CassetteMotionPro.Workspace
         private static Size ghostScaledFor;
         private static bool ghostVisible;
         public static string GhostPath { get; private set; }
+        public static Func<string> GhostSource; // set by the workspace: the session's Before picture
+        private static readonly Dictionary<int, PointF> pinned = new Dictionary<int, PointF>();
+        private static int dragIndex = -1;
+        private static string toastText;
         public static event EventHandler GhostChanged;
         private static Size latestSize;
 
@@ -44,6 +48,8 @@ namespace CassetteMotionPro.Workspace
             {
                 if (enabled == value) return;
                 enabled = value;
+                if (!enabled) lock (gate) { pinned.Clear(); dragIndex = -1; }
+                toastText = enabled ? "LIVE JOINTS \u00B7 on (Ctrl+J)" : "LIVE JOINTS \u00B7 off (Ctrl+J)";
                 toastUntil = clock.ElapsedMilliseconds + 1400;
                 EventHandler handler = EnabledChanged;
                 if (handler != null) handler(null, EventArgs.Empty);
@@ -56,6 +62,9 @@ namespace CassetteMotionPro.Workspace
         {
             LivePoseHook.FrameReady = OnFrame;
             LivePoseHook.Paint = OnPaint;
+            LivePoseHook.MouseDown = OnMouseDown;
+            LivePoseHook.MouseMove = OnMouseMove;
+            LivePoseHook.MouseUp = OnMouseUp;
             Application.AddMessageFilter(new KeyFilter());
         }
 
@@ -69,7 +78,7 @@ namespace CassetteMotionPro.Workspace
                 if (m.Msg != WM_KEYDOWN || Control.ModifierKeys != Keys.Control) return false;
                 Keys key = (Keys)(int)m.WParam;
                 if (key == Keys.J) { Enabled = !Enabled; return true; }
-                if (key == Keys.G && ghost != null) { GhostVisible = !GhostVisible; return true; }
+                if (key == Keys.G) { ToggleGhost(); return true; }
                 return false;
             }
         }
@@ -83,9 +92,33 @@ namespace CassetteMotionPro.Workspace
             {
                 if (ghostVisible == value) return;
                 ghostVisible = value;
+                toastText = value ? "GHOST \u00B7 on (Ctrl+G)" : "GHOST \u00B7 hidden (Ctrl+G)";
                 toastUntil = clock.ElapsedMilliseconds + 1400;
                 EventHandler handler = GhostChanged;
                 if (handler != null) handler(null, EventArgs.Empty);
+            }
+        }
+
+        // Ctrl+G and the workspace button: show or hide the ghost; the first time, load the session's Before picture (or ask for one).
+        public static void ToggleGhost()
+        {
+            if (ghost != null) { GhostVisible = !GhostVisible; return; }
+            string path = null;
+            try { Func<string> source = GhostSource; if (source != null) path = source(); } catch (Exception) { }
+            if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
+            {
+                using (OpenFileDialog dialog = new OpenFileDialog())
+                {
+                    dialog.Title = "Choose the picture to show faintly over the live view";
+                    dialog.Filter = "Image files|*.jpg;*.jpeg;*.png;*.bmp|All files|*.*";
+                    if (dialog.ShowDialog() != DialogResult.OK) return;
+                    path = dialog.FileName;
+                }
+            }
+            try { SetGhost(path); }
+            catch (Exception exception)
+            {
+                MessageBox.Show("That picture could not be opened: " + exception.Message, "Ghost image", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
@@ -158,6 +191,7 @@ namespace CassetteMotionPro.Workspace
                         {
                             segments.Constrain(result, clock.ElapsedMilliseconds);
                             Smooth(result, latest, DateTime.UtcNow);
+                            ApplyPinned(result, copy.Size);
                             latest = result;
                             latestSize = copy.Size;
                             lastResult = clock.ElapsedMilliseconds;
@@ -171,6 +205,78 @@ namespace CassetteMotionPro.Workspace
                     Interlocked.Exchange(ref busy, 0);
                 }
             });
+        }
+
+        // Dots the user has dragged stay where they were put until released (right-click) or the overlay is turned off.
+        private static void ApplyPinned(PoseDetection pose, Size size)
+        {
+            if (pinned.Count == 0) return;
+            if (size != latestSize || (latest != null && latest.FacingRight != pose.FacingRight)) { pinned.Clear(); return; }
+            foreach (KeyValuePair<int, PointF> pin in pinned)
+                if (pin.Key < pose.Points.Count)
+                {
+                    pose.Points[pin.Key] = pin.Value;
+                    pose.Scores[pin.Key] = 1F;
+                }
+        }
+
+        private static int HitDot(Point location, Rectangle target)
+        {
+            if (latest == null || latestSize.Width <= 0 || latestSize.Height <= 0 || target.Width <= 0) return -1;
+            int best = -1; double bestDistance = 18 * 18;
+            for (int i = 0; i < latest.Points.Count; i++)
+            {
+                if (i == 3) continue;
+                double dx = target.X + latest.Points[i].X * target.Width / latestSize.Width - location.X;
+                double dy = target.Y + latest.Points[i].Y * target.Height / latestSize.Height - location.Y;
+                double distance = dx * dx + dy * dy;
+                if (distance < bestDistance) { bestDistance = distance; best = i; }
+            }
+            return best;
+        }
+
+        private static bool OnMouseDown(Point location, MouseButtons button, Rectangle target)
+        {
+            if (!Enabled || PoseEstimator.Unavailable) return false;
+            lock (gate)
+            {
+                int hit = HitDot(location, target);
+                if (hit < 0) return false;
+                if (button == MouseButtons.Right)
+                {
+                    pinned.Remove(hit);
+                    return true;
+                }
+                if (button != MouseButtons.Left) return false;
+                dragIndex = hit;
+                pinned[hit] = latest.Points[hit];
+                return true;
+            }
+        }
+
+        private static bool OnMouseMove(Point location, MouseButtons button, Rectangle target)
+        {
+            if (dragIndex < 0) return false;
+            if (button != MouseButtons.Left) { dragIndex = -1; return false; }
+            lock (gate)
+            {
+                if (latest == null || target.Width <= 0 || target.Height <= 0) return true;
+                float x = Math.Max(0, Math.Min(latestSize.Width, (location.X - target.X) * (float)latestSize.Width / target.Width));
+                float y = Math.Max(0, Math.Min(latestSize.Height, (location.Y - target.Y) * (float)latestSize.Height / target.Height));
+                PointF point = new PointF(x, y);
+                pinned[dragIndex] = point;
+                latest.Points[dragIndex] = point;
+                latest.Scores[dragIndex] = 1F;
+                lastResult = clock.ElapsedMilliseconds;
+            }
+            return true;
+        }
+
+        private static bool OnMouseUp(Point location, MouseButtons button, Rectangle target)
+        {
+            if (dragIndex < 0) return false;
+            dragIndex = -1;
+            return true;
         }
 
         // Blend with the previous reading so the dots do not jitter. Skipped when the rider turned around or the reading is old.
@@ -198,7 +304,7 @@ namespace CassetteMotionPro.Workspace
             {
                 if (clock.ElapsedMilliseconds < toastUntil)
                     using (Font font = new Font("Segoe UI", 10F, FontStyle.Bold))
-                        Label(g, font, new PointF(target.X + 8, target.Y + 22), "LIVE JOINTS \u00B7 off (Ctrl+J)", true, true);
+                        Label(g, font, new PointF(target.X + 8, target.Y + 22), toastText ?? "LIVE JOINTS \u00B7 off (Ctrl+J)", true, true);
                 return;
             }
             PoseDetection pose; Size size;
@@ -231,7 +337,8 @@ namespace CassetteMotionPro.Workspace
                     {
                         if (i == 3) continue;
                         g.FillEllipse(dot, pts[i].X - 5, pts[i].Y - 5, 10, 10);
-                        if (pose.Scores[i] < 0.4F) g.DrawEllipse(warn, pts[i].X - 10, pts[i].Y - 10, 20, 20);
+                        if (pinned.ContainsKey(i)) g.DrawEllipse(Pens.White, pts[i].X - 9, pts[i].Y - 9, 18, 18);
+                        else if (pose.Scores[i] < 0.4F) g.DrawEllipse(warn, pts[i].X - 10, pts[i].Y - 10, 20, 20);
                     }
                 }
 
@@ -241,7 +348,7 @@ namespace CassetteMotionPro.Workspace
                         Label(g, font, pts[1], "Knee " + Angle(pts[0], pts[1], pts[2]).ToString("0") + "°", pose.FacingRight);
                     if (pose.Scores[0] >= 0.3F && pose.Scores[1] >= 0.3F && pose.Scores[4] >= 0.3F)
                         Label(g, font, pts[0], "Hip " + Angle(pts[4], pts[0], pts[1]).ToString("0") + "°", !pose.FacingRight);
-                    Label(g, font, new PointF(target.X + 8, target.Y + 22), "LIVE JOINTS · estimate only", true, true);
+                    Label(g, font, new PointF(target.X + 8, target.Y + 22), "LIVE JOINTS \u00B7 estimate \u00B7 drag a dot to correct it, right-click to release \u00B7 Ctrl+J hides", true, true);
                 }
             }
             finally { g.SmoothingMode = oldSmoothing; }
