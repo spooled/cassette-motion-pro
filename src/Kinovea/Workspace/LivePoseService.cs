@@ -41,7 +41,7 @@ namespace CassetteMotionPro.Workspace
             {
                 Channel channel;
                 if (channelByView.TryGetValue(view, out channel)) return channel;
-                channel = new Channel();
+                channel = new Channel(view);
                 channelByView.Add(view, channel);
                 allChannels.RemoveAll(delegate (WeakReference r) { return !r.IsAlive; });
                 allChannels.Add(new WeakReference(channel));
@@ -81,6 +81,7 @@ namespace CassetteMotionPro.Workspace
         public static void Install()
         {
             LivePoseHook.FrameReady = delegate (object view, Bitmap frame) { ChannelFor(view).OnFrame(frame); };
+            LivePoseHook.PlayerFrameReady = delegate (object view, Bitmap frame, long stamp, bool playing) { ChannelFor(view).OnPlayerFrame(frame, stamp, playing); };
             LivePoseHook.Paint = OnPaint;
             LivePoseHook.MouseDown = delegate (object view, Point l, MouseButtons b, Rectangle r) { return ChannelFor(view).OnMouseDown(l, b, r); };
             LivePoseHook.MouseMove = delegate (object view, Point l, MouseButtons b, Rectangle r) { return ChannelFor(view).OnMouseMove(l, b, r); };
@@ -251,6 +252,21 @@ namespace CassetteMotionPro.Workspace
             private readonly SegmentModel segments = new SegmentModel();
             private readonly Dictionary<int, PointF> pinned = new Dictionary<int, PointF>();
             private int dragIndex = -1;
+            private readonly WeakReference viewRef;
+            private bool sticky, playing;
+            private long lastStamp = long.MinValue, latestStamp, currentStamp;
+
+            public Channel(object view) { viewRef = new WeakReference(view); }
+
+            private void RepaintView()
+            {
+                try
+                {
+                    Control c = viewRef.Target as Control;
+                    if (c != null && c.IsHandleCreated && !c.IsDisposed) c.BeginInvoke(new Action(c.Invalidate));
+                }
+                catch (Exception) { }
+            }
 
             private static OneEuro[] NewFilters()
             {
@@ -266,11 +282,32 @@ namespace CassetteMotionPro.Workspace
 
         public void OnFrame(Bitmap frame)
         {
+            sticky = false;
+            Submit(frame, 0);
+        }
+
+        // Video playback: one reading per frame; a paused frame keeps its joints until you move to another frame.
+        public void OnPlayerFrame(Bitmap frame, long stamp, bool isPlaying)
+        {
+            sticky = true;
+            playing = isPlaying;
+            currentStamp = stamp;
+            Submit(frame, stamp);
+        }
+
+        private void Submit(Bitmap frame, long stamp)
+        {
             if (!Enabled || frame == null || PoseEstimator.Unavailable) return;
             long now = clock.ElapsedMilliseconds;
-            if (now - lastSubmit < IntervalMilliseconds) return;
+            if (sticky) { if (stamp == lastStamp) return; }
+            else if (now - lastSubmit < IntervalMilliseconds) return;
             if (Interlocked.CompareExchange(ref busy, 1, 0) != 0) return;
             lastSubmit = now;
+            if (sticky)
+            {
+                lastStamp = stamp;
+                lock (gate) { pinned.Clear(); dragIndex = -1; }
+            }
 
             Bitmap copy;
             try { copy = (Bitmap)frame.Clone(); }
@@ -290,6 +327,7 @@ namespace CassetteMotionPro.Workspace
                             ApplyPinned(result, copy.Size);
                             latest = result;
                             latestSize = copy.Size;
+                            latestStamp = stamp;
                             lastResult = clock.ElapsedMilliseconds;
                         }
                     }
@@ -299,6 +337,7 @@ namespace CassetteMotionPro.Workspace
                 {
                     copy.Dispose();
                     Interlocked.Exchange(ref busy, 0);
+                    if (sticky) RepaintView();
                 }
             });
         }
@@ -381,7 +420,7 @@ namespace CassetteMotionPro.Workspace
         private void FilterPoints(PoseDetection pose, Size size)
         {
             long now = clock.ElapsedMilliseconds;
-            if (size != filterSize || pose.FacingRight != filterFacing || now - lastResult > StaleMilliseconds)
+            if (size != filterSize || pose.FacingRight != filterFacing || now - lastResult > StaleMilliseconds || (sticky && !playing))
                 foreach (OneEuro filter in filters) filter.Reset();
             filterSize = size;
             filterFacing = pose.FacingRight;
@@ -408,7 +447,7 @@ namespace CassetteMotionPro.Workspace
             long now = clock.ElapsedMilliseconds;
             double dt = Math.Min(500, now - lastPaint);
             lastPaint = now;
-            if (shown == null || shown.Count != pose.Points.Count || dt >= 500)
+            if (shown == null || shown.Count != pose.Points.Count || dt >= 500 || (sticky && !playing))
             {
                 shown = new List<PointF>(pose.Points);
                 return shown;
@@ -426,10 +465,13 @@ namespace CassetteMotionPro.Workspace
 
             public void DrawJoints(Graphics g, Rectangle target)
             {
+            if (target.Width < 8 || target.Height < 8) return;
             PoseDetection pose; Size size; List<PointF> drawn;
             lock (gate)
             {
-                if (latest == null || clock.ElapsedMilliseconds - lastResult > StaleMilliseconds) return;
+                if (latest == null) return;
+                if (sticky && !playing) { if (latestStamp != currentStamp) return; }
+                else if (clock.ElapsedMilliseconds - lastResult > StaleMilliseconds) return;
                 pose = latest; size = latestSize;
                 drawn = EaseShown(pose);
             }

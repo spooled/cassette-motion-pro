@@ -13,6 +13,7 @@ namespace Kinovea.ScreenManager
     {
         public static Action<object, Bitmap> FrameReady;
         public static Action<object, Graphics, Rectangle, Size> Paint;
+        public static Action<object, Bitmap, long, bool> PlayerFrameReady;
         public static Func<object, Point, MouseButtons, Rectangle, bool> MouseDown, MouseMove, MouseUp;
 
         // Each returns true when the overlay used the mouse event (a dot was grabbed, moved or released).
@@ -42,6 +43,18 @@ namespace Kinovea.ScreenManager
             Action<object, Bitmap> handler = FrameReady;
             if (handler == null) return;
             try { handler(view, frame); } catch (Exception) { }
+        }
+
+        // Video player: send the frame on screen (with its timestamp), then draw the overlay over it.
+        public static void PlayerPaint(object view, Graphics canvas, Bitmap frame, long timestamp, bool playing, Rectangle imageRectangle)
+        {
+            if (frame == null || imageRectangle.Width < 8 || imageRectangle.Height < 8) return;
+            Action<object, Bitmap, long, bool> handler = PlayerFrameReady;
+            if (handler != null)
+            {
+                try { handler(view, frame, timestamp, playing); } catch (Exception) { }
+            }
+            Draw(view, canvas, imageRectangle, frame.Size);
         }
 
         public static void Draw(object view, Graphics canvas, Rectangle imageRectangle, Size imageSize)
