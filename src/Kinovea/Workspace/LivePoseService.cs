@@ -87,6 +87,18 @@ namespace CassetteMotionPro.Workspace
             LivePoseHook.MouseMove = delegate (object view, Point l, MouseButtons b, Rectangle r) { return ChannelFor(view).OnMouseMove(l, b, r); };
             LivePoseHook.MouseUp = delegate (object view, Point l, MouseButtons b, Rectangle r) { return ChannelFor(view).OnMouseUp(l, b, r); };
             Application.AddMessageFilter(new KeyFilter());
+            // If the app ever closes unexpectedly, leave the reason in %APPDATA%\Cassette Motion Pro\crash-log.txt (logging only).
+            AppDomain.CurrentDomain.UnhandledException += delegate (object sender, UnhandledExceptionEventArgs e)
+            {
+                try
+                {
+                    string folder = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Cassette Motion Pro");
+                    System.IO.Directory.CreateDirectory(folder);
+                    System.IO.File.AppendAllText(System.IO.Path.Combine(folder, "crash-log.txt"),
+                        DateTime.Now.ToString("s") + "  Unhandled exception (terminating=" + e.IsTerminating + ")" + Environment.NewLine + e.ExceptionObject + Environment.NewLine + Environment.NewLine);
+                }
+                catch (Exception) { }
+            };
         }
 
         // Ctrl+J turns the live joint overlay on or off, Ctrl+G shows or hides the ghost image, from anywhere in the app.
@@ -317,7 +329,7 @@ namespace CassetteMotionPro.Workspace
             {
                 try
                 {
-                    PoseDetection result = PoseEstimator.Detect(copy);
+                    PoseDetection result = PoseEstimator.Detect(copy, sticky && playing);
                     if (result != null)
                     {
                         lock (gate)
@@ -332,7 +344,7 @@ namespace CassetteMotionPro.Workspace
                         }
                     }
                 }
-                catch (Exception) { }
+                catch (Exception exception) { PoseEstimator.Log("Live joints: " + exception); }
                 finally
                 {
                     copy.Dispose();
@@ -471,7 +483,7 @@ namespace CassetteMotionPro.Workspace
             {
                 if (latest == null) return;
                 if (sticky && !playing) { if (latestStamp != currentStamp) return; }
-                else if (clock.ElapsedMilliseconds - lastResult > StaleMilliseconds) return;
+                else if (clock.ElapsedMilliseconds - lastResult > (sticky ? 400 : StaleMilliseconds)) return; // while a video plays, joints from an older frame are hidden rather than shown late
                 pose = latest; size = latestSize;
                 drawn = EaseShown(pose);
             }
