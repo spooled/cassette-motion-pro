@@ -510,6 +510,17 @@ namespace CassetteMotionPro.Workspace
                         Label(g, font, pts[1], "Knee " + Angle(pts[0], pts[1], pts[2]).ToString("0") + "°", pose.FacingRight);
                     if (pose.Scores[0] >= 0.3F && pose.Scores[1] >= 0.3F && pose.Scores[4] >= 0.3F)
                         Label(g, font, pts[0], "Hip " + Angle(pts[4], pts[0], pts[1]).ToString("0") + "°", !pose.FacingRight);
+                    if (pose.Scores[0] >= 0.3F && pose.Scores[4] >= 0.3F)
+                    {
+                        // Back angle: the hip-to-shoulder line against the horizontal, 0-90 degrees (the same value the report calls Back angle).
+                        double back = Math.Abs(Math.Atan2(pts[4].Y - pts[0].Y, pts[4].X - pts[0].X) * 180.0 / Math.PI);
+                        if (back > 90) back = 180 - back;
+                        float reach = Math.Max(40F, Math.Abs(pts[4].X - pts[0].X) * 0.6F + 30F) * (pose.FacingRight ? 1F : -1F);
+                        using (Pen reference = new Pen(Color.FromArgb(170, 255, 255, 255), 1.5F) { DashStyle = DashStyle.Dash })
+                            g.DrawLine(reference, pts[0].X, pts[0].Y, pts[0].X + reach, pts[0].Y);
+                        PointF middle = new PointF((pts[0].X + pts[4].X) / 2F, (pts[0].Y + pts[4].Y) / 2F);
+                        Label(g, font, middle, "Back " + back.ToString("0") + "\u00B0", !pose.FacingRight);
+                    }
                     Label(g, font, new PointF(target.X + 8, target.Y + 22), "LIVE JOINTS \u00B7 estimate \u00B7 drag a dot to correct it, right-click to release \u00B7 Ctrl+J hides", true, true);
                 }
             }
