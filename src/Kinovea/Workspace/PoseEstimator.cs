@@ -57,6 +57,48 @@ namespace CassetteMotionPro.Workspace
             }
         }
 
+        /// <summary>
+        /// Live views: follow the rider from one reading to the next. When the last reading found the rider, look only at a
+        /// square around where they were (one pass instead of two, and sharper than the whole frame); otherwise search the whole
+        /// frame again. crop carries the square from one call to the next and is cleared when the rider is lost.
+        /// </summary>
+        public static PoseDetection DetectTracked(Bitmap frame, ref RectangleF? crop, bool quick = false)
+        {
+            try
+            {
+                lock (gate)
+                {
+                    if (failed) return null;
+                    if (session == null)
+                    {
+                        if (!File.Exists(ModelPath)) { Fail("Model file not found: " + ModelPath, null); return null; }
+                        session = CreateSession();
+                    }
+                    PoseDetection result = null;
+                    if (crop.HasValue)
+                    {
+                        result = Run(frame, crop.Value);
+                        if (result != null && (Average(result) < 0.3 || Found(result) < 5)) result = null; // lost the rider: search again
+                    }
+                    if (result == null) result = Refined(frame, quick);
+                    crop = result == null ? null : CropAround(result, frame, 1.6F);
+                    return result;
+                }
+            }
+            catch (Exception exception)
+            {
+                Fail(exception.GetType().Name + ": " + exception.Message, exception.ToString());
+                return null;
+            }
+        }
+
+        private static int Found(PoseDetection d)
+        {
+            int n = 0;
+            for (int i = 0; i < d.Scores.Count; i++) if (i != 3 && d.Scores[i] >= 0.3F) n++;
+            return n;
+        }
+
         // Leave some processor cores free so the video and the screen stay smooth while the model runs.
         private static InferenceSession CreateSession()
         {
@@ -132,25 +174,33 @@ namespace CassetteMotionPro.Workspace
         {
             PoseDetection first = Run(source, null);
             if (first == null || quick) return first;
+            RectangleF? crop = CropAround(first, source, 1.4F);
+            if (!crop.HasValue) return first;
+            PoseDetection second = Run(source, crop.Value);
+            if (second == null) return first;
+            return Average(second) >= Average(first) - 0.02 ? second : first;
+        }
+
+        // A square around the joints found (margin = how much bigger than the joints' extent), or null when the rider already fills most of the frame.
+        private static RectangleF? CropAround(PoseDetection pose, Bitmap source, float margin)
+        {
             float fullSide = Math.Max(source.Width, source.Height);
             float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
             int used = 0;
-            for (int i = 0; i < first.Points.Count; i++)
+            for (int i = 0; i < pose.Points.Count; i++)
             {
-                if (i == 3 || first.Scores[i] < 0.3F) continue;
-                PointF p = first.Points[i];
+                if (i == 3 || pose.Scores[i] < 0.3F) continue;
+                PointF p = pose.Points[i];
                 minX = Math.Min(minX, p.X); maxX = Math.Max(maxX, p.X);
                 minY = Math.Min(minY, p.Y); maxY = Math.Max(maxY, p.Y);
                 used++;
             }
-            if (used < 3) return first;
-            float side = Math.Max(maxX - minX, maxY - minY) * 1.4F;
+            if (used < 3) return null;
+            float side = Math.Max(maxX - minX, maxY - minY) * margin;
             side = Math.Max(side, fullSide * 0.25F);
-            if (side > fullSide * 0.85F) return first;
+            if (side > fullSide * 0.85F) return null;
             float cx = (minX + maxX) / 2F, cy = (minY + maxY) / 2F;
-            PoseDetection second = Run(source, new RectangleF(cx - side / 2F, cy - side / 2F, side, side));
-            if (second == null) return first;
-            return Average(second) >= Average(first) - 0.02 ? second : first;
+            return new RectangleF(cx - side / 2F, cy - side / 2F, side, side);
         }
 
         private static double Distance(PointF a, PointF b)
@@ -172,14 +222,17 @@ namespace CassetteMotionPro.Workspace
             RectangleF view = area ?? new RectangleF(-(fullSide - source.Width) / 2F, -(fullSide - source.Height) / 2F, fullSide, fullSide);
             float side = view.Width;
             float offsetX = -view.X, offsetY = -view.Y;
-            DenseTensor<int> input = new DenseTensor<int>(new[] { 1, Size, Size, 3 });
+            int[] values = new int[Size * Size * 3];
             using (Bitmap square = new Bitmap(Size, Size, System.Drawing.Imaging.PixelFormat.Format24bppRgb))
             {
                 using (Graphics g = Graphics.FromImage(square))
                 {
                     g.Clear(Color.Black);
-                    g.InterpolationMode = InterpolationMode.HighQualityBilinear;
+                    g.CompositingMode = CompositingMode.SourceCopy;
+                    g.PixelOffsetMode = PixelOffsetMode.HighSpeed;
                     float scale = Size / side;
+                    // Shrinking a lot needs the slower filter to keep thin limbs visible; a crop around the rider shrinks less and can use the quick one.
+                    g.InterpolationMode = scale < 0.4F ? InterpolationMode.HighQualityBilinear : InterpolationMode.Bilinear;
                     g.DrawImage(source, offsetX * scale, offsetY * scale, source.Width * scale, source.Height * scale);
                 }
                 System.Drawing.Imaging.BitmapData data = square.LockBits(new Rectangle(0, 0, Size, Size),
@@ -188,15 +241,19 @@ namespace CassetteMotionPro.Workspace
                 {
                     byte[] bytes = new byte[data.Stride * Size];
                     System.Runtime.InteropServices.Marshal.Copy(data.Scan0, bytes, 0, bytes.Length);
+                    int k = 0;
                     for (int y = 0; y < Size; y++)
-                    for (int x = 0; x < Size; x++)
                     {
-                        int i = y * data.Stride + x * 3; // BGR in memory
-                        input[0, y, x, 0] = bytes[i + 2]; input[0, y, x, 1] = bytes[i + 1]; input[0, y, x, 2] = bytes[i];
+                        int i = y * data.Stride; // BGR in memory
+                        for (int x = 0; x < Size; x++, i += 3)
+                        {
+                            values[k++] = bytes[i + 2]; values[k++] = bytes[i + 1]; values[k++] = bytes[i];
+                        }
                     }
                 }
                 finally { square.UnlockBits(data); }
             }
+            DenseTensor<int> input = new DenseTensor<int>(values, new[] { 1, Size, Size, 3 });
 
             float[] raw;
             string inputName = session.InputMetadata.Keys.First();

@@ -16,7 +16,7 @@ namespace CassetteMotionPro.Workspace
     /// </summary>
     internal static class LivePoseService
     {
-        private const int IntervalMilliseconds = 120;
+        private const int IntervalMilliseconds = 30; // start the next reading as soon as the last one is done (at most about 30 a second)
         private const int StaleMilliseconds = 1500;
         private static readonly object gate = new object();
         private static readonly Stopwatch clock = Stopwatch.StartNew();
@@ -260,6 +260,8 @@ namespace CassetteMotionPro.Workspace
             private long lastPaint;
             private int busy;
             private PoseDetection latest;
+            private RectangleF? crop; // where the rider was in the last reading, so the next one looks only there
+            private Size cropSize;
             private Size latestSize;
             private readonly SegmentModel segments = new SegmentModel();
             private readonly Dictionary<int, PointF> pinned = new Dictionary<int, PointF>();
@@ -329,13 +331,14 @@ namespace CassetteMotionPro.Workspace
             {
                 try
                 {
-                    PoseDetection result = PoseEstimator.Detect(copy, sticky && playing);
+                    if (copy.Size != cropSize) { crop = null; cropSize = copy.Size; }
+                    PoseDetection result = PoseEstimator.DetectTracked(copy, ref crop, sticky && playing);
                     if (result != null)
                     {
                         lock (gate)
                         {
                             segments.Constrain(result, clock.ElapsedMilliseconds);
-                            FilterPoints(result, copy.Size);
+                            FilterPoints(result, copy.Size, now);
                             ApplyPinned(result, copy.Size);
                             latest = result;
                             latestSize = copy.Size;
@@ -429,7 +432,7 @@ namespace CassetteMotionPro.Workspace
         // Steadies each dot. A One Euro filter smooths hard while a joint is nearly still and lets go when it moves fast,
         // so the dots stop shaking without lagging behind the pedalling. Unsure joints are smoothed harder, and a sudden
         // large jump of an unsure joint is ignored.
-        private void FilterPoints(PoseDetection pose, Size size)
+        private void FilterPoints(PoseDetection pose, Size size, long taken)
         {
             long now = clock.ElapsedMilliseconds;
             if (size != filterSize || pose.FacingRight != filterFacing || now - lastResult > StaleMilliseconds || (sticky && !playing))
@@ -437,7 +440,7 @@ namespace CassetteMotionPro.Workspace
             filterSize = size;
             filterFacing = pose.FacingRight;
 
-            double height = Math.Max(1, size.Height), time = now / 1000.0;
+            double height = Math.Max(1, size.Height), time = taken / 1000.0; // when the frame was taken, not when the reading finished
             for (int i = 0; i < pose.Points.Count && i * 2 + 1 < filters.Length; i++)
             {
                 OneEuro fx = filters[i * 2], fy = filters[i * 2 + 1];
@@ -464,7 +467,7 @@ namespace CassetteMotionPro.Workspace
                 shown = new List<PointF>(pose.Points);
                 return shown;
             }
-            float alpha = (float)(1 - Math.Exp(-dt / 70.0));
+            float alpha = (float)(1 - Math.Exp(-dt / 25.0));
             for (int i = 0; i < shown.Count; i++)
             {
                 PointF target = pose.Points[i];
@@ -544,7 +547,7 @@ namespace CassetteMotionPro.Workspace
     /// <summary>One Euro filter: smooth when the value barely changes, responsive when it changes fast.</summary>
     internal class OneEuro
     {
-        private const double MinCutoff = 1.2, Beta = 30.0, DerivativeCutoff = 1.0;
+        private const double MinCutoff = 1.8, Beta = 40.0, DerivativeCutoff = 1.0;
         private bool has;
         private double previous, previousDerivative, previousTime;
 
