@@ -46,7 +46,7 @@ namespace CassetteMotionPro.Workspace
                         if (!File.Exists(ModelPath)) { Fail("Model file not found: " + ModelPath, null); return null; }
                         session = new InferenceSession(ModelPath);
                     }
-                    return Run(frame);
+                    return Refined(frame);
                 }
             }
             catch (Exception exception)
@@ -88,7 +88,7 @@ namespace CassetteMotionPro.Workspace
                         session = new InferenceSession(ModelPath);
                     }
                     using (Bitmap source = new Bitmap(imagePath))
-                        return Run(source);
+                        return Refined(source);
                 }
             }
             catch (Exception exception)
@@ -98,10 +98,52 @@ namespace CassetteMotionPro.Workspace
             }
         }
 
-        private static PoseDetection Run(Bitmap source)
+        // The model sees a 256x256 square, so a rider filling a third of a wide frame gets very few pixels.
+        // After a first pass on the whole frame, look again at a square cropped around the rider and keep that if it is at least as sure.
+        private static PoseDetection Refined(Bitmap source)
         {
-            int side = Math.Max(source.Width, source.Height);
-            float offsetX = (side - source.Width) / 2F, offsetY = (side - source.Height) / 2F;
+            PoseDetection first = Run(source, null);
+            if (first == null) return null;
+            float fullSide = Math.Max(source.Width, source.Height);
+            float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
+            int used = 0;
+            for (int i = 0; i < first.Points.Count; i++)
+            {
+                if (i == 3 || first.Scores[i] < 0.3F) continue;
+                PointF p = first.Points[i];
+                minX = Math.Min(minX, p.X); maxX = Math.Max(maxX, p.X);
+                minY = Math.Min(minY, p.Y); maxY = Math.Max(maxY, p.Y);
+                used++;
+            }
+            if (used < 3) return first;
+            float side = Math.Max(maxX - minX, maxY - minY) * 1.4F;
+            side = Math.Max(side, fullSide * 0.25F);
+            if (side > fullSide * 0.85F) return first;
+            float cx = (minX + maxX) / 2F, cy = (minY + maxY) / 2F;
+            PoseDetection second = Run(source, new RectangleF(cx - side / 2F, cy - side / 2F, side, side));
+            if (second == null) return first;
+            return Average(second) >= Average(first) - 0.02 ? second : first;
+        }
+
+        private static double Distance(PointF a, PointF b)
+        {
+            return Math.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Y - b.Y) * (a.Y - b.Y));
+        }
+
+        private static double Average(PoseDetection d)
+        {
+            double sum = 0; int n = 0;
+            for (int i = 0; i < d.Scores.Count; i++) if (i != 3) { sum += d.Scores[i]; n++; }
+            return n == 0 ? 0 : sum / n;
+        }
+
+        // area: the square piece of the picture (in picture pixels, may reach outside it) shown to the model; null = the whole picture.
+        private static PoseDetection Run(Bitmap source, RectangleF? area)
+        {
+            int fullSide = Math.Max(source.Width, source.Height);
+            RectangleF view = area ?? new RectangleF(-(fullSide - source.Width) / 2F, -(fullSide - source.Height) / 2F, fullSide, fullSide);
+            float side = view.Width;
+            float offsetX = -view.X, offsetY = -view.Y;
             DenseTensor<int> input = new DenseTensor<int>(new[] { 1, Size, Size, 3 });
             using (Bitmap square = new Bitmap(Size, Size, System.Drawing.Imaging.PixelFormat.Format24bppRgb))
             {
@@ -109,7 +151,7 @@ namespace CassetteMotionPro.Workspace
                 {
                     g.Clear(Color.Black);
                     g.InterpolationMode = InterpolationMode.HighQualityBilinear;
-                    float scale = (float)Size / side;
+                    float scale = Size / side;
                     g.DrawImage(source, offsetX * scale, offsetY * scale, source.Width * scale, source.Height * scale);
                 }
                 System.Drawing.Imaging.BitmapData data = square.LockBits(new Rectangle(0, 0, Size, Size),
@@ -160,6 +202,9 @@ namespace CassetteMotionPro.Workspace
             d.Points.Add(pt(elbow)); d.Scores.Add(sc(elbow));
             d.Points.Add(pt(wrist)); d.Scores.Add(sc(wrist));
             d.Points.Add(earOk ? pt(ear) : nose); d.Scores.Add(earOk ? sc(ear) : sc(0));
+            // A wrist far from where a forearm of about the upper arm's length could reach is probably a wrong guess: mark it unsure.
+            double upperArm = Distance(d.Points[4], d.Points[5]), foreArm = Distance(d.Points[5], d.Points[6]);
+            if (upperArm > 1 && (foreArm > upperArm * 1.6 || foreArm < upperArm * 0.35)) d.Scores[6] = Math.Min(d.Scores[6], 0.25F);
             d.Confidence = Math.Min(95, d.Scores.Where((s, i) => i != 3).Average() * 100);
             return d;
         }
