@@ -20,34 +20,42 @@ namespace CassetteMotionPro.Workspace
         private const int StaleMilliseconds = 1500;
         private static readonly object gate = new object();
         private static readonly Stopwatch clock = Stopwatch.StartNew();
-        private static long lastSubmit = -IntervalMilliseconds;
-        private static long lastResult;
-        private static readonly OneEuro[] filters = NewFilters();
-        private static Size filterSize;
-        private static bool filterFacing;
-        private static List<PointF> shown;
-        private static long lastPaint;
-
-        private static OneEuro[] NewFilters()
-        {
-            OneEuro[] list = new OneEuro[16];
-            for (int i = 0; i < list.Length; i++) list[i] = new OneEuro();
-            return list;
-        }
-        private static int busy;
-        private static PoseDetection latest;
-        private static readonly SegmentModel segments = new SegmentModel();
         private static Bitmap ghost;
         private static Bitmap ghostScaled;
         private static Size ghostScaledFor;
         private static bool ghostVisible;
         public static string GhostPath { get; private set; }
         public static Func<string> GhostSource; // set by the workspace: the session's Before picture
-        private static readonly Dictionary<int, PointF> pinned = new Dictionary<int, PointF>();
-        private static int dragIndex = -1;
         private static string toastText;
         public static event EventHandler GhostChanged;
-        private static Size latestSize;
+
+        // Each camera view (left, right, ...) gets its own joints, drags, pins and smoothing.
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<object, Channel> channelByView = new System.Runtime.CompilerServices.ConditionalWeakTable<object, Channel>();
+        private static readonly List<WeakReference> allChannels = new List<WeakReference>();
+        private static readonly object defaultView = new object();
+
+        private static Channel ChannelFor(object view)
+        {
+            if (view == null) view = defaultView;
+            lock (allChannels)
+            {
+                Channel channel;
+                if (channelByView.TryGetValue(view, out channel)) return channel;
+                channel = new Channel();
+                channelByView.Add(view, channel);
+                allChannels.RemoveAll(delegate (WeakReference r) { return !r.IsAlive; });
+                allChannels.Add(new WeakReference(channel));
+                return channel;
+            }
+        }
+
+        private static void ForEachChannel(Action<Channel> action)
+        {
+            List<Channel> list = new List<Channel>();
+            lock (allChannels)
+                foreach (WeakReference r in allChannels) { Channel c = r.Target as Channel; if (c != null) list.Add(c); }
+            foreach (Channel c in list) action(c);
+        }
 
         private static bool enabled = true;
         private static long toastUntil;
@@ -60,7 +68,7 @@ namespace CassetteMotionPro.Workspace
             {
                 if (enabled == value) return;
                 enabled = value;
-                if (!enabled) lock (gate) { pinned.Clear(); dragIndex = -1; }
+                if (!enabled) ForEachChannel(delegate (Channel c) { c.ReleaseAll(); });
                 toastText = enabled ? "LIVE JOINTS \u00B7 on (Ctrl+J)" : "LIVE JOINTS \u00B7 off (Ctrl+J)";
                 toastUntil = clock.ElapsedMilliseconds + 1400;
                 EventHandler handler = EnabledChanged;
@@ -72,11 +80,11 @@ namespace CassetteMotionPro.Workspace
 
         public static void Install()
         {
-            LivePoseHook.FrameReady = OnFrame;
+            LivePoseHook.FrameReady = delegate (object view, Bitmap frame) { ChannelFor(view).OnFrame(frame); };
             LivePoseHook.Paint = OnPaint;
-            LivePoseHook.MouseDown = OnMouseDown;
-            LivePoseHook.MouseMove = OnMouseMove;
-            LivePoseHook.MouseUp = OnMouseUp;
+            LivePoseHook.MouseDown = delegate (object view, Point l, MouseButtons b, Rectangle r) { return ChannelFor(view).OnMouseDown(l, b, r); };
+            LivePoseHook.MouseMove = delegate (object view, Point l, MouseButtons b, Rectangle r) { return ChannelFor(view).OnMouseMove(l, b, r); };
+            LivePoseHook.MouseUp = delegate (object view, Point l, MouseButtons b, Rectangle r) { return ChannelFor(view).OnMouseUp(l, b, r); };
             Application.AddMessageFilter(new KeyFilter());
         }
 
@@ -180,7 +188,83 @@ namespace CassetteMotionPro.Workspace
             }
         }
 
-        private static void OnFrame(Bitmap frame)
+        private static void OnPaint(object view, Graphics g, Rectangle target, Size imageSize)
+        {
+            DrawGhost(g, target);
+            if (Enabled && PoseEstimator.Unavailable)
+            {
+                using (Font font = new Font("Segoe UI", 10F, FontStyle.Bold))
+                    Label(g, font, new PointF(target.X + 8, target.Y + 22), "LIVE JOINTS unavailable: " + Shorten(PoseEstimator.LastError), true, true);
+                return;
+            }
+            if (!Enabled)
+            {
+                if (clock.ElapsedMilliseconds < toastUntil)
+                    using (Font font = new Font("Segoe UI", 10F, FontStyle.Bold))
+                        Label(g, font, new PointF(target.X + 8, target.Y + 22), toastText ?? "LIVE JOINTS \u00B7 off (Ctrl+J)", true, true);
+                return;
+            }
+            ChannelFor(view).DrawJoints(g, target);
+        }
+
+        private static string Shorten(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return "see pose-error.txt";
+            return text.Length > 110 ? text.Substring(0, 110) + "..." : text;
+        }
+
+        private static void Label(Graphics g, Font font, PointF anchor, string text, bool toTheRight, bool pinned = false)
+        {
+            SizeF size = g.MeasureString(text, font);
+            float x = pinned ? anchor.X : (toTheRight ? anchor.X + 14 : anchor.X - 14 - size.Width);
+            float y = pinned ? anchor.Y : anchor.Y - size.Height / 2;
+            using (Brush back = new SolidBrush(Color.FromArgb(190, 13, 19, 17)))
+            using (Brush fore = new SolidBrush(Color.White))
+            {
+                g.FillRectangle(back, x - 4, y - 1, size.Width + 8, size.Height + 2);
+                g.DrawString(text, font, fore, x, y);
+            }
+        }
+
+        private static double Angle(PointF a, PointF b, PointF c)
+        {
+            double v1x = a.X - b.X, v1y = a.Y - b.Y, v2x = c.X - b.X, v2y = c.Y - b.Y;
+            double len = Math.Sqrt(v1x * v1x + v1y * v1y) * Math.Sqrt(v2x * v2x + v2y * v2y);
+            if (len < 1e-6) return 0;
+            double cos = Math.Max(-1, Math.Min(1, (v1x * v2x + v1y * v2y) / len));
+            return Math.Acos(cos) * 180.0 / Math.PI;
+        }
+
+        private sealed class Channel
+        {
+            private readonly object gate = new object();
+            private long lastSubmit = -IntervalMilliseconds;
+            private long lastResult;
+            private readonly OneEuro[] filters = NewFilters();
+            private Size filterSize;
+            private bool filterFacing;
+            private List<PointF> shown;
+            private long lastPaint;
+            private int busy;
+            private PoseDetection latest;
+            private Size latestSize;
+            private readonly SegmentModel segments = new SegmentModel();
+            private readonly Dictionary<int, PointF> pinned = new Dictionary<int, PointF>();
+            private int dragIndex = -1;
+
+            private static OneEuro[] NewFilters()
+            {
+                OneEuro[] list = new OneEuro[16];
+                for (int i = 0; i < list.Length; i++) list[i] = new OneEuro();
+                return list;
+            }
+
+            public void ReleaseAll()
+            {
+                lock (gate) { pinned.Clear(); dragIndex = -1; }
+            }
+
+        public void OnFrame(Bitmap frame)
         {
             if (!Enabled || frame == null || PoseEstimator.Unavailable) return;
             long now = clock.ElapsedMilliseconds;
@@ -220,7 +304,7 @@ namespace CassetteMotionPro.Workspace
         }
 
         // Dots the user has dragged stay where they were put until released (right-click) or the overlay is turned off.
-        private static void ApplyPinned(PoseDetection pose, Size size)
+        private void ApplyPinned(PoseDetection pose, Size size)
         {
             if (pinned.Count == 0) return;
             if (size != latestSize || (latest != null && latest.FacingRight != pose.FacingRight)) { pinned.Clear(); return; }
@@ -232,7 +316,7 @@ namespace CassetteMotionPro.Workspace
                 }
         }
 
-        private static int HitDot(Point location, Rectangle target)
+        private int HitDot(Point location, Rectangle target)
         {
             if (latest == null || latestSize.Width <= 0 || latestSize.Height <= 0 || target.Width <= 0) return -1;
             int best = -1; double bestDistance = 18 * 18;
@@ -247,7 +331,7 @@ namespace CassetteMotionPro.Workspace
             return best;
         }
 
-        private static bool OnMouseDown(Point location, MouseButtons button, Rectangle target)
+        public bool OnMouseDown(Point location, MouseButtons button, Rectangle target)
         {
             if (!Enabled || PoseEstimator.Unavailable) return false;
             lock (gate)
@@ -266,7 +350,7 @@ namespace CassetteMotionPro.Workspace
             }
         }
 
-        private static bool OnMouseMove(Point location, MouseButtons button, Rectangle target)
+        public bool OnMouseMove(Point location, MouseButtons button, Rectangle target)
         {
             if (dragIndex < 0) return false;
             if (button != MouseButtons.Left) { dragIndex = -1; return false; }
@@ -284,7 +368,7 @@ namespace CassetteMotionPro.Workspace
             return true;
         }
 
-        private static bool OnMouseUp(Point location, MouseButtons button, Rectangle target)
+        public bool OnMouseUp(Point location, MouseButtons button, Rectangle target)
         {
             if (dragIndex < 0) return false;
             dragIndex = -1;
@@ -294,7 +378,7 @@ namespace CassetteMotionPro.Workspace
         // Steadies each dot. A One Euro filter smooths hard while a joint is nearly still and lets go when it moves fast,
         // so the dots stop shaking without lagging behind the pedalling. Unsure joints are smoothed harder, and a sudden
         // large jump of an unsure joint is ignored.
-        private static void FilterPoints(PoseDetection pose, Size size)
+        private void FilterPoints(PoseDetection pose, Size size)
         {
             long now = clock.ElapsedMilliseconds;
             if (size != filterSize || pose.FacingRight != filterFacing || now - lastResult > StaleMilliseconds)
@@ -319,7 +403,7 @@ namespace CassetteMotionPro.Workspace
         }
 
         // Each screen refresh moves the drawn dots part of the way to the newest reading, so they glide between detections instead of stepping.
-        private static List<PointF> EaseShown(PoseDetection pose)
+        private List<PointF> EaseShown(PoseDetection pose)
         {
             long now = clock.ElapsedMilliseconds;
             double dt = Math.Min(500, now - lastPaint);
@@ -340,22 +424,8 @@ namespace CassetteMotionPro.Workspace
             return shown;
         }
 
-        private static void OnPaint(Graphics g, Rectangle target, Size imageSize)
-        {
-            DrawGhost(g, target);
-            if (Enabled && PoseEstimator.Unavailable)
+            public void DrawJoints(Graphics g, Rectangle target)
             {
-                using (Font font = new Font("Segoe UI", 10F, FontStyle.Bold))
-                    Label(g, font, new PointF(target.X + 8, target.Y + 22), "LIVE JOINTS unavailable: " + Shorten(PoseEstimator.LastError), true, true);
-                return;
-            }
-            if (!Enabled)
-            {
-                if (clock.ElapsedMilliseconds < toastUntil)
-                    using (Font font = new Font("Segoe UI", 10F, FontStyle.Bold))
-                        Label(g, font, new PointF(target.X + 8, target.Y + 22), toastText ?? "LIVE JOINTS \u00B7 off (Ctrl+J)", true, true);
-                return;
-            }
             PoseDetection pose; Size size; List<PointF> drawn;
             lock (gate)
             {
@@ -402,34 +472,7 @@ namespace CassetteMotionPro.Workspace
                 }
             }
             finally { g.SmoothingMode = oldSmoothing; }
-        }
-
-        private static string Shorten(string text)
-        {
-            if (string.IsNullOrEmpty(text)) return "see pose-error.txt";
-            return text.Length > 110 ? text.Substring(0, 110) + "..." : text;
-        }
-
-        private static void Label(Graphics g, Font font, PointF anchor, string text, bool toTheRight, bool pinned = false)
-        {
-            SizeF size = g.MeasureString(text, font);
-            float x = pinned ? anchor.X : (toTheRight ? anchor.X + 14 : anchor.X - 14 - size.Width);
-            float y = pinned ? anchor.Y : anchor.Y - size.Height / 2;
-            using (Brush back = new SolidBrush(Color.FromArgb(190, 13, 19, 17)))
-            using (Brush fore = new SolidBrush(Color.White))
-            {
-                g.FillRectangle(back, x - 4, y - 1, size.Width + 8, size.Height + 2);
-                g.DrawString(text, font, fore, x, y);
             }
-        }
-
-        private static double Angle(PointF a, PointF b, PointF c)
-        {
-            double v1x = a.X - b.X, v1y = a.Y - b.Y, v2x = c.X - b.X, v2y = c.Y - b.Y;
-            double len = Math.Sqrt(v1x * v1x + v1y * v1y) * Math.Sqrt(v2x * v2x + v2y * v2y);
-            if (len < 1e-6) return 0;
-            double cos = Math.Max(-1, Math.Min(1, (v1x * v2x + v1y * v2y) / len));
-            return Math.Acos(cos) * 180.0 / Math.PI;
         }
     }
 

@@ -25,22 +25,22 @@ Edit-File (Join-Path $sm "Kinovea.ScreenManager.csproj") `
 
 Edit-File (Join-Path $sm "CaptureScreen\CaptureScreen.cs") `
     'viewportController.Bitmap = displayFrame;' `
-    ('viewportController.Bitmap = displayFrame;' + "`r`n" + '                LivePoseHook.Submit(displayFrame);')
+    ('viewportController.Bitmap = displayFrame;' + "`r`n" + '                LivePoseHook.Submit(viewportController, displayFrame);')
 
 Edit-File (Join-Path $sm "CaptureScreen\Views\ViewPort.cs") `
     'DrawKVA(e.Graphics);' `
-    ('DrawKVA(e.Graphics);' + "`r`n" + '            LivePoseHook.Draw(e.Graphics, displayRectangle, controller.Bitmap.Size);')
+    ('DrawKVA(e.Graphics);' + "`r`n" + '            LivePoseHook.Draw(controller, e.Graphics, displayRectangle, controller.Bitmap.Size);')
 
 Edit-File (Join-Path $sm "CaptureScreen\Views\ViewPort.cs") `
     'base.OnMouseDown(e);' `
-    ('base.OnMouseDown(e);' + "`r`n" + '            if (LivePoseHook.PointerDown(e.Location, e.Button, displayRectangle)) { Invalidate(); return; }')
+    ('base.OnMouseDown(e);' + "`r`n" + '            if (LivePoseHook.PointerDown(controller, e.Location, e.Button, displayRectangle)) { Invalidate(); return; }')
 
 Edit-File (Join-Path $sm "CaptureScreen\Views\ViewPort.cs") `
     'this.Focus();' `
-    ('this.Focus();' + "`r`n" + '            if (LivePoseHook.PointerMove(e.Location, e.Button, displayRectangle)) { Invalidate(); return; }')
+    ('this.Focus();' + "`r`n" + '            if (LivePoseHook.PointerMove(controller, e.Location, e.Button, displayRectangle)) { Invalidate(); return; }')
 
 Edit-File (Join-Path $sm "CaptureScreen\Views\ViewPort.cs") `
     'base.OnMouseUp(e);' `
-    ('base.OnMouseUp(e);' + "`r`n" + '            if (LivePoseHook.PointerUp(e.Location, e.Button, displayRectangle)) { Invalidate(); return; }')
+    ('base.OnMouseUp(e);' + "`r`n" + '            if (LivePoseHook.PointerUp(controller, e.Location, e.Button, displayRectangle)) { Invalidate(); return; }')
 
 Write-Host "Live pose hook applied."
