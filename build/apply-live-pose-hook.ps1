@@ -43,4 +43,22 @@ Edit-File (Join-Path $sm "CaptureScreen\Views\ViewPort.cs") `
     'base.OnMouseUp(e);' `
     ('base.OnMouseUp(e);' + "`r`n" + '            if (LivePoseHook.PointerUp(controller, e.Location, e.Button, displayRectangle)) { Invalidate(); return; }')
 
+$player = Join-Path $sm "PlayerScreen\Controls\PlayerScreenUserInterface2.cs"
+
+Edit-File $player `
+    'private void SurfaceScreen_Paint(object sender, PaintEventArgs e)' `
+    ('// Where the whole video image sits on screen (empty when mirrored or nothing is loaded), for the live joint overlay.' + "`r`n" + '        private Rectangle LivePoseRect()' + "`r`n" + '        {' + "`r`n" + '            try' + "`r`n" + '            {' + "`r`n" + '                if (!m_FrameServer.Loaded || m_FrameServer.Metadata.Mirrored) return Rectangle.Empty;' + "`r`n" + '                return m_FrameServer.ImageTransform.Transform(new RectangleF(PointF.Empty, (SizeF)m_FrameServer.VideoReader.Info.ReferenceSize));' + "`r`n" + '            }' + "`r`n" + '            catch (Exception) { return Rectangle.Empty; }' + "`r`n" + '        }' + "`r`n`r`n" + '        private void SurfaceScreen_Paint(object sender, PaintEventArgs e)')
+
+Edit-File $player `
+    'FlushOnGraphics(m_FrameServer.CurrentImage, e.Graphics, m_viewportManipulator.RenderingSize, iKeyFrameIndex, m_iCurrentPosition, m_FrameServer.ImageTransform);' `
+    ('FlushOnGraphics(m_FrameServer.CurrentImage, e.Graphics, m_viewportManipulator.RenderingSize, iKeyFrameIndex, m_iCurrentPosition, m_FrameServer.ImageTransform);' + "`r`n" + '                    LivePoseHook.PlayerPaint(pbSurfaceScreen, e.Graphics, m_FrameServer.CurrentImage, m_iCurrentPosition, m_bIsCurrentlyPlaying, LivePoseRect());')
+
+foreach ($name in @(@("MouseDown", "PointerDown"), @("MouseMove", "PointerMove"), @("MouseUp", "PointerUp"))) {
+    $method = "SurfaceScreen_" + $name[0]
+    $call = "LivePoseHook." + $name[1]
+    Edit-File $player `
+        ("private void " + $method + "(object sender, MouseEventArgs e)") `
+        ("private void " + $method + "(object sender, MouseEventArgs e)" + "`r`n" + '        {' + "`r`n" + "            if ($call(pbSurfaceScreen, e.Location, e.Button, LivePoseRect())) { pbSurfaceScreen.Invalidate(); return; }" + "`r`n" + "            ${method}Core(sender, e);" + "`r`n" + '        }' + "`r`n`r`n" + "        private void ${method}Core(object sender, MouseEventArgs e)")
+}
+
 Write-Host "Live pose hook applied."
