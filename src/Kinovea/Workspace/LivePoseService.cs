@@ -16,12 +16,24 @@ namespace CassetteMotionPro.Workspace
     /// </summary>
     internal static class LivePoseService
     {
-        private const int IntervalMilliseconds = 250;
+        private const int IntervalMilliseconds = 120;
         private const int StaleMilliseconds = 1500;
         private static readonly object gate = new object();
         private static readonly Stopwatch clock = Stopwatch.StartNew();
         private static long lastSubmit = -IntervalMilliseconds;
         private static long lastResult;
+        private static readonly OneEuro[] filters = NewFilters();
+        private static Size filterSize;
+        private static bool filterFacing;
+        private static List<PointF> shown;
+        private static long lastPaint;
+
+        private static OneEuro[] NewFilters()
+        {
+            OneEuro[] list = new OneEuro[16];
+            for (int i = 0; i < list.Length; i++) list[i] = new OneEuro();
+            return list;
+        }
         private static int busy;
         private static PoseDetection latest;
         private static readonly SegmentModel segments = new SegmentModel();
@@ -190,7 +202,7 @@ namespace CassetteMotionPro.Workspace
                         lock (gate)
                         {
                             segments.Constrain(result, clock.ElapsedMilliseconds);
-                            Smooth(result, latest, DateTime.UtcNow);
+                            FilterPoints(result, copy.Size);
                             ApplyPinned(result, copy.Size);
                             latest = result;
                             latestSize = copy.Size;
@@ -279,16 +291,53 @@ namespace CassetteMotionPro.Workspace
             return true;
         }
 
-        // Blend with the previous reading so the dots do not jitter. Skipped when the rider turned around or the reading is old.
-        private static void Smooth(PoseDetection now, PoseDetection before, DateTime unused)
+        // Steadies each dot. A One Euro filter smooths hard while a joint is nearly still and lets go when it moves fast,
+        // so the dots stop shaking without lagging behind the pedalling. Unsure joints are smoothed harder, and a sudden
+        // large jump of an unsure joint is ignored.
+        private static void FilterPoints(PoseDetection pose, Size size)
         {
-            if (before == null || before.FacingRight != now.FacingRight) return;
-            if (clock.ElapsedMilliseconds - lastResult > StaleMilliseconds) return;
-            for (int i = 0; i < now.Points.Count && i < before.Points.Count; i++)
+            long now = clock.ElapsedMilliseconds;
+            if (size != filterSize || pose.FacingRight != filterFacing || now - lastResult > StaleMilliseconds)
+                foreach (OneEuro filter in filters) filter.Reset();
+            filterSize = size;
+            filterFacing = pose.FacingRight;
+
+            double height = Math.Max(1, size.Height), time = now / 1000.0;
+            for (int i = 0; i < pose.Points.Count && i * 2 + 1 < filters.Length; i++)
             {
-                PointF a = before.Points[i], b = now.Points[i];
-                now.Points[i] = new PointF(a.X * 0.45F + b.X * 0.55F, a.Y * 0.45F + b.Y * 0.55F);
+                OneEuro fx = filters[i * 2], fy = filters[i * 2 + 1];
+                PointF p = pose.Points[i];
+                float score = i == 3 ? 0.6F : pose.Scores[i]; // the toe is a guess built from the ankle
+                if (fx.HasValue && score < 0.4F)
+                {
+                    double jump = Math.Sqrt(Math.Pow(p.X - fx.Last * height, 2) + Math.Pow(p.Y - fy.Last * height, 2)) / height;
+                    if (jump > 0.12) p = new PointF((float)(fx.Last * height), (float)(fy.Last * height));
+                }
+                double strength = score < 0.4F ? 0.5 : 1.0;
+                pose.Points[i] = new PointF((float)(fx.Filter(p.X / height, time, strength) * height), (float)(fy.Filter(p.Y / height, time, strength) * height));
             }
+        }
+
+        // Each screen refresh moves the drawn dots part of the way to the newest reading, so they glide between detections instead of stepping.
+        private static List<PointF> EaseShown(PoseDetection pose)
+        {
+            long now = clock.ElapsedMilliseconds;
+            double dt = Math.Min(500, now - lastPaint);
+            lastPaint = now;
+            if (shown == null || shown.Count != pose.Points.Count || dt >= 500)
+            {
+                shown = new List<PointF>(pose.Points);
+                return shown;
+            }
+            float alpha = (float)(1 - Math.Exp(-dt / 70.0));
+            for (int i = 0; i < shown.Count; i++)
+            {
+                PointF target = pose.Points[i];
+                if (pinned.ContainsKey(i)) { shown[i] = target; continue; }
+                PointF current = shown[i];
+                shown[i] = new PointF(current.X + (target.X - current.X) * alpha, current.Y + (target.Y - current.Y) * alpha);
+            }
+            return shown;
         }
 
         private static void OnPaint(Graphics g, Rectangle target, Size imageSize)
@@ -307,11 +356,12 @@ namespace CassetteMotionPro.Workspace
                         Label(g, font, new PointF(target.X + 8, target.Y + 22), toastText ?? "LIVE JOINTS \u00B7 off (Ctrl+J)", true, true);
                 return;
             }
-            PoseDetection pose; Size size;
+            PoseDetection pose; Size size; List<PointF> drawn;
             lock (gate)
             {
                 if (latest == null || clock.ElapsedMilliseconds - lastResult > StaleMilliseconds) return;
                 pose = latest; size = latestSize;
+                drawn = EaseShown(pose);
             }
             if (size.Width <= 0 || size.Height <= 0 || pose.Points.Count < 8) return;
 
@@ -319,7 +369,7 @@ namespace CassetteMotionPro.Workspace
                 target.X + p.X * target.Width / size.Width,
                 target.Y + p.Y * target.Height / size.Height);
             List<PointF> pts = new List<PointF>();
-            foreach (PointF p in pose.Points) pts.Add(map(p));
+            foreach (PointF p in drawn) pts.Add(map(p));
 
             SmoothingMode oldSmoothing = g.SmoothingMode;
             g.SmoothingMode = SmoothingMode.AntiAlias;
@@ -380,6 +430,43 @@ namespace CassetteMotionPro.Workspace
             if (len < 1e-6) return 0;
             double cos = Math.Max(-1, Math.Min(1, (v1x * v2x + v1y * v2y) / len));
             return Math.Acos(cos) * 180.0 / Math.PI;
+        }
+    }
+
+    /// <summary>One Euro filter: smooth when the value barely changes, responsive when it changes fast.</summary>
+    internal class OneEuro
+    {
+        private const double MinCutoff = 1.2, Beta = 30.0, DerivativeCutoff = 1.0;
+        private bool has;
+        private double previous, previousDerivative, previousTime;
+
+        public bool HasValue { get { return has; } }
+        public double Last { get { return previous; } }
+
+        public void Reset() { has = false; }
+
+        public double Filter(double value, double time, double strength)
+        {
+            if (!has)
+            {
+                has = true; previous = value; previousDerivative = 0; previousTime = time;
+                return value;
+            }
+            double dt = Math.Max(time - previousTime, 1e-3);
+            double derivative = (value - previous) / dt;
+            double ad = Alpha(DerivativeCutoff, dt);
+            double smoothedDerivative = ad * derivative + (1 - ad) * previousDerivative;
+            double cutoff = MinCutoff * strength + Beta * Math.Abs(smoothedDerivative);
+            double a = Alpha(cutoff, dt);
+            double result = a * value + (1 - a) * previous;
+            previous = result; previousDerivative = smoothedDerivative; previousTime = time;
+            return result;
+        }
+
+        private static double Alpha(double cutoff, double dt)
+        {
+            double tau = 1.0 / (2 * Math.PI * cutoff);
+            return 1.0 / (1.0 + tau / dt);
         }
     }
 
