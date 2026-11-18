@@ -34,7 +34,8 @@ namespace CassetteMotionPro.Workspace
             get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "models", "movenet_thunder.onnx"); }
         }
 
-        public static PoseDetection Detect(Bitmap frame)
+        // quick: one pass on the whole frame only (used while a video is playing, when speed matters more than the last bit of accuracy).
+        public static PoseDetection Detect(Bitmap frame, bool quick = false)
         {
             try
             {
@@ -44,9 +45,9 @@ namespace CassetteMotionPro.Workspace
                     if (session == null)
                     {
                         if (!File.Exists(ModelPath)) { Fail("Model file not found: " + ModelPath, null); return null; }
-                        session = new InferenceSession(ModelPath);
+                        session = CreateSession();
                     }
-                    return Refined(frame);
+                    return Refined(frame, quick);
                 }
             }
             catch (Exception exception)
@@ -54,6 +55,33 @@ namespace CassetteMotionPro.Workspace
                 Fail(exception.GetType().Name + ": " + exception.Message, exception.ToString());
                 return null;
             }
+        }
+
+        // Leave some processor cores free so the video and the screen stay smooth while the model runs.
+        private static InferenceSession CreateSession()
+        {
+            using (SessionOptions options = new SessionOptions())
+            {
+                options.IntraOpNumThreads = Math.Max(1, Environment.ProcessorCount / 2);
+                return new InferenceSession(ModelPath, options);
+            }
+        }
+
+        private static long lastLog;
+
+        /// <summary>Writes a line to pose-error.txt without turning the pose model off (at most one line every few seconds).</summary>
+        public static void Log(string text)
+        {
+            try
+            {
+                long now = Environment.TickCount;
+                if (now - lastLog < 5000) return;
+                lastLog = now;
+                string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Cassette Motion Pro");
+                Directory.CreateDirectory(folder);
+                File.AppendAllText(Path.Combine(folder, "pose-error.txt"), DateTime.Now.ToString("s") + "  " + text + Environment.NewLine + Environment.NewLine);
+            }
+            catch (Exception) { }
         }
 
         public static bool Unavailable { get { return failed; } }
@@ -85,7 +113,7 @@ namespace CassetteMotionPro.Workspace
                     if (session == null)
                     {
                         if (!File.Exists(ModelPath)) { Fail("Model file not found: " + ModelPath, null); return null; }
-                        session = new InferenceSession(ModelPath);
+                        session = CreateSession();
                     }
                     using (Bitmap source = new Bitmap(imagePath))
                         return Refined(source);
@@ -100,10 +128,10 @@ namespace CassetteMotionPro.Workspace
 
         // The model sees a 256x256 square, so a rider filling a third of a wide frame gets very few pixels.
         // After a first pass on the whole frame, look again at a square cropped around the rider and keep that if it is at least as sure.
-        private static PoseDetection Refined(Bitmap source)
+        private static PoseDetection Refined(Bitmap source, bool quick = false)
         {
             PoseDetection first = Run(source, null);
-            if (first == null) return null;
+            if (first == null || quick) return first;
             float fullSide = Math.Max(source.Width, source.Height);
             float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
             int used = 0;
