@@ -56,14 +56,15 @@ namespace CassetteMotionPro.Workspace
     public static class BikeSizing
     {
         private const double SpacerToStemCentre = 30.0; // headset top cap plus half the stem's clamp height
-        public const double BackSpread = 2.0, ShoulderSpread = 3.0;  // degrees either way for the ranges
+        public const double BackSpread = 2.0, ShoulderSpread = 2.5;  // degrees either way for the ranges
 
         private sealed class Profile
         {
             public double SeatAngle, HeadTubeAngle, StemLength, StemAngle, Spacers, BarReach;
             public double HandForward, HandUp;  // hand contact point relative to the bar clamp centre (not counting bar reach)
-            public double SaddleFactor, ShoulderAngle, ArmFactor, BarWidth;
+            public double SaddleFactor, ArmFactor, BarWidth;
             public double Performance, Endurance, Comfort; // back angles
+            public double ReachPerformance, ReachEndurance, ReachComfort; // body reach angles (hip – shoulder – wrist)
             public bool DropBar;
         }
 
@@ -74,22 +75,25 @@ namespace CassetteMotionPro.Workspace
             {
                 p.SeatAngle = 76; p.HeadTubeAngle = 65; p.StemLength = 45; p.StemAngle = 0; p.Spacers = 15; p.BarReach = 0;
                 p.HandForward = -40; p.HandUp = 25; // grips sit behind and above the clamp (backsweep and rise)
-                p.SaddleFactor = 0.875; p.ShoulderAngle = 108; p.ArmFactor = 0.82; p.BarWidth = 780;
-                p.Performance = 45; p.Endurance = 50; p.Comfort = 55; p.DropBar = false;
+                p.SaddleFactor = 0.875; p.ArmFactor = 0.82; p.BarWidth = 780;
+                p.Performance = 40; p.Endurance = 44; p.Comfort = 48; p.DropBar = false;
+                p.ReachPerformance = 75; p.ReachEndurance = 73; p.ReachComfort = 70;
             }
             else if (Is(bikeType, "Gravel"))
             {
                 p.SeatAngle = 73.5; p.HeadTubeAngle = 71.5; p.StemLength = 90; p.StemAngle = -6; p.Spacers = 30; p.BarReach = 75;
                 p.HandForward = 30; p.HandUp = 30; // top of the hood, ahead of and above the bar
-                p.SaddleFactor = 0.880; p.ShoulderAngle = 95; p.ArmFactor = 0.95; p.BarWidth = 0;
+                p.SaddleFactor = 0.880; p.ArmFactor = 0.97; p.BarWidth = 0;
                 p.Performance = 42; p.Endurance = 46; p.Comfort = 50; p.DropBar = true;
+                p.ReachPerformance = 85; p.ReachEndurance = 83; p.ReachComfort = 80;
             }
             else
             {
                 p.SeatAngle = 73.5; p.HeadTubeAngle = 73; p.StemLength = 100; p.StemAngle = -6; p.Spacers = 25; p.BarReach = 80;
                 p.HandForward = 30; p.HandUp = 30;
-                p.SaddleFactor = 0.883; p.ShoulderAngle = 95; p.ArmFactor = 0.95; p.BarWidth = 0;
+                p.SaddleFactor = 0.883; p.ArmFactor = 0.97; p.BarWidth = 0;
                 p.Performance = 40; p.Endurance = 44; p.Comfort = 48; p.DropBar = true;
+                p.ReachPerformance = 85; p.ReachEndurance = 83; p.ReachComfort = 80;
             }
             return p;
         }
@@ -109,7 +113,12 @@ namespace CassetteMotionPro.Workspace
             return angle;
         }
 
-        public static double DefaultShoulderAngle(string bikeType) { return For(bikeType).ShoulderAngle; }
+        // Default body reach angle (hip – shoulder – wrist): road and gravel 80–85°, mountain 70–75°, more open for performance.
+        public static double DefaultShoulderAngle(string bikeType, string style)
+        {
+            Profile p = For(bikeType);
+            return Is(style, "Performance") ? p.ReachPerformance : Is(style, "Comfort") ? p.ReachComfort : p.ReachEndurance;
+        }
         public static double DefaultStemLength(string bikeType) { return For(bikeType).StemLength; }
         public static double DefaultStemAngle(string bikeType) { return For(bikeType).StemAngle; }
         public static double DefaultSpacers(string bikeType) { return For(bikeType).Spacers; }
@@ -129,7 +138,7 @@ namespace CassetteMotionPro.Workspace
             Profile p = For(input.BikeType);
             BikeSizingResult r = new BikeSizingResult();
             r.BackAngle = Pick(input.BackAngle, DefaultBackAngle(input.BikeType, input.Style, input.Flexibility));
-            r.ShoulderAngle = Pick(input.ShoulderAngle, p.ShoulderAngle);
+            r.ShoulderAngle = Pick(input.ShoulderAngle, DefaultShoulderAngle(input.BikeType, input.Style));
             r.StemLength = Pick(input.StemLength, p.StemLength);
             r.StemAngle = Pick(input.StemAngle, p.StemAngle);
             r.Spacers = Pick(input.Spacers, p.Spacers);
@@ -164,7 +173,7 @@ namespace CassetteMotionPro.Workspace
             r.HandlebarY = handY;
             r.SaddleToHandDrop = saddleY - handY;
 
-            // Range: back angle ±2° or shoulder angle ±3°, one at a time (moving both to their extremes at once
+            // Range: back angle ±2° or body reach angle ±2.5°, one at a time (moving both to their extremes at once
             // spans about three frame sizes, which is too wide to choose a frame from).
             r.HandlebarXMin = r.HandlebarYMin = r.FrameStackMin = r.FrameReachMin = double.MaxValue;
             r.HandlebarXMax = r.HandlebarYMax = r.FrameStackMax = r.FrameReachMax = double.MinValue;
@@ -204,7 +213,8 @@ namespace CassetteMotionPro.Workspace
             double back = Radians(backAngle);
             double shoulderX = hipX + torso * Math.Cos(back);
             double shoulderY = hipY + torso * Math.Sin(back);
-            double down = Radians(shoulderAngle - backAngle); // arm direction below horizontal
+            // The angle at the shoulder between the line down to the hip and the arm is 180 − back − (arm below horizontal).
+            double down = Radians(180 - shoulderAngle - backAngle); // arm direction below horizontal
             x = shoulderX + arm * Math.Cos(down);
             y = shoulderY - arm * Math.Sin(down);
         }
