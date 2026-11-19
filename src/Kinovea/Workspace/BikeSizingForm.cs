@@ -89,7 +89,7 @@ namespace CassetteMotionPro.Workspace
 
             Section(inputs, "Position targets (defaults follow the choices above)");
             Field(inputs, "Back angle (°)", backAngle, "Hip to shoulder line above horizontal, on the hoods (grips for mountain).");
-            Field(inputs, "Shoulder angle (°)", shoulderAngle, "Between the back line and the arm.");
+            Field(inputs, "Body reach angle (°)", shoulderAngle, "Angle at the shoulder between the hip and the wrist / hand contact point (hip – shoulder – wrist), the same angle as Body reach in the rider measurements. Not the elbow-based shoulder angle some fit systems use, which reads smaller.");
 
             Section(inputs, "Cockpit, for the frame size");
             Field(inputs, "Stem length (mm)", stemLength, null);
@@ -339,7 +339,7 @@ namespace CassetteMotionPro.Workspace
             }
 
             text.AppendLine();
-            text.AppendLine("Based on back angle " + r.BackAngle.ToString("0.#") + "° and shoulder angle " + r.ShoulderAngle.ToString("0.#") + "°; ranges allow ±" + BikeSizing.BackSpread.ToString("0") + "° back or ±" + BikeSizing.ShoulderSpread.ToString("0") + "° shoulder.");
+            text.AppendLine("Based on back angle " + r.BackAngle.ToString("0.#") + "° and body reach angle " + r.ShoulderAngle.ToString("0.#") + "° (hip – shoulder – wrist); ranges allow ±" + BikeSizing.BackSpread.ToString("0") + "° back or ±" + BikeSizing.ShoulderSpread.ToString("0") + "° body reach.");
             foreach (string warning in r.Warnings)
                 text.AppendLine("Note: " + warning);
             text.AppendLine("This is a starting estimate from body proportions. Confirm on the bike with the rider pedalling.");

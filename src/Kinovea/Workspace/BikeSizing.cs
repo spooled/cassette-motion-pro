@@ -31,7 +31,7 @@ namespace CassetteMotionPro.Workspace
 
         // Targets and cockpit. NaN = use the default for the bike type and style.
         public double BackAngle = double.NaN;      // hip to shoulder line, degrees above horizontal
-        public double ShoulderAngle = double.NaN;  // between the back line and the arm, degrees
+        public double ShoulderAngle = double.NaN;  // hip – shoulder – wrist/hand contact, degrees (the app calls this Body reach)
         public double StemLength = double.NaN;     // mm
         public double StemAngle = double.NaN;      // degrees, negative points down
         public double Spacers = double.NaN;        // mm of spacers under the stem
