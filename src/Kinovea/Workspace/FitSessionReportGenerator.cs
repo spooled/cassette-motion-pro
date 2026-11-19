@@ -21,7 +21,7 @@ namespace CassetteMotionPro.Workspace
     public static class FitSessionReportGenerator
     {
         private const string ConfidentialNotice = "Confidential bike fit report prepared for the named client.";
-        private const string ReportVersion = "1.37.2";
+        private const string ReportVersion = "1.38.0";
         // Subfolder of a report package that holds fitter-only files. It is never included in the client ZIP.
         public const string FitterOnlyFolderName = "Fitter Only";
         private const string BrandLogoResourceName = "CassetteMotionPro.Brand.Logo.png";
@@ -1059,6 +1059,13 @@ namespace CassetteMotionPro.Workspace
                         AddReportImage(html, "After assisted bike landmarks", session.AssistedBikeLandmarksAfterEvidencePath, false, imageSourceResolver);
                     html.AppendLine("</div>");
                 }
+            }
+
+            if (!session.HideSizingInReport && !string.IsNullOrWhiteSpace(session.SizingSummary))
+            {
+                html.AppendLine("<h2>Bike Sizing Estimate</h2>");
+                html.AppendLine("<div class=\"section-kicker\">Starting position and frame size worked out from the rider's body measurements. Confirmed and adjusted during the fit.</div>");
+                html.AppendLine("<div class=\"section-card\"><div style=\"font-family:Consolas,monospace;white-space:pre-wrap;font-size:13px;line-height:1.5\">" + Encode(session.SizingSummary) + "</div></div>");
             }
 
             html.AppendLine("<h2>Bike Measurements</h2>");

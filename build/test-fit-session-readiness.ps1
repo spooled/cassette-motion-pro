@@ -16,6 +16,7 @@ $sources = @(
   'src/Kinovea/Workspace/SessionPathRebaser.cs',
   'src/Kinovea/Workspace/MeasurementNumber.cs',
   'src/Kinovea/Workspace/BikeFitGeometry.cs',
+  'src/Kinovea/Workspace/BikeSizing.cs',
   'src/Kinovea/Workspace/FitSessionRecoveryStore.cs'
 )
 $usings = "using System;`nusing System.IO;`nusing System.Collections.Generic;`nusing System.Linq;`nusing System.Reflection;`nusing System.Globalization;`nusing System.Text.RegularExpressions;`nusing System.Xml.Serialization;`nusing CassetteMotionPro.Clients;`n"
@@ -221,9 +222,42 @@ try {
   # Three clicks bunched into one small arc are too unreliable to trust.
   if ($geometry::TryCircleThroughPoints(1100.0, 850.0, 1099.0, 855.0, 1097.0, 860.0, [ref]$ccx, [ref]$ccy, [ref]$cr)) { throw 'Bunched chainring clicks were accepted.' }
 
+  # Bike sizing from body measurements: a 175 cm rider should land on ordinary frame sizes.
+  function New-Sizing([string]$type, [string]$style) {
+    $in = New-Object CassetteMotionPro.Workspace.BikeSizingInput
+    $in.Height = 1750; $in.Inseam = 820; $in.SternalNotch = 1430; $in.ArmLength = 650; $in.ShoulderWidth = 400
+    $in.BikeType = $type; $in.Style = $style; $in.Flexibility = 'Average'
+    return $in
+  }
+  function Get-Sizing($in) {
+    $r = $null; $err = $null
+    if (-not [CassetteMotionPro.Workspace.BikeSizing]::TryCalculate($in, [ref]$r, [ref]$err)) { throw ('Sizing failed: ' + $err) }
+    return $r
+  }
+  $road = Get-Sizing (New-Sizing 'Road' 'Endurance')
+  if ([math]::Abs($road.SaddleHeight - 724.06) -gt 0.5) { throw ('Road saddle height should be 0.883 x inseam but was ' + $road.SaddleHeight) }
+  if ($road.FrameStack -lt 530 -or $road.FrameStack -gt 600 -or $road.FrameReach -lt 360 -or $road.FrameReach -gt 400) { throw ('Road endurance frame for 175 cm was stack ' + $road.FrameStack + ' reach ' + $road.FrameReach) }
+  if ($road.HandlebarX -lt 520 -or $road.HandlebarX -gt 620 -or $road.HandlebarY -lt 600 -or $road.HandlebarY -gt 720) { throw ('Road hands for 175 cm were at ' + $road.HandlebarX + ',' + $road.HandlebarY) }
+  if (-not ($road.HandlebarXMin -le $road.HandlebarX -and $road.HandlebarX -le $road.HandlebarXMax -and $road.FrameStackMin -le $road.FrameStack -and $road.FrameStack -le $road.FrameStackMax)) { throw 'The sizing estimate sits outside its own range.' }
+  if ($road.BarWidth -ne 400) { throw ('A 40 cm shoulder width should give a 400 mm road bar but gave ' + $road.BarWidth) }
+  $race = Get-Sizing (New-Sizing 'Road' 'Performance')
+  $comfort = Get-Sizing (New-Sizing 'Road' 'Comfort')
+  if (-not ($race.HandlebarY -lt $road.HandlebarY -and $road.HandlebarY -lt $comfort.HandlebarY)) { throw 'Performance should put the hands lowest and comfort highest.' }
+  if (-not ($race.FrameStack -lt $comfort.FrameStack)) { throw 'A performance position should need a lower frame stack than a comfort one.' }
+  $mtb = Get-Sizing (New-Sizing 'Mountain' 'Endurance')
+  if ($mtb.FrameReach -lt 420 -or $mtb.FrameReach -gt 510) { throw ('Mountain frame reach for 175 cm was ' + $mtb.FrameReach) }
+  if ($mtb.BarWidth -ne 0) { throw 'A flat-bar bike should not get a drop-bar width.' }
+  # A longer stem needs a shorter frame for the same hand position.
+  $long = New-Sizing 'Road' 'Endurance'; $long.StemLength = 120
+  if (-not ((Get-Sizing $long).FrameReach -lt $road.FrameReach - 15)) { throw 'A longer stem did not shorten the frame reach.' }
+  # Measurements that cannot be right are refused rather than sized.
+  $bad = New-Sizing 'Road' 'Endurance'; $bad.Inseam = 400
+  $r = $null; $err = $null
+  if ([CassetteMotionPro.Workspace.BikeSizing]::TryCalculate($bad, [ref]$r, [ref]$err)) { throw 'An impossible inseam was accepted.' }
+
   [FitSessionRecoveryProbe]::Run($repository.RootPath, $session)
 
-  Write-Host 'PASS: legacy session load, current session round-trip, stable storage key, follow-up merge, restore path rebasing, measurement number parsing, level/calibration geometry, manifest backup recovery, autosave backup recovery, recovery cleanup.'
+  Write-Host 'PASS: legacy session load, current session round-trip, stable storage key, follow-up merge, restore path rebasing, measurement number parsing, level/calibration geometry, bike sizing, manifest backup recovery, autosave backup recovery, recovery cleanup.'
 }
 finally {
   if (Test-Path $root) { Remove-Item $root -Recurse -Force }

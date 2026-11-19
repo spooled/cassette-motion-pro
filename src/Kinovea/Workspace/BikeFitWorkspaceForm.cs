@@ -2247,6 +2247,32 @@ namespace CassetteMotionPro.Workspace
             }
         }
 
+        private void ShowBikeSizing(object sender, EventArgs e)
+        {
+            if (currentSession == null)
+            {
+                MessageBox.Show(this, "Create or open a client fit session first.", "Bike Sizing", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            // Compare with the final position if it has been measured, otherwise the starting one.
+            string x = GetMeasurementText("HandlebarXAfter"), y = GetMeasurementText("HandlebarYAfter"), label = "final";
+            if (string.IsNullOrWhiteSpace(x) && string.IsNullOrWhiteSpace(y))
+            {
+                x = GetMeasurementText("HandlebarXBefore");
+                y = GetMeasurementText("HandlebarYBefore");
+                label = "starting";
+            }
+            using (BikeSizingForm form = new BikeSizingForm(currentSession, x, y, label))
+            {
+                form.ShowDialog(this);
+                if (!form.Changed)
+                    return;
+                AddTimelineEvent("Measurements", "Bike sizing estimate saved");
+                SaveCurrentSession();
+                UpdateSaveHint("Rider measurements and the bike sizing estimate were saved to the client session.");
+            }
+        }
+
         private void ShowMeasurementRepeatabilityLab(object sender, EventArgs e)
         {
             if (currentSession == null)
@@ -3955,6 +3981,15 @@ namespace CassetteMotionPro.Workspace
             repeat.FitProtocolBikeType = string.IsNullOrWhiteSpace(source.FitProtocolBikeType) ? source.FitTemplateBikeType : source.FitProtocolBikeType;
             repeat.Goals = source.Goals;
             repeat.Notes = BuildRepeatFitContext(source);
+            // Body measurements rarely change between fits; carry them over so sizing can be rechecked straight away.
+            repeat.RiderHeight = source.RiderHeight;
+            repeat.RiderInseam = source.RiderInseam;
+            repeat.RiderSternalNotchHeight = source.RiderSternalNotchHeight;
+            repeat.RiderArmLength = source.RiderArmLength;
+            repeat.RiderShoulderWidth = source.RiderShoulderWidth;
+            repeat.RiderFlexibility = source.RiderFlexibility;
+            repeat.SizingBikeType = source.SizingBikeType;
+            repeat.SizingRidingStyle = source.SizingRidingStyle;
 
             sessionList.SelectedItems.Clear();
             LoadSession(repeat);
@@ -5131,6 +5166,11 @@ namespace CassetteMotionPro.Workspace
             reviewMetrics.Size = new Size(210, 34);
             reviewMetrics.Click += ReviewMetrics_Click;
             reviewActions.Controls.Add(reviewMetrics);
+
+            Button sizing = CreateButton("Bike Sizing", false);
+            sizing.Size = new Size(130, 34);
+            sizing.Click += ShowBikeSizing;
+            reviewActions.Controls.Add(sizing);
 
             Label reviewHint = new Label();
             reviewHint.Text = "Checks missing key bike metrics and flags values that may be worth reviewing before generating reports.";
