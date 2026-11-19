@@ -339,7 +339,7 @@ namespace CassetteMotionPro.Workspace
             }
 
             text.AppendLine();
-            text.AppendLine("Based on back angle " + r.BackAngle.ToString("0.#") + "° and shoulder angle " + r.ShoulderAngle.ToString("0.#") + "°; ranges allow ±3° back and ±5° shoulder.");
+            text.AppendLine("Based on back angle " + r.BackAngle.ToString("0.#") + "° and shoulder angle " + r.ShoulderAngle.ToString("0.#") + "°; ranges allow ±" + BikeSizing.BackSpread.ToString("0") + "° back or ±" + BikeSizing.ShoulderSpread.ToString("0") + "° shoulder.");
             foreach (string warning in r.Warnings)
                 text.AppendLine("Note: " + warning);
             text.AppendLine("This is a starting estimate from body proportions. Confirm on the bike with the rider pedalling.");

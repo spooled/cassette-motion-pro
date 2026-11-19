@@ -56,6 +56,7 @@ namespace CassetteMotionPro.Workspace
     public static class BikeSizing
     {
         private const double SpacerToStemCentre = 30.0; // headset top cap plus half the stem's clamp height
+        public const double BackSpread = 2.0, ShoulderSpread = 3.0;  // degrees either way for the ranges
 
         private sealed class Profile
         {
@@ -163,12 +164,15 @@ namespace CassetteMotionPro.Workspace
             r.HandlebarY = handY;
             r.SaddleToHandDrop = saddleY - handY;
 
-            // Reasonable spread: back angle ±3°, shoulder angle ±5°.
+            // Range: back angle ±2° or shoulder angle ±3°, one at a time (moving both to their extremes at once
+            // spans about three frame sizes, which is too wide to choose a frame from).
             r.HandlebarXMin = r.HandlebarYMin = r.FrameStackMin = r.FrameReachMin = double.MaxValue;
             r.HandlebarXMax = r.HandlebarYMax = r.FrameStackMax = r.FrameReachMax = double.MinValue;
-            foreach (double back in new double[] { r.BackAngle - 3, r.BackAngle + 3 })
-            foreach (double shoulder in new double[] { r.ShoulderAngle - 5, r.ShoulderAngle + 5 })
+            double[] backs = new double[] { r.BackAngle - BackSpread, r.BackAngle + BackSpread, r.BackAngle, r.BackAngle };
+            double[] shoulderAngles = new double[] { r.ShoulderAngle, r.ShoulderAngle, r.ShoulderAngle - ShoulderSpread, r.ShoulderAngle + ShoulderSpread };
+            for (int k = 0; k < backs.Length; k++)
             {
+                double back = backs[k], shoulder = shoulderAngles[k];
                 double x, y, stack, reach;
                 Hand(hipX, hipY, r.TorsoLength, arm, back, shoulder, out x, out y);
                 Frame(x, y, p, r, out stack, out reach);
