@@ -1,0 +1,81 @@
+# Builds the Windows installer for the FIT desktop app from the private
+# BicycleButler/fit repository and attaches it to this workflow run.
+#
+# To use: Actions > "Build FIT installer (Windows)" > Run workflow.
+# Download: open the run > Artifacts > fit-windows-installer.
+#
+# Requires the repository secret FIT_REPO_TOKEN: a GitHub token with read
+# access to BicycleButler/fit. Keep this repository private: artifacts and
+# logs of a public repository are visible to all GitHub users.
+name: Build FIT installer (Windows)
+
+on:
+  workflow_dispatch:
+    inputs:
+      fit_ref:
+        description: "fit branch, tag or commit to build"
+        required: true
+        default: "main"
+
+concurrency:
+  group: fit-installer
+  cancel-in-progress: true
+
+env:
+  RUST_TOOLCHAIN: "1.100.0"
+  TAURI_CLI_VERSION: "2.12.6"
+  CARGO_TERM_COLOR: always
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Stop if this repository is public
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$(gh api "repos/${{ github.repository }}" --jq .private)" != "true" ]; then
+            echo "::error::This repository is public. Make it private before building FIT here."
+            exit 1
+          fi
+
+      - name: Check out BicycleButler/fit
+        uses: actions/checkout@v4
+        with:
+          repository: BicycleButler/fit
+          ref: ${{ inputs.fit_ref }}
+          token: ${{ secrets.FIT_REPO_TOKEN }}
+          path: fit
+
+      - name: Install Rust ${{ env.RUST_TOOLCHAIN }}
+        run: |
+          rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal
+          rustup default "$RUST_TOOLCHAIN"
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: fit
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+
+      - name: Build installer
+        working-directory: fit/crates/fit-gui
+        run: npx --yes "@tauri-apps/cli@${TAURI_CLI_VERSION}" build --bundles nsis
+
+      - name: Record fit commit
+        working-directory: fit
+        run: echo "Built BicycleButler/fit $(git rev-parse --short HEAD) (${{ inputs.fit_ref }})" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: fit-windows-installer
+          path: fit/target/release/bundle/nsis/*.exe
+          if-no-files-found: error
+          retention-days: 30
