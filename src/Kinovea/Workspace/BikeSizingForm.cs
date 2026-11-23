@@ -28,7 +28,8 @@ namespace CassetteMotionPro.Workspace
         private readonly TextBox height = new TextBox(), inseam = new TextBox(), sternum = new TextBox(), arm = new TextBox(), shoulders = new TextBox();
         private readonly ComboBox flexibility = new ComboBox(), bikeType = new ComboBox(), style = new ComboBox();
         private readonly TextBox backAngle = new TextBox(), shoulderAngle = new TextBox();
-        private readonly TextBox stemLength = new TextBox(), stemAngle = new TextBox(), spacers = new TextBox(), headTube = new TextBox(), barReach = new TextBox();
+        private readonly TextBox stemLength = new TextBox(), stemAngle = new TextBox(), spacers = new TextBox(), headTube = new TextBox(), barReach = new TextBox(), padRise = new TextBox();
+        private Label barReachLabel;
         private readonly TextBox results = new TextBox();
         private readonly CheckBox showInReport = new CheckBox();
         private readonly HashSet<TextBox> edited = new HashSet<TextBox>();
@@ -95,19 +96,20 @@ namespace CassetteMotionPro.Workspace
             Choice(inputs, "Flexibility", flexibility, new object[] { "Limited", "Average", "Good" }, "Limited: can't reach past the knees with straight legs. Good: palms to the floor.");
 
             Section(inputs, "Bike and riding");
-            Choice(inputs, "Bike type", bikeType, new object[] { "Road", "Gravel", "Mountain" }, null);
+            Choice(inputs, "Bike type", bikeType, new object[] { "Road", "Gravel", "Mountain", "Triathlon / TT" }, "Triathlon / TT sizes the elbow pads (pad stack and reach) instead of the hands.");
             Choice(inputs, "Riding style", style, new object[] { "Performance", "Endurance", "Comfort" }, "Performance: lower and longer. Comfort: more upright.");
 
             Section(inputs, "Position targets (defaults follow the choices above)");
             Field(inputs, "Back angle (°)", backAngle, "Hip to shoulder line above horizontal, on the hoods (grips for mountain).");
-            Field(inputs, "Body reach angle (°)", shoulderAngle, "Angle at the shoulder between the hip and the wrist / hand contact point (hip – shoulder – wrist), the same angle as Body reach in the rider measurements. Typical: road and gravel 80–85°, mountain 70–75°; a bigger angle puts the hands further forward. Not the elbow-based shoulder angle some fit systems use, which reads smaller.");
+            Field(inputs, "Body reach angle (°)", shoulderAngle, "Angle at the shoulder between the hip and the wrist / hand contact point (hip – shoulder – wrist), the same angle as Body reach in the rider measurements. Typical: road and gravel 80–85°, mountain 70–75°; a bigger angle puts the hands further forward. Triathlon / TT: hip – shoulder – elbow on the pads, typically 70–75° (elbows about under the shoulders). Not the elbow-based shoulder angle some fit systems use, which reads smaller.");
 
             Section(inputs, "Cockpit, for the frame size");
             Field(inputs, "Stem length (mm)", stemLength, null);
             Field(inputs, "Stem angle (°)", stemAngle, "Negative points down, e.g. −6.");
             Field(inputs, "Spacers under stem (mm)", spacers, null);
             Field(inputs, "Head tube angle (°)", headTube, null);
-            Field(inputs, "Bar reach (mm)", barReach, "Drop bars: stem clamp to the front of the bar.");
+            barReachLabel = Field(inputs, "Bar reach (mm)", barReach, "Drop bars: stem clamp to the front of the bar. Triathlon / TT: pad centre ahead of the stem clamp centre (negative = behind).");
+            Field(inputs, "Pad height above stem clamp (mm)", padRise, "Triathlon / TT: top of the elbow pad above the stem clamp centre (pad thickness plus risers).");
 
             results.Dock = DockStyle.Fill;
             results.Multiline = true;
@@ -149,10 +151,11 @@ namespace CassetteMotionPro.Workspace
             LoadFrameList(false);
             Activated += delegate { if (LoadFrameList(false)) Recalculate(); };
             LoadFrom(session);
-            bikeType.SelectedIndexChanged += delegate { ApplyDefaults(); Recalculate(); };
+            // The cockpit offsets mean different things on a tri bike, so a new bike type starts from its own defaults.
+            bikeType.SelectedIndexChanged += delegate { edited.Remove(barReach); edited.Remove(padRise); ApplyDefaults(); Recalculate(); };
             style.SelectedIndexChanged += delegate { ApplyDefaults(); Recalculate(); };
             flexibility.SelectedIndexChanged += delegate { ApplyDefaults(); Recalculate(); };
-            foreach (TextBox box in new TextBox[] { backAngle, shoulderAngle, stemLength, stemAngle, spacers, headTube, barReach })
+            foreach (TextBox box in new TextBox[] { backAngle, shoulderAngle, stemLength, stemAngle, spacers, headTube, barReach, padRise })
             {
                 TextBox current = box;
                 current.TextChanged += delegate { if (!filling) edited.Add(current); Recalculate(); };
@@ -175,10 +178,10 @@ namespace CassetteMotionPro.Workspace
             table.SetColumnSpan(label, 2);
         }
 
-        private static void Field(TableLayoutPanel table, string caption, TextBox box, string help)
+        private static Label Field(TableLayoutPanel table, string caption, TextBox box, string help)
         {
             box.Width = 110;
-            AddRow(table, caption, box, help);
+            return AddRow(table, caption, box, help);
         }
 
         private static void Choice(TableLayoutPanel table, string caption, ComboBox box, object[] items, string help)
@@ -189,7 +192,7 @@ namespace CassetteMotionPro.Workspace
             AddRow(table, caption, box, help);
         }
 
-        private static void AddRow(TableLayoutPanel table, string caption, Control control, string help)
+        private static Label AddRow(TableLayoutPanel table, string caption, Control control, string help)
         {
             Label label = new Label();
             label.Text = caption;
@@ -206,6 +209,7 @@ namespace CassetteMotionPro.Workspace
                 tip.SetToolTip(control, help);
                 tip.SetToolTip(label, help);
             }
+            return label;
         }
 
         private void LoadFrom(FitSessionRecord s)
@@ -230,6 +234,7 @@ namespace CassetteMotionPro.Workspace
             Restore(spacers, s.SizingSpacers);
             Restore(headTube, s.SizingHeadTubeAngle);
             Restore(barReach, s.SizingBarReach);
+            Restore(padRise, s.SizingPadRise);
             showInReport.Checked = !s.HideSizingInReport;
             filling = false;
         }
@@ -260,9 +265,14 @@ namespace CassetteMotionPro.Workspace
             Default(spacers, BikeSizing.DefaultSpacers(type));
             Default(headTube, BikeSizing.DefaultHeadTubeAngle(type));
             Default(barReach, BikeSizing.DefaultBarReach(type));
-            bool dropBar = type != "Mountain";
-            barReach.Enabled = dropBar;
-            if (!dropBar) { barReach.Text = "0"; edited.Remove(barReach); }
+            Default(padRise, BikeSizing.DefaultPadRise(type));
+            bool tri = BikeSizing.IsTriathlon(type);
+            bool barOffset = type != "Mountain";
+            barReach.Enabled = barOffset;
+            if (!barOffset) { barReach.Text = "0"; edited.Remove(barReach); }
+            barReachLabel.Text = tri ? "Pad reach from stem clamp (mm)" : "Bar reach (mm)";
+            padRise.Enabled = tri;
+            if (!tri) { padRise.Text = string.Empty; edited.Remove(padRise); }
             filling = false;
         }
 
@@ -315,6 +325,7 @@ namespace CassetteMotionPro.Workspace
             input.Spacers = Optional(spacers);
             input.HeadTubeAngle = Optional(headTube);
             input.BarReach = Optional(barReach);
+            input.PadRise = Optional(padRise);
 
             BikeSizingResult r;
             string error;
@@ -325,21 +336,26 @@ namespace CassetteMotionPro.Workspace
                 return;
             }
 
-            bool dropBar = input.BikeType != "Mountain";
-            string hands = dropBar ? "hood contact point (top of the hood, under the palm)" : "grip centre";
+            bool dropBar = input.BikeType != "Mountain" && !r.AeroPads;
+            string hands = r.AeroPads ? "centre of the elbow pad (top surface)" : dropBar ? "hood contact point (top of the hood, under the palm)" : "grip centre";
+            string xName = r.AeroPads ? "Pad reach (X)      " : "Handlebar X        ";
+            string yName = r.AeroPads ? "Pad stack (Y)      " : "Handlebar Y        ";
             text.AppendLine("BIKE SIZING ESTIMATE — " + input.BikeType + ", " + input.Style.ToLowerInvariant() + ", " + input.Flexibility.ToLowerInvariant() + " flexibility");
             text.AppendLine();
             text.AppendLine("Saddle height      " + Mm(r.SaddleHeight) + "   BB centre to saddle top along the seat tube");
             text.AppendLine();
-            text.AppendLine("HANDS — " + hands + ", measured from the BB centre");
-            text.AppendLine("Handlebar X        " + Mm(r.HandlebarX) + "   range " + Range(r.HandlebarXMin, r.HandlebarXMax));
-            text.AppendLine("Handlebar Y        " + Mm(r.HandlebarY) + "   range " + Range(r.HandlebarYMin, r.HandlebarYMax));
-            text.AppendLine("Saddle to hands    " + Mm(r.SaddleToHandDrop) + (r.SaddleToHandDrop >= 0 ? "   drop (hands below saddle)" : "   rise (hands above saddle)"));
+            text.AppendLine((r.AeroPads ? "PADS — " : "HANDS — ") + hands + ", measured from the BB centre");
+            text.AppendLine(xName + Mm(r.HandlebarX) + "   range " + Range(r.HandlebarXMin, r.HandlebarXMax));
+            text.AppendLine(yName + Mm(r.HandlebarY) + "   range " + Range(r.HandlebarYMin, r.HandlebarYMax));
+            if (r.AeroPads)
+                text.AppendLine("Saddle to pads     " + Mm(r.SaddleToHandDrop) + (r.SaddleToHandDrop >= 0 ? "   drop (pads below saddle)" : "   rise (pads above saddle)"));
+            else
+                text.AppendLine("Saddle to hands    " + Mm(r.SaddleToHandDrop) + (r.SaddleToHandDrop >= 0 ? "   drop (hands below saddle)" : "   rise (hands above saddle)"));
             text.AppendLine();
             text.AppendLine("FRAME TO LOOK FOR");
             text.AppendLine("Stack              " + Mm(r.FrameStack) + "   range " + Range(r.FrameStackMin, r.FrameStackMax));
             text.AppendLine("Reach              " + Mm(r.FrameReach) + "   range " + Range(r.FrameReachMin, r.FrameReachMax));
-            text.AppendLine("  with a " + r.StemLength.ToString("0") + " mm stem at " + r.StemAngle.ToString("+0;−0;0") + "°, " + r.Spacers.ToString("0") + " mm spacers, " + r.HeadTubeAngle.ToString("0.#") + "° head tube" + (dropBar ? ", " + r.BarReach.ToString("0") + " mm bar reach." : "."));
+            text.AppendLine("  with a " + r.StemLength.ToString("0") + " mm stem at " + r.StemAngle.ToString("+0;−0;0") + "°, " + r.Spacers.ToString("0") + " mm spacers, " + r.HeadTubeAngle.ToString("0.#") + "° head tube" + (r.AeroPads ? ", pads " + r.HandUp.ToString("0") + " mm above and " + Math.Abs(r.BarReach).ToString("0") + " mm " + (r.BarReach < 0 ? "behind" : "ahead of") + " the stem clamp." : dropBar ? ", " + r.BarReach.ToString("0") + " mm bar reach." : "."));
             text.AppendLine("  Compare with the stack and reach in the frame maker's geometry chart.");
             if (r.BarWidth > 0)
             {
@@ -350,7 +366,8 @@ namespace CassetteMotionPro.Workspace
             double currentX, currentY;
             bool hasX = MeasurementNumber.TryParse(measuredX, out currentX);
             bool hasY = MeasurementNumber.TryParse(measuredY, out currentY);
-            if (hasX || hasY)
+            // Handlebar X / Y are measured to the hoods or grips, so they do not compare with pad stack and reach.
+            if ((hasX || hasY) && !r.AeroPads)
             {
                 text.AppendLine();
                 text.AppendLine("COMPARED WITH THE " + measuredLabel.ToUpperInvariant() + " BIKE MEASUREMENTS");
@@ -361,7 +378,7 @@ namespace CassetteMotionPro.Workspace
             AppendFrames(text, r, input.BikeType);
 
             text.AppendLine();
-            text.AppendLine("Based on back angle " + r.BackAngle.ToString("0.#") + "° and body reach angle " + r.ShoulderAngle.ToString("0.#") + "° (hip – shoulder – wrist); ranges allow ±" + BikeSizing.BackSpread.ToString("0") + "° back or ±" + BikeSizing.ShoulderSpread.ToString("0.#") + "° body reach.");
+            text.AppendLine("Based on back angle " + r.BackAngle.ToString("0.#") + "° and body reach angle " + r.ShoulderAngle.ToString("0.#") + (r.AeroPads ? "° (hip – shoulder – elbow, on the pads); ranges allow ±" : "° (hip – shoulder – wrist); ranges allow ±") + BikeSizing.BackSpread.ToString("0") + "° back or ±" + BikeSizing.ShoulderSpread.ToString("0.#") + "° body reach.");
             foreach (string warning in r.Warnings)
                 text.AppendLine("Note: " + warning);
             text.AppendLine("This is a starting estimate from body proportions. Confirm on the bike with the rider pedalling.");
@@ -417,10 +434,11 @@ namespace CassetteMotionPro.Workspace
             text.AppendLine("FRAMES THAT FIT — from the frame list, closest to the cockpit above first");
             int ofType = 0;
             foreach (FrameGeometry f in frames)
-                if (string.Equals(f.BikeType, bikeType, StringComparison.OrdinalIgnoreCase)) ofType++;
+                if (string.Equals(f.BikeType, bikeType, StringComparison.OrdinalIgnoreCase) || (BikeSizing.IsTriathlon(bikeType) && BikeSizing.IsTriathlon(f.BikeType))) ofType++;
             List<FrameMatch> matches = FrameFinder.Find(r, bikeType, frames);
-            bool mountain = bikeType == "Mountain";
-            string limits = (mountain ? FrameFinder.FlatBarStemMin : FrameFinder.DropBarStemMin).ToString("0") + "–" + (mountain ? FrameFinder.FlatBarStemMax : FrameFinder.DropBarStemMax).ToString("0") + " mm stem and 0–" + (mountain ? FrameFinder.FlatBarSpacersMax : FrameFinder.DropBarSpacersMax).ToString("0") + " mm spacers";
+            double stemMin, stemMax, spacersMax;
+            FrameFinder.Limits(bikeType, out stemMin, out stemMax, out spacersMax);
+            string limits = stemMin.ToString("0") + "–" + stemMax.ToString("0") + " mm stem and 0–" + spacersMax.ToString("0") + " mm spacers";
             if (ofType == 0)
                 text.AppendLine("No " + bikeType.ToLowerInvariant() + " frames in the frame list yet. Add some with Frame List….");
             else if (matches.Count == 0)
@@ -492,6 +510,7 @@ namespace CassetteMotionPro.Workspace
             session.SizingSpacers = Kept(spacers);
             session.SizingHeadTubeAngle = Kept(headTube);
             session.SizingBarReach = Kept(barReach);
+            session.SizingPadRise = Kept(padRise);
             session.SizingSummary = StripComparison(summary);
             session.HideSizingInReport = !showInReport.Checked;
             Changed = true;

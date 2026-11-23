@@ -14,7 +14,7 @@ namespace CassetteMotionPro.Workspace
     // One frame size from the frame list (published geometry, millimetres and degrees).
     public sealed class FrameGeometry
     {
-        public string BikeType = "Road";   // Road, Gravel, Mountain
+        public string BikeType = "Road";   // Road, Gravel, Mountain, Triathlon
         public string Brand = string.Empty, Model = string.Empty, Size = string.Empty;
         public double Stack, Reach, HeadTubeAngle, SeatTubeAngle;
         public string Source = string.Empty;
@@ -38,7 +38,7 @@ namespace CassetteMotionPro.Workspace
     }
 
     // The frame list is a CSV file the fitter can open and add to in Excel or Notepad. Lines starting with # are notes.
-    // Columns: BikeType,Brand,Model,Size,Stack,Reach,HeadTubeAngle,SeatTubeAngle,Source
+    // Columns: BikeType,Brand,Model,Size,Stack,Reach,HeadTubeAngle,SeatTubeAngle,Source (BikeType: Road, Gravel, Mountain or Triathlon)
     // Kept to C# 5 and to the usings the build's test script provides.
     public static class FrameCatalog
     {
@@ -50,7 +50,7 @@ namespace CassetteMotionPro.Workspace
         {
             "# Cassette Motion Pro frame list. Add a line for each frame size you want Bike Sizing to consider.",
             "# Copy stack, reach and angles from the maker's geometry chart (frame stack/reach, not 'effective' values).",
-            "# BikeType is Road, Gravel or Mountain. Numbers use a dot for decimals, for example 72.5.",
+            "# BikeType is Road, Gravel, Mountain or Triathlon (also for TT bikes). Numbers use a dot for decimals, for example 72.5.",
             Header,
             "Road,Canyon,Endurace CF,2XS,525,382,70.3,73.5,canyon.com Endurace CF 7 geometry (checked 2026-11-23)",
             "Road,Canyon,Endurace CF,XS,545,386,71,73.5,canyon.com Endurace CF 7 geometry (checked 2026-11-23)",
@@ -93,7 +93,7 @@ namespace CassetteMotionPro.Workspace
                     f.BikeType = NormaliseType(cells[0]);
                     f.Brand = cells[1].Trim(); f.Model = cells[2].Trim(); f.Size = cells[3].Trim();
                     f.Source = cells.Length > 8 ? cells[8].Trim() : string.Empty;
-                    if (f.BikeType == null) reason = "bike type must be Road, Gravel or Mountain";
+                    if (f.BikeType == null) reason = "bike type must be Road, Gravel, Mountain or Triathlon";
                     else if (!Read(cells[4], 400, 750, out f.Stack)) reason = "stack should be a number of mm between 400 and 750";
                     else if (!Read(cells[5], 300, 550, out f.Reach)) reason = "reach should be a number of mm between 300 and 550";
                     else if (!Read(cells[6], 60, 76, out f.HeadTubeAngle)) reason = "head tube angle should be between 60 and 76 degrees";
@@ -115,6 +115,7 @@ namespace CassetteMotionPro.Workspace
             foreach (string type in new string[] { "Road", "Gravel", "Mountain" })
                 if (string.Equals(v, type, StringComparison.OrdinalIgnoreCase)) return type;
             if (string.Equals(v, "MTB", StringComparison.OrdinalIgnoreCase)) return "Mountain";
+            if (BikeSizing.IsTriathlon(v)) return "Triathlon";
             return null;
         }
 
@@ -152,15 +153,28 @@ namespace CassetteMotionPro.Workspace
     {
         public const double DropBarStemMin = 70, DropBarStemMax = 130, DropBarSpacersMax = 40;
         public const double FlatBarStemMin = 35, FlatBarStemMax = 80, FlatBarSpacersMax = 30;
+        public const double TriStemMin = 50, TriStemMax = 130, TriSpacersMax = 40;
+
+        public static void Limits(string bikeType, out double stemMin, out double stemMax, out double spacersMax)
+        {
+            if (string.Equals(bikeType, "Mountain", StringComparison.OrdinalIgnoreCase)) { stemMin = FlatBarStemMin; stemMax = FlatBarStemMax; spacersMax = FlatBarSpacersMax; }
+            else if (BikeSizing.IsTriathlon(bikeType)) { stemMin = TriStemMin; stemMax = TriStemMax; spacersMax = TriSpacersMax; }
+            else { stemMin = DropBarStemMin; stemMax = DropBarStemMax; spacersMax = DropBarSpacersMax; }
+        }
+
+        private static bool SameType(string frameType, string bikeType)
+        {
+            if (BikeSizing.IsTriathlon(bikeType)) return BikeSizing.IsTriathlon(frameType);
+            return string.Equals(frameType, bikeType, StringComparison.OrdinalIgnoreCase);
+        }
 
         public static List<FrameMatch> Find(BikeSizingResult estimate, string bikeType, IEnumerable<FrameGeometry> frames)
         {
             List<FrameMatch> matches = new List<FrameMatch>();
             if (estimate == null || frames == null) return matches;
             bool mountain = string.Equals(bikeType, "Mountain", StringComparison.OrdinalIgnoreCase);
-            double stemMin = mountain ? FlatBarStemMin : DropBarStemMin;
-            double stemMax = mountain ? FlatBarStemMax : DropBarStemMax;
-            double spacersMax = mountain ? FlatBarSpacersMax : DropBarSpacersMax;
+            double stemMin, stemMax, spacersMax;
+            Limits(bikeType, out stemMin, out stemMax, out spacersMax);
             double stemStep = mountain ? 5 : 10;
 
             // Bar clamp centre the hands need (the hand contact point minus the bar and hood offsets).
@@ -169,7 +183,7 @@ namespace CassetteMotionPro.Workspace
 
             foreach (FrameGeometry f in frames)
             {
-                if (f == null || !string.Equals(f.BikeType, bikeType, StringComparison.OrdinalIgnoreCase)) continue;
+                if (f == null || !SameType(f.BikeType, bikeType)) continue;
                 double head = Radians(f.HeadTubeAngle);
                 double upX = -Math.Cos(head), upY = Math.Sin(head);       // along the steerer, upward
                 double perpX = Math.Sin(head), perpY = Math.Cos(head);    // square to the steerer, forward

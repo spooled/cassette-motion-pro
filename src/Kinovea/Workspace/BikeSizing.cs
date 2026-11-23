@@ -25,7 +25,7 @@ namespace CassetteMotionPro.Workspace
         public double ArmLength;       // shoulder bony point (acromion) to the centre of a closed fist, arm straight
         public double ShoulderWidth;   // acromion to acromion
 
-        public string BikeType = "Road";        // Road, Gravel, Mountain
+        public string BikeType = "Road";        // Road, Gravel, Mountain, Triathlon / TT
         public string Style = "Endurance";      // Performance, Endurance, Comfort
         public string Flexibility = "Average";  // Limited, Average, Good
 
@@ -36,7 +36,8 @@ namespace CassetteMotionPro.Workspace
         public double StemAngle = double.NaN;      // degrees, negative points down
         public double Spacers = double.NaN;        // mm of spacers under the stem
         public double HeadTubeAngle = double.NaN;  // degrees
-        public double BarReach = double.NaN;       // mm, stem clamp to the front of the bar (drop bars)
+        public double BarReach = double.NaN;       // mm, stem clamp to the front of the bar (drop bars); Triathlon / TT: pad centre ahead of the stem clamp (negative = behind)
+        public double PadRise = double.NaN;        // Triathlon / TT: top of the elbow pad above the stem clamp centre, mm
     }
 
     public sealed class BikeSizingResult
@@ -51,7 +52,8 @@ namespace CassetteMotionPro.Workspace
         public double BackAngle, ShoulderAngle, StemLength, StemAngle, Spacers, HeadTubeAngle, BarReach;
         public double TorsoLength;
         public double SeatAngle;                 // seat tube angle the estimate assumes
-        public double HandForward, HandUp;       // hand contact point relative to the bar clamp centre (not counting bar reach)
+        public double HandForward, HandUp;       // hand contact point relative to the bar clamp centre (not counting bar reach); Triathlon / TT: HandUp is the pad rise
+        public bool AeroPads;                    // Triathlon / TT: the contact point is the centre of the elbow pad, not the hands
         public List<string> Warnings = new List<string>();
     }
 
@@ -59,6 +61,9 @@ namespace CassetteMotionPro.Workspace
     {
         public const double SpacerToStemCentre = 30.0; // headset top cap plus half the stem's clamp height
         public const double BackSpread = 2.0, ShoulderSpread = 2.5;  // degrees either way for the ranges
+        // Triathlon / TT: the pad supports the forearm just ahead of the elbow. Centre of the pad's top surface
+        // relative to the elbow joint centre (forearm resting on it).
+        public const double PadForwardOfElbow = 60.0, PadBelowElbow = 45.0;
 
         private sealed class Profile
         {
@@ -67,13 +72,24 @@ namespace CassetteMotionPro.Workspace
             public double SaddleFactor, ArmFactor, BarWidth;
             public double Performance, Endurance, Comfort; // back angles
             public double ReachPerformance, ReachEndurance, ReachComfort; // body reach angles (hip – shoulder – wrist)
-            public bool DropBar;
+            public bool DropBar, AeroPads;
         }
 
         private static Profile For(string bikeType)
         {
             Profile p = new Profile();
-            if (Is(bikeType, "Mountain"))
+            if (IsTriathlon(bikeType))
+            {
+                // Aero position on the elbow pads. ArmFactor is the upper arm (acromion to elbow) as a share of arm length
+                // (acromion to fist centre). Body reach is measured hip – shoulder – elbow: 70–75° puts the elbows about
+                // under the shoulders at a 14–22° back angle. Pads sit above and a little behind the stem clamp.
+                p.SeatAngle = 78; p.HeadTubeAngle = 73; p.StemLength = 70; p.StemAngle = -10; p.Spacers = 20; p.BarReach = -30;
+                p.HandForward = 0; p.HandUp = 40;
+                p.SaddleFactor = 0.883; p.ArmFactor = 0.49; p.BarWidth = 0;
+                p.Performance = 14; p.Endurance = 18; p.Comfort = 22; p.DropBar = false; p.AeroPads = true;
+                p.ReachPerformance = 75; p.ReachEndurance = 73; p.ReachComfort = 70;
+            }
+            else if (Is(bikeType, "Mountain"))
             {
                 p.SeatAngle = 76; p.HeadTubeAngle = 65; p.StemLength = 45; p.StemAngle = 0; p.Spacers = 15; p.BarReach = 0;
                 p.HandForward = -40; p.HandUp = 25; // grips sit behind and above the clamp (backsweep and rise)
@@ -100,6 +116,13 @@ namespace CassetteMotionPro.Workspace
             return p;
         }
 
+        // Triathlon / TT as Cassette's fit protocols name it, plus the short forms a frame list may use.
+        public static bool IsTriathlon(string bikeType)
+        {
+            string v = bikeType == null ? string.Empty : bikeType.Trim();
+            return Is(v, "Triathlon / TT") || Is(v, "Triathlon") || Is(v, "Tri") || Is(v, "TT") || Is(v, "Time Trial");
+        }
+
         private static bool Is(string value, string expected)
         {
             return string.Equals(value, expected, StringComparison.OrdinalIgnoreCase);
@@ -115,7 +138,8 @@ namespace CassetteMotionPro.Workspace
             return angle;
         }
 
-        // Default body reach angle (hip – shoulder – wrist): road and gravel 80–85°, mountain 70–75°, more open for performance.
+        // Default body reach angle: road and gravel 80–85°, mountain 70–75° (hip – shoulder – wrist), triathlon / TT 70–75°
+        // (hip – shoulder – elbow), more open for performance.
         public static double DefaultShoulderAngle(string bikeType, string style)
         {
             Profile p = For(bikeType);
@@ -126,6 +150,7 @@ namespace CassetteMotionPro.Workspace
         public static double DefaultSpacers(string bikeType) { return For(bikeType).Spacers; }
         public static double DefaultHeadTubeAngle(string bikeType) { return For(bikeType).HeadTubeAngle; }
         public static double DefaultBarReach(string bikeType) { return For(bikeType).BarReach; }
+        public static double DefaultPadRise(string bikeType) { Profile p = For(bikeType); return p.AeroPads ? p.HandUp : 0; }
 
         public static bool TryCalculate(BikeSizingInput input, out BikeSizingResult result, out string error)
         {
@@ -145,10 +170,11 @@ namespace CassetteMotionPro.Workspace
             r.StemAngle = Pick(input.StemAngle, p.StemAngle);
             r.Spacers = Pick(input.Spacers, p.Spacers);
             r.HeadTubeAngle = Pick(input.HeadTubeAngle, p.HeadTubeAngle);
-            r.BarReach = p.DropBar ? Pick(input.BarReach, p.BarReach) : 0;
+            r.BarReach = p.DropBar || p.AeroPads ? Pick(input.BarReach, p.BarReach) : 0;
             r.SeatAngle = p.SeatAngle;
             r.HandForward = p.HandForward;
-            r.HandUp = p.HandUp;
+            r.HandUp = p.AeroPads ? Pick(input.PadRise, p.HandUp) : p.HandUp;
+            r.AeroPads = p.AeroPads;
 
             // Saddle height (LeMond 0.883 × inseam for road) and the seated hip joint just above the saddle.
             r.SaddleHeight = p.SaddleFactor * input.Inseam;
@@ -163,7 +189,7 @@ namespace CassetteMotionPro.Workspace
             if (r.TorsoLength < 0.22 * input.Height || r.TorsoLength > 0.36 * input.Height)
                 r.Warnings.Add("The torso length worked out from these measurements is unusual. Re-check inseam and floor-to-sternal-notch.");
 
-            // Elbows are slightly bent on the bike. With a wide flat bar the hands are also out to the side, which shortens the arm in side view.
+            // Elbows are slightly bent on the bike (on the pads, only the upper arm counts). With a wide flat bar the hands are also out to the side, which shortens the arm in side view.
             double arm = p.ArmFactor * input.ArmLength;
             if (p.BarWidth > 0)
             {
@@ -173,7 +199,7 @@ namespace CassetteMotionPro.Workspace
             }
 
             double handX, handY;
-            Hand(hipX, hipY, r.TorsoLength, arm, r.BackAngle, r.ShoulderAngle, out handX, out handY);
+            Hand(hipX, hipY, r.TorsoLength, arm, r.BackAngle, r.ShoulderAngle, p.AeroPads, out handX, out handY);
             r.HandlebarX = handX;
             r.HandlebarY = handY;
             r.SaddleToHandDrop = saddleY - handY;
@@ -188,14 +214,14 @@ namespace CassetteMotionPro.Workspace
             {
                 double back = backs[k], shoulder = shoulderAngles[k];
                 double x, y, stack, reach;
-                Hand(hipX, hipY, r.TorsoLength, arm, back, shoulder, out x, out y);
-                Frame(x, y, p, r, out stack, out reach);
+                Hand(hipX, hipY, r.TorsoLength, arm, back, shoulder, p.AeroPads, out x, out y);
+                Frame(x, y, r, out stack, out reach);
                 r.HandlebarXMin = Math.Min(r.HandlebarXMin, x); r.HandlebarXMax = Math.Max(r.HandlebarXMax, x);
                 r.HandlebarYMin = Math.Min(r.HandlebarYMin, y); r.HandlebarYMax = Math.Max(r.HandlebarYMax, y);
                 r.FrameStackMin = Math.Min(r.FrameStackMin, stack); r.FrameStackMax = Math.Max(r.FrameStackMax, stack);
                 r.FrameReachMin = Math.Min(r.FrameReachMin, reach); r.FrameReachMax = Math.Max(r.FrameReachMax, reach);
             }
-            Frame(handX, handY, p, r, out r.FrameStack, out r.FrameReach);
+            Frame(handX, handY, r, out r.FrameStack, out r.FrameReach);
 
             // Drop bars: centre-to-centre width about the shoulder width, rounded to the usual 20 mm steps.
             if (p.DropBar && input.ShoulderWidth > 0)
@@ -207,13 +233,16 @@ namespace CassetteMotionPro.Workspace
 
             if (r.SaddleToHandDrop < -60)
                 r.Warnings.Add("The hands come out well above the saddle. Check the back angle; a frame this tall may be hard to find.");
-            if (r.FrameReach < 330 || r.FrameStack < 470)
+            if (p.AeroPads && r.SaddleToHandDrop < 30)
+                r.Warnings.Add("The pads are close to saddle height. That is upright for a triathlon / TT position; check the back angle.");
+            if (r.FrameReach < 330 || r.FrameStack < (p.AeroPads ? 440 : 470))
                 r.Warnings.Add("The frame numbers are at the small end of what is made. A shorter stem or more spacers may be needed instead of a smaller frame.");
             result = r;
             return true;
         }
 
-        private static void Hand(double hipX, double hipY, double torso, double arm, double backAngle, double shoulderAngle, out double x, out double y)
+        // Contact point: the hand (hood or grip), or with aero pads the centre of the elbow pad (arm = upper arm).
+        private static void Hand(double hipX, double hipY, double torso, double arm, double backAngle, double shoulderAngle, bool pads, out double x, out double y)
         {
             double back = Radians(backAngle);
             double shoulderX = hipX + torso * Math.Cos(back);
@@ -222,10 +251,15 @@ namespace CassetteMotionPro.Workspace
             double down = Radians(180 - shoulderAngle - backAngle); // arm direction below horizontal
             x = shoulderX + arm * Math.Cos(down);
             y = shoulderY - arm * Math.Sin(down);
+            if (pads)
+            {
+                x += PadForwardOfElbow;
+                y -= PadBelowElbow;
+            }
         }
 
         // Works back from the hand contact point through the bar, stem and spacers to the top of the head tube.
-        private static void Frame(double handX, double handY, Profile p, BikeSizingResult r, out double stack, out double reach)
+        private static void Frame(double handX, double handY, BikeSizingResult r, out double stack, out double reach)
         {
             double head = Radians(r.HeadTubeAngle);
             double upX = -Math.Cos(head), upY = Math.Sin(head);       // along the steerer, upward
@@ -233,8 +267,8 @@ namespace CassetteMotionPro.Workspace
             double stem = Radians(r.StemAngle);
             double dirX = Math.Cos(stem) * perpX + Math.Sin(stem) * upX;
             double dirY = Math.Cos(stem) * perpY + Math.Sin(stem) * upY;
-            double clampX = handX - (r.BarReach + p.HandForward);
-            double clampY = handY - p.HandUp;
+            double clampX = handX - (r.BarReach + r.HandForward);
+            double clampY = handY - r.HandUp;
             double stemX = clampX - r.StemLength * dirX;
             double stemY = clampY - r.StemLength * dirY;
             double along = r.Spacers + SpacerToStemCentre;

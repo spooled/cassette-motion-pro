@@ -5,9 +5,9 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 1.39.1 USB Global Shutter Cameras
+## Current milestone: 1.40.0 Triathlon / TT Bike Sizing
 
-1.39.1 makes USB 3 global shutter cameras such as the ELP AR0234 run smoothly in live capture. The first time Cassette Motion Pro connects to a USB camera it now picks 1920×1080 (or the nearest size) at the highest frame rate up to 120 fps, which is MJPG on most cameras, instead of the first format the camera lists; on many cameras that is a raw full-size mode that USB carries at only a few frames per second, so the picture was choppy, black or frozen. A camera already saved in such a slow raw mode is moved once to its fast MJPG mode, and a raw mode chosen again later is kept. There is a built-in "ELP global shutter USB 3 (AR0234)" camera profile, and the camera check lists the USB 3 port, MJPG and short-exposure steps. GoPro Webcam keeps its own 1080p choice.
+1.40.0 adds Triathlon / TT to Bike Sizing. For a tri or TT bike the estimate sizes the elbow pads instead of the hands: pad reach (X) and pad stack (Y) from the BB centre to the centre of the pad's top surface, with a range, the saddle-to-pad drop, and the frame stack and reach for a given stem, spacers, head angle and pad position. The rider sits at a 78° seat angle with a 14–22° back angle (Performance / Endurance / Comfort, adjusted for flexibility), and the body reach angle is measured hip – shoulder – elbow, 70–75° by default, which puts the elbows about under the shoulders. Two cockpit fields describe the pads: pad height above the stem clamp and pad reach from the stem clamp. Frames That Fit uses Triathlon lines in the frame list (Tri and TT also work), with stems from 50 to 130 mm. The bike type follows a session's Triathlon / TT fit protocol. The comparison with the measured Handlebar X / Y is not shown for tri, because those are measured to the hoods.
 
 Each fit session now has a permanent storage folder, so changing the session date
 no longer moves or hides its Before/After videos, report images, or captures.
