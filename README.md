@@ -5,9 +5,9 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 1.39.0 Frames That Fit
+## Current milestone: 1.39.1 USB Global Shutter Cameras
 
-1.39.0 adds Frames That Fit to Bike Sizing: from the sizing estimate, Cassette lists the frames in the studio frame list that put the rider's hands on the estimate, each with the stock stem length and spacer height it needs, where the hands end up with those parts, and a note when the frame's seat angle changes the saddle setback the post must give. Frames needing a stem outside 70–130 mm (35–80 mm on mountain bikes) or spacers outside 0–40 mm are left out; the rest are ranked by how close their cockpit is to the one chosen in Bike Sizing. The frame list is a CSV file (frame-list.csv in the settings folder) that opens in Excel or Notepad from the new Frame List… button and is included in studio backups. It starts with the Canyon Endurace CF, Giant Defy Advanced and Canyon Grizl CF, copied from the makers' geometry charts; add the frames your studio sells or sees. The best matches are saved with the sizing summary and appear in the report.
+1.39.1 makes USB 3 global shutter cameras such as the ELP AR0234 run smoothly in live capture. The first time Cassette Motion Pro connects to a USB camera it now picks 1920×1080 (or the nearest size) at the highest frame rate up to 120 fps, which is MJPG on most cameras, instead of the first format the camera lists; on many cameras that is a raw full-size mode that USB carries at only a few frames per second, so the picture was choppy, black or frozen. A camera already saved in such a slow raw mode is moved once to its fast MJPG mode, and a raw mode chosen again later is kept. There is a built-in "ELP global shutter USB 3 (AR0234)" camera profile, and the camera check lists the USB 3 port, MJPG and short-exposure steps. GoPro Webcam keeps its own 1080p choice.
 
 Each fit session now has a permanent storage folder, so changing the session date
 no longer moves or hides its Before/After videos, report images, or captures.
