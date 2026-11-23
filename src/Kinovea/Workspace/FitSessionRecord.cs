@@ -140,6 +140,7 @@ namespace CassetteMotionPro.Workspace
         public string SizingSpacers { get; set; }
         public string SizingHeadTubeAngle { get; set; }
         public string SizingBarReach { get; set; }
+        public string SizingPadRise { get; set; }
         public string SizingSummary { get; set; }
         public bool HideSizingInReport { get; set; }
 

@@ -271,6 +271,25 @@ try {
   $problems.Clear()
   $mixed = [CassetteMotionPro.Workspace.FrameCatalog]::Parse("BikeType,Brand,Model,Size,Stack,Reach,HeadTubeAngle,SeatTubeAngle,Source`nRoad,Test,Comma,M,""560,5"",""380"",""72,5"",73.5,note`nRoad,Test,Bad,M,56,380,72.5,73.5", $problems)
   if ($mixed.Count -ne 1 -or $mixed[0].Stack -ne 560.5 -or $mixed[0].HeadTubeAngle -ne 72.5 -or $problems.Count -ne 1 -or -not $problems[0].StartsWith('Line 3')) { throw ('Frame list parsing: ' + $mixed.Count + ' frames, problems: ' + ($problems -join '; ')) }
+  # Triathlon / TT: the elbow pads are sized (pad stack / reach), elbows about under the shoulders.
+  $tri = Get-Sizing (New-Sizing 'Triathlon / TT' 'Endurance')
+  if (-not $tri.AeroPads -or $tri.BackAngle -ne 18 -or $tri.ShoulderAngle -ne 73) { throw ('Triathlon defaults were back ' + $tri.BackAngle + ', body reach ' + $tri.ShoulderAngle) }
+  if ($tri.HandlebarX -lt 400 -or $tri.HandlebarX -gt 460 -or $tri.HandlebarY -lt 560 -or $tri.HandlebarY -gt 630) { throw ('Triathlon pads for 175 cm were at ' + $tri.HandlebarX + ',' + $tri.HandlebarY) }
+  if ($tri.SaddleToHandDrop -lt 80 -or $tri.SaddleToHandDrop -gt 150) { throw ('Triathlon saddle-to-pad drop was ' + $tri.SaddleToHandDrop) }
+  if ($tri.FrameStack -lt 470 -or $tri.FrameStack -gt 530 -or $tri.FrameReach -lt 380 -or $tri.FrameReach -gt 430) { throw ('Triathlon frame for 175 cm was stack ' + $tri.FrameStack + ' reach ' + $tri.FrameReach) }
+  if ($tri.BarWidth -ne 0) { throw 'A triathlon bike should not get a drop-bar width.' }
+  $triRace = Get-Sizing (New-Sizing 'Triathlon / TT' 'Performance')
+  $triComfort = Get-Sizing (New-Sizing 'Triathlon / TT' 'Comfort')
+  if (-not ($triRace.HandlebarY -lt $tri.HandlebarY -and $tri.HandlebarY -lt $triComfort.HandlebarY)) { throw 'Triathlon performance should put the pads lowest and comfort highest.' }
+  $riser = New-Sizing 'Triathlon / TT' 'Endurance'; $riser.PadRise = 60
+  $riserResult = Get-Sizing $riser
+  if ([math]::Abs($riserResult.HandlebarY - $tri.HandlebarY) -gt 0.01 -or [math]::Abs(($tri.FrameStack - $riserResult.FrameStack) - 20) -gt 0.01) { throw 'Higher pads should lower the frame stack by the same amount and keep the pad position.' }
+  if (-not [CassetteMotionPro.Workspace.BikeSizing]::IsTriathlon('TT') -or [CassetteMotionPro.Workspace.BikeSizing]::IsTriathlon('Road')) { throw 'Triathlon bike type names were not recognised.' }
+  $problems.Clear()
+  $triList = [CassetteMotionPro.Workspace.FrameCatalog]::Parse(("Tri,Test,Aero,M," + [math]::Round($tri.FrameStack) + "," + [math]::Round($tri.FrameReach) + ",73,78,test`nRoad,Test,Road,M,560,380,72.5,73.5,test"), $problems)
+  if ($problems.Count -ne 0 -or $triList[0].BikeType -ne 'Triathlon') { throw ('Triathlon frame list line: ' + ($problems -join '; ')) }
+  $triFrames = [CassetteMotionPro.Workspace.FrameFinder]::Find($tri, 'Triathlon / TT', $triList)
+  if ($triFrames.Count -ne 1 -or $triFrames[0].Frame.Model -ne 'Aero' -or $triFrames[0].Stem -ne 70 -or $triFrames[0].Spacers -ne 20) { throw ('Triathlon frame matching gave ' + $triFrames.Count + ' frame(s).') }
   # Measurements that cannot be right are refused rather than sized.
   $bad = New-Sizing 'Road' 'Endurance'; $bad.Inseam = 400
   $r = $null; $err = $null
@@ -278,7 +297,7 @@ try {
 
   [FitSessionRecoveryProbe]::Run($repository.RootPath, $session)
 
-  Write-Host 'PASS: legacy session load, current session round-trip, stable storage key, follow-up merge, restore path rebasing, measurement number parsing, level/calibration geometry, bike sizing, frames that fit, manifest backup recovery, autosave backup recovery, recovery cleanup.'
+  Write-Host 'PASS: legacy session load, current session round-trip, stable storage key, follow-up merge, restore path rebasing, measurement number parsing, level/calibration geometry, bike sizing, frames that fit, triathlon sizing, manifest backup recovery, autosave backup recovery, recovery cleanup.'
 }
 finally {
   if (Test-Path $root) { Remove-Item $root -Recurse -Force }
