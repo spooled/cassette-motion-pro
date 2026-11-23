@@ -5,9 +5,9 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 1.40.0 Triathlon / TT Bike Sizing
+## Current milestone: 1.40.1 GoPro support removed
 
-1.40.0 adds Triathlon / TT to Bike Sizing. For a tri or TT bike the estimate sizes the elbow pads instead of the hands: pad reach (X) and pad stack (Y) from the BB centre to the centre of the pad's top surface, with a range, the saddle-to-pad drop, and the frame stack and reach for a given stem, spacers, head angle and pad position. The rider sits at a 78° seat angle with a 14–22° back angle (Performance / Endurance / Comfort, adjusted for flexibility), and the body reach angle is measured hip – shoulder – elbow, 70–75° by default, which puts the elbows about under the shoulders. Two cockpit fields describe the pads: pad height above the stem clamp and pad reach from the stem clamp. Frames That Fit uses Triathlon lines in the frame list (Tri and TT also work), with stems from 50 to 130 mm. The bike type follows a session's Triathlon / TT fit protocol. The comparison with the measured Handlebar X / Y is not shown for tri, because those are measured to the hoods.
+1.40.1 removes the GoPro Webcam support added in 1.38.1, as the studio no longer uses a GoPro: the GoPro first-connection rule, the built-in "GoPro HERO webcam (USB)" camera profile and the GoPro step in the camera check are gone. Every USB camera, including a GoPro if one is ever connected, now uses the general rule from 1.39.1 (1920×1080 at the highest frame rate up to 120 fps, usually MJPG). The camera format log and the no-frames message stay. 1.40.0 added Triathlon / TT to Bike Sizing (elbow pad stack and reach, frames for them).
 
 Each fit session now has a permanent storage folder, so changing the session date
 no longer moves or hides its Before/After videos, report images, or captures.
