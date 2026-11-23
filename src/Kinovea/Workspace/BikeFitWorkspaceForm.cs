@@ -4929,7 +4929,8 @@ namespace CassetteMotionPro.Workspace
                 "3. Record 10 seconds of pedaling and verify the saved file.\n" +
                 "4. Check for dropped frames, blur, exposure changes, and curved straight lines.\n" +
                 "5. For IDS, install IDS peak with its DirectShow component before opening Cassette Motion Pro.\n" +
-                "6. For a GoPro (HERO8 or newer): start the GoPro Webcam app first, set the camera's USB Connection to GoPro Connect, wait for the blue dot, choose 1080p in the GoPro Webcam app, and close its preview window before selecting GoPro Webcam here. If the picture stays black, close Cassette Motion Pro, unplug and replug the GoPro, then open the GoPro Webcam app before Cassette Motion Pro.\n\n" +
+                "6. For a USB 3 global shutter camera (for example ELP AR0234): use a blue USB 3 port on the computer itself, choose an MJPG 1920 × 1080 media type at 60 or 90 fps, and turn auto exposure off with a short exposure (about 1 ms). Choppy, black or frozen video almost always means a raw (YUY2) mode or a USB 2 port.\n" +
+                "7. For a GoPro (HERO8 or newer): start the GoPro Webcam app first, set the camera's USB Connection to GoPro Connect, wait for the blue dot, choose 1080p in the GoPro Webcam app, and close its preview window before selecting GoPro Webcam here. If the picture stays black, close Cassette Motion Pro, unplug and replug the GoPro, then open the GoPro Webcam app before Cassette Motion Pro.\n\n" +
                 "This check validates the saved setup, not whether disconnected hardware is functioning.";
 
             cameraProfileStatus.Text = review.Count == 0 ? "Profile ready · Complete the physical 10-second camera test." : review.Count + " profile item(s) need review.";

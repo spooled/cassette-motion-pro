@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  VERSION: 1.39.0
+  VERSION: 1.39.1
   KINOVEA_UPSTREAM_REF: 7e7c9dcf55b6e6f0d6a7080e191a7ae9485ff3e9
 
 jobs:
@@ -145,7 +145,7 @@ jobs:
         run: |
           .\build\apply-live-pose-hook.ps1
 
-      - name: Patch Kinovea camera first-connection format (GoPro Webcam)
+      - name: Patch Kinovea camera formats (GoPro Webcam, USB global shutter cameras)
         shell: pwsh
         run: |
           .\build\patch-kinovea-camera-defaults.ps1
