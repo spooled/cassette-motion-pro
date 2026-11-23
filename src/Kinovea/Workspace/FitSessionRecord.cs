@@ -124,6 +124,25 @@ namespace CassetteMotionPro.Workspace
         public string AssistedBikeLandmarksBeforeEvidencePath { get; set; }
         public string AssistedBikeLandmarksAfterEvidencePath { get; set; }
 
+        // Bike sizing: rider body measurements (cm), choices, and the saved estimate.
+        public string RiderHeight { get; set; }
+        public string RiderInseam { get; set; }
+        public string RiderSternalNotchHeight { get; set; }
+        public string RiderArmLength { get; set; }
+        public string RiderShoulderWidth { get; set; }
+        public string RiderFlexibility { get; set; }
+        public string SizingBikeType { get; set; }
+        public string SizingRidingStyle { get; set; }
+        public string SizingBackAngle { get; set; }
+        public string SizingShoulderAngle { get; set; }
+        public string SizingStemLength { get; set; }
+        public string SizingStemAngle { get; set; }
+        public string SizingSpacers { get; set; }
+        public string SizingHeadTubeAngle { get; set; }
+        public string SizingBarReach { get; set; }
+        public string SizingSummary { get; set; }
+        public bool HideSizingInReport { get; set; }
+
         public string KneeAngleBefore { get; set; }
         public string KneeAngleAfter { get; set; }
         public string HipAngleBefore { get; set; }
