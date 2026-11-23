@@ -1,10 +1,8 @@
-# Better camera formats than the upstream default (GoPro Webcam, USB global shutter cameras such as the ELP AR0234).
-# Upstream connects a never-configured camera with the first media type it lists.
-# - GoPro Webcam lists several sizes but only delivers the one chosen in the GoPro Webcam app (1080p by default), so
-#   the live view never gets a frame. For GoPro devices this picks 1920x1080 in a format that converts cleanly.
-# - Other USB cameras often list a raw (YUY2) full-size mode first. USB carries that at only a few frames per second,
-#   so the picture is choppy, black or frozen. For them this picks 1920x1080 (or the nearest size) at the highest
-#   frame rate up to 120 fps, which is MJPG on most cameras.
+# Better camera formats than the upstream default (USB global shutter cameras such as the ELP AR0234, webcams).
+# Upstream connects a never-configured camera with the first media type it lists. USB cameras often list a raw
+# (YUY2) full-size mode first, which USB carries at only a few frames per second, so the picture is choppy, black or
+# frozen. This picks 1920x1080 (or the nearest size) at the highest frame rate up to 120 fps, which is MJPG on most
+# cameras.
 # - A camera already saved in a raw mode that is slow (under 25 fps) or HD size or larger is moved once to a fast
 #   MJPG mode when it has one (listed in camera-format-upgrades.txt, so a raw mode chosen again later is kept).
 # It also logs every media type the camera offers and logs when no frame arrives. Fails loudly if upstream changed.
@@ -45,42 +43,13 @@ $helpers = @'
         // ---- Cassette Motion Pro: first-connection format and diagnostics ----
         private System.Threading.Timer cassetteFirstFrameTimer;
 
-        private static bool CassetteIsGoPro(string alias)
-        {
-            return alias != null && alias.IndexOf("GoPro", StringComparison.OrdinalIgnoreCase) >= 0;
-        }
-
-        // GoPro Webcam only streams the size chosen in the GoPro Webcam app (1080p by default) and RGB24 / YUY2 / MJPG
-        // convert cleanly. Other cameras get the fastest full-HD mode (see CassettePickFastMediaType).
+        // The fastest full-HD mode (see CassettePickFastMediaType), logged.
         private static AForge.Video.DirectShow.VideoCapabilities CassettePickDefaultMediaType(AForge.Video.DirectShow.VideoCapabilities[] caps, string alias)
         {
-            if (!CassetteIsGoPro(alias))
-            {
-                AForge.Video.DirectShow.VideoCapabilities fast = CassettePickFastMediaType(caps);
-                log.InfoFormat("Camera {0}: first connection uses index {1} ({2}x{3} @ {4:0.###} fps, {5}).",
-                    alias, fast.Index, fast.FrameSize.Width, fast.FrameSize.Height, fast.AverageFrameRate, fast.Compression);
-                return fast;
-            }
-
-            AForge.Video.DirectShow.VideoCapabilities best = caps[0];
-            double bestScore = double.MinValue;
-            foreach (AForge.Video.DirectShow.VideoCapabilities cap in caps)
-            {
-                double score = 0;
-                int w = cap.FrameSize.Width, h = cap.FrameSize.Height;
-                if (w == 1920 && h == 1080) score += 1000;
-                else if (w == 1280 && h == 720) score += 500;
-                else score += Math.Min(w * h, 1920 * 1080) / 10000.0;
-                string compression = (cap.Compression ?? string.Empty).Trim().ToUpperInvariant();
-                if (compression == "RGB24") score += 60;
-                else if (compression == "YUY2") score += 50;
-                else if (compression == "MJPG") score += 40;
-                score -= Math.Abs(cap.AverageFrameRate - 30) * 0.5;
-                if (score > bestScore) { bestScore = score; best = cap; }
-            }
-            log.InfoFormat("GoPro camera {0}: first connection uses index {1} ({2}x{3} @ {4:0.###} fps, {5}).",
-                alias, best.Index, best.FrameSize.Width, best.FrameSize.Height, best.AverageFrameRate, best.Compression);
-            return best;
+            AForge.Video.DirectShow.VideoCapabilities fast = CassettePickFastMediaType(caps);
+            log.InfoFormat("Camera {0}: first connection uses index {1} ({2}x{3} @ {4:0.###} fps, {5}).",
+                alias, fast.Index, fast.FrameSize.Width, fast.FrameSize.Height, fast.AverageFrameRate, fast.Compression);
+            return fast;
         }
 
         // 1920x1080 (or the nearest size up to 1920x1200) at the highest frame rate up to 120 fps. On USB cameras the
@@ -113,7 +82,7 @@ $helpers = @'
         // in the settings folder, so a raw mode chosen later in the camera settings is kept.
         private SpecificInfo CassetteUpgradeSlowSavedMediaType(SpecificInfo info)
         {
-            if (info == null || CassetteIsGoPro(summary.Alias) || string.IsNullOrEmpty(summary.Identifier)) return info;
+            if (info == null || string.IsNullOrEmpty(summary.Identifier)) return info;
             try
             {
                 string listPath = System.IO.Path.Combine(Software.SettingsDirectory, "camera-format-upgrades.txt");
@@ -150,7 +119,7 @@ $helpers = @'
         // The first-connection choice counts as the one-time move: a raw mode chosen later is kept.
         private void CassetteRememberFormatChoice()
         {
-            if (CassetteIsGoPro(summary.Alias) || string.IsNullOrEmpty(summary.Identifier)) return;
+            if (string.IsNullOrEmpty(summary.Identifier)) return;
             try
             {
                 string listPath = System.IO.Path.Combine(Software.SettingsDirectory, "camera-format-upgrades.txt");
@@ -183,10 +152,7 @@ $helpers = @'
             cassetteFirstFrameTimer = new System.Threading.Timer(delegate
             {
                 if (receivedFirstFrame || !grabbing) return;
-                if (CassetteIsGoPro(summary.Alias))
-                    log.ErrorFormat("No frames from {0} after 8 s. Check that the GoPro Webcam app shows the camera ready (blue dot), that its preview window is closed, and that the size chosen in the GoPro Webcam app matches the camera settings here.", summary.Alias);
-                else
-                    log.ErrorFormat("No frames from {0} after 8 s. Use a USB 3 (blue) port directly on the computer, not a hub, and choose an MJPG 1920x1080 media type in the camera settings. The selected media type may not be delivered by this camera.", summary.Alias);
+                log.ErrorFormat("No frames from {0} after 8 s. Use a USB 3 (blue) port directly on the computer, not a hub, and choose an MJPG 1920x1080 media type in the camera settings. The selected media type may not be delivered by this camera.", summary.Alias);
             }, null, 8000, System.Threading.Timeout.Infinite);
         }
         // ---- end Cassette Motion Pro ----
