@@ -7,16 +7,19 @@ GNU General Public License version 2.
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Globalization;
 using System.Text;
 using System.Windows.Forms;
+using Kinovea.Services;
 
 namespace CassetteMotionPro.Workspace
 {
     // Bike sizing from body measurements: target saddle height, hand position (Handlebar X / Y) and the frame
     // stack and reach that fit it. Results update as you type; Save writes the measurements and the estimate
-    // to the session.
+    // to the session. Frames that fit come from the studio frame list (frame-list.csv in the settings folder).
     internal sealed class BikeSizingForm : Form
     {
         private readonly FitSessionRecord session;
@@ -31,6 +34,14 @@ namespace CassetteMotionPro.Workspace
         private readonly HashSet<TextBox> edited = new HashSet<TextBox>();
         private bool filling;
         private string summary = string.Empty;
+        private List<FrameGeometry> frames = new List<FrameGeometry>();
+        private readonly List<string> frameProblems = new List<string>();
+        private DateTime frameListTime = DateTime.MinValue;
+
+        public static string FrameListPath
+        {
+            get { return Path.Combine(Software.SettingsDirectory, "frame-list.csv"); }
+        }
 
         public bool Changed { get; private set; }
 
@@ -117,17 +128,26 @@ namespace CassetteMotionPro.Workspace
             save.Text = "Save to Session";
             save.Size = new Size(150, 34);
             save.Click += Save_Click;
+            Button frameList = new Button();
+            frameList.Text = "Frame List…";
+            frameList.Size = new Size(120, 34);
+            frameList.Click += FrameList_Click;
+            ToolTip frameTip = new ToolTip();
+            frameTip.SetToolTip(frameList, "Open the studio frame list in Excel or Notepad to add frames. Save it, then come back here.");
             showInReport.Text = "Include in report";
             showInReport.AutoSize = true;
             showInReport.Margin = new Padding(12, 9, 12, 0);
             buttons.Controls.Add(close);
             buttons.Controls.Add(save);
+            buttons.Controls.Add(frameList);
             buttons.Controls.Add(showInReport);
             layout.Controls.Add(buttons, 0, 2);
             layout.SetColumnSpan(buttons, 2);
             CancelButton = close;
             AcceptButton = save;
 
+            LoadFrameList(false);
+            Activated += delegate { if (LoadFrameList(false)) Recalculate(); };
             LoadFrom(session);
             bikeType.SelectedIndexChanged += delegate { ApplyDefaults(); Recalculate(); };
             style.SelectedIndexChanged += delegate { ApplyDefaults(); Recalculate(); };
@@ -338,6 +358,8 @@ namespace CassetteMotionPro.Workspace
                 if (hasY) text.AppendLine("Handlebar Y        " + Mm(currentY) + "   " + Difference(r.HandlebarY - currentY, r.HandlebarYMin - currentY, r.HandlebarYMax - currentY, "higher", "lower"));
             }
 
+            AppendFrames(text, r, input.BikeType);
+
             text.AppendLine();
             text.AppendLine("Based on back angle " + r.BackAngle.ToString("0.#") + "° and body reach angle " + r.ShoulderAngle.ToString("0.#") + "° (hip – shoulder – wrist); ranges allow ±" + BikeSizing.BackSpread.ToString("0") + "° back or ±" + BikeSizing.ShoulderSpread.ToString("0.#") + "° body reach.");
             foreach (string warning in r.Warnings)
@@ -346,6 +368,93 @@ namespace CassetteMotionPro.Workspace
 
             summary = text.ToString().TrimEnd();
             results.Text = summary;
+        }
+
+        // Reads the frame list, writing the starter list first if the studio has none. Returns true when it changed.
+        private bool LoadFrameList(bool force)
+        {
+            string path = FrameListPath;
+            try
+            {
+                if (!File.Exists(path))
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(path));
+                    File.WriteAllText(path, FrameCatalog.StarterCsv);
+                }
+                DateTime time = File.GetLastWriteTimeUtc(path);
+                if (!force && time == frameListTime) return false;
+                frameListTime = time;
+                frameProblems.Clear();
+                frames = FrameCatalog.Parse(File.ReadAllText(path), frameProblems);
+            }
+            catch (Exception exception)
+            {
+                // Excel locks the file while it is open; keep the last list and try again next time.
+                frameProblems.Clear();
+                frameProblems.Add("The frame list could not be read (" + exception.Message + "). Close it in Excel and come back.");
+                if (frames.Count == 0) frames = FrameCatalog.Parse(FrameCatalog.StarterCsv, null);
+            }
+            return true;
+        }
+
+        private void FrameList_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                LoadFrameList(true);
+                Process.Start(FrameListPath);
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(this, "The frame list could not be opened.\n\n" + FrameListPath + "\n\n" + exception.Message, "Frame List", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void AppendFrames(StringBuilder text, BikeSizingResult r, string bikeType)
+        {
+            const int Shown = 6;
+            text.AppendLine();
+            text.AppendLine("FRAMES THAT FIT — from the frame list, closest to the cockpit above first");
+            int ofType = 0;
+            foreach (FrameGeometry f in frames)
+                if (string.Equals(f.BikeType, bikeType, StringComparison.OrdinalIgnoreCase)) ofType++;
+            List<FrameMatch> matches = FrameFinder.Find(r, bikeType, frames);
+            bool mountain = bikeType == "Mountain";
+            string limits = (mountain ? FrameFinder.FlatBarStemMin : FrameFinder.DropBarStemMin).ToString("0") + "–" + (mountain ? FrameFinder.FlatBarStemMax : FrameFinder.DropBarStemMax).ToString("0") + " mm stem and 0–" + (mountain ? FrameFinder.FlatBarSpacersMax : FrameFinder.DropBarSpacersMax).ToString("0") + " mm spacers";
+            if (ofType == 0)
+                text.AppendLine("No " + bikeType.ToLowerInvariant() + " frames in the frame list yet. Add some with Frame List….");
+            else if (matches.Count == 0)
+                text.AppendLine("None of the " + ofType + " " + bikeType.ToLowerInvariant() + " frames in the list fits with a " + limits + ".");
+            else
+            {
+                text.AppendLine("Frame                            Stack  Reach   Stem  Spacers   Hands");
+                for (int k = 0; k < matches.Count && k < Shown; k++)
+                {
+                    FrameMatch m = matches[k];
+                    string name = m.Frame.Name.Length > 31 ? m.Frame.Name.Substring(0, 30) + "…" : m.Frame.Name;
+                    text.AppendLine(name.PadRight(32) + m.Frame.Stack.ToString("0").PadLeft(6) + m.Frame.Reach.ToString("0").PadLeft(7)
+                        + m.Stem.ToString("0").PadLeft(7) + m.Spacers.ToString("0").PadLeft(9) + "   " + Miss(m));
+                    if (Math.Abs(m.SetbackChange) >= 8)
+                        text.AppendLine("    " + m.Frame.SeatTubeAngle.ToString("0.#") + "° seat tube: about " + Math.Abs(Math.Round(m.SetbackChange)).ToString("0") + " mm " + (m.SetbackChange > 0 ? "more" : "less") + " saddle setback from the post than the estimate assumes.");
+                }
+                if (matches.Count > Shown)
+                    text.AppendLine("+ " + (matches.Count - Shown) + " more that fit with a " + limits + ".");
+                text.AppendLine("Stem and spacers are the nearest stock parts (stem at " + r.StemAngle.ToString("+0;−0;0") + "°). Hands: where they end up with those parts, compared with the estimate (forward / up).");
+            }
+            if (frameProblems.Count > 0)
+                text.AppendLine("Frame list: " + frameProblems.Count + " line(s) skipped. " + frameProblems[0]);
+        }
+
+        private static string Miss(FrameMatch m)
+        {
+            if (Math.Abs(m.HandMissX) < 3 && Math.Abs(m.HandMissY) < 3) return "on target";
+            return Signed(m.HandMissX) + " / " + Signed(m.HandMissY) + " mm";
+        }
+
+        private static string Signed(double value)
+        {
+            double v = Math.Round(value);
+            return v > 0 ? "+" + v.ToString("0") : v < 0 ? "−" + (-v).ToString("0") : "0";
         }
 
         private static string Mm(double value)

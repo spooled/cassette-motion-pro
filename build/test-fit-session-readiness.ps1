@@ -17,6 +17,7 @@ $sources = @(
   'src/Kinovea/Workspace/MeasurementNumber.cs',
   'src/Kinovea/Workspace/BikeFitGeometry.cs',
   'src/Kinovea/Workspace/BikeSizing.cs',
+  'src/Kinovea/Workspace/FrameFinder.cs',
   'src/Kinovea/Workspace/FitSessionRecoveryStore.cs'
 )
 $usings = "using System;`nusing System.IO;`nusing System.Collections.Generic;`nusing System.Linq;`nusing System.Reflection;`nusing System.Globalization;`nusing System.Text.RegularExpressions;`nusing System.Xml.Serialization;`nusing CassetteMotionPro.Clients;`n"
@@ -250,6 +251,26 @@ try {
   # A longer stem needs a shorter frame for the same hand position.
   $long = New-Sizing 'Road' 'Endurance'; $long.StemLength = 120
   if (-not ((Get-Sizing $long).FrameReach -lt $road.FrameReach - 15)) { throw 'A longer stem did not shorten the frame reach.' }
+  # Frames that fit: the starter list reads cleanly, and the 175 cm rider gets an ordinary size with ordinary parts.
+  $problems = New-Object 'System.Collections.Generic.List[string]'
+  $catalog = [CassetteMotionPro.Workspace.FrameCatalog]::Parse([CassetteMotionPro.Workspace.FrameCatalog]::StarterCsv, $problems)
+  if ($problems.Count -ne 0 -or $catalog.Count -ne 19) { throw ('Starter frame list: ' + $catalog.Count + ' frames, problems: ' + ($problems -join '; ')) }
+  $roadFrames = [CassetteMotionPro.Workspace.FrameFinder]::Find($road, 'Road', $catalog)
+  if ($roadFrames.Count -lt 3) { throw ('Only ' + $roadFrames.Count + ' road frames fit the 175 cm rider.') }
+  $best = $roadFrames[0]
+  if ($best.Frame.Name -ne 'Giant Defy Advanced S' -or $best.Stem -ne 100 -or $best.Spacers -ne 20) { throw ('Best road frame was ' + $best.Frame.Name + ' with ' + $best.Stem + ' mm stem and ' + $best.Spacers + ' mm spacers.') }
+  if ([math]::Abs($best.HandMissX) -gt 10 -or [math]::Abs($best.HandMissY) -gt 10) { throw 'Stock parts left the hands more than 10 mm from the estimate.' }
+  foreach ($m in $roadFrames) {
+    if ($m.Frame.BikeType -ne 'Road') { throw 'A non-road frame was offered for a road bike.' }
+    if ($m.Stem -lt 70 -or $m.Stem -gt 130 -or $m.Spacers -lt 0 -or $m.Spacers -gt 40) { throw ($m.Frame.Name + ' was offered with parts outside the limits.') }
+  }
+  if (@($roadFrames | Where-Object { $_.Frame.Name -eq 'Canyon Endurace CF M' }).Count -ne 0) { throw 'A frame that needs negative spacers was offered.' }
+  $gravelFrames = [CassetteMotionPro.Workspace.FrameFinder]::Find((Get-Sizing (New-Sizing 'Gravel' 'Endurance')), 'Gravel', $catalog)
+  if ($gravelFrames.Count -lt 1 -or @($gravelFrames | Where-Object { $_.Frame.Brand -ne 'Canyon' }).Count -ne 0) { throw 'Gravel matching did not use the gravel frames.' }
+  if ([CassetteMotionPro.Workspace.FrameFinder]::Find($mtb, 'Mountain', $catalog).Count -ne 0) { throw 'Mountain bike matches came from a list with no mountain bikes.' }
+  $problems.Clear()
+  $mixed = [CassetteMotionPro.Workspace.FrameCatalog]::Parse("BikeType,Brand,Model,Size,Stack,Reach,HeadTubeAngle,SeatTubeAngle,Source`nRoad,Test,Comma,M,""560,5"",""380"",""72,5"",73.5,note`nRoad,Test,Bad,M,56,380,72.5,73.5", $problems)
+  if ($mixed.Count -ne 1 -or $mixed[0].Stack -ne 560.5 -or $mixed[0].HeadTubeAngle -ne 72.5 -or $problems.Count -ne 1 -or -not $problems[0].StartsWith('Line 3')) { throw ('Frame list parsing: ' + $mixed.Count + ' frames, problems: ' + ($problems -join '; ')) }
   # Measurements that cannot be right are refused rather than sized.
   $bad = New-Sizing 'Road' 'Endurance'; $bad.Inseam = 400
   $r = $null; $err = $null
@@ -257,7 +278,7 @@ try {
 
   [FitSessionRecoveryProbe]::Run($repository.RootPath, $session)
 
-  Write-Host 'PASS: legacy session load, current session round-trip, stable storage key, follow-up merge, restore path rebasing, measurement number parsing, level/calibration geometry, bike sizing, manifest backup recovery, autosave backup recovery, recovery cleanup.'
+  Write-Host 'PASS: legacy session load, current session round-trip, stable storage key, follow-up merge, restore path rebasing, measurement number parsing, level/calibration geometry, bike sizing, frames that fit, manifest backup recovery, autosave backup recovery, recovery cleanup.'
 }
 finally {
   if (Test-Path $root) { Remove-Item $root -Recurse -Force }

@@ -50,12 +50,14 @@ namespace CassetteMotionPro.Workspace
         public double BarWidth;          // 0 when shoulder width was not given or the bike uses a flat bar
         public double BackAngle, ShoulderAngle, StemLength, StemAngle, Spacers, HeadTubeAngle, BarReach;
         public double TorsoLength;
+        public double SeatAngle;                 // seat tube angle the estimate assumes
+        public double HandForward, HandUp;       // hand contact point relative to the bar clamp centre (not counting bar reach)
         public List<string> Warnings = new List<string>();
     }
 
     public static class BikeSizing
     {
-        private const double SpacerToStemCentre = 30.0; // headset top cap plus half the stem's clamp height
+        public const double SpacerToStemCentre = 30.0; // headset top cap plus half the stem's clamp height
         public const double BackSpread = 2.0, ShoulderSpread = 2.5;  // degrees either way for the ranges
 
         private sealed class Profile
@@ -144,6 +146,9 @@ namespace CassetteMotionPro.Workspace
             r.Spacers = Pick(input.Spacers, p.Spacers);
             r.HeadTubeAngle = Pick(input.HeadTubeAngle, p.HeadTubeAngle);
             r.BarReach = p.DropBar ? Pick(input.BarReach, p.BarReach) : 0;
+            r.SeatAngle = p.SeatAngle;
+            r.HandForward = p.HandForward;
+            r.HandUp = p.HandUp;
 
             // Saddle height (LeMond 0.883 × inseam for road) and the seated hip joint just above the saddle.
             r.SaddleHeight = p.SaddleFactor * input.Inseam;
