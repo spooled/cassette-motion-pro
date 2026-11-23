@@ -29,7 +29,7 @@ namespace CassetteMotionPro.Workspace
         private const string ManifestName = "cassette-motion-package.txt";
         private const string PackageHeader = "CASSETTE-MOTION-PRO-DATA";
         private static readonly string[] SettingsFolders = { "Clients", "Fit Templates", "Camera Profiles", "Studio Branding" };
-        private static readonly string[] SettingsFiles = { "studio-settings.xml" };
+        private static readonly string[] SettingsFiles = { "studio-settings.xml", "frame-list.csv" };
 
         public static void CreateFullBackup(string archivePath)
         {

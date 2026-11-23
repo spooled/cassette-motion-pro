@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  VERSION: 1.38.1
+  VERSION: 1.39.0
   KINOVEA_UPSTREAM_REF: 7e7c9dcf55b6e6f0d6a7080e191a7ae9485ff3e9
 
 jobs:
@@ -455,12 +455,6 @@ jobs:
           ) | Set-Content "dist\windows\INSTALLER-BUILD-STATUS.txt"
           Get-ChildItem dist\windows
 
-      - name: Upload portable application
-        uses: actions/upload-artifact@v6
-        with:
-          name: CassetteMotionPro-Portable-${{ env.VERSION }}
-          path: src/Kinovea/bin/x64/Release/
-
       - name: Remove portable settings folder
         shell: pwsh
         run: Remove-Item "src\Kinovea\bin\x64\Release\AppData" -Recurse -Force
@@ -528,7 +522,7 @@ jobs:
               "Reason: makensis.exe was not available on the GitHub runner."
               ""
               "The portable zip was still created and uploaded."
-              "Download CassetteMotionPro-Windows-$env:VERSION or CassetteMotionPro-Portable-$env:VERSION."
+              "Download CassetteMotionPro-Windows-$env:VERSION."
             ) | Set-Content "dist\windows\INSTALLER-BUILD-STATUS.txt"
             Write-Warning "makensis.exe was not found. Skipping installer, but keeping the Windows bundle successful."
             $global:LASTEXITCODE = 0
@@ -546,7 +540,7 @@ jobs:
               "Reason: makensis.exe was not available on the GitHub runner."
               ""
               "The portable zip was still created and uploaded."
-              "Download CassetteMotionPro-Windows-$env:VERSION or CassetteMotionPro-Portable-$env:VERSION."
+              "Download CassetteMotionPro-Windows-$env:VERSION."
             ) | Set-Content "dist\windows\INSTALLER-BUILD-STATUS.txt"
             Write-Warning "Skipping installer because MAKENSIS_PATH is missing or invalid: $env:MAKENSIS_PATH"
             return
@@ -653,11 +647,16 @@ jobs:
           name: CassetteMotionPro-Installer-${{ env.VERSION }}
           path: dist/installer/*.exe
           if-no-files-found: error
+          # The repository is private: the free plan stores 500 MB of build files.
+          # Only the installer (about 86 MB) is kept, for 14 days. The portable
+          # copy and the full Windows bundle are still built and checked above.
+          retention-days: 14
 
-      - name: Upload Windows bundle
-        if: always()
+      - name: Upload Windows bundle (only when no installer was built)
+        if: always() && hashFiles('dist/installer/*.exe') == ''
         uses: actions/upload-artifact@v6
         with:
           name: CassetteMotionPro-Windows-${{ env.VERSION }}
           path: dist/windows/*
           if-no-files-found: error
+          retention-days: 14
