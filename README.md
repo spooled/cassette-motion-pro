@@ -5,9 +5,9 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 1.40.1 GoPro support removed
+## Current milestone: 1.40.3 Live view watch for cameras that open black
 
-1.40.1 removes the GoPro Webcam support added in 1.38.1, as the studio no longer uses a GoPro: the GoPro first-connection rule, the built-in "GoPro HERO webcam (USB)" camera profile and the GoPro step in the camera check are gone. Every USB camera, including a GoPro if one is ever connected, now uses the general rule from 1.39.1 (1920×1080 at the highest frame rate up to 120 fps, usually MJPG). The camera format log and the no-frames message stay. 1.40.0 added Triathlon / TT to Bike Sizing (elbow pad stack and reach, frames for them).
+1.40.3 adds a live view watch for USB cameras, such as the ELP AR0234 global shutter camera, whose capture screen stays dark while the camera is sending pictures (the screen header shows the signal) until the screen layout is changed. After a camera connects, Cassette Motion Pro checks that its pictures are actually painted on screen: after 3 seconds without one it refreshes the view, and after 6 seconds it reconnects the camera once, which is what changing the layout did by hand. Each step is written to the normal log as a warning with the display state (display timer, pictures handed to the view and painted, delay buffer, view size and visibility, picture position), so the cause can be read from the log. It keeps 1.40.2's refit of a picture saved off screen and the restart of a camera that sends nothing.
 
 Each fit session now has a permanent storage folder, so changing the session date
 no longer moves or hides its Before/After videos, report images, or captures.
