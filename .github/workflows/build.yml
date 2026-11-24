@@ -150,6 +150,11 @@ jobs:
         run: |
           .\build\patch-kinovea-camera-defaults.ps1
 
+      - name: Patch Kinovea live view to keep the picture on screen
+        shell: pwsh
+        run: |
+          .\build\patch-kinovea-capture-viewport.ps1
+
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 

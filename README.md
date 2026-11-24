@@ -7,7 +7,7 @@ can be incorporated with minimal changes to the playback and annotation engine.
 
 ## Current milestone: 1.40.2 Camera opens without a black screen
 
-1.40.2 fixes USB cameras such as the ELP AR0234 global shutter camera that stayed black when opened in a capture screen until the screen layout was changed. If a camera sends no picture within 3 seconds of starting, Cassette Motion Pro now restarts it, up to twice, which is what changing the layout did. Each restart, the format the camera was opened in, and (if it still sends nothing) every format the camera offers are written to the normal log as warnings, so they can be read without turning on debug logging. 1.40.1 removed GoPro support.
+1.40.2 fixes USB cameras such as the ELP AR0234 global shutter camera that stayed black when opened in a capture screen until the screen layout was changed. Kinovea reuses the screen position where each camera's picture was last drawn and only checks its shape, so a position saved in another layout, or while the capture screen had no size yet, drew the picture off screen; the live view now refits the picture to the screen when it is mostly off screen or tiny, both when a camera connects and whenever the view changes size. If a camera sends no picture at all within 3 seconds of starting, Cassette Motion Pro also restarts it, up to twice. Each restart, the format the camera was opened in, and (if it still sends nothing) every format the camera offers are written to the normal log as warnings, so they can be read without turning on debug logging. 1.40.1 removed GoPro support.
 
 Each fit session now has a permanent storage folder, so changing the session date
 no longer moves or hides its Before/After videos, report images, or captures.
