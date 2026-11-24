@@ -5,7 +5,10 @@
 # cameras.
 # - A camera already saved in a raw mode that is slow (under 25 fps) or HD size or larger is moved once to a fast
 #   MJPG mode when it has one (listed in camera-format-upgrades.txt, so a raw mode chosen again later is kept).
-# It also logs every media type the camera offers and logs when no frame arrives. Fails loudly if upstream changed.
+# - A camera that sends no frame within 3 s of starting is restarted, up to twice (the first start after the camera
+#   list's thumbnail can stay black; a second start works). Each restart and a final failure are logged as warnings
+#   with the camera's media types, so they show in the normal log without debug logging.
+# It also logs every media type the camera offers (debug log). Fails loudly if upstream changed.
 param(
     [string]$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 )
@@ -33,21 +36,30 @@ Edit-File $grabber `
     'var loadedConfig = ConfigureDevice();' `
     ('CassetteLogMediaTypes(device, summary.Alias);' + "`r`n" + '            var loadedConfig = ConfigureDevice();' + "`r`n" + '            loadedConfig = CassetteUpgradeSlowSavedMediaType(loadedConfig);')
 
-# 3. Note when the camera starts but sends nothing.
+# 3. Restart the camera if it starts but sends nothing.
 Edit-File $grabber `
     'device.Start();' `
     ('device.Start();' + "`r`n" + '            CassetteWatchFirstFrame();')
+
+# 3b. Stop the first-frame watch before the camera is stopped.
+Edit-File $grabber `
+    'DeviceHelper.StopDevice(device);' `
+    ('CassetteStopWatch();' + "`r`n" + '            DeviceHelper.StopDevice(device);')
 
 # 4. The helpers, added before the frame handler.
 $helpers = @'
         // ---- Cassette Motion Pro: first-connection format and diagnostics ----
         private System.Threading.Timer cassetteFirstFrameTimer;
+        private readonly object cassetteWatchLock = new object();
+        private int cassetteRestarts;
+        private bool cassetteStopping;
+        private const int CassetteFirstFrameWaitMs = 3000, CassetteMaxRestarts = 2;
 
         // The fastest full-HD mode (see CassettePickFastMediaType), logged.
         private static AForge.Video.DirectShow.VideoCapabilities CassettePickDefaultMediaType(AForge.Video.DirectShow.VideoCapabilities[] caps, string alias)
         {
             AForge.Video.DirectShow.VideoCapabilities fast = CassettePickFastMediaType(caps);
-            log.InfoFormat("Camera {0}: first connection uses index {1} ({2}x{3} @ {4:0.###} fps, {5}).",
+            log.WarnFormat("Camera {0}: first connection uses index {1} ({2}x{3} @ {4:0.###} fps, {5}).",
                 alias, fast.Index, fast.FrameSize.Width, fast.FrameSize.Height, fast.AverageFrameRate, fast.Compression);
             return fast;
         }
@@ -146,14 +158,91 @@ $helpers = @'
             }
         }
 
+        // Started by Start(): wait for the first frame, restarting the camera if none comes.
         private void CassetteWatchFirstFrame()
         {
-            if (cassetteFirstFrameTimer != null) cassetteFirstFrameTimer.Dispose();
-            cassetteFirstFrameTimer = new System.Threading.Timer(delegate
+            lock (cassetteWatchLock)
             {
-                if (receivedFirstFrame || !grabbing) return;
-                log.ErrorFormat("No frames from {0} after 8 s. Use a USB 3 (blue) port directly on the computer, not a hub, and choose an MJPG 1920x1080 media type in the camera settings. The selected media type may not be delivered by this camera.", summary.Alias);
-            }, null, 8000, System.Threading.Timeout.Infinite);
+                cassetteStopping = false;
+                cassetteRestarts = 0;
+                CassetteArmWatch();
+            }
+        }
+
+        private void CassetteArmWatch()
+        {
+            if (cassetteFirstFrameTimer != null) cassetteFirstFrameTimer.Dispose();
+            cassetteFirstFrameTimer = new System.Threading.Timer(CassetteCheckFirstFrame, null, CassetteFirstFrameWaitMs, System.Threading.Timeout.Infinite);
+        }
+
+        private void CassetteCheckFirstFrame(object state)
+        {
+            lock (cassetteWatchLock)
+            {
+                if (cassetteStopping || receivedFirstFrame || !grabbing) return;
+                string format = CassetteCurrentFormat();
+                if (cassetteRestarts < CassetteMaxRestarts)
+                {
+                    cassetteRestarts++;
+                    log.WarnFormat("No frames from {0} ({1}) after {2} s. Restarting the camera ({3} of {4}).",
+                        summary.Alias, format, CassetteFirstFrameWaitMs / 1000, cassetteRestarts, CassetteMaxRestarts);
+                    try
+                    {
+                        DeviceHelper.StopDevice(device);
+                        if (cassetteStopping) return;
+                        device.Start();
+                    }
+                    catch (Exception e)
+                    {
+                        log.ErrorFormat("Could not restart {0}: {1}", summary.Alias, e.Message);
+                    }
+                    CassetteArmWatch();
+                    return;
+                }
+                log.ErrorFormat("No frames from {0} ({1}) after {2} restarts. Use a USB 3 (blue) port directly on the computer, not a hub, close other programs that use the camera, and choose an MJPG 1920x1080 media type in the camera settings.",
+                    summary.Alias, format, CassetteMaxRestarts);
+                CassetteLogMediaTypesAsWarning();
+            }
+        }
+
+        // Called by Stop() before the camera is stopped.
+        private void CassetteStopWatch()
+        {
+            lock (cassetteWatchLock)
+            {
+                cassetteStopping = true;
+                if (cassetteFirstFrameTimer != null) cassetteFirstFrameTimer.Dispose();
+                cassetteFirstFrameTimer = null;
+            }
+        }
+
+        private string CassetteCurrentFormat()
+        {
+            try
+            {
+                AForge.Video.DirectShow.VideoCapabilities cap = device.VideoResolution;
+                if (cap == null) return "format unknown";
+                return string.Format("{0}x{1} @ {2:0.###} fps, {3}", cap.FrameSize.Width, cap.FrameSize.Height, resultingFramerate, cap.Compression);
+            }
+            catch (Exception)
+            {
+                return "format unknown";
+            }
+        }
+
+        private void CassetteLogMediaTypesAsWarning()
+        {
+            try
+            {
+                AForge.Video.DirectShow.VideoCapabilities[] caps = device.VideoCapabilities;
+                log.WarnFormat("{0} offers {1} media type(s):", summary.Alias, caps.Length);
+                foreach (AForge.Video.DirectShow.VideoCapabilities cap in caps)
+                    log.WarnFormat("  index {0}: {1}x{2} @ {3:0.###} fps, {4}", cap.Index, cap.FrameSize.Width, cap.FrameSize.Height, cap.AverageFrameRate, cap.Compression);
+            }
+            catch (Exception e)
+            {
+                log.ErrorFormat("Could not list media types for {0}: {1}", summary.Alias, e.Message);
+            }
         }
         // ---- end Cassette Motion Pro ----
 
