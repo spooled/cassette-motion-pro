@@ -5,9 +5,9 @@ Cassette Motion Pro is professional bike fitting software built on the
 keeps bike-fit-specific code and branding isolated so upstream Kinovea updates
 can be incorporated with minimal changes to the playback and annotation engine.
 
-## Current milestone: 1.40.2 Camera opens without a black screen
+## Current milestone: 1.40.3 Live view watch for cameras that open black
 
-1.40.2 fixes USB cameras such as the ELP AR0234 global shutter camera that stayed black when opened in a capture screen until the screen layout was changed. Kinovea reuses the screen position where each camera's picture was last drawn and only checks its shape, so a position saved in another layout, or while the capture screen had no size yet, drew the picture off screen; the live view now refits the picture to the screen when it is mostly off screen or tiny, both when a camera connects and whenever the view changes size. If a camera sends no picture at all within 3 seconds of starting, Cassette Motion Pro also restarts it, up to twice. Each restart, the format the camera was opened in, and (if it still sends nothing) every format the camera offers are written to the normal log as warnings, so they can be read without turning on debug logging. 1.40.1 removed GoPro support.
+1.40.3 adds a live view watch for USB cameras, such as the ELP AR0234 global shutter camera, whose capture screen stays dark while the camera is sending pictures (the screen header shows the signal) until the screen layout is changed. After a camera connects, Cassette Motion Pro checks that its pictures are actually painted on screen: after 3 seconds without one it refreshes the view, and after 6 seconds it reconnects the camera once, which is what changing the layout did by hand. Each step is written to the normal log as a warning with the display state (display timer, pictures handed to the view and painted, delay buffer, view size and visibility, picture position), so the cause can be read from the log. It keeps 1.40.2's refit of a picture saved off screen and the restart of a camera that sends nothing.
 
 Each fit session now has a permanent storage folder, so changing the session date
 no longer moves or hides its Before/After videos, report images, or captures.
